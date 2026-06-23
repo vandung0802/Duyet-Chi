@@ -1613,14 +1613,13 @@ function renderBtnReject(p){
   let boxD = '';
   if(isRejected && (dRejected || legacyD)){
     const reason = (dRejected&&dRejected.reason) ? dRejected.reason : '';
-    const time = (dRejected&&dRejected.ts) ? fmtFull(dRejected.ts) : (p.rejectedAt ? fmtFull(p.rejectedAt) : '');
-    const reasonHtml = reason ? `<span class="ab-time-sub" style="color:#c81e1e;font-style:italic" title="Lý do từ chối">"${reason}"</span>` : '';
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">D</span><span class="ab-mid-label">Từ chối</span></div>${time?`<span class="ab-time-sub">${time}</span>`:''}${reasonHtml}`;
+    const reasonHtml = reason ? `<span style="font-size:7px;font-style:italic;color:#c81e1e;display:block;text-align:center;word-break:break-word;line-height:1.2;max-width:100%;margin-top:1px">"${reason}"</span>` : '';
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">D</span><span class="ab-mid-label" style="color:#c81e1e">Từ chối</span></div>${reasonHtml}`;
     const canUndo = currentRole==='dung';
     if(canUndo)
-      boxD = `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${p.id}','D')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
+      boxD = `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0;overflow:hidden"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${p.id}','D')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
     else
-      boxD = `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><div class="ab-done-btn" style="color:var(--red)">${inner}</div></div>`;
+      boxD = `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0;overflow:hidden"><div class="ab-done-btn" style="color:var(--red)">${inner}</div></div>`;
   } else if(canRejectD){
     boxD = `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${p.id}','D')"><span class="ab-big-letter" style="font-size:11px;color:var(--red)">D</span> ✕ Từ chối</button></div>`;
   } else if(!isRejected){
@@ -1634,14 +1633,13 @@ function renderBtnReject(p){
   let boxH = '';
   if(isRejected && (hRejected || legacyH)){
     const reason = (hRejected&&hRejected.reason) ? hRejected.reason : '';
-    const time = (hRejected&&hRejected.ts) ? fmtFull(hRejected.ts) : (p.rejectedAt ? fmtFull(p.rejectedAt) : '');
-    const reasonHtml = reason ? `<span class="ab-time-sub" style="color:#c81e1e;font-style:italic" title="Lý do từ chối">"${reason}"</span>` : '';
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label">Từ chối</span></div>${time?`<span class="ab-time-sub">${time}</span>`:''}${reasonHtml}`;
+    const reasonHtml = reason ? `<span style="font-size:7px;font-style:italic;color:#7c3aed;display:block;text-align:center;word-break:break-word;line-height:1.2;max-width:100%;margin-top:1px">"${reason}"</span>` : '';
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#7c3aed">Từ chối</span></div>${reasonHtml}`;
     const canUndo = currentRole==='hien';
     if(canUndo)
-      boxH = `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f0ff"><button class="ab-done-btn" style="color:#7c3aed" onclick="undoRejectBy('${p.id}','H')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
+      boxH = `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f0ff;overflow:hidden"><button class="ab-done-btn" style="color:#7c3aed" onclick="undoRejectBy('${p.id}','H')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
     else
-      boxH = `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f0ff"><div class="ab-done-btn" style="color:#7c3aed">${inner}</div></div>`;
+      boxH = `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f0ff;overflow:hidden"><div class="ab-done-btn" style="color:#7c3aed">${inner}</div></div>`;
   } else if(canRejectH){
     boxH = `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${p.id}','H')"><span class="ab-big-letter" style="font-size:11px;color:#7c3aed">H</span> ✕ Từ chối</button></div>`;
   } else if(!isRejected){
