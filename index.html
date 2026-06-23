@@ -842,11 +842,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: Tóm tắt -->
   <div class="card report-tab-panel" id="report-tab-summary">
-    <div class="card-body">
-      <p style="font-size:12px;color:var(--text-sub);margin-bottom:12px;line-height:1.6">Tổng hợp toàn bộ đề xuất hôm nay — khoản đã xong, khoản còn tồn đọng, cần xử lý gấp.</p>
-      <button class="btn-full btn-success-full" onclick="generateReport()" id="btn-report">📝 Tạo báo cáo</button>
-      <button class="btn-full btn-outline-full" onclick="copyReport()">📋 Sao chép gửi Zalo</button>
-      <div class="report-box" id="report-box">Nhấn nút trên để tạo báo cáo.</div>
+    <div class="card-body" style="padding:0">
+      <div id="report-summary-content"></div>
+      <div style="padding:12px 12px 4px">
+        <button class="btn-full btn-outline-full" onclick="copyReport()" style="margin-top:4px">📋 Sao chép gửi Zalo</button>
+      </div>
     </div>
   </div>
 
@@ -1402,7 +1402,7 @@ function showPage(pg, btn){
   if(btn) btn.classList.add('active');
   if(pg==='add') populateSelects();
   if(pg==='settings') renderSettings();
-  if(pg==='report') renderReportTables();
+  if(pg==='report'){ renderReportSummary(); renderReportTables(); }
 }
 
 // ── RENDER ALL ──
@@ -2496,6 +2496,7 @@ function setReportTab(tab, btn){
   ['summary','list','done','pending'].forEach(t=>{
     document.getElementById('report-tab-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
+  if(tab==='summary') renderReportSummary();
   if(tab==='done' || tab==='pending') renderReportTables();
   if(tab==='list') renderReportList();
 }
@@ -2606,10 +2607,99 @@ function renderExcelTable(containerId, items, kind){
     </div>`;
 }
 
-function generateReport(){
-  const box=document.getElementById('report-box');
-  if(!proposals.length){ box.textContent='Chưa có đề xuất nào.'; return; }
+function renderReportSummary(){
+  const el = document.getElementById('report-summary-content');
+  if(!el) return;
+  if(!proposals.length){ el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text-sub)">Chưa có đề xuất nào.</div>'; return; }
 
+  const tot     = proposals.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const transTotal = proposals.reduce((a,p)=>a+getTotalTransferred(p),0);
+  const hasTrans = proposals.filter(p=>getTotalTransferred(p)>0);
+  const appd    = proposals.filter(p=>p.status==='approved');
+  const pend    = proposals.filter(p=>p.status==='pending');
+  const rej     = proposals.filter(p=>p.status==='rejected');
+  const pendAmt = pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const appdAmt = appd.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p),0);
+
+  // Thẻ thống kê
+  const statCards = `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px">
+    <div style="background:#eff6ff;border-radius:10px;padding:10px 12px">
+      <div style="font-size:10px;color:#1a56db;font-weight:600">TỔNG ĐỀ XUẤT</div>
+      <div style="font-size:18px;font-weight:800;color:#1a56db">${proposals.length} phiếu</div>
+      <div style="font-size:11px;color:#64748b">${fmt(tot)} triệu</div>
+    </div>
+    <div style="background:#f0fdf4;border-radius:10px;padding:10px 12px">
+      <div style="font-size:10px;color:#16a34a;font-weight:600">ĐÃ CHUYỂN</div>
+      <div style="font-size:18px;font-weight:800;color:#16a34a">${fmt(transTotal)} tr</div>
+      <div style="font-size:11px;color:#64748b">${hasTrans.length} phiếu</div>
+    </div>
+    <div style="background:#fffbeb;border-radius:10px;padding:10px 12px">
+      <div style="font-size:10px;color:#d97706;font-weight:600">ĐÃ DUYỆT · CHỜ CHUYỂN</div>
+      <div style="font-size:18px;font-weight:800;color:#d97706">${fmt(appdAmt)} tr</div>
+      <div style="font-size:11px;color:#64748b">${appd.length} phiếu</div>
+    </div>
+    <div style="background:#fdf4ff;border-radius:10px;padding:10px 12px">
+      <div style="font-size:10px;color:#9333ea;font-weight:600">CHỜ DUYỆT</div>
+      <div style="font-size:18px;font-weight:800;color:#9333ea">${fmt(pendAmt)} tr</div>
+      <div style="font-size:11px;color:#64748b">${pend.length} phiếu</div>
+    </div>
+  </div>`;
+
+  // Hàm tạo bảng nhóm
+  const makeTable = (title, color, bg, list, showRej) => {
+    if(!list.length) return '';
+    const rows = list.map(p=>{
+      const trans = getTotalTransferred(p);
+      const official = getOfficialApprovedAmount(p)||0;
+      const remaining = official - trans;
+      const dRej=p.rejectedByD, hRej=p.rejectedByH;
+      const legD=!dRej&&!hRej&&p.rejectedBy==='D', legH=!dRej&&!hRej&&p.rejectedBy==='H';
+      const rejStr = showRej ? [
+        (dRej||legD)?(dRej&&dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'',
+        (hRej||legH)?(hRej&&hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):''
+      ].filter(Boolean).join('<br>') : '';
+      const amtCell = showRej
+        ? `<span style="color:var(--red)">${fmt(p.amount)}tr</span>`
+        : trans>0 && remaining>0.001
+          ? `<span style="color:var(--yellow)">${fmt(trans)}tr</span><br><span style="font-size:9px;color:var(--red)">còn ${fmt(remaining)}tr</span>`
+          : trans>0
+            ? `<span style="color:#16a34a">${fmt(trans)}tr</span>`
+            : official>0
+              ? `<span style="color:#d97706">${fmt(official)}tr</span>`
+              : `<span style="color:#64748b">${fmt(p.amount)}tr</span>`;
+      return `<tr>
+        <td style="font-weight:600;max-width:90px;white-space:normal">${p.desc}</td>
+        <td style="font-size:10px">${p.person||'—'}</td>
+        <td style="font-size:9px;color:#64748b">${(p.site||'').replace('CT ','')}</td>
+        <td class="col-amount" style="font-size:11px;white-space:normal;line-height:1.4">${amtCell}</td>
+        ${showRej?`<td style="font-size:9px;color:var(--red);white-space:normal">${rejStr||'—'}</td>`:''}
+      </tr>`;
+    }).join('');
+    const groupTotal = showRej
+      ? list.reduce((a,p)=>a+(parseFloat(p.amount)||0),0)
+      : list.reduce((a,p)=>a+getTotalTransferred(p),0);
+    return `
+    <div style="padding:0 12px 12px">
+      <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmt(groupTotal)}tr</div>
+      <div class="excel-table-wrap" style="border-radius:0 0 8px 8px;overflow:hidden">
+        <table class="excel-table" style="border-radius:0">
+          <thead><tr><th>Nội dung</th><th>Người</th><th>CT</th><th>${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th>Lý do</th>':''}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+  };
+
+  el.innerHTML = statCards
+    + makeTable('💸 Đã chuyển tiền', '#16a34a', '#f0fdf4', hasTrans, false)
+    + makeTable('✅ Đã duyệt · chờ chuyển', '#d97706', '#fffbeb', appd, false)
+    + makeTable('⏳ Chờ duyệt', '#9333ea', '#fdf4ff', pend, false)
+    + makeTable('❌ Từ chối', '#dc2626', '#fff1f2', rej, true);
+}
+
+function generateReport(){
+  if(!proposals.length) return '';
   const fLine = p => {
     const trans = getTotalTransferred(p);
     const dAmt = parseFloat(p.approvedDAmount)||0;
@@ -2624,20 +2714,18 @@ function generateReport(){
     if(rejInfo) detail += ` [${rejInfo}]`;
     return `• ${p.desc} — ${p.person} — ${p.site||'?'} — ${fmt(p.amount)}tr${detail}`;
   };
-
-  const done = proposals.filter(p=>p.status==='transferred');
+  const hasTrans = proposals.filter(p=>getTotalTransferred(p)>0);
   const appd = proposals.filter(p=>p.status==='approved');
   const pend = proposals.filter(p=>p.status==='pending');
   const rej  = proposals.filter(p=>p.status==='rejected');
   const tot  = proposals.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const transTotal = proposals.reduce((a,p)=>a+getTotalTransferred(p),0);
-
   let lines=[];
   lines.push(`📊 BÁO CÁO TỔNG HỢP — ${new Date().toLocaleDateString('vi-VN')}`);
   lines.push(`Tổng: ${proposals.length} đề xuất · ${fmt(tot)}tr · Đã chuyển: ${fmt(transTotal)}tr`);
   lines.push('');
-  lines.push(`💸 ĐÃ CHUYỂN (${done.length} khoản, ${fmt(done.reduce((a,p)=>a+getTotalTransferred(p),0))}tr):`);
-  lines.push(done.length ? done.map(fLine).join('\n') : '(không có)');
+  lines.push(`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản, ${fmt(hasTrans.reduce((a,p)=>a+getTotalTransferred(p),0))}tr):`);
+  lines.push(hasTrans.length ? hasTrans.map(fLine).join('\n') : '(không có)');
   lines.push('');
   lines.push(`✅ ĐÃ DUYỆT, CHƯA CHUYỂN ĐỦ (${appd.length} khoản):`);
   lines.push(appd.length ? appd.map(fLine).join('\n') : '(không có)');
@@ -2647,20 +2735,15 @@ function generateReport(){
   lines.push('');
   lines.push(`❌ TỪ CHỐI (${rej.length} khoản):`);
   lines.push(rej.length ? rej.map(fLine).join('\n') : '(không có)');
-  if(pend.length){
-    lines.push('');
-    lines.push(`⚠️ CẦN XỬ LÝ GẤP: còn ${pend.length} khoản chờ duyệt, tổng ${fmt(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}tr.`);
-  }
-
-  box.textContent = lines.join('\n');
-  showToast('✅ Đã tạo báo cáo');
+  if(pend.length) lines.push(`\n⚠️ CẦN XỬ LÝ GẤP: còn ${pend.length} khoản chờ duyệt, tổng ${fmt(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}tr.`);
+  return lines.join('\n');
 }
 
 function copyReport(){
-  const t=document.getElementById('report-box').textContent;
-  if(!t || t==='Nhấn nút trên để tạo báo cáo.'){ showToast('Chưa có báo cáo để sao chép'); return; }
+  const t = generateReport();
+  if(!t){ showToast('Chưa có đề xuất nào'); return; }
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(t).then(()=>showToast('📋 Đã sao chép!')).catch(()=>fallbackCopy(t));
+    navigator.clipboard.writeText(t).then(()=>showToast('📋 Đã sao chép! Dán vào Zalo')).catch(()=>fallbackCopy(t));
   } else {
     fallbackCopy(t);
   }
