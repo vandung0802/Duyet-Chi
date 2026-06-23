@@ -2503,8 +2503,14 @@ function setReportTab(tab, btn){
 function renderReportTables(){
   // Đã chuyển: bất kỳ phiếu nào đã có chuyển tiền (kể cả chuyển một phần)
   renderExcelTable('report-table-done', proposals.filter(p=>getTotalTransferred(p)>0), 'done');
-  // Chưa chuyển: chưa có lần chuyển nào (kể cả đang chờ hoặc đã duyệt nhưng chưa chuyển)
-  renderExcelTable('report-table-pending', proposals.filter(p=>p.status!=='rejected'&&getTotalTransferred(p)<=0), 'pending');
+  // Chưa chuyển: không bị từ chối VÀ còn số tiền chưa chuyển
+  // (gồm: chưa chuyển gì, hoặc đã chuyển một phần nhưng vẫn còn thiếu)
+  renderExcelTable('report-table-pending', proposals.filter(p=>{
+    if(p.status==='rejected') return false;
+    const approved = getOfficialApprovedAmount(p)||parseFloat(p.amount)||0;
+    const transferred = getTotalTransferred(p);
+    return transferred < approved - 0.001;
+  }), 'pending');
 }
 
 function renderReportList(){
@@ -2570,7 +2576,9 @@ function renderExcelTable(containerId, items, kind){
       : new Date(p.ts).toLocaleDateString('vi-VN');
     const amtLabel = kind==='done'
       ? `<span style="color:var(--yellow);font-weight:700">${fmt(transferred)} tr</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub)">còn ${fmt(remaining)}tr</span>`:''}`
-      : `${fmt(p.amount)} tr`;
+      : transferred>0.001
+        ? `<span style="font-weight:700">${fmt(remaining)} tr</span><br><span style="font-size:9px;color:var(--red);font-weight:600">⚠ còn thiếu (đã chuyển ${fmt(transferred)}tr)</span>`
+        : `${fmt(p.amount)} tr`;
     return `<tr>
       <td>${p.desc}</td>
       <td class="col-amount">${amtLabel}</td>
@@ -2580,12 +2588,14 @@ function renderExcelTable(containerId, items, kind){
     </tr>`;
   }).join('');
 
-  const totalTransferred = kind==='done' ? sorted.reduce((a,p)=>a+getTotalTransferred(p),0) : sorted.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const totalTransferred = kind==='done'
+    ? sorted.reduce((a,p)=>a+getTotalTransferred(p),0)
+    : sorted.reduce((a,p)=>{ const approved=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0; return a+(approved-getTotalTransferred(p)); },0);
   el.innerHTML = `
     <div class="excel-table-wrap">
       <table class="excel-table">
         <thead><tr>
-          <th>Tên đề xuất</th><th>${kind==='done'?'Đã chuyển':'Số tiền ĐX'}</th><th>Người đề xuất</th><th>Công trường</th><th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
+          <th>Tên đề xuất</th><th>${kind==='done'?'Đã chuyển':'Còn phải chuyển'}</th><th>Người đề xuất</th><th>Công trường</th><th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
