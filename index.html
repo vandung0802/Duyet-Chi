@@ -1574,6 +1574,10 @@ function renderBtnD(p){
   const amt = parseFloat(p.approvedDAmount)||0;
   const total = parseFloat(p.amount)||0;
   const full = amt>0 && amt >= total - 0.0001;
+  // Khi D từ chối: ẩn ô "D Đã duyệt" — thông tin đã hiện ở badge và nút từ chối
+  const dHasRej = !!(p.rejectedByD || (!p.rejectedByD && !p.rejectedByH && p.rejectedBy==='D'));
+  if(p.status==='rejected' && dHasRej)
+    return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
   const canPress = currentRole==='dung' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
     const mainLabel = amt>0 ? `${fmt(amt)}/${fmt(total)}tr` : 'Chờ duyệt D';
@@ -1592,6 +1596,10 @@ function renderBtnH(p){
   const amt = parseFloat(p.approvedHAmount)||0;
   const total = parseFloat(p.amount)||0;
   const full = amt>0 && amt >= total - 0.0001;
+  // Khi H từ chối: ẩn ô "H Đã duyệt"
+  const hHasRej = !!(p.rejectedByH || (!p.rejectedByD && !p.rejectedByH && p.rejectedBy==='H'));
+  if(p.status==='rejected' && hHasRej)
+    return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
   const canPress = currentRole==='hien' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
     const mainLabel = amt>0 ? `${fmt(amt)}/${fmt(total)}tr` : 'Chờ duyệt H';
@@ -1618,8 +1626,12 @@ function renderBtnReject(p){
   const canRejectH = currentRole==='hien' && p.status!=='transferred';
 
   if(isRejected){
+    const officialAmt = getOfficialApprovedAmount(p);
+    const transferred = getTotalTransferred(p);
+    const remaining = officialAmt > 0 ? officialAmt - transferred : 0;
+    const remLabel = remaining > 0.0001 ? ` ${fmt(remaining)}tr` : '';
     const whoLabel = (dHasRejected && hHasRejected) ? 'D+H' : (dHasRejected ? 'D' : 'H');
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">${whoLabel}</span><span class="ab-mid-label" style="color:#c81e1e">Từ chối</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">${whoLabel}</span><span class="ab-mid-label" style="color:#c81e1e">Từ chối${remLabel}</span></div>`;
     if(canRejectD && dHasRejected)
       return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${p.id}','D')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
     if(canRejectH && hHasRejected)
