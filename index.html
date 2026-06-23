@@ -1788,20 +1788,37 @@ function confirmApproveAmount(){
 function undoApprove(id, field){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
-  if(!confirm('Bỏ duyệt phiếu này? (xóa số tiền đã duyệt của người này)')) return;
-  p[field] = null;
-  p[field==='approvedD' ? 'approvedDAmount' : 'approvedHAmount'] = null;
-  p[field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory'] = []; // xóa lịch sử từng lần
-  // Nếu bỏ duyệt mà KHÔNG còn ai duyệt → lùi về "pending"
+  const amountField = field==='approvedD' ? 'approvedDAmount' : 'approvedHAmount';
+  const historyField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
+  const hist = Array.isArray(p[historyField]) ? p[historyField] : [];
+  if(hist.length === 0){ showToast('Không có lần duyệt nào để bỏ'); return; }
+
+  const lastEntry = hist[hist.length - 1];
+  const lastAmt = lastEntry ? lastEntry.amount : 0;
+  const confirmMsg = hist.length > 1
+    ? `Bỏ lần duyệt cuối (Lần ${hist.length}: ${fmt(lastAmt)}tr)?\nCác lần trước vẫn giữ nguyên.`
+    : `Bỏ duyệt lần ${hist.length} (${fmt(lastAmt)}tr)?`;
+  if(!confirm(confirmMsg)) return;
+
+  // Chỉ xóa lần cuối cùng
+  hist.pop();
+  p[historyField] = hist;
+  const newTotal = hist.reduce((s, t) => s + (t.amount || 0), 0);
+  p[amountField] = newTotal > 0 ? newTotal : null;
+  p[field] = hist.length > 0 ? hist[hist.length - 1].ts : null;
+
   if(p.status==='approved' && getOfficialApprovedAmount(p)<=0){
     p.status = 'pending';
   }
   save();
   syncStatusToSheet(id, p.status);
-  syncApprovalToSheet(id, field, null);
+  syncApprovalToSheet(id, field, p[field] || null);
   syncApprovalAmountToSheet(p);
   renderAll();
-  showToast('↩ Đã bỏ duyệt');
+  const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+  showToast(hist.length > 0
+    ? `↩ Đã bỏ lần duyệt cuối của ${who}. Còn ${hist.length} lần (${fmt(newTotal)}tr)`
+    : `↩ Đã bỏ duyệt của ${who}`);
 }
 
 // Mở modal nhập số tiền chuyển cho Trang
