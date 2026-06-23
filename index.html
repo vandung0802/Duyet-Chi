@@ -1376,7 +1376,7 @@ function updateFbBadge(ok){
 }
 function fmt(n){return n?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:2}):'—'}
 function fmtT(ts){return new Date(ts).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}
-function fmtFull(ts){const d=new Date(ts);return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' '+d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'})}
+function fmtFull(ts){const d=new Date(ts);return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' '+d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function initials(name){return name.trim().split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
 
 // ── INIT ──
