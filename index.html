@@ -1548,7 +1548,7 @@ function renderCard(p){
           <div class="proposal-meta">
             <span>👤 ${p.person||'—'}</span>
             ${p.site?`<span>📍 ${p.site}</span>`:''}
-            <span>🕐 ${fmtT(p.ts)}</span>
+            <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
           <div class="proposal-amount">${fmt(p.amount)} triệu đồng</div>
         </div>
