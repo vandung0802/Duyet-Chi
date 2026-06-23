@@ -2523,17 +2523,18 @@ function renderReportList(){
     const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmt(dAmt)+'tr':'');
     const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmt(hAmt)+'tr':'');
     const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmt(trans)+'tr':'');
+    const cellBase = 'style="vertical-align:top;white-space:normal;line-height:1.5"';
     return `<tr>
-      <td style="text-align:center">${sorted.length-i}</td>
-      <td style="white-space:normal;max-width:100px;font-size:10px;font-weight:700">${p.desc}</td>
-      <td style="font-size:10px">${p.person||'—'}</td>
-      <td style="font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount">${fmt(p.amount)}tr</td>
-      <td style="font-size:9px;color:var(--blue)">${dHist}</td>
-      <td style="font-size:9px;color:#7c3aed">${hHist}</td>
-      <td style="font-size:9px;color:var(--yellow)">${tHist}</td>
-      <td><span class="badge ${st.badge}" style="font-size:8px;padding:1px 5px">${st.icon}</span></td>
-      <td style="font-size:9px;color:var(--red)">${rejStr}</td>
+      <td style="vertical-align:top;text-align:center">${sorted.length-i}</td>
+      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc}</td>
+      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:10px">${p.person||'—'}</td>
+      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px">${p.site||'—'}</td>
+      <td class="col-amount" style="vertical-align:top">${fmt(p.amount)}tr</td>
+      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--blue)">${dHist}</td>
+      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:#7c3aed">${hHist}</td>
+      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--yellow)">${tHist}</td>
+      <td style="vertical-align:top"><span class="badge ${st.badge}" style="font-size:8px;padding:1px 5px">${st.icon}</span></td>
+      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--red)">${rejStr}</td>
     </tr>`;
   }).join('');
   const total = proposals.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
@@ -2805,10 +2806,19 @@ function openApp(){var html=HtmlService.createHtmlOutput('<div style="font-famil
 function doGet(e){
   const ss=SpreadsheetApp.getActiveSpreadsheet();
   let sh=ss.getSheetByName('Đề xuất')||ss.insertSheet('Đề xuất');
+  const HEADERS=['ID','Thời gian tạo','Nội dung','Người đề xuất','Công trường','Số tiền ĐX (tr)','Ghi chú','D duyệt - lịch sử','H duyệt - lịch sử','Trạng thái','Lý do từ chối','Ngày cập nhật','D tổng duyệt (tr)','H tổng duyệt (tr)','Tổng đã chuyển (tr)','T chuyển - lịch sử','Số tiền duyệt chính thức (tr)'];
   if(sh.getLastRow()===0){
-    sh.appendRow(['ID','Thời gian tạo','Nội dung','Người đề xuất','Công trường','Số tiền ĐX (tr)','Ghi chú','D duyệt - lịch sử','H duyệt - lịch sử','Trạng thái','Lý do từ chối','Ngày cập nhật','D tổng duyệt (tr)','H tổng duyệt (tr)','Tổng đã chuyển (tr)','T chuyển - lịch sử','Số tiền duyệt chính thức (tr)']);
-    sh.getRange(1,1,1,17).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
+    sh.appendRow(HEADERS);
+    sh.getRange(1,1,1,HEADERS.length).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
     sh.setColumnWidth(3,220);sh.setColumnWidth(8,260);sh.setColumnWidth(9,260);sh.setColumnWidth(16,260);
+  } else {
+    // Cập nhật header nếu chưa đủ cột
+    const curCols=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+    for(let c=0;c<HEADERS.length;c++){
+      if(!curCols[c]||curCols[c]!==HEADERS[c]){
+        sh.getRange(1,c+1).setValue(HEADERS[c]).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
+      }
+    }
   }
   const v=sh.getDataRange().getValues();
   const targetId=String(e.parameter.id);
