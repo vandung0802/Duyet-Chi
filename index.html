@@ -2501,8 +2501,10 @@ function setReportTab(tab, btn){
 }
 
 function renderReportTables(){
-  renderExcelTable('report-table-done', proposals.filter(p=>p.status==='transferred'), 'done');
-  renderExcelTable('report-table-pending', proposals.filter(p=>p.status==='pending'||p.status==='approved'), 'pending');
+  // Đã chuyển: bất kỳ phiếu nào đã có chuyển tiền (kể cả chuyển một phần)
+  renderExcelTable('report-table-done', proposals.filter(p=>getTotalTransferred(p)>0), 'done');
+  // Chưa chuyển: chưa có lần chuyển nào (kể cả đang chờ hoặc đã duyệt nhưng chưa chuyển)
+  renderExcelTable('report-table-pending', proposals.filter(p=>p.status!=='rejected'&&getTotalTransferred(p)<=0), 'pending');
 }
 
 function renderReportList(){
@@ -2553,34 +2555,44 @@ function renderExcelTable(containerId, items, kind){
     return;
   }
   // Sắp xếp theo thời gian gần nhất lên trên
-  const sorted = items.slice().sort((a,b)=> (kind==='done' ? (b.transferredAt||0)-(a.transferredAt||0) : b.ts-a.ts));
-  const total = sorted.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const getLastTransferTs = p => {
+    if(Array.isArray(p.transfers)&&p.transfers.length) return p.transfers[p.transfers.length-1].ts||0;
+    return p.transferredAt||0;
+  };
+  const sorted = items.slice().sort((a,b)=> (kind==='done' ? getLastTransferTs(b)-getLastTransferTs(a) : b.ts-a.ts));
 
   const rows = sorted.map(p=>{
+    const transferred = getTotalTransferred(p);
+    const remaining = (getOfficialApprovedAmount(p)||parseFloat(p.amount)||0) - transferred;
+    const lastTs = getLastTransferTs(p);
     const dateCol = kind==='done'
-      ? (p.transferredAt ? fmtFull(p.transferredAt) : '—')
+      ? (lastTs ? fmtFull(lastTs) : '—')
       : new Date(p.ts).toLocaleDateString('vi-VN');
+    const amtLabel = kind==='done'
+      ? `<span style="color:var(--yellow);font-weight:700">${fmt(transferred)} tr</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub)">còn ${fmt(remaining)}tr</span>`:''}`
+      : `${fmt(p.amount)} tr`;
     return `<tr>
       <td>${p.desc}</td>
-      <td class="col-amount">${fmt(p.amount)} tr</td>
+      <td class="col-amount">${amtLabel}</td>
       <td>${p.person||'—'}</td>
       <td>${p.site||'—'}</td>
       <td>${dateCol}</td>
     </tr>`;
   }).join('');
 
+  const totalTransferred = kind==='done' ? sorted.reduce((a,p)=>a+getTotalTransferred(p),0) : sorted.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   el.innerHTML = `
     <div class="excel-table-wrap">
       <table class="excel-table">
         <thead><tr>
-          <th>Tên đề xuất</th><th>Số tiền</th><th>Người đề xuất</th><th>Công trường</th><th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
+          <th>Tên đề xuất</th><th>${kind==='done'?'Đã chuyển':'Số tiền ĐX'}</th><th>Người đề xuất</th><th>Công trường</th><th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
     <div class="excel-table-footer">
       <span>Tổng cộng: ${sorted.length} khoản</span>
-      <span>${fmt(total)} triệu đồng</span>
+      <span>${fmt(totalTransferred)} triệu đồng</span>
     </div>`;
 }
 
