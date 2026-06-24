@@ -1668,13 +1668,17 @@ function renderCard(p){
     <div class="proposal-top">
       <div class="proposal-top-row">
         <div class="proposal-left-col">
-          <div class="proposal-desc">${p.desc} ${priorityBadge(p)}</div>
+          <div class="proposal-desc">${p.desc}</div>
           <div class="proposal-meta">
             <span>👤 ${p.person||'—'}</span>
             ${p.site?`<span>📍 ${p.site}</span>`:''}
             <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
-          <div class="proposal-amount">${fmt(p.amount)} triệu đồng</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <div class="proposal-amount">${fmt(p.amount)} triệu đồng</div>
+            ${(p.priority||'normal')==='urgent'?`<span style="font-size:17px;font-weight:900;color:#b00000;letter-spacing:0.5px">🔴 GẤP</span>`:''}
+            ${(p.priority||'normal')==='low'?`<span style="font-size:13px;font-weight:700;color:#1a7a3c">🟢 Có thể chờ</span>`:''}
+          </div>
         </div>
         ${badgeHtml}
       </div>
