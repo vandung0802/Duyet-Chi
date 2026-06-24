@@ -2795,6 +2795,7 @@ function renderExcelTable(containerId, items, kind){
 }
 
 function renderReportSummary(){
+  renderPersonChips();
   const el = document.getElementById('report-summary-content');
   if(!el) return;
   if(!proposals.length){ el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text-sub)">Chưa có đề xuất nào.</div>'; return; }
