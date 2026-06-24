@@ -578,12 +578,12 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .report-table th{background:var(--blue);color:#fff;padding:6px 5px;text-align:left;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.25);overflow:hidden}
 .report-table td{padding:5px 5px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;vertical-align:top;word-break:break-word}
 .report-table tr:nth-child(even) td{background:#f4f6fa}
-.report-table .col-desc{width:auto}
-.report-table .col-person{width:52px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.report-table .col-site{width:70px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.report-table .col-pri{width:22px;text-align:center;font-size:12px}
-.report-table .col-amt{width:88px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap}
-.report-table .col-rej{width:70px;font-size:9px;color:var(--red)}
+.report-table .col-desc{width:80px;font-size:10px}
+.report-table .col-person{width:42px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-table .col-site{width:84px;font-size:10px;white-space:normal;word-break:break-word}
+.report-table .col-pri{width:28px;text-align:center;font-size:12px;white-space:nowrap}
+.report-table .col-amt{width:84px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap}
+.report-table .col-rej{width:80px;font-size:9px;color:var(--red);white-space:normal;word-break:break-word}
 .excel-table-empty{padding:30px 16px;text-align:center;color:var(--text-sub);font-size:12px}
 .excel-table-footer{padding:10px 12px;background:var(--gray-light);font-size:12px;font-weight:700;display:flex;justify-content:space-between;border-top:2px solid var(--gray-border)}
 
@@ -2761,22 +2761,26 @@ function renderReportRejected(){
     const hTs = hRej&&hRej.ts?fmtT(hRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const prv=p.priority||'normal';
     const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Chờ':'🟡 BT';
+    const rejNote = [dLine?`D: ${dLine}`:'' , hLine?`H: ${hLine}`:''].filter(Boolean).join('<br>');
     return `<tr>
-      <td style="font-weight:700">${p.desc}</td>
-      <td>${p.person||'—'}</td>
-      <td style="font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount" style="color:var(--red)">${fmtVND(p.amount)}</td>
-      <td style="text-align:center">${prCell}</td>
-      <td style="font-size:9px;color:#c81e1e;white-space:normal">${dLine?`D: ${dLine}<br><span style="color:#999">${dTs}</span>`:''}</td>
-      <td style="font-size:9px;color:#7c3aed;white-space:normal">${hLine?`H: ${hLine}<br><span style="color:#999">${hTs}</span>`:''}</td>
-      <td style="font-size:9px">${new Date(p.ts).toLocaleDateString('vi-VN')}</td>
+      <td class="col-desc" style="font-weight:600">${p.desc}</td>
+      <td class="col-person">${p.person||'—'}</td>
+      <td class="col-site" style="color:#64748b">${(p.site||'—').replace('CT ','')}</td>
+      <td class="col-pri">${prCell}</td>
+      <td class="col-amt" style="color:var(--red)">${fmtVND(p.amount)}</td>
+      <td class="col-rej">${rejNote||'—'}</td>
     </tr>`;
   }).join('');
   const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
-  el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
-    <thead><tr><th>Nội dung</th><th>Người</th><th>CT</th><th>Số tiền</th><th>Mức</th><th>D từ chối</th><th>H từ chối</th><th>Ngày tạo</th></tr></thead>
-    <tbody>${rows}</tbody></table></div>
-  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu bị từ chối</span><span style="color:var(--red)">${fmtVND(total)}</span></div>`;
+  el.innerHTML=`<div style="padding:0 12px 12px">
+    <div style="font-size:11px;font-weight:700;color:#dc2626;background:#fff1f2;padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid #dc2626">❌ Từ chối — ${fp.length} phiếu · ${fmtVND(total)}</div>
+    <div style="border-radius:0 0 8px 8px;overflow:hidden">
+      <table class="report-table">
+        <thead><tr><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">Số tiền</th><th class="col-rej">Lý do từ chối</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
 }
 
 function renderReportList(){
@@ -2856,12 +2860,12 @@ function renderExcelTable(containerId, items, kind){
     const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700">${fmtVND(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
     const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
     return `<tr>
-      <td>${p.desc}</td>
+      <td style="white-space:normal;word-break:break-word;font-weight:600">${p.desc}</td>
       <td class="col-amount">${amtLabel}</td>
-      <td>${p.person||'—'}</td>
-      <td>${p.site||'—'}</td>
-      ${kind==='pending'?`<td style="text-align:center">${dCell}</td><td style="text-align:center">${hCell}</td><td style="text-align:center">${prCell}</td>`:''}
-      <td>${dateCol}</td>
+      <td style="white-space:nowrap;font-size:10px">${p.person||'—'}</td>
+      <td style="white-space:normal;word-break:break-word;font-size:10px">${(p.site||'—').replace('CT ','')}</td>
+      ${kind==='pending'?`<td style="text-align:center;font-size:10px;white-space:normal">${dCell}</td><td style="text-align:center;font-size:10px;white-space:normal">${hCell}</td><td style="text-align:center">${prCell}</td>`:''}
+      <td style="font-size:10px;white-space:nowrap">${dateCol}</td>
     </tr>`;
   }).join('');
 
@@ -2881,7 +2885,7 @@ function renderExcelTable(containerId, items, kind){
     </div>
     <div class="excel-table-footer">
       <span>Tổng cộng: ${sorted.length} khoản</span>
-      <span>${fmtVND(totalTransferred)}iệu đồng</span>
+      <span>${fmtVND(totalTransferred)}</span>
     </div>`;
 }
 
