@@ -845,15 +845,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button class="report-subtab" data-tab="done" onclick="setReportTab('done',this)">💸 Đã chuyển</button>
         <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">⏳ Chưa chuyển</button>
       </div>
-      <!-- Hàng chip người đề xuất -->
-      <div id="report-person-chips" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px 12px 10px"></div>
-    </div>
-  </div>
-
-  <!-- Tab con: Xem theo người -->
-  <div class="card report-tab-panel" id="report-tab-person" style="display:none">
-    <div class="card-body" style="padding:0">
-      <div id="report-person-content"></div>
+      <!-- Hàng lọc -->
+      <div style="display:flex;gap:8px;padding:8px 12px 10px">
+        <select id="filter-person" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+          <option value="">👤 Tất cả người</option>
+        </select>
+        <select id="filter-site" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+          <option value="">🏗 Tất cả CT</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -2590,7 +2590,7 @@ function setReportTab(tab, btn){
   // ẩn chip người khi chuyển tab (trừ khi đang ở person)
   activePersonChip = null;
   document.querySelectorAll('.person-chip').forEach(c=>c.classList.remove('active'));
-  ['summary','list','done','pending','person'].forEach(t=>{
+  ['summary','list','done','pending'].forEach(t=>{
     document.getElementById('report-tab-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
   if(tab==='summary') renderReportSummary();
@@ -2598,16 +2598,33 @@ function setReportTab(tab, btn){
   if(tab==='list') renderReportList();
 }
 
-function renderPersonChips(){
-  const wrap = document.getElementById('report-person-chips');
-  if(!wrap) return;
+function renderPersonChips(){ renderReportFilters(); } // compat alias
+
+function renderReportFilters(){
+  const selP = document.getElementById('filter-person');
+  const selS = document.getElementById('filter-site');
+  if(!selP || !selS) return;
+  const curP = selP.value, curS = selS.value;
   const names = [...new Set(proposals.map(p=>p.person||'').filter(Boolean))].sort();
-  if(!names.length){ wrap.innerHTML='<span style="font-size:11px;color:#aaa;padding:2px 4px">Chưa có đề xuất</span>'; return; }
-  wrap.innerHTML = names.map(name=>{
-    const safe = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-    const isActive = activePersonChip===name;
-    return `<button class="person-chip${isActive?' active':''}" onclick="selectPersonChip('${safe}',this)">${name}</button>`;
-  }).join('');
+  const siteList = [...new Set(proposals.map(p=>p.site||'').filter(Boolean))].sort();
+  selP.innerHTML = '<option value="">👤 Tất cả người</option>' +
+    names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}"${curP===n?' selected':''}>${n}</option>`).join('');
+  selS.innerHTML = '<option value="">🏗 Tất cả CT</option>' +
+    siteList.map(s=>`<option value="${s.replace(/"/g,'&quot;')}"${curS===s?' selected':''}>${s}</option>`).join('');
+}
+
+function getFilteredProposals(){
+  const p = (document.getElementById('filter-person')||{}).value||'';
+  const s = (document.getElementById('filter-site')||{}).value||'';
+  return proposals.filter(x=>(!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
+}
+
+function applyReportFilter(){
+  const tab = document.querySelector('.report-subtab.active');
+  const t = tab ? tab.dataset.tab : 'summary';
+  if(t==='summary') renderReportSummary();
+  else if(t==='done'||t==='pending') renderReportTables();
+  else if(t==='list') renderReportList();
 }
 
 function selectPersonChip(name, btn){
@@ -2701,11 +2718,9 @@ function renderPersonReport(name){
 }
 
 function renderReportTables(){
-  // Đã chuyển: bất kỳ phiếu nào đã có chuyển tiền (kể cả chuyển một phần)
-  renderExcelTable('report-table-done', proposals.filter(p=>getTotalTransferred(p)>0), 'done');
-  // Chưa chuyển: không bị từ chối VÀ còn số tiền chưa chuyển
-  // (gồm: chưa chuyển gì, hoặc đã chuyển một phần nhưng vẫn còn thiếu)
-  renderExcelTable('report-table-pending', proposals.filter(p=>{
+  const fp = getFilteredProposals();
+  renderExcelTable('report-table-done', fp.filter(p=>getTotalTransferred(p)>0), 'done');
+  renderExcelTable('report-table-pending', fp.filter(p=>{
     if(p.status==='rejected') return false;
     const approved = getOfficialApprovedAmount(p)||parseFloat(p.amount)||0;
     const transferred = getTotalTransferred(p);
@@ -2716,8 +2731,9 @@ function renderReportTables(){
 function renderReportList(){
   const el = document.getElementById('report-table-list');
   if(!el) return;
-  if(!proposals.length){ el.innerHTML='<div class="excel-table-empty">Chưa có đề xuất nào.</div>'; return; }
-  const sorted = proposals.slice().sort((a,b)=>b.ts-a.ts);
+  const fp = getFilteredProposals();
+  if(!fp.length){ el.innerHTML='<div class="excel-table-empty">Không có đề xuất nào phù hợp.</div>'; return; }
+  const sorted = fp.slice().sort((a,b)=>b.ts-a.ts);
   const rows = sorted.map((p,i)=>{
     const dAmt = parseFloat(p.approvedDAmount)||0;
     const hAmt = parseFloat(p.approvedHAmount)||0;
@@ -2745,12 +2761,12 @@ function renderReportList(){
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--red)">${rejStr}</td>
     </tr>`;
   }).join('');
-  const total = proposals.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
-  const totalTrans = proposals.reduce((a,p)=>a+getTotalTransferred(p),0);
+  const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const totalTrans = fp.reduce((a,p)=>a+getTotalTransferred(p),0);
   el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
     <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-  <div class="excel-table-footer"><span>Tổng ${proposals.length} phiếu · ${fmt(total)}tr</span><span>Đã chuyển: ${fmt(totalTrans)}tr</span></div>`;
+  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmt(total)}tr</span><span>Đã chuyển: ${fmt(totalTrans)}tr</span></div>`;
 }
 
 function renderExcelTable(containerId, items, kind){
@@ -2807,17 +2823,18 @@ function renderExcelTable(containerId, items, kind){
 }
 
 function renderReportSummary(){
-  renderPersonChips();
+  renderReportFilters();
   const el = document.getElementById('report-summary-content');
   if(!el) return;
-  if(!proposals.length){ el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text-sub)">Chưa có đề xuất nào.</div>'; return; }
+  const fp = getFilteredProposals();
+  if(!fp.length){ el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text-sub)">Không có đề xuất nào phù hợp.</div>'; return; }
 
-  const tot     = proposals.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
-  const transTotal = proposals.reduce((a,p)=>a+getTotalTransferred(p),0);
-  const hasTrans = proposals.filter(p=>getTotalTransferred(p)>0);
-  const appd    = proposals.filter(p=>p.status==='approved');
-  const pend    = proposals.filter(p=>p.status==='pending');
-  const rej     = proposals.filter(p=>p.status==='rejected');
+  const tot     = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const transTotal = fp.reduce((a,p)=>a+getTotalTransferred(p),0);
+  const hasTrans = fp.filter(p=>getTotalTransferred(p)>0);
+  const appd    = fp.filter(p=>p.status==='approved');
+  const pend    = fp.filter(p=>p.status==='pending');
+  const rej     = fp.filter(p=>p.status==='rejected');
   const pendAmt = pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const appdAmt = appd.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p),0);
 
