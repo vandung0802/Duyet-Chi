@@ -1567,8 +1567,7 @@ function setFilter(f,el){
 
 function renderProposals(){
   const list = document.getElementById('proposal-list');
-  const items = proposals.filter(p=>matchFilter(p,filter))
-    .sort((a,b)=>prioritySortVal(a)-prioritySortVal(b));
+  const items = proposals.filter(p=>matchFilter(p,filter));
   if(!items.length){
     list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có đề xuất nào<br><small>Nhấn ➕ để thêm mới</small></div>';
     return;
