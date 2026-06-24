@@ -652,8 +652,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <textarea class="form-input" id="edit-desc" rows="2"></textarea>
     </div>
     <div class="form-group">
-      <label class="form-label">Số tiền (triệu đồng) <span class="req">*</span></label>
-      <input class="form-input" id="edit-amount" type="number" inputmode="decimal" min="0" step="0.01">
+      <label class="form-label">Số tiền (đồng) <span class="req">*</span></label>
+      <input class="form-input" id="edit-amount" type="text" inputmode="numeric" placeholder="200.000.000" oninput="fmtAmountInput(this)">
     </div>
     <div class="form-group">
       <label class="form-label">Mức độ ưu tiên</label>
@@ -695,8 +695,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div id="aa-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Duyệt chi</div>
     <div id="aa-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
 
-    <label class="form-label">Số tiền duyệt (triệu đồng)</label>
-    <input class="form-input" id="aa-amount" type="number" inputmode="decimal" min="0" step="0.01" style="font-size:16px;text-align:center;margin-bottom:8px">
+    <label class="form-label">Số tiền duyệt (đồng)</label>
+    <input class="form-input" id="aa-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this)">
     <button class="btn-full btn-outline-full" style="margin:0 0 14px" onclick="aaFillFull()">✓ Duyệt toàn bộ số còn lại</button>
 
     <button class="btn-full btn-primary-full" onclick="confirmApproveAmount()">Xác nhận duyệt</button>
@@ -711,8 +711,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">💸 Xác nhận chuyển tiền</div>
     <div id="ta-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
 
-    <label class="form-label">Số tiền chuyển (triệu đồng)</label>
-    <input class="form-input" id="ta-amount" type="number" inputmode="decimal" min="0" step="0.01" style="font-size:16px;text-align:center;margin-bottom:8px">
+    <label class="form-label">Số tiền chuyển (đồng)</label>
+    <input class="form-input" id="ta-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this)">
     <button class="btn-full btn-outline-full" style="margin:0 0 14px" onclick="taFillFull()">✓ Chuyển toàn bộ số đã duyệt còn lại</button>
 
     <button class="btn-full btn-primary-full" onclick="confirmTransferAmount()">Xác nhận chuyển</button>
@@ -839,8 +839,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </div>
 
       <div class="form-group">
-        <label class="form-label">Số tiền (triệu đồng) <span class="req">*</span></label>
-        <input class="form-input" id="inp-amount" type="number" inputmode="decimal" placeholder="0.00" min="0" step="0.01">
+        <label class="form-label">Số tiền (đồng) <span class="req">*</span></label>
+        <input class="form-input" id="inp-amount" type="text" inputmode="numeric" placeholder="200.000.000" oninput="fmtAmountInput(this)">
       </div>
 
       <div class="form-group">
@@ -1420,6 +1420,7 @@ function initFirebaseSync(){
       localStorage.setItem('dc_proposals', JSON.stringify(proposals));
       localStorage.setItem('dc_persons',   JSON.stringify(persons));
       localStorage.setItem('dc_sites',     JSON.stringify(sites));
+      migrateAmountsToVND();
       fbInitialLoadDone = true;
       renderAll();
       if(document.getElementById('page-settings').style.display!=='none') renderSettings();
@@ -1476,6 +1477,7 @@ function initFirebaseSync(){
       pushToFirebase();
     }
 
+    migrateAmountsToVND();
     fbInitialLoadDone = true;
     renderAll();
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
@@ -1494,7 +1496,34 @@ function updateFbBadge(ok){
   if(ok){ b.className='sheet-badge sheet-ok'; b.style.background='rgba(255,255,255,0.2)'; b.style.color='#fff'; b.textContent='☁️ Đồng bộ OK'; }
   else{ b.className='sheet-badge sheet-err'; b.style.background='rgba(255,0,0,0.25)'; b.style.color='#ffd6d6'; b.textContent='☁️ Mất kết nối'; }
 }
-function fmt(n){return n?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:2}):'—'}
+function fmt(n){return n||n===0?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0}):'—'}
+function parseAmountInput(el){return parseInt((el.value||'').replace(/\./g,'').replace(/[^\d]/g,''))||0;}
+function fmtAmountInput(el){
+  const pos=el.selectionStart, oldLen=el.value.length;
+  const raw=(el.value||'').replace(/[^\d]/g,'');
+  const formatted=raw?Number(raw).toLocaleString('vi-VN',{maximumFractionDigits:0}):'';
+  el.value=formatted;
+  const diff=formatted.length-oldLen;
+  try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
+}
+function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ':'—'}
+// Chuyển đổi dữ liệu cũ (đơn vị triệu) sang đồng — chỉ chạy 1 lần
+function migrateAmountsToVND(){
+  let changed=false;
+  proposals.forEach(p=>{
+    if(p.amountUnit==='dong') return;
+    const x=1000000;
+    p.amount=(parseFloat(p.amount)||0)*x;
+    if(p.approvedDAmount!=null) p.approvedDAmount=(parseFloat(p.approvedDAmount)||0)*x;
+    if(p.approvedHAmount!=null) p.approvedHAmount=(parseFloat(p.approvedHAmount)||0)*x;
+    if(Array.isArray(p.approvedDHistory)) p.approvedDHistory.forEach(h=>{if(h.amount!=null)h.amount=(parseFloat(h.amount)||0)*x;});
+    if(Array.isArray(p.approvedHHistory)) p.approvedHHistory.forEach(h=>{if(h.amount!=null)h.amount=(parseFloat(h.amount)||0)*x;});
+    if(Array.isArray(p.transfers)) p.transfers.forEach(t=>{if(t.amount!=null)t.amount=(parseFloat(t.amount)||0)*x;});
+    p.amountUnit='dong';
+    changed=true;
+  });
+  if(changed){save(); console.log('Migrated amounts to VND');}
+}
 function fmtT(ts){return new Date(ts).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}
 function fmtFull(ts){const d=new Date(ts);return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' '+d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function initials(name){return name.trim().split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
@@ -1563,7 +1592,7 @@ function renderStats(){
     const elVal = document.getElementById('st-'+key);
     const elAmt = document.getElementById('st-'+key+'-amt');
     if(elVal) elVal.textContent = items.length;
-    if(elAmt) elAmt.textContent = items.length ? fmt(sum)+'tr' : '—';
+    if(elAmt) elAmt.textContent = items.length ? fmtVND(sum) : '—';
   });
 }
 
@@ -1635,23 +1664,22 @@ function renderCard(p){
     const dFull = dAmt>0 && dAmt >= total - 0.0001;
     const hFull = hAmt>0 && hAmt >= total - 0.0001;
     const tFull = transferredAmt>0 && transferredAmt >= approvedAmt - 0.0001;
-    const dLabel = dAmt>0 ? `D đã duyệt ${dFull ? fmt(total)+'tr' : fmt(dAmt)+'/'+fmt(total)+'tr'}` : 'D chờ duyệt';
-    const hLabel = hAmt>0 ? `H đã duyệt ${hFull ? fmt(total)+'tr' : fmt(hAmt)+'/'+fmt(total)+'tr'}` : 'H chờ duyệt';
+    const dLabel = dAmt>0 ? `D đã duyệt ${dFull ? fmtVND(total) : fmtVND(dAmt)+'/'+fmtVND(total)}` : 'D chờ duyệt';
+    const hLabel = hAmt>0 ? `H đã duyệt ${hFull ? fmtVND(total) : fmtVND(hAmt)+'/'+fmtVND(total)}` : 'H chờ duyệt';
     const dBadgeClass = dAmt>0 ? 'badge-approved' : 'badge-wait';
     const hBadgeClass = hAmt>0 ? 'badge-approved' : 'badge-wait';
-    // Lịch sử từng lần D/H duyệt
     const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory : [];
     const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory : [];
     const dHistoryHtml = dHistory.length>=1 ? `<div class="badge-history">${dHistory.map((t,idx)=>
-      `Lần ${idx+1}: ${fmt(t.amount)}tr · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
+      `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
     const hHistoryHtml = hHistory.length>=1 ? `<div class="badge-history">${hHistory.map((t,idx)=>
-      `Lần ${idx+1}: ${fmt(t.amount)}tr · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
+      `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
     let tRow = '';
     if(transferredAmt>0){
-      const tLabel = `T đã chuyển ${tFull ? fmt(approvedAmt)+'tr' : fmt(transferredAmt)+'/'+fmt(approvedAmt)+'tr'}`;
+      const tLabel = `T đã chuyển ${tFull ? fmtVND(approvedAmt) : fmtVND(transferredAmt)+'/'+fmtVND(approvedAmt)}`;
       const history = Array.isArray(p.transfers) ? p.transfers : [];
       const historyHtml = history.length>=1 ? `<div class="badge-history">${history.map((t,idx)=>
-        `Lần ${idx+1}: ${fmt(t.amount)}tr · ${fmtFull(t.ts)}`
+        `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`
       ).join('<br>')}</div>` : '';
       tRow = `<span class="badge badge-done">💸 ${tLabel}</span>${historyHtml}`;
     }
@@ -1684,7 +1712,7 @@ function renderCard(p){
             <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-            <div class="proposal-amount">${fmt(p.amount)} triệu đồng</div>
+            <div class="proposal-amount">${fmtVND(p.amount)}</div>
             ${(p.priority||'normal')==='urgent'?`<span style="font-size:17px;font-weight:900;color:#b00000;letter-spacing:0.5px">🔴 GẤP</span>`:''}
             ${(p.priority||'normal')==='low'?`<span style="font-size:13px;font-weight:700;color:#1a7a3c">🟢 Có thể chờ</span>`:''}
           </div>
@@ -1725,12 +1753,12 @@ function renderBtnD(p){
     return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
   const canPress = currentRole==='dung' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
-    const mainLabel = amt>0 ? `${fmt(amt)}/${fmt(total)}tr` : 'Chờ duyệt D';
+    const mainLabel = amt>0 ? `${fmt(amt)}/${fmtVND(total)}` : 'Chờ duyệt D';
     const prevInfo = amt>0 ? `<span class="ab-prev-info">${fmtFull(p.approvedD)}</span>` : '';
     return `<div class="approve-box"><button class="ab-btn ab-btn-tight ab-btn-approve" onclick="approveBy('${p.id}','approvedD')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">D</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmt(total)+'tr'}</span></div><span class="ab-time-sub">${fmtFull(p.approvedD)}</span>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">D</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div><span class="ab-time-sub">${fmtFull(p.approvedD)}</span>`;
     const canUndo = currentRole==='dung' && p.status!=='transferred';
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><button class="ab-done-btn" style="color:var(--green)" onclick="undoApprove('${p.id}','approvedD')" title="Bấm để bỏ toàn bộ duyệt của Dũng">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><div class="ab-done-btn" style="color:var(--green)">${inner}</div></div>`;
@@ -1747,12 +1775,12 @@ function renderBtnH(p){
     return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
   const canPress = currentRole==='hien' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
-    const mainLabel = amt>0 ? `${fmt(amt)}/${fmt(total)}tr` : 'Chờ duyệt H';
+    const mainLabel = amt>0 ? `${fmt(amt)}/${fmtVND(total)}` : 'Chờ duyệt H';
     const prevInfo = amt>0 ? `<span class="ab-prev-info">${fmtFull(p.approvedH)}</span>` : '';
     return `<div class="approve-box"><button class="ab-btn ab-btn-tight" style="background:#7c3aed;color:#fff" onclick="approveBy('${p.id}','approvedH')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">H</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmt(total)+'tr'}</span></div><span class="ab-time-sub">${fmtFull(p.approvedH)}</span>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">H</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div><span class="ab-time-sub">${fmtFull(p.approvedH)}</span>`;
     const canUndo = currentRole==='hien' && p.status!=='transferred';
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><button class="ab-done-btn" style="color:#7c3aed" onclick="undoApprove('${p.id}','approvedH')" title="Bấm để bỏ toàn bộ duyệt của Hiền">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><div class="ab-done-btn" style="color:#7c3aed">${inner}</div></div>`;
@@ -1774,7 +1802,7 @@ function renderBtnReject(p){
     const officialAmt = getOfficialApprovedAmount(p);
     const transferred = getTotalTransferred(p);
     const remaining = officialAmt > 0 ? officialAmt - transferred : 0;
-    const remLabel = remaining > 0.0001 ? ` ${fmt(remaining)}tr` : '';
+    const remLabel = remaining > 0.0001 ? ` ${fmtVND(remaining)}` : '';
     const whoLabel = (dHasRejected && hHasRejected) ? 'D+H' : (dHasRejected ? 'D' : 'H');
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">${whoLabel}</span><span class="ab-mid-label" style="color:#c81e1e">Từ chối${remLabel}</span></div>`;
     if(canRejectD && dHasRejected)
@@ -1801,13 +1829,13 @@ function renderBtnTransfer(p){
   const canPress = currentRole==='trang' && approvedAmt>0 && transferred < approvedAmt - 0.0001 && p.status!=='rejected';
   const canUndo = currentRole==='trang' && transferred>0;
   if(canPress){
-    const mainLabel = transferred>0 ? `${fmt(transferred)}/${fmt(approvedAmt)}tr` : 'Chờ chuyển';
+    const mainLabel = transferred>0 ? `${fmt(transferred)}/${fmtVND(approvedAmt)}` : 'Chờ chuyển';
     const prevInfo = transferred>0 ? `<span class="ab-prev-info">${p.transferredAt?fmtFull(p.transferredAt):''}</span>` : '';
     return `<div class="approve-box"><button class="ab-btn ab-btn-tight ab-btn-transfer" onclick="doTransfer('${p.id}')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
   }
   if(transferred>0){
     const full = transferred >= approvedAmt - 0.0001;
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">T</span><span class="ab-mid-label">${full?'Đã chuyển':fmt(transferred)+'/'+fmt(approvedAmt)+'tr'}</span></div><span class="ab-time-sub">${p.transferredAt?fmtFull(p.transferredAt):''}</span>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">T</span><span class="ab-mid-label">${full?'Đã chuyển':fmt(transferred)+'/'+fmtVND(approvedAmt)}</span></div><span class="ab-time-sub">${p.transferredAt?fmtFull(p.transferredAt):''}</span>`;
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="color:var(--yellow)" onclick="undoTransfer('${p.id}')" title="Bấm để hoàn tác lần chuyển gần nhất">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><div class="ab-done-btn" style="color:var(--yellow)">${inner}</div></div>`;
   }
@@ -1855,7 +1883,7 @@ function undoTransfer(id){
   syncStatusToSheet(id, p.status);
   syncTransferToSheet(p);
   renderAll();
-  showToast(`↩ Đã hoàn tác lần chuyển ${fmt(removed.amount)}tr`);
+  showToast(`↩ Đã hoàn tác lần chuyển ${fmtVND(removed.amount)}`);
 }
 
 // Mở modal nhập số tiền duyệt cho D hoặc H
@@ -1867,8 +1895,8 @@ function approveBy(id, field){
   const already = field==='approvedD' ? (parseFloat(p.approvedDAmount)||0) : (parseFloat(p.approvedHAmount)||0);
   const remain = (parseFloat(p.amount)||0) - already;
   document.getElementById('aa-title').textContent = (field==='approvedD' ? 'Dũng duyệt chi' : 'Hiền duyệt chi');
-  document.getElementById('aa-sub').textContent = `Tổng đề xuất: ${fmt(p.amount)}tr${already>0?` — Đã duyệt trước: ${fmt(already)}tr`:''}`;
-  document.getElementById('aa-amount').value = remain>0 ? remain : '';
+  document.getElementById('aa-sub').textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${already>0?` — Đã duyệt trước: ${fmtVND(already)}`:''}`;
+  document.getElementById('aa-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
   document.getElementById('aa-undo-btn').style.display = already>0 ? 'block' : 'none';
   document.getElementById('approve-amount-modal').style.display = 'flex';
   document.getElementById('approve-amount-modal').style.pointerEvents = 'auto';
@@ -1888,26 +1916,25 @@ function aaFillFull(){
   if(!pendingApproveField) return;
   const p = proposals.find(x=>x.id===pendingApproveField.id);
   if(!p) return;
-  document.getElementById('aa-amount').value = p.amount;
+  document.getElementById('aa-amount').value = Number(p.amount).toLocaleString('vi-VN',{maximumFractionDigits:0});
 }
 function confirmApproveAmount(){
   if(!pendingApproveField) return;
   const { id, field } = pendingApproveField;
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
-  const val = parseFloat(document.getElementById('aa-amount').value);
+  const val = parseAmountInput(document.getElementById('aa-amount'));
   if(!val || val<=0){ showToast('Vui lòng nhập số tiền hợp lệ'); return; }
-  if(val > p.amount){ showToast(`Không thể duyệt vượt quá tổng đề xuất (${fmt(p.amount)}tr)`); return; }
+  if(val > p.amount){ showToast(`Không thể duyệt vượt quá tổng đề xuất (${fmtVND(p.amount)})`); return; }
 
   const amountField = field==='approvedD' ? 'approvedDAmount' : 'approvedHAmount';
   const historyField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
-  const timeField = field; // approvedD / approvedH giữ làm mốc thời gian duyệt gần nhất
+  const timeField = field;
   const prevAmt = parseFloat(p[amountField])||0;
-  const newTotal = prevAmt + val; // CỘNG DỒN, không ghi đè
-  if(newTotal > p.amount + 0.0001){ showToast(`Tổng đã duyệt (${fmt(prevAmt)}tr + ${fmt(val)}tr = ${fmt(newTotal)}tr) vượt quá đề xuất (${fmt(p.amount)}tr)`); return; }
+  const newTotal = prevAmt + val;
+  if(newTotal > p.amount + 1){ showToast(`Tổng đã duyệt (${fmtVND(prevAmt)} + ${fmtVND(val)} = ${fmtVND(newTotal)}) vượt quá đề xuất (${fmtVND(p.amount)})`); return; }
   p[amountField] = newTotal;
   p[timeField] = Date.now();
-  // Lưu lịch sử từng lần duyệt (giống transfers[] của Trang)
   if(!Array.isArray(p[historyField])) p[historyField] = [];
   p[historyField].push({ amount: val, ts: p[timeField] });
   if(getOfficialApprovedAmount(p) > 0) p.status = 'approved';
@@ -1919,7 +1946,7 @@ function confirmApproveAmount(){
   renderAll();
   closeApproveAmountModal();
   const full = val >= p.amount;
-  showToast(`✓ ${field==='approvedD'?'Dũng':'Hiền'} đã duyệt ${fmt(val)}tr${full?' (toàn bộ)':' (1 phần)'}`);
+  showToast(`✓ ${field==='approvedD'?'Dũng':'Hiền'} đã duyệt ${fmtVND(val)}${full?' (toàn bộ)':' (1 phần)'}`);
 }
 
 function undoApprove(id, field){
@@ -1933,8 +1960,8 @@ function undoApprove(id, field){
   const lastEntry = hist[hist.length - 1];
   const lastAmt = lastEntry ? lastEntry.amount : 0;
   const confirmMsg = hist.length > 1
-    ? `Bỏ lần duyệt cuối (Lần ${hist.length}: ${fmt(lastAmt)}tr)?\nCác lần trước vẫn giữ nguyên.`
-    : `Bỏ duyệt lần ${hist.length} (${fmt(lastAmt)}tr)?`;
+    ? `Bỏ lần duyệt cuối (Lần ${hist.length}: ${fmtVND(lastAmt)})?\nCác lần trước vẫn giữ nguyên.`
+    : `Bỏ duyệt lần ${hist.length} (${fmtVND(lastAmt)})?`;
   if(!confirm(confirmMsg)) return;
 
   // Chỉ xóa lần cuối cùng
@@ -1954,7 +1981,7 @@ function undoApprove(id, field){
   renderAll();
   const who = field==='approvedD' ? 'Dũng' : 'Hiền';
   showToast(hist.length > 0
-    ? `↩ Đã bỏ lần duyệt cuối của ${who}. Còn ${hist.length} lần (${fmt(newTotal)}tr)`
+    ? `↩ Đã bỏ lần duyệt cuối của ${who}. Còn ${hist.length} lần (${fmtVND(newTotal)})`
     : `↩ Đã bỏ duyệt của ${who}`);
 }
 
@@ -1968,8 +1995,8 @@ function doTransfer(id){
   const remain = approvedAmt - transferred;
   if(remain<=0){ showToast('Đã chuyển đủ số tiền đã duyệt'); return; }
   pendingTransferId = id;
-  document.getElementById('ta-sub').textContent = `Đã duyệt: ${fmt(approvedAmt)}tr — Đã chuyển: ${fmt(transferred)}tr — Còn lại: ${fmt(remain)}tr`;
-  document.getElementById('ta-amount').value = remain;
+  document.getElementById('ta-sub').textContent = `Đã duyệt: ${fmtVND(approvedAmt)} — Đã chuyển: ${fmtVND(transferred)} — Còn lại: ${fmtVND(remain)}`;
+  document.getElementById('ta-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
   document.getElementById('transfer-amount-modal').style.display='flex';
   document.getElementById('transfer-amount-modal').style.pointerEvents='auto';
 }
@@ -1983,18 +2010,18 @@ function taFillFull(){
   const p = proposals.find(x=>x.id===pendingTransferId);
   if(!p) return;
   const remain = getOfficialApprovedAmount(p) - getTotalTransferred(p);
-  document.getElementById('ta-amount').value = remain>0 ? remain : 0;
+  document.getElementById('ta-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
 }
 function confirmTransferAmount(){
   if(!pendingTransferId) return;
   const id = pendingTransferId;
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
-  const val = parseFloat(document.getElementById('ta-amount').value);
+  const val = parseAmountInput(document.getElementById('ta-amount'));
   if(!val || val<=0){ showToast('Vui lòng nhập số tiền hợp lệ'); return; }
   const approvedAmt = getOfficialApprovedAmount(p);
   const transferred = getTotalTransferred(p);
-  if(val > approvedAmt - transferred + 0.0001){ showToast(`Không thể chuyển vượt quá số đã duyệt còn lại (${fmt(approvedAmt-transferred)}tr)`); return; }
+  if(val > approvedAmt - transferred + 1){ showToast(`Không thể chuyển vượt quá số đã duyệt còn lại (${fmtVND(approvedAmt-transferred)})`); return; }
 
   if(!Array.isArray(p.transfers)) p.transfers = [];
   p.transfers.push({ amount: val, ts: Date.now() });
@@ -2011,7 +2038,7 @@ function confirmTransferAmount(){
   renderAll();
   closeTransferAmountModal();
   const remaining = (parseFloat(p.amount)||0) - totalAfter;
-  showToast(`💸 Đã chuyển ${fmt(val)}tr${isFullyDone?' (đủ toàn bộ đề xuất)':' — còn '+fmt(remaining)+'tr cần duyệt thêm'}`);
+  showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ toàn bộ đề xuất)':' — còn '+fmt(remaining)+'tr cần duyệt thêm'}`);
   if(isFullyDone) setTimeout(()=>uploadProof(id),500);
 }
 
@@ -2129,7 +2156,7 @@ function openEditProposal(id){
   document.getElementById('edit-person').value = p.person||'';
   document.getElementById('edit-site').value = p.site||'';
   document.getElementById('edit-desc').value = p.desc||'';
-  document.getElementById('edit-amount').value = p.amount||'';
+  document.getElementById('edit-amount').value = p.amount ? Number(p.amount).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
   document.getElementById('edit-note').value = p.note||'';
   const epv = p.priority||'normal';
   document.querySelectorAll('input[name="edit-priority"]').forEach(r=>{ r.checked = r.value===epv; });
@@ -2201,17 +2228,18 @@ function saveEditProposal(){
   const person = document.getElementById('edit-person').value;
   const site = document.getElementById('edit-site').value;
   const desc = document.getElementById('edit-desc').value.trim();
-  const amount = document.getElementById('edit-amount').value.trim();
+  const amountRaw = parseAmountInput(document.getElementById('edit-amount'));
   const note = document.getElementById('edit-note').value.trim();
 
   if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
   if(!desc){ showToast('Vui lòng nhập nội dung'); return; }
-  if(!amount){ showToast('Vui lòng nhập số tiền'); return; }
+  if(!amountRaw){ showToast('Vui lòng nhập số tiền'); return; }
 
   p.person = person;
   p.site = site;
   p.desc = desc;
-  p.amount = parseFloat(amount)||0;
+  p.amount = amountRaw;
+  p.amountUnit = 'dong';
   p.note = note;
   p.priority = (document.querySelector('input[name="edit-priority"]:checked')||{value:'normal'}).value;
   p.imgImages = editingImages.slice();
@@ -2556,15 +2584,16 @@ function submitProposal(){
     const desc=document.getElementById('inp-desc').value.trim();
     const person=document.getElementById('inp-person').value;
     const site=document.getElementById('inp-site').value;
-    const amount=document.getElementById('inp-amount').value.trim();
+    const amountRaw=parseAmountInput(document.getElementById('inp-amount'));
     if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
     if(!desc){ showToast('Vui lòng nhập nội dung'); document.getElementById('inp-desc').focus(); return; }
-    if(!amount){ showToast('Vui lòng nhập số tiền'); document.getElementById('inp-amount').focus(); return; }
+    if(!amountRaw){ showToast('Vui lòng nhập số tiền'); document.getElementById('inp-amount').focus(); return; }
 
     const p={
       id: Date.now().toString(),
       desc, person, site,
-      amount: parseFloat(amount)||0,
+      amount: amountRaw,
+      amountUnit: 'dong',
       note: document.getElementById('inp-note').value.trim(),
       priority: (document.querySelector('input[name="inp-priority"]:checked')||{value:'normal'}).value,
       status:'pending',
@@ -2731,7 +2760,7 @@ function renderReportRejected(){
       <td style="font-weight:700">${p.desc}</td>
       <td>${p.person||'—'}</td>
       <td style="font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount" style="color:var(--red)">${fmt(p.amount)}tr</td>
+      <td class="col-amount" style="color:var(--red)">${fmtVND(p.amount)}</td>
       <td style="text-align:center">${prCell}</td>
       <td style="font-size:9px;color:#c81e1e;white-space:normal">${dLine?`D: ${dLine}<br><span style="color:#999">${dTs}</span>`:''}</td>
       <td style="font-size:9px;color:#7c3aed;white-space:normal">${hLine?`H: ${hLine}<br><span style="color:#999">${hTs}</span>`:''}</td>
@@ -2742,7 +2771,7 @@ function renderReportRejected(){
   el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
     <thead><tr><th>Nội dung</th><th>Người</th><th>CT</th><th>Số tiền</th><th>Mức</th><th>D từ chối</th><th>H từ chối</th><th>Ngày tạo</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu bị từ chối</span><span style="color:var(--red)">${fmt(total)}tr</span></div>`;
+  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu bị từ chối</span><span style="color:var(--red)">${fmtVND(total)}</span></div>`;
 }
 
 function renderReportList(){
@@ -2761,9 +2790,9 @@ function renderReportList(){
     const rejD = (dRej||legD)?(dRej&&dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'';
     const rejH = (hRej||legH)?(hRej&&hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):'';
     const rejStr = [rejD,rejH].filter(Boolean).join('<br>');
-    const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmt(dAmt)+'tr':'');
-    const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmt(hAmt)+'tr':'');
-    const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmt(trans)+'tr':'');
+    const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmtVND(dAmt):'');
+    const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmtVND(hAmt):'');
+    const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmtVND(trans):'');
     const cellBase = 'style="vertical-align:top;white-space:normal;line-height:1.5"';
     const prv2 = p.priority||'normal';
     const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
@@ -2772,7 +2801,7 @@ function renderReportList(){
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:10px">${p.person||'—'}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount" style="vertical-align:top">${fmt(p.amount)}tr</td>
+      <td class="col-amount" style="vertical-align:top">${fmtVND(p.amount)}</td>
       <td style="vertical-align:top;text-align:center;font-size:14px">${prCell2}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--blue)">${dHist}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:#7c3aed">${hHist}</td>
@@ -2786,7 +2815,7 @@ function renderReportList(){
   el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
     <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmt(total)}tr</span><span>Đã chuyển: ${fmt(totalTrans)}tr</span></div>`;
+  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtVND(total)}</span><span>Đã chuyển: ${fmtVND(totalTrans)}</span></div>`;
 }
 
 function renderExcelTable(containerId, items, kind){
@@ -2811,16 +2840,16 @@ function renderExcelTable(containerId, items, kind){
       ? (lastTs ? fmtFull(lastTs) : '—')
       : new Date(p.ts).toLocaleDateString('vi-VN');
     const amtLabel = kind==='done'
-      ? `<span style="color:var(--yellow);font-weight:700">${fmt(transferred)} tr</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub)">còn ${fmt(remaining)}tr</span>`:''}`
+      ? `<span style="color:var(--yellow);font-weight:700">${fmtVND(transferred)}</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub)">còn ${fmtVND(remaining)}</span>`:''}`
       : transferred>0.001
-        ? `<span style="font-weight:700">${fmt(remaining)} tr</span><br><span style="font-size:9px;color:var(--red);font-weight:600">⚠ còn thiếu (đã chuyển ${fmt(transferred)}tr)</span>`
-        : `${fmt(p.amount)} tr`;
+        ? `<span style="font-weight:700">${fmtVND(remaining)}</span><br><span style="font-size:9px;color:var(--red);font-weight:600">⚠ còn thiếu (đã chuyển ${fmtVND(transferred)})</span>`
+        : `${fmtVND(p.amount)}`;
     const prv = p.priority||'normal';
     const prCell = prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'<span style="color:#1a7a3c">🟢 Chờ</span>':'🟡';
     const dAmt = parseFloat(p.approvedDAmount)||0;
     const hAmt = parseFloat(p.approvedHAmount)||0;
-    const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700">${fmt(dAmt)}tr ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
-    const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700">${fmt(hAmt)}tr ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
+    const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700">${fmtVND(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
+    const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
     return `<tr>
       <td>${p.desc}</td>
       <td class="col-amount">${amtLabel}</td>
@@ -2847,7 +2876,7 @@ function renderExcelTable(containerId, items, kind){
     </div>
     <div class="excel-table-footer">
       <span>Tổng cộng: ${sorted.length} khoản</span>
-      <span>${fmt(totalTransferred)} triệu đồng</span>
+      <span>${fmtVND(totalTransferred)}iệu đồng</span>
     </div>`;
 }
 
@@ -2874,21 +2903,21 @@ function renderReportSummary(){
     <div style="background:#eff6ff;border-radius:10px;padding:10px 12px">
       <div style="font-size:10px;color:#1a56db;font-weight:600">TỔNG ĐỀ XUẤT</div>
       <div style="font-size:18px;font-weight:800;color:#1a56db">${proposals.length} phiếu</div>
-      <div style="font-size:11px;color:#64748b">${fmt(tot)} triệu</div>
+      <div style="font-size:11px;color:#64748b">${fmtVND(tot)}iệu</div>
     </div>
     <div style="background:#f0fdf4;border-radius:10px;padding:10px 12px">
       <div style="font-size:10px;color:#16a34a;font-weight:600">ĐÃ CHUYỂN</div>
-      <div style="font-size:18px;font-weight:800;color:#16a34a">${fmt(transTotal)} tr</div>
+      <div style="font-size:18px;font-weight:800;color:#16a34a">${fmtVND(transTotal)}</div>
       <div style="font-size:11px;color:#64748b">${hasTrans.length} phiếu</div>
     </div>
     <div style="background:#fffbeb;border-radius:10px;padding:10px 12px">
       <div style="font-size:10px;color:#d97706;font-weight:600">ĐÃ DUYỆT · CHỜ CHUYỂN</div>
-      <div style="font-size:18px;font-weight:800;color:#d97706">${fmt(appdAmt)} tr</div>
+      <div style="font-size:18px;font-weight:800;color:#d97706">${fmtVND(appdAmt)}</div>
       <div style="font-size:11px;color:#64748b">${appd.length} phiếu</div>
     </div>
     <div style="background:#fdf4ff;border-radius:10px;padding:10px 12px">
       <div style="font-size:10px;color:#9333ea;font-weight:600">CHỜ DUYỆT</div>
-      <div style="font-size:18px;font-weight:800;color:#9333ea">${fmt(pendAmt)} tr</div>
+      <div style="font-size:18px;font-weight:800;color:#9333ea">${fmtVND(pendAmt)}</div>
       <div style="font-size:11px;color:#64748b">${pend.length} phiếu</div>
     </div>
     ${urgent.length ? `<div style="background:#fdecea;border-radius:10px;padding:10px 12px;grid-column:1/-1;border:1.5px solid #f5a0a0">
@@ -2912,14 +2941,14 @@ function renderReportSummary(){
         (hRej||legH)?(hRej&&hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):''
       ].filter(Boolean).join('<br>') : '';
       const amtCell = showRej
-        ? `<span style="color:var(--red)">${fmt(p.amount)}tr</span>`
+        ? `<span style="color:var(--red)">${fmtVND(p.amount)}</span>`
         : trans>0 && remaining>0.001
-          ? `<span style="color:var(--yellow)">${fmt(trans)}tr</span><br><span style="font-size:9px;color:var(--red)">còn ${fmt(remaining)}tr</span>`
+          ? `<span style="color:var(--yellow)">${fmtVND(trans)}</span><br><span style="font-size:9px;color:var(--red)">còn ${fmtVND(remaining)}</span>`
           : trans>0
-            ? `<span style="color:#16a34a">${fmt(trans)}tr</span>`
+            ? `<span style="color:#16a34a">${fmtVND(trans)}</span>`
             : official>0
-              ? `<span style="color:#d97706">${fmt(official)}tr</span>`
-              : `<span style="color:#64748b">${fmt(p.amount)}tr</span>`;
+              ? `<span style="color:#d97706">${fmtVND(official)}</span>`
+              : `<span style="color:#64748b">${fmtVND(p.amount)}</span>`;
       const prv = p.priority||'normal';
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
       return `<tr>
@@ -2936,7 +2965,7 @@ function renderReportSummary(){
       : list.reduce((a,p)=>a+getTotalTransferred(p),0);
     return `
     <div style="padding:0 12px 12px">
-      <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmt(groupTotal)}tr</div>
+      <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtVND(groupTotal)}</div>
       <div class="excel-table-wrap" style="border-radius:0 0 8px 8px;overflow:hidden">
         <table class="excel-table" style="border-radius:0">
           <thead><tr><th>Nội dung</th><th>Người</th><th>CT</th><th>Mức</th><th>${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th>Lý do</th>':''}</tr></thead>
@@ -2962,12 +2991,12 @@ function generateReport(){
     const dRej = p.rejectedByD; const hRej = p.rejectedByH;
     const legD = !dRej&&!hRej&&p.rejectedBy==='D'; const legH = !dRej&&!hRej&&p.rejectedBy==='H';
     const rejInfo = [(dRej||legD)?(dRej&&dRej.reason?`D từ chối: "${dRej.reason}"`:'D từ chối'):'', (hRej||legH)?(hRej&&hRej.reason?`H từ chối: "${hRej.reason}"`:'H từ chối'):''].filter(Boolean).join(', ');
-    const duyetInfo = [dAmt>0?`D:${fmt(dAmt)}tr`:'', hAmt>0?`H:${fmt(hAmt)}tr`:''].filter(Boolean).join(', ');
+    const duyetInfo = [dAmt>0?`D:${fmtVND(dAmt)}`:'', hAmt>0?`H:${fmtVND(hAmt)}`:''].filter(Boolean).join(', ');
     let detail = '';
     if(duyetInfo) detail += ` [Duyệt: ${duyetInfo}]`;
-    if(trans>0) detail += ` [Chuyển: ${fmt(trans)}tr]`;
+    if(trans>0) detail += ` [Chuyển: ${fmtVND(trans)}]`;
     if(rejInfo) detail += ` [${rejInfo}]`;
-    return `• ${p.desc} — ${p.person} — ${p.site||'?'} — ${fmt(p.amount)}tr${detail}`;
+    return `• ${p.desc} — ${p.person} — ${p.site||'?'} — ${fmtVND(p.amount)}${detail}`;
   };
   const hasTrans = proposals.filter(p=>getTotalTransferred(p)>0);
   const appd = proposals.filter(p=>p.status==='approved');
@@ -2977,7 +3006,7 @@ function generateReport(){
   const transTotal = proposals.reduce((a,p)=>a+getTotalTransferred(p),0);
   let lines=[];
   lines.push(`📊 BÁO CÁO TỔNG HỢP — ${new Date().toLocaleDateString('vi-VN')}`);
-  lines.push(`Tổng: ${proposals.length} đề xuất · ${fmt(tot)}tr · Đã chuyển: ${fmt(transTotal)}tr`);
+  lines.push(`Tổng: ${proposals.length} đề xuất · ${fmtVND(tot)} · Đã chuyển: ${fmtVND(transTotal)}`);
   lines.push('');
   lines.push(`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản, ${fmt(hasTrans.reduce((a,p)=>a+getTotalTransferred(p),0))}tr):`);
   lines.push(hasTrans.length ? hasTrans.map(fLine).join('\n') : '(không có)');
@@ -3123,8 +3152,8 @@ function syncApprovalToSheet(id, field, time){
 
 function syncApprovalAmountToSheet(p){
   if(!sheetUrl) return;
-  const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory.map((t,i)=>`Lần ${i+1}: ${fmt(t.amount)}tr lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
-  const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory.map((t,i)=>`Lần ${i+1}: ${fmt(t.amount)}tr lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
+  const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
+  const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const params = new URLSearchParams({
     action:'updateApprovalAmount', id:p.id,
     dAmount: p.approvedDAmount||'', hAmount: p.approvedHAmount||'',
@@ -3139,7 +3168,7 @@ function syncApprovalAmountToSheet(p){
 
 function syncTransferToSheet(p){
   if(!sheetUrl) return;
-  const history = Array.isArray(p.transfers) ? p.transfers.map((t,i)=>`Lần ${i+1}: ${fmt(t.amount)}tr lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
+  const history = Array.isArray(p.transfers) ? p.transfers.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const params = new URLSearchParams({
     action:'updateTransfer', id:p.id,
     totalTransferred: getTotalTransferred(p)||'',
