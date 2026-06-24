@@ -363,6 +363,15 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<script>
+// Tự thêm timestamp vào URL để tránh cache — chạy trước mọi thứ khác
+(function(){
+  var p = location.search;
+  if(p.indexOf('t=')===-1 && p.indexOf('r=')===-1){
+    location.replace(location.pathname + '?t=' + Date.now());
+  }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#1a56db">
 <meta name="apple-mobile-web-app-capable" content="yes">
