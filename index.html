@@ -3117,9 +3117,12 @@ function showToast(msg){
 
 <script>
 if('serviceWorker' in navigator){
+  // Nhận lệnh reload từ SW mới khi activate
+  navigator.serviceWorker.addEventListener('message', e => {
+    if(e.data && e.data.type === 'SW_UPDATED') location.reload();
+  });
   navigator.serviceWorker.register('/Duyet-Chi/sw.js').then(reg=>{
-    // Kiểm tra update ngay khi mở app (không chờ 24h)
-    reg.update();
+    reg.update(); // kiểm tra ngay khi mở app
     function listenUpdate(r){
       if(!r) return;
       r.addEventListener('statechange',()=>{
