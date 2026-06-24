@@ -2140,8 +2140,9 @@ function addImagesToUpload(files){
     }).catch(err=>{
       console.error('Upload ảnh thất bại:', err);
       done++;
-      const msg = err && err.code ? `❌ Lỗi ảnh: ${err.code}` : '❌ Tải ảnh lên thất bại, thử lại';
+      const msg = err && err.code ? `❌ Lỗi ảnh: ${err.code}` : `❌ Lỗi ảnh: ${err && err.message ? err.message : 'không rõ'}`;
       showToast(msg);
+      alert('Lỗi upload ảnh:\n' + (err ? (err.code||'') + '\n' + (err.message||'') : 'unknown'));
       if(done===validFiles.length) renderUploadPreview();
     });
   });
