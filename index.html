@@ -3043,4 +3043,19 @@ if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.se
 
 
 
+<script>
+// Tự động reload khi có phiên bản mới — không cần xóa cache thủ công
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/Duyet-Chi/sw.js').then(reg=>{
+    reg.addEventListener('updatefound',()=>{
+      const nw = reg.installing;
+      nw.addEventListener('statechange',()=>{
+        if(nw.state==='installed' && navigator.serviceWorker.controller){
+          if(confirm('App có bản cập nhật mới. Tải lại ngay?')) location.reload();
+        }
+      });
+    });
+  });
+}
+</script>
 </body></html>
