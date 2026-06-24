@@ -564,11 +564,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 /* Excel-like table */
 .excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.excel-table{width:100%;border-collapse:collapse;font-size:11px;min-width:560px}
-.excel-table th{background:var(--blue);color:#fff;padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;position:sticky;top:0}
-.excel-table td{padding:7px 6px;border-bottom:1px solid var(--gray-border);white-space:nowrap}
-.excel-table tr:nth-child(even) td{background:#f9fafb}
-.excel-table tr:hover td{background:var(--blue-light)}
+.excel-table{width:100%;border-collapse:collapse;font-size:11px;min-width:560px;border:1.5px solid #b0b8c9}
+.excel-table th{background:var(--blue);color:#fff;padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;position:sticky;top:0;border-right:1px solid rgba(255,255,255,0.25)}
+.excel-table td{padding:7px 6px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;white-space:nowrap}
+.excel-table tr:nth-child(even) td{background:#f4f6fa}
+.excel-table tr:hover td{background:#e8f0fe}
 .excel-table .col-amount{text-align:right;font-weight:700;color:var(--blue)}
 .excel-table-empty{padding:30px 16px;text-align:center;color:var(--text-sub);font-size:12px}
 .excel-table-footer{padding:10px 12px;background:var(--gray-light);font-size:12px;font-weight:700;display:flex;justify-content:space-between;border-top:2px solid var(--gray-border)}
@@ -876,6 +876,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button class="report-subtab" data-tab="list" onclick="setReportTab('list',this)">📋 Danh sách</button>
         <button class="report-subtab" data-tab="done" onclick="setReportTab('done',this)">💸 Đã chuyển</button>
         <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">⏳ Chưa chuyển</button>
+        <button class="report-subtab" data-tab="rejected" onclick="setReportTab('rejected',this)">❌ Từ chối</button>
       </div>
       <!-- Hàng lọc -->
       <div style="display:flex;gap:8px;padding:8px 12px 10px">
@@ -917,6 +918,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card report-tab-panel" id="report-tab-pending" style="display:none">
     <div class="card-body" style="padding:0">
       <div id="report-table-pending"></div>
+    </div>
+  </div>
+
+  <!-- Tab con: Từ chối -->
+  <div class="card report-tab-panel" id="report-tab-rejected" style="display:none">
+    <div class="card-body" style="padding:0">
+      <div id="report-table-rejected"></div>
     </div>
   </div>
 </div>
@@ -2656,6 +2664,7 @@ function setReportTab(tab, btn){
   });
   if(tab==='summary') renderReportSummary();
   if(tab==='done' || tab==='pending') renderReportTables();
+  if(tab==='rejected') renderReportRejected();
   if(tab==='list') renderReportList();
 }
 
@@ -2686,6 +2695,7 @@ function applyReportFilter(){
   if(t==='summary') renderReportSummary();
   else if(t==='done'||t==='pending') renderReportTables();
   else if(t==='list') renderReportList();
+  else if(t==='rejected') renderReportRejected();
 }
 
 
@@ -2698,6 +2708,39 @@ function renderReportTables(){
     const transferred = getTotalTransferred(p);
     return transferred < approved - 0.001;
   }), 'pending');
+}
+
+function renderReportRejected(){
+  const el = document.getElementById('report-table-rejected');
+  if(!el) return;
+  const fp = getFilteredProposals().filter(p=>p.status==='rejected');
+  if(!fp.length){ el.innerHTML='<div class="excel-table-empty">Không có phiếu nào bị từ chối.</div>'; return; }
+  const sorted = fp.slice().sort((a,b)=>b.ts-a.ts);
+  const rows = sorted.map((p,i)=>{
+    const dRej=p.rejectedByD, hRej=p.rejectedByH;
+    const legD=!dRej&&!hRej&&p.rejectedBy==='D', legH=!dRej&&!hRej&&p.rejectedBy==='H';
+    const dLine = (dRej||legD)?(dRej&&dRej.reason?`"${dRej.reason}"`:'—'):'';
+    const hLine = (hRej||legH)?(hRej&&hRej.reason?`"${hRej.reason}"`:'—'):'';
+    const dTs = dRej&&dRej.ts?fmtT(dRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
+    const hTs = hRej&&hRej.ts?fmtT(hRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
+    const prv=p.priority||'normal';
+    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Chờ':'🟡 BT';
+    return `<tr>
+      <td style="font-weight:700">${p.desc}</td>
+      <td>${p.person||'—'}</td>
+      <td style="font-size:9px">${p.site||'—'}</td>
+      <td class="col-amount" style="color:var(--red)">${fmt(p.amount)}tr</td>
+      <td style="text-align:center">${prCell}</td>
+      <td style="font-size:9px;color:#c81e1e;white-space:normal">${dLine?`D: ${dLine}<br><span style="color:#999">${dTs}</span>`:''}</td>
+      <td style="font-size:9px;color:#7c3aed;white-space:normal">${hLine?`H: ${hLine}<br><span style="color:#999">${hTs}</span>`:''}</td>
+      <td style="font-size:9px">${new Date(p.ts).toLocaleDateString('vi-VN')}</td>
+    </tr>`;
+  }).join('');
+  const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
+    <thead><tr><th>Nội dung</th><th>Người</th><th>CT</th><th>Số tiền</th><th>Mức</th><th>D từ chối</th><th>H từ chối</th><th>Ngày tạo</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu bị từ chối</span><span style="color:var(--red)">${fmt(total)}tr</span></div>`;
 }
 
 function renderReportList(){
@@ -2720,12 +2763,15 @@ function renderReportList(){
     const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmt(hAmt)+'tr':'');
     const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmt(t.amount)}tr ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmt(trans)+'tr':'');
     const cellBase = 'style="vertical-align:top;white-space:normal;line-height:1.5"';
+    const prv2 = p.priority||'normal';
+    const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
     return `<tr>
       <td style="vertical-align:top;text-align:center">${sorted.length-i}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:10px">${p.person||'—'}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px">${p.site||'—'}</td>
       <td class="col-amount" style="vertical-align:top">${fmt(p.amount)}tr</td>
+      <td style="vertical-align:top;text-align:center;font-size:14px">${prCell2}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--blue)">${dHist}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:#7c3aed">${hHist}</td>
       <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--yellow)">${tHist}</td>
@@ -2736,7 +2782,7 @@ function renderReportList(){
   const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const totalTrans = fp.reduce((a,p)=>a+getTotalTransferred(p),0);
   el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
-    <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
+    <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
   <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmt(total)}tr</span><span>Đã chuyển: ${fmt(totalTrans)}tr</span></div>`;
 }
