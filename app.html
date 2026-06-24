@@ -573,6 +573,17 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .excel-table tr:nth-child(even) td{background:#f4f6fa}
 .excel-table tr:hover td{background:#e8f0fe}
 .excel-table .col-amount{text-align:right;font-weight:700;color:var(--blue)}
+/* Bảng báo cáo tóm tắt: vừa màn hình, không cần scroll ngang */
+.report-table{width:100%;border-collapse:collapse;font-size:11px;border:1.5px solid #b0b8c9;table-layout:fixed}
+.report-table th{background:var(--blue);color:#fff;padding:6px 5px;text-align:left;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.25);overflow:hidden}
+.report-table td{padding:5px 5px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;vertical-align:top;word-break:break-word}
+.report-table tr:nth-child(even) td{background:#f4f6fa}
+.report-table .col-desc{width:auto}
+.report-table .col-person{width:52px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-table .col-site{width:70px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-table .col-pri{width:22px;text-align:center;font-size:12px}
+.report-table .col-amt{width:88px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap}
+.report-table .col-rej{width:70px;font-size:9px;color:var(--red)}
 .excel-table-empty{padding:30px 16px;text-align:center;color:var(--text-sub);font-size:12px}
 .excel-table-footer{padding:10px 12px;background:var(--gray-light);font-size:12px;font-weight:700;display:flex;justify-content:space-between;border-top:2px solid var(--gray-border)}
 
@@ -2948,12 +2959,12 @@ function renderReportSummary(){
       const prv = p.priority||'normal';
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
       return `<tr>
-        <td style="font-weight:600;max-width:90px;white-space:normal">${p.desc}</td>
-        <td style="font-size:10px">${p.person||'—'}</td>
-        <td style="font-size:9px;color:#64748b">${(p.site||'').replace('CT ','')}</td>
-        <td style="font-size:13px;text-align:center">${prCell}</td>
-        <td class="col-amount" style="font-size:11px;white-space:normal;line-height:1.4">${amtCell}</td>
-        ${showRej?`<td style="font-size:9px;color:var(--red);white-space:normal">${rejStr||'—'}</td>`:''}
+        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}</td>
+        <td class="col-person">${p.person||'—'}</td>
+        <td class="col-site" style="color:#64748b">${(p.site||'').replace('CT ','')}</td>
+        <td class="col-pri">${prCell}</td>
+        <td class="col-amt">${amtCell}</td>
+        ${showRej?`<td class="col-rej">${rejStr||'—'}</td>`:''}
       </tr>`;
     }).join('');
     const groupTotal = showRej
@@ -2962,9 +2973,9 @@ function renderReportSummary(){
     return `
     <div style="padding:0 12px 12px">
       <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtVND(groupTotal)}</div>
-      <div class="excel-table-wrap" style="border-radius:0 0 8px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
-        <table class="excel-table" style="border-radius:0">
-          <thead><tr><th>Nội dung</th><th>Người</th><th>CT</th><th>Mức</th><th>${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th>Lý do</th>':''}</tr></thead>
+      <div style="border-radius:0 0 8px 8px;overflow:hidden">
+        <table class="report-table">
+          <thead><tr><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th class="col-rej">Lý do</th>':''}</tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
