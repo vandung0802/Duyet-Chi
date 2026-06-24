@@ -360,6 +360,9 @@
     </script>
   
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#1a56db">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -3116,25 +3119,13 @@ function showToast(msg){
 
 
 <script>
+// Xóa Service Worker cũ nếu còn tồn tại
 if('serviceWorker' in navigator){
-  // Nhận lệnh reload từ SW mới khi activate
   navigator.serviceWorker.addEventListener('message', e => {
-    if(e.data && e.data.type === 'SW_UPDATED') location.reload();
+    if(e.data && (e.data.type==='RELOAD'||e.data.type==='SW_UPDATED')) location.reload();
   });
-  navigator.serviceWorker.register('/Duyet-Chi/sw.js').then(reg=>{
-    reg.update(); // kiểm tra ngay khi mở app
-    function listenUpdate(r){
-      if(!r) return;
-      r.addEventListener('statechange',()=>{
-        if(r.state==='installed' && navigator.serviceWorker.controller){
-          if(confirm('App có bản cập nhật mới. Tải lại ngay?')) location.reload();
-        }
-      });
-    }
-    if(reg.installing) listenUpdate(reg.installing);
-    if(reg.waiting) listenUpdate(reg.waiting);
-    reg.addEventListener('updatefound',()=>listenUpdate(reg.installing));
-  });
+  navigator.serviceWorker.register('/Duyet-Chi/sw.js');
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update()));
 }
 </script>
 </body></html>
