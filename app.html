@@ -2695,7 +2695,7 @@ function delSite(i){ sites.splice(i,1); save(); renderSettings(); }
 function setReportTab(tab, btn){
   document.querySelectorAll('.report-subtab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  ['summary','list','done','pending'].forEach(t=>{
+  ['summary','list','done','pending','rejected'].forEach(t=>{
     document.getElementById('report-tab-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
   if(tab==='summary') renderReportSummary();
