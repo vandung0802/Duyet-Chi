@@ -2962,7 +2962,7 @@ function renderReportSummary(){
     return `
     <div style="padding:0 12px 12px">
       <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtVND(groupTotal)}</div>
-      <div class="excel-table-wrap" style="border-radius:0 0 8px 8px;overflow:hidden">
+      <div class="excel-table-wrap" style="border-radius:0 0 8px 8px;overflow-x:auto;-webkit-overflow-scrolling:touch">
         <table class="excel-table" style="border-radius:0">
           <thead><tr><th>Nội dung</th><th>Người</th><th>CT</th><th>Mức</th><th>${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th>Lý do</th>':''}</tr></thead>
           <tbody>${rows}</tbody>
