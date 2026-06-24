@@ -2589,12 +2589,12 @@ function setReportTab(tab, btn){
 function renderPersonChips(){
   const wrap = document.getElementById('report-person-chips');
   if(!wrap) return;
-  // Lấy danh sách người từ proposals + persons (để có người chưa có đề xuất vẫn không hiện)
-  const names = [...new Set(proposals.map(p=>p.person||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
-  if(!names.length){ wrap.innerHTML=''; return; }
+  const names = [...new Set(proposals.map(p=>p.person||'').filter(Boolean))].sort();
+  if(!names.length){ wrap.innerHTML='<span style="font-size:11px;color:#aaa;padding:2px 4px">Chưa có đề xuất</span>'; return; }
   wrap.innerHTML = names.map(name=>{
+    const safe = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     const isActive = activePersonChip===name;
-    return `<button class="person-chip${isActive?' active':''}" onclick="selectPersonChip('${name.replace(/'/g,"\\'")}',this)">${name}</button>`;
+    return `<button class="person-chip${isActive?' active':''}" onclick="selectPersonChip('${safe}',this)">${name}</button>`;
   }).join('');
 }
 
