@@ -983,11 +983,9 @@ const storage = firebase.storage();
 
 // Upload ảnh (dataUrl) lên Firebase Storage, trả về download URL
 async function uploadToStorage(dataUrl, storagePath){
-  // Chuyển dataUrl → Blob
-  const res = await fetch(dataUrl);
-  const blob = await res.blob();
   const ref = storage.ref(storagePath);
-  await ref.put(blob, { contentType: 'image/jpeg' });
+  // dùng putString với DATA_URL để tránh lỗi CORS khi fetch blob
+  await ref.putString(dataUrl, 'data_url', { contentType: 'image/jpeg' });
   return await ref.getDownloadURL();
 }
 let fbConnected = false;
