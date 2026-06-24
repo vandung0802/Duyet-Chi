@@ -1508,7 +1508,9 @@ function attachThumbLongPress(container){
         : (Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64?[p.imgB64]:[]));
       return arr[idx]||'';
     };
-    const getDeleteFn = kind==='proof' ? (()=>(()=>removeProofImage(pid, idx))) : null;
+    const getDeleteFn = kind==='proof'
+      ? (()=>(()=>removeProofImage(pid, idx)))
+      : (()=>(()=>removeZaloImage(pid, idx)));
     attachLongPress(img, getSrc, getDeleteFn);
   });
 }
@@ -2189,19 +2191,20 @@ document.addEventListener('DOMContentLoaded', ()=>{
     attachLongPress(
       modalImgEl,
       ()=>modalImages[modalIdx],
-      ()=> (modalKind==='proof' ? (()=>{
-        removeProofImage(modalProposalId, modalIdx);
-        // Sau khi xóa, đồng bộ lại danh sách ảnh hiển thị trong modal (nếu còn ảnh thì xem tiếp, hết thì đóng)
+      ()=> (()=>{
         const p = proposals.find(x=>x.id===modalProposalId);
-        const arr = p ? (Array.isArray(p.proofImages)?p.proofImages:[]) : [];
-        if(arr.length){
-          modalImages = arr;
-          modalIdx = Math.min(modalIdx, arr.length-1);
-          showModalImg();
+        if(modalKind==='proof'){
+          removeProofImage(modalProposalId, modalIdx);
+          const arr2 = p ? (Array.isArray(p.proofImages)?p.proofImages:[]) : [];
+          if(arr2.length){ modalImages=arr2; modalIdx=Math.min(modalIdx,arr2.length-1); showModalImg(); }
+          else closeImgModal();
         } else {
-          closeImgModal();
+          removeZaloImage(modalProposalId, modalIdx);
+          const arr2 = p ? (Array.isArray(p.imgImages)?p.imgImages:(p.imgB64?[p.imgB64]:[])) : [];
+          if(arr2.length){ modalImages=arr2; modalIdx=Math.min(modalIdx,arr2.length-1); showModalImg(); }
+          else closeImgModal();
         }
-      }) : null)
+      })
     );
   }
   const pasteZone = document.getElementById('paste-zone');
@@ -2425,6 +2428,19 @@ function removeProofImage(id, idx){
   save();
   renderAll();
   showToast('Đã xóa ảnh chứng từ');
+}
+
+function removeZaloImage(id, idx){
+  const p=proposals.find(x=>x.id===id);
+  if(!p) return;
+  const arr = Array.isArray(p.imgImages) ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
+  if(!arr.length) return;
+  arr.splice(idx,1);
+  p.imgImages = arr;
+  if(arr.length===0){ p.imgB64=null; }
+  save();
+  renderAll();
+  showToast('Đã xóa ảnh');
 }
 
 // ── AI READ ──
