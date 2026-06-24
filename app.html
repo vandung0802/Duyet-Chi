@@ -2768,11 +2768,18 @@ function renderExcelTable(containerId, items, kind){
       : transferred>0.001
         ? `<span style="font-weight:700">${fmt(remaining)} tr</span><br><span style="font-size:9px;color:var(--red);font-weight:600">⚠ còn thiếu (đã chuyển ${fmt(transferred)}tr)</span>`
         : `${fmt(p.amount)} tr`;
+    const prv = p.priority||'normal';
+    const prCell = prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'<span style="color:#1a7a3c">🟢 Chờ</span>':'🟡';
+    const dAmt = parseFloat(p.approvedDAmount)||0;
+    const hAmt = parseFloat(p.approvedHAmount)||0;
+    const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700">${fmt(dAmt)}tr ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
+    const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700">${fmt(hAmt)}tr ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
     return `<tr>
       <td>${p.desc}</td>
       <td class="col-amount">${amtLabel}</td>
       <td>${p.person||'—'}</td>
       <td>${p.site||'—'}</td>
+      ${kind==='pending'?`<td style="text-align:center">${dCell}</td><td style="text-align:center">${hCell}</td><td style="text-align:center">${prCell}</td>`:''}
       <td>${dateCol}</td>
     </tr>`;
   }).join('');
@@ -2784,7 +2791,9 @@ function renderExcelTable(containerId, items, kind){
     <div class="excel-table-wrap">
       <table class="excel-table">
         <thead><tr>
-          <th>Tên đề xuất</th><th>${kind==='done'?'Đã chuyển':'Còn phải chuyển'}</th><th>Người đề xuất</th><th>Công trường</th><th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
+          <th>Tên đề xuất</th><th>${kind==='done'?'Đã chuyển':'Còn chuyển'}</th><th>Người</th><th>CT</th>
+          ${kind==='pending'?'<th>D duyệt</th><th>H duyệt</th><th>Mức</th>':''}
+          <th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
