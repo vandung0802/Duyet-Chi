@@ -1012,6 +1012,13 @@ const APP_VERSION = '20260624-v12';
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+// Tự động reload sau 15 phút không dùng → luôn có bản mới nhất
+(function(){
+  let t = setTimeout(()=>location.reload(), 15*60*1000);
+  const reset = ()=>{ clearTimeout(t); t = setTimeout(()=>location.reload(), 15*60*1000); };
+  ['touchstart','click','keydown','scroll'].forEach(e=>document.addEventListener(e, reset, {passive:true}));
+})();
 const storage = firebase.storage();
 
 // Upload ảnh (dataUrl) lên Firebase Storage, trả về download URL
