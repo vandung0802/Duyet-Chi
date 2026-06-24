@@ -999,6 +999,13 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
+// Version check — tự reload nếu đang chạy bản cũ
+const APP_VERSION = '20260624-v10';
+if(localStorage.getItem('app_version') !== APP_VERSION){
+  localStorage.setItem('app_version', APP_VERSION);
+  location.reload(true);
+}
+
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
