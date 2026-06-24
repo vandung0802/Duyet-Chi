@@ -1363,7 +1363,7 @@ function initFirebaseSync(){
       fbInitialLoadDone = true;
       renderAll();
       if(document.getElementById('page-settings').style.display!=='none') renderSettings();
-      if(document.getElementById('page-report').style.display!=='none'){ renderPersonChips(); renderReportTables(); if(activePersonChip) renderPersonReport(activePersonChip); }
+      if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
       // Chuyển đổi sang cấu trúc mới ngay (tách node), rồi xóa node cũ để giải phóng dung lượng.
       showToast('🔄 Đang nâng cấp cách lưu dữ liệu để ổn định hơn...');
       pushToFirebase();
@@ -1419,7 +1419,7 @@ function initFirebaseSync(){
     fbInitialLoadDone = true;
     renderAll();
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
-    if(document.getElementById('page-report').style.display!=='none'){ renderPersonChips(); renderReportTables(); if(activePersonChip) renderPersonReport(activePersonChip); }
+    if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
   }, (err)=>{
     fbConnected = false;
     updateFbBadge(false);
@@ -2580,16 +2580,10 @@ function addSite(){
 }
 function delSite(i){ sites.splice(i,1); save(); renderSettings(); }
 
-// ── REPORT ──
 // ── REPORT SUB-TABS ──
-let activePersonChip = null;
-
 function setReportTab(tab, btn){
   document.querySelectorAll('.report-subtab').forEach(t=>t.classList.remove('active'));
   btn.classList.add('active');
-  // ẩn chip người khi chuyển tab (trừ khi đang ở person)
-  activePersonChip = null;
-  document.querySelectorAll('.person-chip').forEach(c=>c.classList.remove('active'));
   ['summary','list','done','pending'].forEach(t=>{
     document.getElementById('report-tab-'+t).style.display = (t===tab) ? 'block' : 'none';
   });
@@ -2627,95 +2621,6 @@ function applyReportFilter(){
   else if(t==='list') renderReportList();
 }
 
-function selectPersonChip(name, btn){
-  if(activePersonChip===name){
-    // Bấm lại → bỏ chọn, quay về Tóm tắt
-    activePersonChip=null;
-    document.querySelectorAll('.person-chip').forEach(c=>c.classList.remove('active'));
-    ['summary','list','done','pending','person'].forEach(t=>{
-      document.getElementById('report-tab-'+t).style.display=(t==='summary'?'block':'none');
-    });
-    document.querySelectorAll('.report-subtab').forEach(t=>t.classList.remove('active'));
-    document.querySelector('.report-subtab[data-tab="summary"]').classList.add('active');
-    renderReportSummary();
-    return;
-  }
-  activePersonChip=name;
-  document.querySelectorAll('.person-chip').forEach(c=>c.classList.remove('active'));
-  btn.classList.add('active');
-  // Ẩn hết các tab, hiện tab person
-  document.querySelectorAll('.report-subtab').forEach(t=>t.classList.remove('active'));
-  ['summary','list','done','pending','person'].forEach(t=>{
-    document.getElementById('report-tab-'+t).style.display=(t==='person'?'block':'none');
-  });
-  renderPersonReport(name);
-}
-
-function renderPersonReport(name){
-  const el=document.getElementById('report-person-content');
-  if(!el) return;
-  const ps = proposals.filter(p=>(p.person||'')=== name).sort((a,b)=>b.ts-a.ts);
-  if(!ps.length){ el.innerHTML=`<div style="padding:16px;color:var(--text-sub)">Không có đề xuất nào của ${name}.</div>`; return; }
-
-  const totalAmt   = ps.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
-  const totalTrans = ps.reduce((a,p)=>a+getTotalTransferred(p),0);
-  const totalApproved = ps.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0),0);
-  const pendingAmt = totalApproved - totalTrans;
-  const countApproved = ps.filter(p=>getOfficialApprovedAmount(p)>0).length;
-  const countTransferred = ps.filter(p=>getTotalTransferred(p)>0).length;
-
-  const statusColor={pending:'#f59e0b',approved:'#2563eb',transferred:'#16a34a',rejected:'#dc2626'};
-  const statusLabel={pending:'Chờ duyệt',approved:'Đã duyệt',transferred:'Đã chuyển',rejected:'Từ chối'};
-
-  const rows = ps.map((p,i)=>{
-    const st = p.status||'pending';
-    const approved = getOfficialApprovedAmount(p)||0;
-    const trans = getTotalTransferred(p);
-    const remaining = approved - trans;
-    const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length
-      ? p.approvedDHistory.map((t,j)=>`L${j+1}: ${fmt(t.amount)}tr`).join('<br>')
-      : (parseFloat(p.approvedDAmount)>0 ? fmt(p.approvedDAmount)+'tr' : '—');
-    const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length
-      ? p.approvedHHistory.map((t,j)=>`L${j+1}: ${fmt(t.amount)}tr`).join('<br>')
-      : (parseFloat(p.approvedHAmount)>0 ? fmt(p.approvedHAmount)+'tr' : '—');
-    const tHist = Array.isArray(p.transfers)&&p.transfers.length
-      ? p.transfers.map((t,j)=>`L${j+1}: ${fmt(t.amount)}tr`).join('<br>')
-      : (trans>0 ? fmt(trans)+'tr' : '—');
-    const rejD = p.rejectedByD||(p.rejectedBy==='D'?{reason:''}:null);
-    const rejH = p.rejectedByH||(p.rejectedBy==='H'?{reason:''}:null);
-    const rejStr = [
-      rejD?(rejD.reason?`D: "${rejD.reason}"`:'D từ chối'):'',
-      rejH?(rejH.reason?`H: "${rejH.reason}"`:'H từ chối'):''
-    ].filter(Boolean).join(', ')||'';
-    const cell='style="vertical-align:top;white-space:normal;line-height:1.6;font-size:10px"';
-    return `<tr>
-      <td style="vertical-align:top;text-align:center;font-size:10px">${ps.length-i}</td>
-      <td ${cell} style="vertical-align:top;white-space:normal;line-height:1.6;font-size:10px;font-weight:700;max-width:110px">${p.desc}</td>
-      <td ${cell} style="font-size:9px">${p.site||'—'}</td>
-      <td style="vertical-align:top;text-align:right;font-size:10px;font-weight:700">${fmt(p.amount)}tr</td>
-      <td ${cell} style="color:var(--blue)">${dHist}</td>
-      <td ${cell} style="color:#7c3aed">${hHist}</td>
-      <td ${cell} style="color:var(--yellow)">${tHist}</td>
-      <td style="vertical-align:top;text-align:right;font-size:10px;font-weight:700;color:${remaining>0.001?'var(--red)':'var(--green)'}">${remaining>0.001?fmt(remaining)+'tr còn lại':'✅'}</td>
-      <td style="vertical-align:top"><span style="font-size:9px;font-weight:700;color:${statusColor[st]||'#666'};white-space:nowrap">${statusLabel[st]||st}${rejStr?'<br><span style="color:var(--red);font-weight:400">'+rejStr+'</span>':''}</span></td>
-    </tr>`;
-  }).join('');
-
-  el.innerHTML=`
-    <div class="person-report-header">👤 ${name} — ${ps.length} đề xuất</div>
-    <div class="person-stat-row">
-      <div class="person-stat-box"><div class="psb-val">${ps.length}</div><div class="psb-lbl">Tổng phiếu</div></div>
-      <div class="person-stat-box"><div class="psb-val" style="color:#f59e0b">${fmt(totalAmt)}tr</div><div class="psb-lbl">Tổng đề xuất</div></div>
-      <div class="person-stat-box"><div class="psb-val" style="color:#2563eb">${countApproved}</div><div class="psb-lbl">Đã duyệt</div></div>
-      <div class="person-stat-box"><div class="psb-val" style="color:#16a34a">${fmt(totalTrans)}tr</div><div class="psb-lbl">Đã chuyển</div></div>
-      <div class="person-stat-box"><div class="psb-val" style="color:#dc2626">${pendingAmt>0.001?fmt(pendingAmt)+'tr':'—'}</div><div class="psb-lbl">Còn phải chuyển</div></div>
-    </div>
-    <div class="excel-table-wrap"><table class="excel-table">
-      <thead><tr><th>#</th><th>Nội dung</th><th>CT</th><th>Đề xuất</th><th>D duyệt</th><th>H duyệt</th><th>Đã chuyển</th><th>Còn lại</th><th>Trạng thái</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table></div>
-    <div class="excel-table-footer"><span>${ps.length} phiếu · đề xuất ${fmt(totalAmt)}tr</span><span>Đã chuyển ${fmt(totalTrans)}tr · còn ${pendingAmt>0.001?fmt(pendingAmt)+'tr':'0'}</span></div>`;
-}
 
 function renderReportTables(){
   const fp = getFilteredProposals();
