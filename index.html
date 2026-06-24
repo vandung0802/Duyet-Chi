@@ -3109,8 +3109,6 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2200);
 }
 
-// ── SERVICE WORKER ──
-if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js'));
 </script>
 
 
@@ -3118,17 +3116,21 @@ if('serviceWorker' in navigator) window.addEventListener('load',()=>navigator.se
 
 
 <script>
-// Tự động reload khi có phiên bản mới — không cần xóa cache thủ công
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/Duyet-Chi/sw.js').then(reg=>{
-    reg.addEventListener('updatefound',()=>{
-      const nw = reg.installing;
-      nw.addEventListener('statechange',()=>{
-        if(nw.state==='installed' && navigator.serviceWorker.controller){
+    // Kiểm tra update ngay khi mở app (không chờ 24h)
+    reg.update();
+    function listenUpdate(r){
+      if(!r) return;
+      r.addEventListener('statechange',()=>{
+        if(r.state==='installed' && navigator.serviceWorker.controller){
           if(confirm('App có bản cập nhật mới. Tải lại ngay?')) location.reload();
         }
       });
-    });
+    }
+    if(reg.installing) listenUpdate(reg.installing);
+    if(reg.waiting) listenUpdate(reg.waiting);
+    reg.addEventListener('updatefound',()=>listenUpdate(reg.installing));
   });
 }
 </script>
