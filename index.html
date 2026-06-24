@@ -2142,7 +2142,8 @@ function addImagesToUpload(files){
     }).catch(err=>{
       console.error('Upload ảnh thất bại:', err);
       done++;
-      showToast('❌ Tải ảnh lên thất bại, thử lại');
+      const msg = err && err.code ? `❌ Lỗi ảnh: ${err.code}` : '❌ Tải ảnh lên thất bại, thử lại';
+      showToast(msg);
       if(done===validFiles.length) renderUploadPreview();
     });
   });
