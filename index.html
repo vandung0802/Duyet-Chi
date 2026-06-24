@@ -978,6 +978,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <button class="nav-item" onclick="showPage('settings',this)">
     <span class="nav-icon">⚙️</span><span>Cài đặt</span>
   </button>
+  <button class="nav-item" onclick="logoutRole()">
+    <span class="nav-icon">🚪</span><span>Thoát</span>
+  </button>
 </nav>
 
 <script>
@@ -1223,6 +1226,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
   const pwInput = document.getElementById('pw-input');
   if(pwInput) pwInput.addEventListener('keydown', e=>{ if(e.key==='Enter') checkPassword(); });
 });
+
+function logoutRole(){
+  if(!confirm('Thoát và quay về màn hình chọn vai trò?')) return;
+  currentRole = '';
+  localStorage.removeItem('dc_role');
+  document.getElementById('role-screen').style.display='flex';
+}
 
 function setRole(role){
   currentRole = role;
