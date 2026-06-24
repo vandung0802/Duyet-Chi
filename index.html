@@ -1462,7 +1462,7 @@ function showPage(pg, btn){
   if(btn) btn.classList.add('active');
   if(pg==='add') populateSelects();
   if(pg==='settings') renderSettings();
-  if(pg==='report'){ renderPersonChips(); renderReportSummary(); renderReportTables(); }
+  if(pg==='report'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
 }
 
 // ── RENDER ALL ──
