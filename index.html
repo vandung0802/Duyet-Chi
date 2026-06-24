@@ -1541,8 +1541,8 @@ function renderCard(p){
     const hRej = p.rejectedByH;
     const legD = !dRej && !hRej && p.rejectedBy==='D';
     const legH = !dRej && !hRej && p.rejectedBy==='H';
-    const dLine = (dRej||legD) ? `<div class="badge-history" style="color:#c81e1e;font-style:italic">D${dRej&&dRej.reason?': "'+dRej.reason+'"':' từ chối'}</div>` : '';
-    const hLine = (hRej||legH) ? `<div class="badge-history" style="color:#7c3aed;font-style:italic">H${hRej&&hRej.reason?': "'+hRej.reason+'"':' từ chối'}</div>` : '';
+    const dLine = (dRej||legD) ? `<div class="badge-history" style="color:#c81e1e;font-style:italic">D${dRej&&dRej.reason?': "'+dRej.reason+'"':' từ chối'}${dRej&&dRej.ts?' · '+fmtFull(dRej.ts):''}</div>` : '';
+    const hLine = (hRej||legH) ? `<div class="badge-history" style="color:#7c3aed;font-style:italic">H${hRej&&hRej.reason?': "'+hRej.reason+'"':' từ chối'}${hRej&&hRej.ts?' · '+fmtFull(hRej.ts):''}</div>` : '';
     badgeHtml = `<div class="badge-stack"><span class="badge badge-reject">❌ Từ chối</span>${dLine}${hLine}</div>`;
   }
   if(p.status==='approved' || p.status==='transferred'){
