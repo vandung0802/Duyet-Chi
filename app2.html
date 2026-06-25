@@ -1400,41 +1400,30 @@ function setRole(role){
 }
 
 async function osRegisterPush() {
-  alert('Bắt đầu đăng ký...');
   try {
-    alert('Bước 1: lấy SW...');
     const swReg = await navigator.serviceWorker.ready;
-    alert('Bước 2: lấy push sub...');
     const sub = await swReg.pushManager.getSubscription();
-    alert('Bước 3: sub=' + (sub ? sub.endpoint.substring(0,30) : 'null'));
-    if(!sub) { const r='no-sub'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
+    if(!sub) { const r='no-sub'; localStorage.setItem('dc_os_reg',r); return; }
     const k1 = sub.getKey('p256dh');
     const k2 = sub.getKey('auth');
-    alert('Bước 4: keys=' + (k1?'ok':'null') + '/' + (k2?'ok':'null'));
-    if(!k1||!k2) { const r='getKey null'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
+    if(!k1||!k2) { const r='getKey null'; localStorage.setItem('dc_os_reg',r); return; }
     const p256dh = btoa(String.fromCharCode(...new Uint8Array(k1)));
     const auth = btoa(String.fromCharCode(...new Uint8Array(k2)));
-    alert('Bước 5: test fetch...');
-    try {
-      const testR = await fetch('https://api.github.com/zen');
-      alert('GitHub fetch OK: ' + testR.status);
-    } catch(te) { alert('GitHub fetch lỗi: ' + te.message); }
-    alert('Bước 5b: gọi OneSignal API...');
-    const resp = await fetch('https://api.onesignal.com/api/v1/players', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
+    // Gửi qua SW để bypass interception
+    const swReg2 = await navigator.serviceWorker.ready;
+    const data = await new Promise((resolve, reject) => {
+      const ch = new MessageChannel();
+      ch.port1.onmessage = e => e.data.error ? reject(new Error(e.data.error)) : resolve(e.data.data);
+      swReg2.active.postMessage({type:'OS_REGISTER', payload:{
         app_id: '8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6',
         device_type: 5,
         identifier: sub.endpoint,
         web_auth: auth,
         web_p256: p256dh,
         tags: { role: localStorage.getItem('dc_role') || 'other' }
-      })
+      }}, [ch.port2]);
+      setTimeout(() => reject(new Error('timeout')), 15000);
     });
-    alert('Bước 6: status=' + resp.status);
-    const data = await resp.json();
-    alert('Bước 7: data=' + JSON.stringify(data).substring(0,100));
     const result = data.id ? '✅ ' + data.id : '❌ ' + JSON.stringify(data);
     localStorage.setItem('dc_os_reg', result);
     window._osManualId = result;
