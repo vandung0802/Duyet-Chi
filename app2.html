@@ -782,9 +782,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div style="font-size:10px;opacity:.8;margin-top:1px" id="header-date">Thứ Tư, 17/06/2026</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
+    <div style="position:relative;display:inline-flex">
+      <button id="notif-bell" onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative" title="Thông báo">🔔</button>
+      <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
+    </div>
     <button class="current-role" id="role-badge" onclick="document.getElementById('role-screen').style.display='flex'">👤 Chọn vai trò</button>
     <span id="fb-badge" class="sheet-badge sheet-none">☁️ Đang kết nối...</span>
   </div>
+</div>
+<!-- Panel thông báo -->
+<div id="notif-panel" style="display:none;position:fixed;top:56px;right:8px;width:300px;max-width:calc(100vw - 16px);background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);z-index:200;overflow:hidden">
+  <div style="background:var(--blue);color:#fff;padding:10px 14px;font-size:13px;font-weight:700">🔔 Việc cần xử lý của bạn</div>
+  <div id="notif-list" style="max-height:320px;overflow-y:auto"></div>
 </div>
 
 <!-- PAGE: HOME -->
@@ -1587,7 +1596,98 @@ function priorityBadge(p){
 }
 function prioritySortVal(p){ return PRIORITY_ORDER[p.priority||'normal']??1; }
 
-function renderAll(){ renderProposals(); renderStats(); }
+function renderAll(){ renderProposals(); renderStats(); updateNotifBadge(); }
+
+function getMyPendingItems(){
+  const items = [];
+  proposals.forEach(p=>{
+    if(p.status==='rejected') return;
+    const dAmt = parseFloat(p.approvedDAmount)||0;
+    const hAmt = parseFloat(p.approvedHAmount)||0;
+    const total = parseFloat(p.amount)||0;
+    const transferred = getTotalTransferred(p);
+    if(currentRole==='dung'){
+      if(dAmt < total - 0.0001 && p.status!=='transferred')
+        items.push({desc:p.desc, note:'Chờ D duyệt', person:p.person, id:p.id});
+    } else if(currentRole==='hien'){
+      if(hAmt < total - 0.0001 && p.status!=='transferred')
+        items.push({desc:p.desc, note:'Chờ H duyệt', person:p.person, id:p.id});
+    } else if(currentRole==='trang'){
+      const official = getOfficialApprovedAmount(p)||0;
+      if(official > 0 && transferred < official - 0.0001)
+        items.push({desc:p.desc, note:'Chờ chuyển tiền', person:p.person, id:p.id});
+    } else if(currentRole==='other'){
+      if(p.status==='transferred')
+        items.push({desc:p.desc, note:'Đã chuyển xong ✅', person:p.person, id:p.id});
+    }
+  });
+  return items;
+}
+
+function updateNotifBadge(){
+  const items = getMyPendingItems();
+  const n = items.length;
+  // Badge đỏ trên chuông
+  const badge = document.getElementById('notif-badge');
+  if(badge){ badge.textContent = n>99?'99+':n; badge.style.display = n>0?'block':'none'; }
+  // Tiêu đề tab
+  document.title = n>0 ? `(${n}) Duyệt Chi v13` : 'Duyệt Chi v13';
+  // PWA App Badge API
+  if(navigator.setAppBadge){
+    n>0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
+  }
+}
+
+function toggleNotifPanel(){
+  const panel = document.getElementById('notif-panel');
+  if(!panel) return;
+  const open = panel.style.display==='block';
+  if(open){ panel.style.display='none'; return; }
+  renderNotifPanel();
+  panel.style.display='block';
+  // Đóng khi bấm ra ngoài
+  setTimeout(()=>{ document.addEventListener('click', closeNotifOnOutside, {once:true}); }, 50);
+}
+
+function closeNotifOnOutside(e){
+  const panel = document.getElementById('notif-panel');
+  const bell = document.getElementById('notif-bell');
+  if(panel && !panel.contains(e.target) && !bell.contains(e.target)){
+    panel.style.display='none';
+  } else {
+    document.addEventListener('click', closeNotifOnOutside, {once:true});
+  }
+}
+
+function renderNotifPanel(){
+  const list = document.getElementById('notif-list');
+  if(!list) return;
+  const items = getMyPendingItems();
+  if(!items.length){
+    list.innerHTML='<div style="padding:20px;text-align:center;color:#64748b;font-size:13px">✅ Không có việc gì cần xử lý</div>';
+    return;
+  }
+  list.innerHTML = items.map(it=>`
+    <div onclick="closeNotifAndGo('${it.id}')" style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.desc}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">${it.person||''} · <span style="color:var(--blue);font-weight:600">${it.note}</span></div>
+      </div>
+      <div style="color:#cbd5e1;font-size:16px">›</div>
+    </div>`).join('');
+}
+
+function closeNotifAndGo(id){
+  document.getElementById('notif-panel').style.display='none';
+  // Chuyển sang tab Danh sách và scroll đến card
+  showPage('home');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.nav-btn[data-page="home"]')&&document.querySelector('.nav-btn[data-page="home"]').classList.add('active');
+  setTimeout(()=>{
+    const el = document.getElementById('card-'+id);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 100);
+}
 
 // ── STATS ──
 // Hàm dùng chung để xác định 1 phiếu có khớp với 1 loại filter hay không.
