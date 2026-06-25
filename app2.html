@@ -1371,15 +1371,13 @@ function setRole(role){
   document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}`;
   document.getElementById('role-screen').style.display='none';
   // Tag role trong OneSignal để gửi thông báo đúng người
-  if(role !== 'other') {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function(OneSignal) {
-      try {
-        await OneSignal.login(role);
-        await OneSignal.User.addTag('role', role);
-      } catch(e) {}
-    });
-  }
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    try {
+      await OneSignal.login(role === 'other' ? 'other_' + Date.now() : role);
+      await OneSignal.User.addTag('role', role);
+    } catch(e) {}
+  });
   checkNotifBanner();
   renderAll();
 }
@@ -2887,7 +2885,7 @@ function submitProposal(){
     showToast('Đã gửi đề xuất!');
     showPage('home', document.querySelector('.nav-item'));
     renderAll();
-    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang']);
+    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang', 'other']);
   }catch(err){
     // Hiện rõ lỗi thật trên màn hình (kể cả trên điện thoại, không cần mở Console)
     // để dễ chẩn đoán khi có sự cố, thay vì nút bấm im lặng không phản ứng gì.
