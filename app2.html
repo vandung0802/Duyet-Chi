@@ -1414,7 +1414,12 @@ async function osRegisterPush() {
     if(!k1||!k2) { const r='getKey null'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
     const p256dh = btoa(String.fromCharCode(...new Uint8Array(k1)));
     const auth = btoa(String.fromCharCode(...new Uint8Array(k2)));
-    alert('Bước 5: đang gọi API...');
+    alert('Bước 5: test fetch...');
+    try {
+      const testR = await fetch('https://api.github.com/zen');
+      alert('GitHub fetch OK: ' + testR.status);
+    } catch(te) { alert('GitHub fetch lỗi: ' + te.message); }
+    alert('Bước 5b: gọi OneSignal API...');
     const resp = await fetch('https://api.onesignal.com/api/v1/players', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
