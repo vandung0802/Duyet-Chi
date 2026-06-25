@@ -1403,9 +1403,12 @@ async function osRegisterPush() {
   try {
     const swReg = await navigator.serviceWorker.ready;
     const sub = await swReg.pushManager.getSubscription();
-    if(!sub) { localStorage.setItem('dc_os_reg', 'no-sub'); return; }
-    const p256dh = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh'))));
-    const auth = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth'))));
+    if(!sub) { const r='no-sub'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
+    const k1 = sub.getKey('p256dh');
+    const k2 = sub.getKey('auth');
+    if(!k1||!k2) { const r='getKey null'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
+    const p256dh = btoa(String.fromCharCode(...new Uint8Array(k1)));
+    const auth = btoa(String.fromCharCode(...new Uint8Array(k2)));
     const resp = await fetch('https://api.onesignal.com/api/v1/players', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -1422,10 +1425,12 @@ async function osRegisterPush() {
     const result = data.id ? '✅ ' + data.id : '❌ ' + JSON.stringify(data);
     localStorage.setItem('dc_os_reg', result);
     window._osManualId = result;
+    alert('Kết quả: ' + result);
   } catch(e3) {
     const err = '❌ ' + (e3.message || String(e3));
     localStorage.setItem('dc_os_reg', err);
     window._osManualErr = err;
+    alert('Lỗi: ' + err);
   }
 }
 async function enableNotifications() {
