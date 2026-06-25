@@ -400,7 +400,7 @@
       window._osInitErr = null;
       // Force register push subscription if permission already granted
       if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try { await OneSignal.User.PushSubscription.optIn(); } catch(e2) {}
+        try { await OneSignal.User.PushSubscription.optIn(); } catch(e2) { window._osOptInErr = e2.message || String(e2); }
       }
     } catch(initErr) {
       window._osInitErr = initErr.message || String(initErr);
@@ -1464,6 +1464,7 @@ function updateNotifSettingsStatus() {
     `Sub ID: <b style="font-size:10px;word-break:break-all">${osSubId}</b><br>` +
     `Service Workers: <span id="sw-debug">loading...</span><br>` +
     `Native Push: <span id="push-debug">loading...</span><br>` +
+    `OptIn err: <b>${window._osOptInErr || 'none'}</b><br>` +
     `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
