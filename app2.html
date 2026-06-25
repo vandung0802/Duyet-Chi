@@ -386,6 +386,19 @@
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
+<!-- OneSignal Web Push SDK -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script>
+  window.OneSignalDeferred = window.OneSignalDeferred || [];
+  OneSignalDeferred.push(async function(OneSignal) {
+    await OneSignal.init({
+      appId: "8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6",
+      notifyButton: { enable: false },
+      serviceWorkerParam: { scope: '/Duyet-Chi/' },
+      serviceWorkerPath: 'OneSignalSDKWorker.js',
+    });
+  });
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -1332,7 +1345,43 @@ function setRole(role){
   const r = ROLES[role]||ROLES.other;
   document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}`;
   document.getElementById('role-screen').style.display='none';
+  // Tag role trong OneSignal để gửi thông báo đúng người
+  if(role !== 'other') {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      try {
+        await OneSignal.login(role);
+        await OneSignal.User.addTag('role', role);
+        await OneSignal.Notifications.requestPermission();
+      } catch(e) {}
+    });
+  }
   renderAll();
+}
+
+async function sendPushNotif(title, body, targetRoles) {
+  if(!Array.isArray(targetRoles) || targetRoles.length === 0) return;
+  const filters = [];
+  targetRoles.forEach((r, i) => {
+    if(i > 0) filters.push({operator: 'OR'});
+    filters.push({field: 'tag', key: 'role', relation: '=', value: r});
+  });
+  try {
+    await fetch('https://api.onesignal.com/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Key os_v2_app_rw57o4bpsrgynji4f7zvutt32y4pegxes5fuuo5n7osvyni4c4rbxoqgb6nkwhfhvasrjtw4ctuchfynma25nxyty4r3lb7ne6iurgy'
+      },
+      body: JSON.stringify({
+        app_id: '8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6',
+        headings: {en: title, vi: title},
+        contents: {en: body, vi: body},
+        filters: filters,
+        url: 'https://vandung0802.github.io/Duyet-Chi/app2.html'
+      })
+    });
+  } catch(e) { console.log('Push notif error:', e); }
 }
 
 const STATUS = {
@@ -2077,6 +2126,11 @@ function confirmApproveAmount(){
   closeApproveAmountModal();
   const full = val >= p.amount;
   showToast(`✓ ${field==='approvedD'?'Dũng':'Hiền'} đã duyệt ${fmtVND(val)}${full?' (toàn bộ)':' (1 phần)'}`);
+  if(field === 'approvedD') {
+    sendPushNotif('✅ Dũng đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['hien', 'trang']);
+  } else {
+    sendPushNotif('✅ Hiền đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['dung', 'trang']);
+  }
 }
 
 function undoApprove(id, field){
@@ -2169,6 +2223,7 @@ function confirmTransferAmount(){
   closeTransferAmountModal();
   const remaining = (parseFloat(p.amount)||0) - totalAfter;
   showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ toàn bộ đề xuất)':' — còn '+fmt(remaining)+'tr cần duyệt thêm'}`);
+  sendPushNotif('💸 Trang đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien']);
   if(isFullyDone) setTimeout(()=>uploadProof(id),500);
 }
 
