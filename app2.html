@@ -1458,7 +1458,9 @@ async function sendPushNotif(title, body, targetRoles) {
         headings: {en: title, vi: title},
         contents: {en: body, vi: body},
         filters: filters,
-        url: 'https://vandung0802.github.io/Duyet-Chi/app2.html'
+        url: 'https://vandung0802.github.io/Duyet-Chi/app2.html',
+        ios_badgeType: 'Increase',
+        ios_badgeCount: 1
       })
     });
   } catch(e) { console.log('Push notif error:', e); }
@@ -2885,6 +2887,7 @@ function submitProposal(){
     showToast('Đã gửi đề xuất!');
     showPage('home', document.querySelector('.nav-item'));
     renderAll();
+    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang']);
   }catch(err){
     // Hiện rõ lỗi thật trên màn hình (kể cả trên điện thoại, không cần mở Console)
     // để dễ chẩn đoán khi có sự cố, thay vì nút bấm im lặng không phản ứng gì.
