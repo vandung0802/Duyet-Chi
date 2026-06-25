@@ -1400,6 +1400,7 @@ function setRole(role){
 }
 
 async function osRegisterPush() {
+  alert('Bắt đầu đăng ký...');
   try {
     const swReg = await navigator.serviceWorker.ready;
     const sub = await swReg.pushManager.getSubscription();
