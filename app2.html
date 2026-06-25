@@ -1370,12 +1370,16 @@ function setRole(role){
   const r = ROLES[role]||ROLES.other;
   document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}`;
   document.getElementById('role-screen').style.display='none';
-  // Tag role trong OneSignal để gửi thông báo đúng người
+  // Tag role trong OneSignal và xin quyền thông báo
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     try {
       await OneSignal.login(role === 'other' ? 'other_' + Date.now() : role);
       await OneSignal.User.addTag('role', role);
+      // Tự động xin quyền nếu chưa có
+      if(typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        await OneSignal.Notifications.requestPermission();
+      }
     } catch(e) {}
   });
   checkNotifBanner();
