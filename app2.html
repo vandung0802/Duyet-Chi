@@ -398,6 +398,10 @@
         notifyButton: { enable: false },
       });
       window._osInitErr = null;
+      // Force register push subscription if permission already granted
+      if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        try { await OneSignal.User.PushSubscription.optIn(); } catch(e2) {}
+      }
     } catch(initErr) {
       window._osInitErr = initErr.message || String(initErr);
     }
