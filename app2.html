@@ -789,6 +789,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<div id="notif-remind-banner" style="display:none;background:#b45309;color:#fff;font-size:13px;font-weight:600;padding:8px 14px;text-align:center;cursor:pointer" onclick="enableNotifications()">
+  🔔 Thông báo chưa được bật — Bấm vào đây để bật
+</div>
 <div class="app-header">
   <div>
     <h1>Duyệt Chi <span style="font-size:9px;opacity:.6;font-weight:400">v13</span></h1>
@@ -1349,6 +1352,18 @@ function logoutRole(){
   document.getElementById('role-screen').style.display='flex';
 }
 
+function checkNotifBanner() {
+  const banner = document.getElementById('notif-remind-banner');
+  if(!banner || currentRole === 'other' || !currentRole) return;
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if(!isStandalone) { banner.style.display = 'none'; return; }
+  if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    banner.style.display = 'none';
+  } else {
+    banner.style.display = 'block';
+  }
+}
+
 function setRole(role){
   currentRole = role;
   localStorage.setItem('dc_role', role);
@@ -1362,10 +1377,10 @@ function setRole(role){
       try {
         await OneSignal.login(role);
         await OneSignal.User.addTag('role', role);
-        await OneSignal.Notifications.requestPermission();
       } catch(e) {}
     });
   }
+  checkNotifBanner();
   renderAll();
 }
 
@@ -1390,6 +1405,8 @@ async function enableNotifications() {
         }
         if(statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã được bật!</span>';
         if(btnEl) btnEl.style.display = 'none';
+        const banner = document.getElementById('notif-remind-banner');
+        if(banner) banner.style.display = 'none';
       } else {
         if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Bị từ chối — vào Cài đặt iPhone → Thông báo → DC để bật</span>';
       }
