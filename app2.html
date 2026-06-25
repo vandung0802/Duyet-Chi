@@ -990,6 +990,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-body">
       <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px">Nhận thông báo khi có phiếu mới được duyệt hoặc chuyển tiền. Yêu cầu: mở app từ biểu tượng DC ngoài màn hình (không phải Safari).</p>
       <div id="notif-status-text" style="font-size:13px;margin-bottom:10px;font-weight:600">Đang kiểm tra...</div>
+      <div id="notif-debug" style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6"></div>
       <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">🔔 Bật thông báo</button>
     </div>
   </div>
@@ -1423,14 +1424,22 @@ async function enableNotifications() {
 function updateNotifSettingsStatus() {
   const statusEl = document.getElementById('notif-status-text');
   const btnEl = document.getElementById('btn-enable-notif');
+  const debugEl = document.getElementById('notif-debug');
   if(!statusEl) return;
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'không hỗ trợ';
+  const osReady = window._osReady ? 'Đã tải' : 'Chưa tải';
+  const ua = navigator.userAgent.match(/OS ([\d_]+) like Mac/) ? 'iOS ' + navigator.userAgent.match(/OS ([\d_]+) like Mac/)[1].replace(/_/g,'.') : navigator.userAgent.substring(0,50);
+  if(debugEl) debugEl.innerHTML =
+    `PWA mode: <b>${isStandalone ? '✅ Standalone' : '❌ Safari/Browser'}</b><br>` +
+    `Notification API: <b>${perm}</b><br>` +
+    `OneSignal SDK: <b>${osReady}</b><br>` +
+    `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
     if(btnEl) btnEl.style.display = 'none';
     return;
   }
-  const perm = Notification.permission;
   if(perm === 'granted') {
     statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã bật</span>';
     if(btnEl) btnEl.style.display = 'none';
