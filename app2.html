@@ -1906,7 +1906,7 @@ function renderCard(p){
       ${(p.status==='pending' || currentRole==='dung')
         ? `<button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất">✏️</button>`
         : ''}
-      `<button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="del('${p.id}')" title="Xóa đề xuất">🗑</button>`
+      <button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="del('${p.id}')" title="Xóa đề xuất">🗑</button>
     </div>
     ${proofHtml}
   </div>`;
