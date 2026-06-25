@@ -1383,7 +1383,6 @@ function setRole(role){
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   OneSignalDeferred.push(async function(OneSignal) {
     try {
-      await OneSignal.login(role === 'other' ? 'other_' + Date.now() : role);
       await OneSignal.User.addTag('role', role);
       // Tự động xin quyền nếu chưa có
       if(typeof Notification !== 'undefined' && Notification.permission === 'default') {
@@ -1411,8 +1410,6 @@ async function enableNotifications() {
     const granted = await os.Notifications.requestPermission();
     if(granted) {
       try {
-        const uid = (currentRole && currentRole !== 'other') ? currentRole : ('other_' + Date.now());
-        await os.login(uid);
         await os.User.addTag('role', currentRole || 'other');
       } catch(e2) {}
       if(statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã bật!</span>';
