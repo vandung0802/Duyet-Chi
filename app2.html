@@ -1414,6 +1414,7 @@ async function osRegisterPush() {
     if(!k1||!k2) { const r='getKey null'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
     const p256dh = btoa(String.fromCharCode(...new Uint8Array(k1)));
     const auth = btoa(String.fromCharCode(...new Uint8Array(k2)));
+    alert('Bước 5: đang gọi API...');
     const resp = await fetch('https://api.onesignal.com/api/v1/players', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
@@ -1426,7 +1427,9 @@ async function osRegisterPush() {
         tags: { role: localStorage.getItem('dc_role') || 'other' }
       })
     });
+    alert('Bước 6: status=' + resp.status);
     const data = await resp.json();
+    alert('Bước 7: data=' + JSON.stringify(data).substring(0,100));
     const result = data.id ? '✅ ' + data.id : '❌ ' + JSON.stringify(data);
     localStorage.setItem('dc_os_reg', result);
     window._osManualId = result;
