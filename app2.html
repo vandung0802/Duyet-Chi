@@ -402,28 +402,7 @@
       if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         try { await OneSignal.User.PushSubscription.optIn(); } catch(e2) { window._osOptInErr = e2.message || String(e2); }
         // Manually register push subscription with OneSignal REST API if SDK fails
-        try {
-          const swReg = await navigator.serviceWorker.ready;
-          const sub = await swReg.pushManager.getSubscription();
-          if(sub) {
-            const p256dh = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh'))));
-            const auth = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth'))));
-            const resp = await fetch('https://api.onesignal.com/api/v1/players', {
-              method: 'POST',
-              headers: {'Content-Type': 'application/json'},
-              body: JSON.stringify({
-                app_id: '8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6',
-                device_type: 5,
-                identifier: sub.endpoint,
-                web_auth: auth,
-                web_p256: p256dh,
-                tags: { role: localStorage.getItem('dc_role') || 'other' }
-              })
-            });
-            const data = await resp.json();
-            window._osManualId = data.id || JSON.stringify(data);
-          }
-        } catch(e3) { window._osManualErr = e3.message || String(e3); }
+        await osRegisterPush();
       }
     } catch(initErr) {
       window._osInitErr = initErr.message || String(initErr);
@@ -1023,6 +1002,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div id="notif-debug" style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6"></div>
       <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px;margin-bottom:8px">🔔 Bật thông báo</button>
       <button onclick="updateNotifSettingsStatus()" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569">🔄 Kiểm tra lại trạng thái</button>
+      <button onclick="osRegisterPush().then(updateNotifSettingsStatus)" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569;margin-top:6px">📡 Đăng ký thủ công</button>
     </div>
   </div>
 
@@ -1419,6 +1399,35 @@ function setRole(role){
   renderAll();
 }
 
+async function osRegisterPush() {
+  try {
+    const swReg = await navigator.serviceWorker.ready;
+    const sub = await swReg.pushManager.getSubscription();
+    if(!sub) { localStorage.setItem('dc_os_reg', 'no-sub'); return; }
+    const p256dh = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh'))));
+    const auth = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth'))));
+    const resp = await fetch('https://api.onesignal.com/api/v1/players', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        app_id: '8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6',
+        device_type: 5,
+        identifier: sub.endpoint,
+        web_auth: auth,
+        web_p256: p256dh,
+        tags: { role: localStorage.getItem('dc_role') || 'other' }
+      })
+    });
+    const data = await resp.json();
+    const result = data.id ? '✅ ' + data.id : '❌ ' + JSON.stringify(data);
+    localStorage.setItem('dc_os_reg', result);
+    window._osManualId = result;
+  } catch(e3) {
+    const err = '❌ ' + (e3.message || String(e3));
+    localStorage.setItem('dc_os_reg', err);
+    window._osManualErr = err;
+  }
+}
 async function enableNotifications() {
   const statusEl = document.getElementById('notif-status-text');
   const btnEl = document.getElementById('btn-enable-notif');
@@ -1488,7 +1497,7 @@ function updateNotifSettingsStatus() {
     `Service Workers: <span id="sw-debug">loading...</span><br>` +
     `Native Push: <span id="push-debug">loading...</span><br>` +
     `OptIn err: <b>${window._osOptInErr || 'none'}</b><br>` +
-    `Manual reg: <b style="font-size:10px;word-break:break-all">${window._osManualId || window._osManualErr || 'pending...'}</b><br>` +
+    `Manual reg: <b style="font-size:10px;word-break:break-all">${localStorage.getItem('dc_os_reg') || window._osManualId || window._osManualErr || 'chưa đăng ký'}</b><br>` +
     `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
