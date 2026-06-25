@@ -376,7 +376,7 @@
 <meta name="theme-color" content="#1a56db">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="PVA-379">
+<meta name="apple-mobile-web-app-title" content="DC">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.svg">
 <title>Duyệt Chi — Phúc Vinh An</title>
@@ -1624,18 +1624,18 @@ function getMyPendingItems(){
   return items;
 }
 
+function getSeenIds(){ try{ return new Set(JSON.parse(localStorage.getItem('dc_notif_seen')||'[]')); }catch(e){ return new Set(); } }
+function markAllSeen(items){ localStorage.setItem('dc_notif_seen', JSON.stringify(items.map(i=>i.id))); }
+
 function updateNotifBadge(){
   const items = getMyPendingItems();
-  const n = items.length;
-  // Badge đỏ trên chuông
+  const seen = getSeenIds();
+  const unread = items.filter(i=>!seen.has(i.id));
+  const n = unread.length;
   const badge = document.getElementById('notif-badge');
   if(badge){ badge.textContent = n>99?'99+':n; badge.style.display = n>0?'block':'none'; }
-  // Tiêu đề tab
   document.title = n>0 ? `(${n}) Duyệt Chi v13` : 'Duyệt Chi v13';
-  // PWA App Badge API
-  if(navigator.setAppBadge){
-    n>0 ? navigator.setAppBadge(n) : navigator.clearAppBadge();
-  }
+  if(navigator.setAppBadge){ n>0 ? navigator.setAppBadge(n) : navigator.clearAppBadge(); }
 }
 
 function toggleNotifPanel(){
@@ -1643,6 +1643,9 @@ function toggleNotifPanel(){
   if(!panel) return;
   const open = panel.style.display==='block';
   if(open){ panel.style.display='none'; return; }
+  const items = getMyPendingItems();
+  markAllSeen(items);
+  updateNotifBadge();
   renderNotifPanel();
   panel.style.display='block';
   // Đóng khi bấm ra ngoài
@@ -1851,10 +1854,10 @@ function renderCard(p){
       ${renderBtnReject(p)}
       ${renderBtnTransfer(p)}
       ${renderBtnShare(p)}
-      ${p.status==='pending'
+      ${(p.status==='pending' || currentRole==='dung')
         ? `<button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất">✏️</button>`
         : ''}
-      ${p.status==='transferred'
+      ${(p.status==='transferred' && currentRole!=='dung')
         ? `<div class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important;cursor:default;opacity:.5" title="Đã chuyển tiền — không thể xóa">🔒</div>`
         : `<button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="del('${p.id}')" title="Xóa đề xuất">🗑</button>`}
     </div>
@@ -1881,7 +1884,7 @@ function renderBtnD(p){
     return `<div class="approve-box"><button class="ab-btn ab-btn-tight ab-btn-approve" onclick="approveBy('${p.id}','approvedD')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">D</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div><span class="ab-time-sub">${fmtFull(p.approvedD)}</span>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">D</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div>`;
     const canUndo = currentRole==='dung' && p.status!=='transferred';
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><button class="ab-done-btn" style="color:var(--green)" onclick="undoApprove('${p.id}','approvedD')" title="Bấm để bỏ toàn bộ duyệt của Dũng">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><div class="ab-done-btn" style="color:var(--green)">${inner}</div></div>`;
@@ -1903,7 +1906,7 @@ function renderBtnH(p){
     return `<div class="approve-box"><button class="ab-btn ab-btn-tight" style="background:#7c3aed;color:#fff" onclick="approveBy('${p.id}','approvedH')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">H</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div><span class="ab-time-sub">${fmtFull(p.approvedH)}</span>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">H</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div>`;
     const canUndo = currentRole==='hien' && p.status!=='transferred';
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><button class="ab-done-btn" style="color:#7c3aed" onclick="undoApprove('${p.id}','approvedH')" title="Bấm để bỏ toàn bộ duyệt của Hiền">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><div class="ab-done-btn" style="color:#7c3aed">${inner}</div></div>`;
@@ -1958,7 +1961,7 @@ function renderBtnTransfer(p){
   }
   if(transferred>0){
     const full = transferred >= approvedAmt - 0.0001;
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">T</span><span class="ab-mid-label">${full?'Đã chuyển':fmt(transferred)+'/'+fmtVND(approvedAmt)}</span></div><span class="ab-time-sub">${p.transferredAt?fmtFull(p.transferredAt):''}</span>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">T</span><span class="ab-mid-label">${full?'Đã chuyển':fmt(transferred)+'/'+fmtVND(approvedAmt)}</span></div>`;
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="color:var(--yellow)" onclick="undoTransfer('${p.id}')" title="Bấm để hoàn tác lần chuyển gần nhất">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><div class="ab-done-btn" style="color:var(--yellow)">${inner}</div></div>`;
   }
