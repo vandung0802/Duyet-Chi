@@ -392,12 +392,17 @@
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window._osReady = null;
   OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6",
-      notifyButton: { enable: false },
-      serviceWorkerParam: { scope: '/Duyet-Chi/' },
-      serviceWorkerPath: 'OneSignalSDKWorker.js',
-    });
+    try {
+      await OneSignal.init({
+        appId: "8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6",
+        notifyButton: { enable: false },
+        serviceWorkerParam: { scope: '/Duyet-Chi/' },
+        serviceWorkerPath: '/Duyet-Chi/OneSignalSDKWorker.js',
+      });
+      window._osInitErr = null;
+    } catch(initErr) {
+      window._osInitErr = initErr.message || String(initErr);
+    }
     window._osReady = OneSignal; // lưu instance để gọi trực tiếp từ user gesture
   });
 </script>
@@ -1430,10 +1435,14 @@ function updateNotifSettingsStatus() {
   const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'không hỗ trợ';
   const osReady = window._osReady ? 'Đã tải' : 'Chưa tải';
   const ua = navigator.userAgent.match(/OS ([\d_]+) like Mac/) ? 'iOS ' + navigator.userAgent.match(/OS ([\d_]+) like Mac/)[1].replace(/_/g,'.') : navigator.userAgent.substring(0,50);
+  const osErr = window._osInitErr ? '❌ ' + window._osInitErr : (osReady === 'Đã tải' ? '✅' : '⏳');
+  const osSub = (window._osReady && window._osReady.User && window._osReady.User.PushSubscription)
+    ? (window._osReady.User.PushSubscription.optedIn ? '✅ Đã subscribe' : '❌ Chưa subscribe') : '?';
   if(debugEl) debugEl.innerHTML =
     `PWA mode: <b>${isStandalone ? '✅ Standalone' : '❌ Safari/Browser'}</b><br>` +
     `Notification API: <b>${perm}</b><br>` +
-    `OneSignal SDK: <b>${osReady}</b><br>` +
+    `OneSignal SDK: <b>${osReady}</b> ${osErr}<br>` +
+    `Push subscription: <b>${osSub}</b><br>` +
     `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
