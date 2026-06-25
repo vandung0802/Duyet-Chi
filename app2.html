@@ -1879,14 +1879,13 @@ function renderBtnD(p){
     return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
   const canPress = currentRole==='dung' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
-    const mainLabel = amt>0 ? `${fmt(amt)}/${fmtVND(total)}` : 'Chờ duyệt D';
-    const prevInfo = amt>0 ? `<span class="ab-prev-info">${fmtFull(p.approvedD)}</span>` : '';
-    return `<div class="approve-box"><button class="ab-btn ab-btn-tight ab-btn-approve" onclick="approveBy('${p.id}','approvedD')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">D</span><span class="ab-mid-label" style="color:var(--yellow)">${amt>0?'Đã duyệt':'Chờ duyệt'}</span></div>`;
+    return `<div class="approve-box"><button class="ab-done-btn" style="color:var(--yellow);width:100%" onclick="approveBy('${p.id}','approvedD')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">D</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">D</span><span class="ab-mid-label">Đã duyệt</span></div>`;
     const canUndo = currentRole==='dung' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><button class="ab-done-btn" style="color:var(--green)" onclick="undoApprove('${p.id}','approvedD')" title="Bấm để bỏ toàn bộ duyệt của Dũng">${inner}</button></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><button class="ab-done-btn" style="color:var(--green)" onclick="undoApprove('${p.id}','approvedD')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><div class="ab-done-btn" style="color:var(--green)">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
@@ -1901,14 +1900,13 @@ function renderBtnH(p){
     return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
   const canPress = currentRole==='hien' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
-    const mainLabel = amt>0 ? `${fmt(amt)}/${fmtVND(total)}` : 'Chờ duyệt H';
-    const prevInfo = amt>0 ? `<span class="ab-prev-info">${fmtFull(p.approvedH)}</span>` : '';
-    return `<div class="approve-box"><button class="ab-btn ab-btn-tight" style="background:#7c3aed;color:#fff" onclick="approveBy('${p.id}','approvedH')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">H</span><span class="ab-mid-label" style="color:#7c3aed">${amt>0?'Đã duyệt':'Chờ duyệt'}</span></div>`;
+    return `<div class="approve-box"><button class="ab-done-btn" style="color:#7c3aed;width:100%" onclick="approveBy('${p.id}','approvedH')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter">H</span><span class="ab-mid-label">${full?'Đã duyệt':fmt(amt)+'/'+fmtVND(total)}</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter">H</span><span class="ab-mid-label">Đã duyệt</span></div>`;
     const canUndo = currentRole==='hien' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><button class="ab-done-btn" style="color:#7c3aed" onclick="undoApprove('${p.id}','approvedH')" title="Bấm để bỏ toàn bộ duyệt của Hiền">${inner}</button></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><button class="ab-done-btn" style="color:#7c3aed" onclick="undoApprove('${p.id}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><div class="ab-done-btn" style="color:#7c3aed">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
