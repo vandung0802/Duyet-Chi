@@ -390,6 +390,7 @@
 <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
+  window._osReady = null;
   OneSignalDeferred.push(async function(OneSignal) {
     await OneSignal.init({
       appId: "8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6",
@@ -397,6 +398,7 @@
       serviceWorkerParam: { scope: '/Duyet-Chi/' },
       serviceWorkerPath: 'OneSignalSDKWorker.js',
     });
+    window._osReady = OneSignal; // lưu instance để gọi trực tiếp từ user gesture
   });
 </script>
 <style>
@@ -1389,30 +1391,30 @@ function setRole(role){
 async function enableNotifications() {
   const statusEl = document.getElementById('notif-status-text');
   const btnEl = document.getElementById('btn-enable-notif');
-  // Kiểm tra có phải PWA standalone không
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
   if(!isStandalone) {
-    if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Cần mở app từ biểu tượng DC ngoài màn hình (không phải Safari)</span>';
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Cần mở app từ biểu tượng DC ngoài màn hình</span>';
     return;
   }
   if(statusEl) statusEl.textContent = '⏳ Đang xin quyền...';
   try {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function(OneSignal) {
-      const granted = await OneSignal.Notifications.requestPermission();
-      if(granted) {
-        if(currentRole && currentRole !== 'other') {
-          await OneSignal.login(currentRole);
-          await OneSignal.User.addTag('role', currentRole);
-        }
-        if(statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã được bật!</span>';
-        if(btnEl) btnEl.style.display = 'none';
-        const banner = document.getElementById('notif-remind-banner');
-        if(banner) banner.style.display = 'none';
-      } else {
-        if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Bị từ chối — vào Cài đặt iPhone → Thông báo → DC để bật</span>';
-      }
-    });
+    const os = window._osReady;
+    if(!os) { if(statusEl) statusEl.textContent = '⏳ SDK chưa tải xong, thử lại sau 3 giây...'; setTimeout(enableNotifications, 3000); return; }
+    // Gọi thẳng từ user gesture — không qua deferred
+    const granted = await os.Notifications.requestPermission();
+    if(granted) {
+      try {
+        const uid = (currentRole && currentRole !== 'other') ? currentRole : ('other_' + Date.now());
+        await os.login(uid);
+        await os.User.addTag('role', currentRole || 'other');
+      } catch(e2) {}
+      if(statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã bật!</span>';
+      if(btnEl) btnEl.style.display = 'none';
+      const banner = document.getElementById('notif-remind-banner');
+      if(banner) banner.style.display = 'none';
+    } else {
+      if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Bị từ chối — vào Cài đặt iPhone → Thông báo → DC</span>';
+    }
   } catch(e) {
     if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Lỗi: ' + e.message + '</span>';
   }
