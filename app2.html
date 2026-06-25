@@ -387,7 +387,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
 <!-- OneSignal Web Push SDK -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"></script>
 <script>
   window.OneSignalDeferred = window.OneSignalDeferred || [];
   window._osReady = null;
@@ -996,7 +996,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px">Nhận thông báo khi có phiếu mới được duyệt hoặc chuyển tiền. Yêu cầu: mở app từ biểu tượng DC ngoài màn hình (không phải Safari).</p>
       <div id="notif-status-text" style="font-size:13px;margin-bottom:10px;font-weight:600">Đang kiểm tra...</div>
       <div id="notif-debug" style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6"></div>
-      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">🔔 Bật thông báo</button>
+      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px;margin-bottom:8px">🔔 Bật thông báo</button>
+      <button onclick="updateNotifSettingsStatus()" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569">🔄 Kiểm tra lại trạng thái</button>
     </div>
   </div>
 
