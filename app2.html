@@ -1402,11 +1402,15 @@ function setRole(role){
 async function osRegisterPush() {
   alert('Bắt đầu đăng ký...');
   try {
+    alert('Bước 1: lấy SW...');
     const swReg = await navigator.serviceWorker.ready;
+    alert('Bước 2: lấy push sub...');
     const sub = await swReg.pushManager.getSubscription();
+    alert('Bước 3: sub=' + (sub ? sub.endpoint.substring(0,30) : 'null'));
     if(!sub) { const r='no-sub'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
     const k1 = sub.getKey('p256dh');
     const k2 = sub.getKey('auth');
+    alert('Bước 4: keys=' + (k1?'ok':'null') + '/' + (k2?'ok':'null'));
     if(!k1||!k2) { const r='getKey null'; localStorage.setItem('dc_os_reg',r); alert('Push: '+r); return; }
     const p256dh = btoa(String.fromCharCode(...new Uint8Array(k1)));
     const auth = btoa(String.fromCharCode(...new Uint8Array(k2)));
