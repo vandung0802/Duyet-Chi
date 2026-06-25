@@ -401,6 +401,29 @@
       // Force register push subscription if permission already granted
       if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
         try { await OneSignal.User.PushSubscription.optIn(); } catch(e2) { window._osOptInErr = e2.message || String(e2); }
+        // Manually register push subscription with OneSignal REST API if SDK fails
+        try {
+          const swReg = await navigator.serviceWorker.ready;
+          const sub = await swReg.pushManager.getSubscription();
+          if(sub) {
+            const p256dh = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh'))));
+            const auth = btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth'))));
+            const resp = await fetch('https://api.onesignal.com/api/v1/players', {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({
+                app_id: '8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6',
+                device_type: 5,
+                identifier: sub.endpoint,
+                web_auth: auth,
+                web_p256: p256dh,
+                tags: { role: localStorage.getItem('dc_role') || 'other' }
+              })
+            });
+            const data = await resp.json();
+            window._osManualId = data.id || JSON.stringify(data);
+          }
+        } catch(e3) { window._osManualErr = e3.message || String(e3); }
       }
     } catch(initErr) {
       window._osInitErr = initErr.message || String(initErr);
@@ -1465,6 +1488,7 @@ function updateNotifSettingsStatus() {
     `Service Workers: <span id="sw-debug">loading...</span><br>` +
     `Native Push: <span id="push-debug">loading...</span><br>` +
     `OptIn err: <b>${window._osOptInErr || 'none'}</b><br>` +
+    `Manual reg: <b style="font-size:10px;word-break:break-all">${window._osManualId || window._osManualErr || 'pending...'}</b><br>` +
     `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
