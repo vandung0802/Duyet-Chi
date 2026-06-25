@@ -979,6 +979,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- PAGE: SETTINGS -->
 <div id="page-settings" class="main" style="display:none">
 
+  <!-- Thông báo đẩy -->
+  <div class="card">
+    <div class="card-header">🔔 Thông báo đẩy (Push Notification)</div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px">Nhận thông báo khi có phiếu mới được duyệt hoặc chuyển tiền. Yêu cầu: mở app từ biểu tượng DC ngoài màn hình (không phải Safari).</p>
+      <div id="notif-status-text" style="font-size:13px;margin-bottom:10px;font-weight:600">Đang kiểm tra...</div>
+      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">🔔 Bật thông báo</button>
+    </div>
+  </div>
+
   <!-- Danh sách người đề xuất -->
   <div class="card">
     <div class="card-header">👤 Danh sách người đề xuất</div>
@@ -1357,6 +1367,59 @@ function setRole(role){
     });
   }
   renderAll();
+}
+
+async function enableNotifications() {
+  const statusEl = document.getElementById('notif-status-text');
+  const btnEl = document.getElementById('btn-enable-notif');
+  // Kiểm tra có phải PWA standalone không
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if(!isStandalone) {
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Cần mở app từ biểu tượng DC ngoài màn hình (không phải Safari)</span>';
+    return;
+  }
+  if(statusEl) statusEl.textContent = '⏳ Đang xin quyền...';
+  try {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    OneSignalDeferred.push(async function(OneSignal) {
+      const granted = await OneSignal.Notifications.requestPermission();
+      if(granted) {
+        if(currentRole && currentRole !== 'other') {
+          await OneSignal.login(currentRole);
+          await OneSignal.User.addTag('role', currentRole);
+        }
+        if(statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã được bật!</span>';
+        if(btnEl) btnEl.style.display = 'none';
+      } else {
+        if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Bị từ chối — vào Cài đặt iPhone → Thông báo → DC để bật</span>';
+      }
+    });
+  } catch(e) {
+    if(statusEl) statusEl.innerHTML = '<span style="color:var(--red)">❌ Lỗi: ' + e.message + '</span>';
+  }
+}
+
+function updateNotifSettingsStatus() {
+  const statusEl = document.getElementById('notif-status-text');
+  const btnEl = document.getElementById('btn-enable-notif');
+  if(!statusEl) return;
+  const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+  if(!isStandalone) {
+    statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
+    if(btnEl) btnEl.style.display = 'none';
+    return;
+  }
+  const perm = Notification.permission;
+  if(perm === 'granted') {
+    statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã bật</span>';
+    if(btnEl) btnEl.style.display = 'none';
+  } else if(perm === 'denied') {
+    statusEl.innerHTML = '<span style="color:var(--red)">❌ Bị chặn — vào Cài đặt iPhone → Thông báo → DC để bật</span>';
+    if(btnEl) btnEl.style.display = 'none';
+  } else {
+    statusEl.innerHTML = '<span style="color:var(--yellow)">🔔 Chưa bật — bấm nút bên dưới</span>';
+    if(btnEl) btnEl.style.display = 'block';
+  }
 }
 
 async function sendPushNotif(title, body, targetRoles) {
@@ -2830,6 +2893,7 @@ function autofillPerson(name){
 
 // ── SETTINGS ──
 function renderSettings(){
+  updateNotifSettingsStatus();
   const pl=document.getElementById('person-list');
   pl.innerHTML=persons.length
     ? persons.map((p,i)=>`<div class="person-item">
