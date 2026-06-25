@@ -1440,13 +1440,21 @@ function updateNotifSettingsStatus() {
   const ps = (window._osReady && window._osReady.User && window._osReady.User.PushSubscription) ? window._osReady.User.PushSubscription : null;
   const osSub = ps ? (ps.optedIn ? '✅ Đã subscribe' : '❌ Chưa subscribe') : '?';
   const osSubId = ps ? (ps.id || ps.token || 'không có ID') : '?';
-  // Check service worker registrations
-  let swInfo = 'checking...';
+  // Check service worker registrations + push subscription
   if('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
       const swEl = document.getElementById('sw-debug');
       if(swEl) swEl.innerHTML = regs.length === 0 ? '❌ Không có SW' :
         regs.map(r => `✅ ${r.scope} [${r.active ? r.active.state : 'no active'}]`).join('<br>');
+    });
+    navigator.serviceWorker.ready.then(reg => {
+      return reg.pushManager.getSubscription();
+    }).then(sub => {
+      const el = document.getElementById('push-debug');
+      if(el) el.innerHTML = sub ? `✅ endpoint: ${sub.endpoint.substring(0,40)}...` : '❌ Không có push subscription';
+    }).catch(e => {
+      const el = document.getElementById('push-debug');
+      if(el) el.innerHTML = '❌ Lỗi: ' + e.message;
     });
   }
   if(debugEl) debugEl.innerHTML =
@@ -1456,6 +1464,7 @@ function updateNotifSettingsStatus() {
     `Push subscription: <b>${osSub}</b><br>` +
     `Sub ID: <b style="font-size:10px;word-break:break-all">${osSubId}</b><br>` +
     `Service Workers: <span id="sw-debug">loading...</span><br>` +
+    `Native Push: <span id="push-debug">loading...</span><br>` +
     `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
