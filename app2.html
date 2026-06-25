@@ -1437,13 +1437,15 @@ function updateNotifSettingsStatus() {
   const osReady = window._osReady ? 'Đã tải' : 'Chưa tải';
   const ua = navigator.userAgent.match(/OS ([\d_]+) like Mac/) ? 'iOS ' + navigator.userAgent.match(/OS ([\d_]+) like Mac/)[1].replace(/_/g,'.') : navigator.userAgent.substring(0,50);
   const osErr = window._osInitErr ? '❌ ' + window._osInitErr : (osReady === 'Đã tải' ? '✅' : '⏳');
-  const osSub = (window._osReady && window._osReady.User && window._osReady.User.PushSubscription)
-    ? (window._osReady.User.PushSubscription.optedIn ? '✅ Đã subscribe' : '❌ Chưa subscribe') : '?';
+  const ps = (window._osReady && window._osReady.User && window._osReady.User.PushSubscription) ? window._osReady.User.PushSubscription : null;
+  const osSub = ps ? (ps.optedIn ? '✅ Đã subscribe' : '❌ Chưa subscribe') : '?';
+  const osSubId = ps ? (ps.id || ps.token || 'không có ID') : '?';
   if(debugEl) debugEl.innerHTML =
     `PWA mode: <b>${isStandalone ? '✅ Standalone' : '❌ Safari/Browser'}</b><br>` +
     `Notification API: <b>${perm}</b><br>` +
     `OneSignal SDK: <b>${osReady}</b> ${osErr}<br>` +
     `Push subscription: <b>${osSub}</b><br>` +
+    `Sub ID: <b style="font-size:10px;word-break:break-all">${osSubId}</b><br>` +
     `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
