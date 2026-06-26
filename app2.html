@@ -1709,6 +1709,13 @@ function fmtT(ts){return new Date(ts).toLocaleTimeString('vi-VN',{hour:'2-digit'
 function fmtFull(ts){const d=new Date(ts);return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' '+d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}
 function initials(name){return name.trim().split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
 
+// ── ĐĂNG KÝ SERVICE WORKER ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('https://vandung0802.github.io/OneSignalSDKWorker.js', {
+    scope: 'https://vandung0802.github.io/'
+  }).catch(e => console.log('SW register error:', e));
+}
+
 // ── INIT ──
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
