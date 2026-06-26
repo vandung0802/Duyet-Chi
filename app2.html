@@ -1718,6 +1718,14 @@ function initials(name){return name.trim().split(' ').map(w=>w[0]).join('').slic
 
 // ── ĐĂNG KÝ SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
+  // Xóa các SW cũ (Firebase Messaging, OneSignal) có thể chặn fetch
+  navigator.serviceWorker.getRegistrations().then(regs => {
+    for (const reg of regs) {
+      if (!reg.scope.includes('/Duyet-Chi/')) {
+        reg.unregister();
+      }
+    }
+  });
   navigator.serviceWorker.register('/Duyet-Chi/sw.js').catch(e => console.log('SW register error:', e));
 }
 // Xóa badge khi mở app
