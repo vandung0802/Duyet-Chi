@@ -386,30 +386,8 @@
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
-<!-- OneSignal Web Push SDK -->
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js"></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  window._osReady = null;
-  OneSignalDeferred.push(async function(OneSignal) {
-    try {
-      await OneSignal.init({
-        appId: "8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6",
-        notifyButton: { enable: false },
-      });
-      window._osInitErr = null;
-      // Force register push subscription if permission already granted
-      if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
-        try { await OneSignal.User.PushSubscription.optIn(); } catch(e2) { window._osOptInErr = e2.message || String(e2); }
-        // Manually register push subscription with OneSignal REST API if SDK fails
-        await osRegisterPush();
-      }
-    } catch(initErr) {
-      window._osInitErr = initErr.message || String(initErr);
-    }
-    window._osReady = OneSignal; // lưu instance để gọi trực tiếp từ user gesture
-  });
-</script>
+<!-- Firebase Messaging SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -1002,7 +980,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div id="notif-debug" style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6"></div>
       <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px;margin-bottom:8px">🔔 Bật thông báo</button>
       <button onclick="updateNotifSettingsStatus()" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569">🔄 Kiểm tra lại trạng thái</button>
-      <button onclick="osRegisterPush().then(updateNotifSettingsStatus)" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569;margin-top:6px">📡 Đăng ký thủ công</button>
+      <button onclick="fcmRegister(currentRole).then(updateNotifSettingsStatus)" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569;margin-top:6px">📡 Đăng ký FCM thủ công</button>
     </div>
   </div>
 
@@ -1384,57 +1362,32 @@ function setRole(role){
   const r = ROLES[role]||ROLES.other;
   document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}`;
   document.getElementById('role-screen').style.display='none';
-  // Tag role trong OneSignal và xin quyền thông báo
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    try {
-      await OneSignal.User.addTag('role', role);
-      // Tự động xin quyền nếu chưa có
-      if(typeof Notification !== 'undefined' && Notification.permission === 'default') {
-        await OneSignal.Notifications.requestPermission();
-      }
-    } catch(e) {}
-  });
+  // Đăng ký FCM nếu đã có quyền
+  if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    fcmRegister(role).catch(()=>{});
+  }
   checkNotifBanner();
   renderAll();
 }
 
-async function osRegisterPush() {
+const FCM_VAPID = 'BL_WWYVKSZXo6krxx4Csf1Vpu7XDNR1efagcbFf8CiLM_kpWkjXUPncmK-JdQHVYahlgztsqp3Ngleuf8m0Sx7I';
+
+async function fcmRegister(role) {
   try {
-    const swReg = await navigator.serviceWorker.ready;
-    const sub = await swReg.pushManager.getSubscription();
-    if(!sub) { const r='no-sub'; localStorage.setItem('dc_os_reg',r); return; }
-    const k1 = sub.getKey('p256dh');
-    const k2 = sub.getKey('auth');
-    if(!k1||!k2) { const r='getKey null'; localStorage.setItem('dc_os_reg',r); return; }
-    const p256dh = btoa(String.fromCharCode(...new Uint8Array(k1)));
-    const auth = btoa(String.fromCharCode(...new Uint8Array(k2)));
-    // Gửi qua SW để bypass interception
-    const swReg2 = await navigator.serviceWorker.ready;
-    const data = await new Promise((resolve, reject) => {
-      const ch = new MessageChannel();
-      ch.port1.onmessage = e => e.data.error ? reject(new Error(e.data.error)) : resolve(e.data.data);
-      swReg2.active.postMessage({type:'OS_REGISTER', payload:{
-        app_id: '8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6',
-        device_type: 5,
-        identifier: sub.endpoint,
-        web_auth: auth,
-        web_p256: p256dh,
-        tags: { role: localStorage.getItem('dc_role') || 'other' }
-      }}, [ch.port2]);
-      setTimeout(() => reject(new Error('timeout')), 15000);
-    });
-    const result = data.id ? '✅ ' + data.id : '❌ ' + JSON.stringify(data);
-    localStorage.setItem('dc_os_reg', result);
-    window._osManualId = result;
-    alert('Kết quả: ' + result);
-  } catch(e3) {
-    const err = '❌ ' + (e3.message || String(e3));
-    localStorage.setItem('dc_os_reg', err);
-    window._osManualErr = err;
-    alert('Lỗi: ' + err);
+    const messaging = firebase.messaging();
+    const token = await messaging.getToken({ vapidKey: FCM_VAPID });
+    if(!token) { localStorage.setItem('dc_fcm_reg', '❌ no token'); return; }
+    const r = role || currentRole || localStorage.getItem('dc_role') || 'other';
+    // Lưu token vào Firebase dưới /fcm-tokens/{role}/{safeToken}
+    const safeKey = token.replace(/[.#$[\]]/g, '_').substring(0, 100);
+    await db.ref('fcm-tokens/' + r + '/' + safeKey).set(token);
+    localStorage.setItem('dc_fcm_reg', '✅ ' + token.substring(0,20) + '...');
+    window._fcmToken = token;
+  } catch(e) {
+    localStorage.setItem('dc_fcm_reg', '❌ ' + e.message);
   }
 }
+
 async function enableNotifications() {
   const statusEl = document.getElementById('notif-status-text');
   const btnEl = document.getElementById('btn-enable-notif');
@@ -1445,14 +1398,9 @@ async function enableNotifications() {
   }
   if(statusEl) statusEl.textContent = '⏳ Đang xin quyền...';
   try {
-    const os = window._osReady;
-    if(!os) { if(statusEl) statusEl.textContent = '⏳ SDK chưa tải xong, thử lại sau 3 giây...'; setTimeout(enableNotifications, 3000); return; }
-    // Gọi thẳng từ user gesture — không qua deferred
-    const granted = await os.Notifications.requestPermission();
-    if(granted) {
-      try {
-        await os.User.addTag('role', currentRole || 'other');
-      } catch(e2) {}
+    const perm = await Notification.requestPermission();
+    if(perm === 'granted') {
+      await fcmRegister(currentRole);
       if(statusEl) statusEl.innerHTML = '<span style="color:var(--green)">✅ Thông báo đã bật!</span>';
       if(btnEl) btnEl.style.display = 'none';
       const banner = document.getElementById('notif-remind-banner');
@@ -1472,12 +1420,7 @@ function updateNotifSettingsStatus() {
   if(!statusEl) return;
   const isStandalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
   const perm = (typeof Notification !== 'undefined') ? Notification.permission : 'không hỗ trợ';
-  const osReady = window._osReady ? 'Đã tải' : 'Chưa tải';
   const ua = navigator.userAgent.match(/OS ([\d_]+) like Mac/) ? 'iOS ' + navigator.userAgent.match(/OS ([\d_]+) like Mac/)[1].replace(/_/g,'.') : navigator.userAgent.substring(0,50);
-  const osErr = window._osInitErr ? '❌ ' + window._osInitErr : (osReady === 'Đã tải' ? '✅' : '⏳');
-  const ps = (window._osReady && window._osReady.User && window._osReady.User.PushSubscription) ? window._osReady.User.PushSubscription : null;
-  const osSub = ps ? (ps.optedIn ? '✅ Đã subscribe' : '❌ Chưa subscribe') : '?';
-  const osSubId = ps ? (ps.id || ps.token || 'không có ID') : '?';
   // Check service worker registrations + push subscription
   if('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
@@ -1498,13 +1441,9 @@ function updateNotifSettingsStatus() {
   if(debugEl) debugEl.innerHTML =
     `PWA mode: <b>${isStandalone ? '✅ Standalone' : '❌ Safari/Browser'}</b><br>` +
     `Notification API: <b>${perm}</b><br>` +
-    `OneSignal SDK: <b>${osReady}</b> ${osErr}<br>` +
-    `Push subscription: <b>${osSub}</b><br>` +
-    `Sub ID: <b style="font-size:10px;word-break:break-all">${osSubId}</b><br>` +
+    `FCM token: <b style="font-size:10px;word-break:break-all">${localStorage.getItem('dc_fcm_reg') || 'chưa đăng ký'}</b><br>` +
     `Service Workers: <span id="sw-debug">loading...</span><br>` +
     `Native Push: <span id="push-debug">loading...</span><br>` +
-    `OptIn err: <b>${window._osOptInErr || 'none'}</b><br>` +
-    `Manual reg: <b style="font-size:10px;word-break:break-all">${localStorage.getItem('dc_os_reg') || window._osManualId || window._osManualErr || 'chưa đăng ký'}</b><br>` +
     `iOS: <b>${ua}</b>`;
   if(!isStandalone) {
     statusEl.innerHTML = '<span style="color:#b45309">⚠️ Đang mở bằng Safari — cần mở từ biểu tượng DC</span>';
@@ -1525,27 +1464,11 @@ function updateNotifSettingsStatus() {
 
 async function sendPushNotif(title, body, targetRoles) {
   if(!Array.isArray(targetRoles) || targetRoles.length === 0) return;
-  const filters = [];
-  targetRoles.forEach((r, i) => {
-    if(i > 0) filters.push({operator: 'OR'});
-    filters.push({field: 'tag', key: 'role', relation: '=', value: r});
-  });
   try {
-    await fetch('https://api.onesignal.com/notifications', {
+    await fetch('https://us-central1-duyetchi-pva379.cloudfunctions.net/sendPush', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Key os_v2_app_rw57o4bpsrgynji4f7zvutt32y4pegxes5fuuo5n7osvyni4c4rbxoqgb6nkwhfhvasrjtw4ctuchfynma25nxyty4r3lb7ne6iurgy'
-      },
-      body: JSON.stringify({
-        app_id: '8dbbf770-2f94-4d86-a51c-2ff35a4e7bd6',
-        headings: {en: title, vi: title},
-        contents: {en: body, vi: body},
-        filters: filters,
-        url: 'https://vandung0802.github.io/Duyet-Chi/app2.html',
-        ios_badgeType: 'Increase',
-        ios_badgeCount: 1
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body, roles: targetRoles })
     });
   } catch(e) { console.log('Push notif error:', e); }
 }
