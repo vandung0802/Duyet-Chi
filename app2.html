@@ -1711,9 +1711,7 @@ function initials(name){return name.trim().split(' ').map(w=>w[0]).join('').slic
 
 // ── ĐĂNG KÝ SERVICE WORKER ──
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('https://vandung0802.github.io/OneSignalSDKWorker.js', {
-    scope: 'https://vandung0802.github.io/'
-  }).catch(e => console.log('SW register error:', e));
+  navigator.serviceWorker.register('/Duyet-Chi/sw.js').catch(e => console.log('SW register error:', e));
 }
 
 // ── INIT ──
