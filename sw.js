@@ -47,5 +47,16 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  event.waitUntil(clients.openWindow('https://vandung0802.github.io/Duyet-Chi/app2.html'));
+  event.waitUntil((async () => {
+    await setBadgeCount(0);
+    if (navigator.clearAppBadge) await navigator.clearAppBadge();
+    await clients.openWindow('https://vandung0802.github.io/Duyet-Chi/app2.html');
+  })());
+});
+
+self.addEventListener('message', function(event) {
+  if (event.data === 'CLEAR_BADGE') {
+    setBadgeCount(0);
+    if (navigator.clearAppBadge) navigator.clearAppBadge();
+  }
 });

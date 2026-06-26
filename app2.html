@@ -1715,6 +1715,11 @@ if ('serviceWorker' in navigator) {
 }
 // Xóa badge khi mở app
 if (navigator.clearAppBadge) navigator.clearAppBadge();
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.ready.then(reg => {
+    if (reg.active) reg.active.postMessage('CLEAR_BADGE');
+  });
+}
 
 // ── INIT ──
 document.addEventListener('DOMContentLoaded',()=>{
