@@ -1475,16 +1475,21 @@ function updateNotifSettingsStatus() {
 
 async function sendPushNotif(title, body, targetRoles) {
   if(!Array.isArray(targetRoles) || targetRoles.length === 0) return;
+  showToast('Đang gửi push...');
   try {
+    const controller = new AbortController();
+    const tid = setTimeout(() => controller.abort(), 8000);
     const r = await fetch('https://us-central1-duyetchi-pva379.cloudfunctions.net/sendPush', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title, body, roles: targetRoles })
+      body: JSON.stringify({ title, body, roles: targetRoles }),
+      signal: controller.signal
     });
+    clearTimeout(tid);
     const data = await r.json();
     showToast('Push: sent=' + data.sent + ' failed=' + (data.failed||0));
   } catch(e) {
-    showToast('Push lỗi: ' + e.message);
+    showToast('Push lỗi: ' + (e.name === 'AbortError' ? 'timeout 8s' : e.message));
   }
 }
 
