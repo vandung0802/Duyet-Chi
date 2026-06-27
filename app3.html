@@ -1125,7 +1125,7 @@ function initFirebaseSync(){
       persons = meta.persons||[]; sites = meta.sites||[];
       if(meta.sheetUrl){ sheetUrl=meta.sheetUrl; localStorage.setItem('dc_sheetUrl',sheetUrl); const inp=document.getElementById('inp-sheet-url'); if(inp) inp.value=sheetUrl; }
       const proposalsObj = data.proposals||{}; const imagesObj = data.images||{};
-      proposals = Object.keys(proposalsObj).map(id=>{ const p=proposalsObj[id]; const imgs=imagesObj[id]||{}; return {...p, imgImages:imgs.imgImages||[], proofImages:imgs.proofImages||}; }).sort((a,b)=>b.ts-a.ts);
+      proposals = Object.keys(proposalsObj).map(id=>{ const p=proposalsObj[id]; const imgs=imagesObj[id]||{}; return {...p, imgImages:imgs.imgImages||[], proofImages:imgs.proofImages||[]}; }).sort((a,b)=>b.ts-a.ts);
       localStorage.setItem('dc_proposals',JSON.stringify(proposals));
       localStorage.setItem('dc_persons',JSON.stringify(persons));
       localStorage.setItem('dc_sites',JSON.stringify(sites));
