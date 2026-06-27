@@ -1223,13 +1223,22 @@ if('serviceWorker' in navigator){
 // ══════════════════════════════════════════
 // UTILITIES
 // ══════════════════════════════════════════
-function fmt(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}); }
-function fmtFull(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
-function fmtVND(n){ if(!n&&n!==0) return ''; return Number(n).toLocaleString('vi-VN')+'đ'; }
-function fmtAmountInput(inp){ let v=inp.value.replace(/\D/g,''); if(!v){ inp.value=''; return; } inp.value=Number(v).toLocaleString('vi-VN'); }
-function parseVND(s){ return parseInt((s||'').replace(/\D/g,'')||'0',10); }
-function uid(){ return Date.now().toString(36)+Math.random().toString(36).substring(2,6); }
-function migrateAmountsToVND(){ proposals.forEach(p=>{ if(p.amount&&p.amount>100000000) p.amount=Math.round(p.amount/1000); if(p.approvedAmount&&p.approvedAmount>100000000) p.approvedAmount=Math.round(p.approvedAmount/1000); if(p.transferAmount&&p.transferAmount>100000000) p.transferAmount=Math.round(p.transferAmount/1000); }); }
+function fmt(n){return n||n===0?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0}):'—'}
+function fmtFull(ts){if(!ts)return''; const d=new Date(ts);return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' '+d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'})}
+function fmtT(ts){return new Date(ts).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})}
+function fmtVND(n){return(n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ':'—'}
+function parseAmountInput(el){return parseInt((el.value||'').replace(/\./g,'').replace(/[^\d]/g,''))||0;}
+function fmtAmountInput(el){const pos=el.selectionStart,oldLen=el.value.length;const raw=(el.value||'').replace(/[^\d]/g,'');const formatted=raw?Number(raw).toLocaleString('vi-VN',{maximumFractionDigits:0}):'';el.value=formatted;const diff=formatted.length-oldLen;try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}}
+function parseVND(s){return parseInt((s||'').replace(/\D/g,'')||'0',10);}
+function uid(){return Date.now().toString();}
+function getOfficialApprovedAmount(p){const h=parseFloat(p.approvedHAmount)||0;const d=parseFloat(p.approvedDAmount)||0;return h>0?h:d;}
+function getTotalTransferred(p){if(!Array.isArray(p.transfers))return 0;return p.transfers.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);}
+function migrateAmountsToVND(){
+  // amounts from app2 are already in dong — just mark them so we don't re-process
+  let changed=false;
+  proposals.forEach(p=>{ if(!p.amountUnit){ p.amountUnit='dong'; changed=true; } });
+  if(changed) save();
+}
 
 // ══════════════════════════════════════════
 // NAVIGATION
@@ -1241,241 +1250,450 @@ function showPage(page,el){
   if(el) el.classList.add('active');
   currentPage=page;
   if(page==='home') renderAll();
-  if(page==='report'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
+  if(page==='report'){ renderReportFilters(); setReportTab('summary',document.querySelector('.report-subtab[data-tab="summary"]')); }
   if(page==='settings'){ renderSettings(); updateNotifSettingsStatus(); if(currentRole==='dung') loadLoginHistory(); }
   if(page==='add') resetAddForm();
   window.scrollTo(0,0);
 }
 function resetAddForm(){
-  document.getElementById('inp-title').value='';
-  document.getElementById('inp-site').value='';
-  document.getElementById('inp-amount').value='';
-  document.getElementById('inp-date').value=new Date().toISOString().split('T')[0];
-  document.getElementById('inp-note').value='';
-  document.getElementById('inp-person').value=currentUserName;
+  const desc=document.getElementById('inp-desc'); if(desc) desc.value='';
+  const site=document.getElementById('inp-site'); if(site) site.value='';
+  const amt=document.getElementById('inp-amount'); if(amt) amt.value='';
+  const note=document.getElementById('inp-note'); if(note) note.value='';
+  document.querySelector('input[name="inp-priority"][value="normal"]').checked=true;
+  const ph=document.getElementById('inp-person'); if(ph) ph.value=currentUserName;
   const pd=document.getElementById('inp-person-display'); if(pd) pd.textContent=currentUserName;
-  uploadedImages=[]; renderUploadedImages();
+  uploadedImages=[]; renderUploadPreview();
+  populateSelects();
 }
 
 // ══════════════════════════════════════════
-// ADD PROPOSAL
+// ADD PROPOSAL – IMAGE UPLOAD
 // ══════════════════════════════════════════
-function triggerImageUpload(){ document.getElementById('inp-image').click(); }
-function handleImageSelect(e){
-  const files=e.target.files; if(!files||!files.length) return;
-  Array.from(files).forEach(f=>{ const r=new FileReader(); r.onload=ev=>{ uploadedImages.push(ev.target.result); renderUploadedImages(); }; r.readAsDataURL(f); });
-  e.target.value='';
+function handleImg(inp){
+  const files=inp.files; if(!files||!files.length) return;
+  Array.from(files).forEach(f=>{ const r=new FileReader(); r.onload=ev=>{ uploadedImages.push(ev.target.result); renderUploadPreview(); }; r.readAsDataURL(f); });
+  inp.value='';
 }
-function renderUploadedImages(){
-  const c=document.getElementById('uploaded-images-preview'); if(!c) return;
-  c.innerHTML=uploadedImages.map((img,i)=>`<div style="position:relative;display:inline-block"><img src="${img}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="viewImg('${img}')"><button onclick="removeUploadedImg(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;line-height:1">×</button></div>`).join('');
+function renderUploadPreview(){
+  const c=document.getElementById('img-preview-wrap'); if(!c) return;
+  if(!uploadedImages.length){ c.style.display='none'; c.innerHTML=''; return; }
+  c.style.display='';
+  c.innerHTML=uploadedImages.map((img,i)=>`<div style="position:relative;display:inline-block;margin:4px"><img src="${img}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="viewImg('${img}')"><button onclick="removeUploadedImg(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;line-height:1">×</button></div>`).join('');
 }
-function removeUploadedImg(i){ uploadedImages.splice(i,1); renderUploadedImages(); }
+function removeUploadedImg(i){ uploadedImages.splice(i,1); renderUploadPreview(); }
+function populateSelects(){
+  const sel=document.getElementById('inp-site'); if(!sel) return;
+  sel.innerHTML='<option value="">— Chọn công trường —</option>'+(sites||[]).map(s=>`<option value="${s}">${s}</option>`).join('');
+}
 
 async function submitProposal(){
-  const title=document.getElementById('inp-title').value.trim();
-  const site=document.getElementById('inp-site').value.trim();
-  const amountStr=document.getElementById('inp-amount').value;
-  const date=document.getElementById('inp-date').value;
-  const note=document.getElementById('inp-note').value.trim();
-  if(!title){ showToast('⚠️ Nhập tiêu đề'); return; }
-  if(!site){ showToast('⚠️ Nhập công trình'); return; }
-  if(!amountStr){ showToast('⚠️ Nhập số tiền'); return; }
+  const desc=(document.getElementById('inp-desc')||{}).value?.trim();
+  const site=(document.getElementById('inp-site')||{}).value?.trim();
+  const amountStr=(document.getElementById('inp-amount')||{}).value||'';
+  const note=(document.getElementById('inp-note')||{}).value?.trim()||'';
+  const priority=document.querySelector('input[name="inp-priority"]:checked')?.value||'normal';
+  if(!desc){ showToast('⚠️ Nhập nội dung đề xuất'); return; }
+  if(!site){ showToast('⚠️ Chọn công trường'); return; }
   const amount=parseVND(amountStr);
-  if(!amount||amount<=0){ showToast('⚠️ Số tiền không hợp lệ'); return; }
-  const btn=document.getElementById('btn-submit-proposal');
-  btn.disabled=true; btn.textContent='⏳ Đang lưu...';
+  if(!amount||amount<=0){ showToast('⚠️ Nhập số tiền'); return; }
+  showToast('⏳ Đang lưu...');
   let imgImages=[];
   if(uploadedImages.length){
-    try{ showToast('⏳ Đang tải ảnh...'); for(let i=0;i<uploadedImages.length;i++){ const url=await uploadToStorage(uploadedImages[i],`duyetchi/proposals/${Date.now()}_${i}.jpg`); imgImages.push(url); } }
-    catch(e){ showToast('⚠️ Lỗi tải ảnh: '+e.message); }
+    try{
+      for(let i=0;i<uploadedImages.length;i++){
+        const url=await uploadToStorage(uploadedImages[i],`duyetchi/proposals/${Date.now()}_${i}.jpg`);
+        imgImages.push(url);
+      }
+    } catch(e){ imgImages=uploadedImages.slice(); }
   }
-  const p={id:uid(),title,site,amount,date:date||fmt(Date.now()),note,person:currentUserName,role:currentRole,ts:Date.now(),status:'pending',imgImages,proofImages:[]};
-  proposals.unshift(p); save(); uploadedImages=[]; renderUploadedImages();
-  btn.disabled=false; btn.textContent='💾 Gửi đề xuất';
+  const p={id:uid(),desc,site,amount,note,priority,person:currentUserName,personRole:currentRole,ts:Date.now(),status:'pending',imgImages,transfers:[],amountUnit:'dong'};
+  proposals.unshift(p); save(); uploadedImages=[]; renderUploadPreview();
   showToast('✅ Đã gửi đề xuất!');
   const others=['dung','hien','trang'].filter(r=>r!==currentRole);
-  sendPushNotif('📋 Đề xuất mới',`${currentUserName}: ${title} — ${fmtVND(amount)}`,others);
+  sendPushNotif('📋 Đề xuất mới',`${currentUserName}: ${desc} — ${fmtVND(amount)}`,others);
   showPage('home',document.querySelectorAll('.nav-item')[0]);
 }
 
 // ══════════════════════════════════════════
 // RENDER HOME
 // ══════════════════════════════════════════
-function renderAll(){
-  const list=document.getElementById('proposals-list'); if(!list) return;
-  let filtered=proposals;
-  if(filter==='pending') filtered=proposals.filter(p=>p.status==='pending');
-  else if(filter==='approved') filtered=proposals.filter(p=>p.status==='approved'||p.status==='partial');
-  else if(filter==='done') filtered=proposals.filter(p=>p.status==='done');
-  else if(filter==='rejected') filtered=proposals.filter(p=>p.status==='rejected');
-  const q=(document.getElementById('search-input')||{}).value||'';
-  if(q.trim()) filtered=filtered.filter(p=>(p.title+p.site+p.person+p.note).toLowerCase().includes(q.toLowerCase()));
-  list.innerHTML=filtered.length?filtered.map(renderCard).join(''):'<div style="text-align:center;padding:40px;color:var(--text-sub)">Không có đề xuất nào</div>';
-  renderSummaryBar(proposals); updateNotifBadge();
-}
-function setFilter(f,el){ filter=f; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); if(el) el.classList.add('active'); renderAll(); }
-const STATUS_LABEL={pending:'⏳ Chờ',approved:'✅ Duyệt',partial:'✅ 1 phần',done:'💸 Đã chi',rejected:'❌ Từ chối'};
-const STATUS_COLOR={pending:'var(--yellow)',approved:'var(--green)',partial:'#34d399',done:'var(--blue)',rejected:'var(--red)'};
+const STATUS_LABEL={pending:'⏳ Chờ duyệt',approved:'✅ Đã duyệt',rejected:'❌ Từ chối',transferred:'💸 Đã chuyển',done:'💸 Đã chuyển'};
+const STATUS_COLOR={pending:'#f59e0b',approved:'#10b981',rejected:'#ef4444',transferred:'#3b82f6',done:'#3b82f6'};
+// normalize 'done' → 'transferred' for compatibility with old data
+function normStatus(p){ return (p.status==='done')?'transferred':p.status; }
 
-function renderCard(p){
-  const statusL=STATUS_LABEL[p.status]||p.status, statusC=STATUS_COLOR[p.status]||'#888';
-  const hasImg=(p.imgImages&&p.imgImages.length)||(p.imgB64);
-  const hasProof=(p.proofImages&&p.proofImages.length)||(p.proofB64);
-  const roleColors={dung:'#3b82f6',hien:'#8b5cf6',trang:'#f59e0b',other:'#6b7280'};
-  const personColor=roleColors[p.role||getRoleForName(p.person)]||'#6b7280';
-  return `<div class="card" id="card-${p.id}">
-    <div class="card-header">
-      <div><div class="card-title">${p.title}</div><div class="card-meta"><span style="color:${personColor};font-weight:700">${p.person||''}</span> • ${p.site||''} • ${fmt(p.ts)||p.date||''}</div></div>
-      <div class="status-badge" style="background:${statusC}">${statusL}</div>
-    </div>
-    <div class="card-amount">${fmtVND(p.amount)}</div>
-    ${p.approvedAmount&&p.approvedAmount!==p.amount?`<div style="font-size:12px;color:var(--green)">Duyệt: ${fmtVND(p.approvedAmount)}</div>`:''}
-    ${p.transferAmount?`<div style="font-size:12px;color:var(--blue)">Chuyển: ${fmtVND(p.transferAmount)}</div>`:''}
-    ${p.note?`<div class="card-note">${p.note}</div>`:''}
-    ${p.rejectReason?`<div style="font-size:12px;color:var(--red)">Lý do: ${p.rejectReason}</div>`:''}
-    <div class="card-imgs">
-      ${hasImg?`<div class="img-thumb-wrap"><img src="${(p.imgImages&&p.imgImages[0])||p.imgB64}" class="img-thumb" onclick="openImageGallery('${p.id}','img')"><span class="img-count">${(p.imgImages&&p.imgImages.length)||1} ảnh</span></div>`:''}
-      ${hasProof?`<div class="img-thumb-wrap"><img src="${(p.proofImages&&p.proofImages[0])||p.proofB64}" class="img-thumb" onclick="openImageGallery('${p.id}','proof')"><span class="img-count" style="background:#3b82f6">${(p.proofImages&&p.proofImages.length)||1} BC</span></div>`:''}
-    </div>
-    <div class="card-actions">${renderActionBtns(p)}</div>
-    <div class="approve-meta">${renderApproveMeta(p)}</div>
-  </div>`;
+function matchFilter(p,f){
+  const st=normStatus(p);
+  if(f==='all') return true;
+  if(f==='pending') return st==='pending';
+  if(f==='approved') return st==='approved';
+  if(f==='rejected') return st==='rejected';
+  if(f==='transferred') return st==='transferred';
+  if(f==='d_only') return !!(p.approvedD);
+  if(f==='h_only') return !!(p.approvedH);
+  return true;
 }
-function renderApproveMeta(p){
-  const parts=[];
-  if(p.approvedBy) parts.push(`<span style="color:var(--green)">✅ ${p.approvedBy}${p.approvedAt?' ('+fmt(p.approvedAt)+')':''}</span>`);
-  if(p.transferBy) parts.push(`<span style="color:var(--blue)">💸 ${p.transferBy}${p.transferAt?' ('+fmt(p.transferAt)+')':''}</span>`);
-  if(p.rejectedBy) parts.push(`<span style="color:var(--red)">❌ ${p.rejectedBy}${p.rejectedAt?' ('+fmt(p.rejectedAt)+')':''}</span>`);
-  return parts.join(' ');
+function setFilter(f,el){
+  filter=f;
+  document.querySelectorAll('.stat-box').forEach(b=>b.classList.remove('active'));
+  if(el) el.classList.add('active');
+  renderProposals();
+}
+function renderAll(){ renderStats(); renderProposals(); updateNotifBadge(); }
+function renderStats(){
+  const all=proposals;
+  const set=(id,n,amt)=>{ const e=document.getElementById(id); if(e) e.textContent=n; const a=document.getElementById(id+'-amt'); if(a) a.textContent=amt>0?fmtVND(amt):'—'; };
+  set('st-all',all.length,all.reduce((s,p)=>s+(parseFloat(p.amount)||0),0));
+  const pen=all.filter(p=>normStatus(p)==='pending');
+  set('st-pending',pen.length,pen.reduce((s,p)=>s+(parseFloat(p.amount)||0),0));
+  const app=all.filter(p=>normStatus(p)==='approved');
+  set('st-approved',app.length,app.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||parseFloat(p.amount)||0),0));
+  const tra=all.filter(p=>normStatus(p)==='transferred');
+  set('st-done',tra.length,tra.reduce((s,p)=>s+getTotalTransferred(p),0));
+  const dap=all.filter(p=>p.approvedD);
+  set('st-d',dap.length,dap.reduce((s,p)=>s+(parseFloat(p.approvedDAmount)||0),0));
+  const hap=all.filter(p=>p.approvedH);
+  set('st-h',hap.length,hap.reduce((s,p)=>s+(parseFloat(p.approvedHAmount)||0),0));
+  const rej=all.filter(p=>normStatus(p)==='rejected');
+  set('st-rejected',rej.length,rej.reduce((s,p)=>s+(parseFloat(p.amount)||0),0));
+}
+function renderProposals(){
+  const list=document.getElementById('proposal-list'); if(!list) return;
+  const q=(document.getElementById('search-input')||{}).value?.toLowerCase()||'';
+  let arr=proposals.filter(p=>matchFilter(p,filter));
+  if(q) arr=arr.filter(p=>((p.desc||p.title||'')+' '+(p.site||'')+' '+(p.person||'')+' '+(p.note||'')).toLowerCase().includes(q));
+  arr=arr.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  list.innerHTML=arr.length?arr.map(renderCard).join(''):'<div style="text-align:center;padding:40px;color:var(--text-sub);font-size:13px">Không có đề xuất nào</div>';
+}
+function renderCard(p){
+  const title=p.desc||p.title||'(chưa có mô tả)';
+  const st=normStatus(p);
+  const statusL=STATUS_LABEL[st]||st, statusC=STATUS_COLOR[st]||'#888';
+  const hasImg=(p.imgImages&&p.imgImages.length)||p.imgB64;
+  const allProofs=Array.isArray(p.transfers)?p.transfers.reduce((a,t)=>a.concat(t.proofImages||[]),[]):[];
+  const hasProof=allProofs.length||p.proofImages?.length||p.proofB64;
+  const firstProof=allProofs[0]||(p.proofImages&&p.proofImages[0])||p.proofB64;
+  const proofCount=allProofs.length||(p.proofImages?.length||0)||(p.proofB64?1:0);
+  const roleColors={dung:'#3b82f6',hien:'#7c3aed',trang:'#f59e0b'};
+  const personColor=roleColors[p.personRole||p.role]||'#6b7280';
+  const approvedDLine=p.approvedD?`<div style="font-size:12px;color:#10b981;margin-top:2px">✅ D duyệt: ${fmtVND(p.approvedDAmount)}</div>`:'';
+  const approvedHLine=p.approvedH?`<div style="font-size:12px;color:#7c3aed;margin-top:2px">✅ H duyệt: ${fmtVND(p.approvedHAmount)}</div>`:'';
+  const totalTrans=getTotalTransferred(p);
+  const transLine=totalTrans?`<div style="font-size:12px;color:#3b82f6;margin-top:2px">💸 Đã chuyển: ${fmtVND(totalTrans)}</div>`:'';
+  const rejLine=(p.rejectedByD||p.rejectedByH)?`<div style="font-size:12px;color:#ef4444;margin-top:2px">❌ ${p.rejectReason||'Đã từ chối'}</div>`:'';
+  const dateStr=p.ts?fmtFull(p.ts):(p.date||'');
+  return `<div class="card" id="card-${p.id}">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:14px;line-height:1.4;word-break:break-word">${title}</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-top:2px"><span style="color:${personColor};font-weight:700">${p.person||''}</span> · ${p.site||''} · ${dateStr}</div>
+      </div>
+      <div style="background:${statusC};color:#fff;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700;white-space:nowrap;flex-shrink:0">${statusL}</div>
+    </div>
+    <div style="font-size:18px;font-weight:800;color:var(--purple);margin:4px 0">${fmtVND(p.amount)}</div>
+    ${approvedDLine}${approvedHLine}${transLine}${rejLine}
+    ${p.note?`<div style="font-size:12px;color:var(--text-sub);margin-top:4px;font-style:italic">${p.note}</div>`:''}
+    ${hasImg||hasProof?`<div style="display:flex;gap:8px;margin-top:8px">
+      ${hasImg?`<div style="position:relative;cursor:pointer" onclick="openImageGallery('${p.id}','img')"><img src="${(p.imgImages&&p.imgImages[0])||p.imgB64}" style="width:60px;height:60px;object-fit:cover;border-radius:8px"><span style="position:absolute;bottom:2px;right:2px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;border-radius:4px;padding:1px 4px">${(p.imgImages&&p.imgImages.length)||1}📸</span></div>`:''}
+      ${hasProof?`<div style="position:relative;cursor:pointer" onclick="openImageGallery('${p.id}','proof')"><img src="${firstProof}" style="width:60px;height:60px;object-fit:cover;border-radius:8px"><span style="position:absolute;bottom:2px;right:2px;background:rgba(59,130,246,0.8);color:#fff;font-size:10px;border-radius:4px;padding:1px 4px">${proofCount}BC</span></div>`:''}
+    </div>`:''}
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">${renderActionBtns(p)}</div>
+  </div>`;
 }
 function renderActionBtns(p){
   let btns='';
-  if(currentRole==='dung'){
-    if(p.status==='pending'||p.status==='rejected'){ btns+=`<button class="btn btn-approve" onclick="approveBy(event,'${p.id}')">✅ Duyệt</button><button class="btn btn-reject" onclick="rejectBy(event,'${p.id}')">❌ Từ chối</button>`; }
-    if(p.status==='approved'||p.status==='partial'){ btns+=`<button class="btn btn-transfer" onclick="transferBy(event,'${p.id}')">💸 Chuyển</button><button class="btn btn-reject" onclick="rejectBy(event,'${p.id}')">❌ Từ chối</button>`; }
-    btns+=`<button class="btn btn-edit" onclick="openEditProposal('${p.id}')">✏️ Sửa</button><button class="btn btn-del" onclick="del('${p.id}')">🗑️</button>`;
-  }
-  if(currentRole==='hien'){
-    if(p.status==='pending'||p.status==='rejected'){ btns+=`<button class="btn btn-approve" onclick="approveBy(event,'${p.id}')">✅ Duyệt</button><button class="btn btn-reject" onclick="rejectBy(event,'${p.id}')">❌ Từ chối</button>`; }
-    btns+=`<button class="btn btn-edit" onclick="openEditProposal('${p.id}')">✏️ Sửa</button>`;
-  }
-  if(currentRole==='trang'){
-    if(p.status==='approved'||p.status==='partial'){ btns+=`<button class="btn btn-transfer" onclick="transferBy(event,'${p.id}')">💸 Chuyển</button>`; }
-    btns+=`<button class="btn btn-edit" onclick="openEditProposal('${p.id}')">✏️ Sửa</button>`;
-  }
-  btns+=`<button class="btn" style="background:var(--surface2)" onclick="shareCard('${p.id}')">🔗</button>`;
+  const id=p.id; const st=normStatus(p);
+  const canApproveD=currentRole==='dung'&&!p.approvedD&&st!=='rejected'&&st!=='transferred';
+  const canApproveH=currentRole==='hien'&&!p.approvedH&&st!=='rejected'&&st!=='transferred';
+  const canTransfer=currentRole==='trang'&&st==='approved';
+  const canRejectD=currentRole==='dung'&&st!=='transferred';
+  const canRejectH=currentRole==='hien'&&st!=='transferred';
+  if(canApproveD) btns+=`<button class="btn btn-approve" onclick="approveByD(event,'${id}')">✅ D Duyệt</button>`;
+  if(canApproveH) btns+=`<button class="btn btn-approve" onclick="approveByH(event,'${id}')">✅ H Duyệt</button>`;
+  if(canTransfer) btns+=`<button class="btn btn-transfer" onclick="doTransfer(event,'${id}')">💸 Chuyển tiền</button>`;
+  if(canRejectD) btns+=`<button class="btn btn-reject" onclick="rejectBy(event,'${id}','dung')">❌ D Từ chối</button>`;
+  if(canRejectH) btns+=`<button class="btn btn-reject" onclick="rejectBy(event,'${id}','hien')">❌ H Từ chối</button>`;
+  btns+=`<button class="btn btn-edit" onclick="openEditProposal('${id}')">✏️ Sửa</button>`;
+  btns+=`<button class="btn" style="background:var(--surface2)" onclick="shareCard('${id}')">🔗</button>`;
+  if(currentRole==='dung') btns+=`<button class="btn btn-del" onclick="del('${id}')">🗑️</button>`;
   return btns;
 }
-function renderSummaryBar(arr){
-  const total=arr.reduce((s,p)=>s+p.amount,0);
-  const approved=arr.filter(p=>p.status==='approved'||p.status==='partial'||p.status==='done').reduce((s,p)=>s+p.amount,0);
-  const done=arr.filter(p=>p.status==='done').reduce((s,p)=>s+(p.transferAmount||p.approvedAmount||p.amount),0);
-  const el=document.getElementById('summary-bar'); if(!el) return;
-  el.innerHTML=`<span>📋 ${arr.length}</span> <span>💰 ${fmtVND(total)}</span> <span style="color:var(--green)">✅ ${fmtVND(approved)}</span> <span style="color:var(--blue)">💸 ${fmtVND(done)}</span>`;
+function calcStatus(p){
+  if(Array.isArray(p.transfers)&&p.transfers.length) return 'transferred';
+  if(p.rejectedByD||p.rejectedByH) return 'rejected';
+  if(p.approvedD&&p.approvedH) return 'approved';
+  return 'pending';
 }
 
 // ══════════════════════════════════════════
 // APPROVE / TRANSFER / REJECT
 // ══════════════════════════════════════════
-let pendingApproveId='';
-function approveBy(e,id){ e.stopPropagation(); const p=proposals.find(x=>x.id===id); if(!p) return; pendingApproveId=id; document.getElementById('approve-amount-input').value=Number(p.amount).toLocaleString('vi-VN'); document.getElementById('approve-amount-modal').style.display='flex'; }
+let pendingApproveId='', pendingApproveRole='';
+function approveByD(e,id){ e.stopPropagation(); pendingApproveId=id; pendingApproveRole='dung'; const p=proposals.find(x=>x.id===id); if(!p) return; document.getElementById('approve-amount-input').value=Number(p.amount).toLocaleString('vi-VN'); document.getElementById('approve-amount-modal').style.display='flex'; }
+function approveByH(e,id){ e.stopPropagation(); pendingApproveId=id; pendingApproveRole='hien'; const p=proposals.find(x=>x.id===id); if(!p) return; document.getElementById('approve-amount-input').value=Number(p.amount).toLocaleString('vi-VN'); document.getElementById('approve-amount-modal').style.display='flex'; }
 function closeApproveModal(){ document.getElementById('approve-amount-modal').style.display='none'; }
 function confirmApproveAmount(){
   const p=proposals.find(x=>x.id===pendingApproveId); if(!p) return;
   const amt=parseVND(document.getElementById('approve-amount-input').value);
   if(!amt||amt<=0){ showToast('⚠️ Nhập số tiền'); return; }
-  p.approvedAmount=amt; p.approvedBy=currentUserName; p.approvedAt=Date.now(); p.status=amt<p.amount?'partial':'approved';
+  const now=Date.now();
+  if(pendingApproveRole==='dung'){ p.approvedD=now; p.approvedDAmount=amt; if(!Array.isArray(p.approvedDHistory)) p.approvedDHistory=[]; p.approvedDHistory.push({amount:amt,at:now,by:currentUserName}); }
+  else { p.approvedH=now; p.approvedHAmount=amt; if(!Array.isArray(p.approvedHHistory)) p.approvedHHistory=[]; p.approvedHHistory.push({amount:amt,at:now,by:currentUserName}); }
+  p.status=calcStatus(p);
   save(); closeApproveModal(); renderAll(); showToast('✅ Đã duyệt '+fmtVND(amt));
   const others=['dung','hien','trang'].filter(r=>r!==currentRole);
-  sendPushNotif('✅ Đề xuất được duyệt',`${currentUserName} duyệt: ${p.title} — ${fmtVND(amt)}`,others);
+  sendPushNotif('✅ Duyệt chi',`${currentUserName} duyệt: ${p.desc||p.title} — ${fmtVND(amt)}`,others);
 }
 
 let pendingTransferId='', pendingProofImages=[];
-function transferBy(e,id){ e.stopPropagation(); const p=proposals.find(x=>x.id===id); if(!p) return; pendingTransferId=id; pendingProofImages=[]; document.getElementById('transfer-amount-input').value=Number(p.approvedAmount||p.amount).toLocaleString('vi-VN'); document.getElementById('transfer-proof-preview').innerHTML=''; document.getElementById('transfer-amount-modal').style.display='flex'; }
+function doTransfer(e,id){ e.stopPropagation(); const p=proposals.find(x=>x.id===id); if(!p) return; pendingTransferId=id; pendingProofImages=[]; const approved=getOfficialApprovedAmount(p)||p.amount||0; document.getElementById('transfer-amount-input').value=Number(approved).toLocaleString('vi-VN'); const prev=document.getElementById('transfer-proof-preview'); if(prev) prev.innerHTML=''; document.getElementById('transfer-amount-modal').style.display='flex'; }
 function closeTransferModal(){ document.getElementById('transfer-amount-modal').style.display='none'; }
 function handleProofSelect(e){
   const files=e.target.files; if(!files||!files.length) return; pendingProofImages=[];
-  Array.from(files).forEach(f=>{ const r=new FileReader(); r.onload=ev=>{ pendingProofImages.push(ev.target.result); document.getElementById('transfer-proof-preview').innerHTML=pendingProofImages.map(img=>`<img src="${img}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="viewImg('${img}')">`).join(''); }; r.readAsDataURL(f); });
+  Array.from(files).forEach(f=>{ const r=new FileReader(); r.onload=ev=>{ pendingProofImages.push(ev.target.result); const prev=document.getElementById('transfer-proof-preview'); if(prev) prev.innerHTML=pendingProofImages.map(img=>`<img src="${img}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer;margin:2px" onclick="viewImg('${img}')">`).join(''); }; r.readAsDataURL(f); });
   e.target.value='';
 }
 async function confirmTransferAmount(){
   const p=proposals.find(x=>x.id===pendingTransferId); if(!p) return;
   const amt=parseVND(document.getElementById('transfer-amount-input').value);
   if(!amt||amt<=0){ showToast('⚠️ Nhập số tiền'); return; }
-  let proofImages=[...(p.proofImages||[])];
-  if(pendingProofImages.length){ showToast('⏳ Đang tải ảnh biên lai...'); for(let i=0;i<pendingProofImages.length;i++){ try{ const url=await uploadToStorage(pendingProofImages[i],`duyetchi/proofs/${p.id}_${Date.now()}_${i}.jpg`); proofImages.push(url); }catch(ex){ proofImages.push(pendingProofImages[i]); } } }
-  p.transferAmount=amt; p.transferBy=currentUserName; p.transferAt=Date.now(); p.status='done'; p.proofImages=proofImages;
+  let proofImages=[];
+  if(pendingProofImages.length){
+    showToast('⏳ Đang tải ảnh...');
+    for(let i=0;i<pendingProofImages.length;i++){
+      try{ const url=await uploadToStorage(pendingProofImages[i],`duyetchi/proofs/${p.id}_${Date.now()}_${i}.jpg`); proofImages.push(url); }
+      catch(ex){ proofImages.push(pendingProofImages[i]); }
+    }
+  }
+  if(!Array.isArray(p.transfers)) p.transfers=[];
+  p.transfers.push({amount:amt,by:currentUserName,at:Date.now(),proofImages});
+  p.transferredAt=Date.now(); p.status='transferred';
   save(); closeTransferModal(); renderAll(); pendingProofImages=[]; showToast('💸 Đã ghi nhận chuyển '+fmtVND(amt));
   const others=['dung','hien','trang'].filter(r=>r!==currentRole);
-  sendPushNotif('💸 Đã chuyển tiền',`${currentUserName} chuyển: ${p.title} — ${fmtVND(amt)}`,others);
+  sendPushNotif('💸 Đã chuyển tiền',`${currentUserName} chuyển: ${p.desc||p.title} — ${fmtVND(amt)}`,others);
 }
-function rejectBy(e,id){ e.stopPropagation(); const reason=prompt('Lý do từ chối (có thể để trống):'); if(reason===null) return; const p=proposals.find(x=>x.id===id); if(!p) return; p.status='rejected'; p.rejectedBy=currentUserName; p.rejectedAt=Date.now(); p.rejectReason=reason||''; save(); renderAll(); showToast('❌ Đã từ chối'); }
+function rejectBy(e,id,byRole){
+  e.stopPropagation();
+  const reason=prompt('Lý do từ chối (có thể để trống):');
+  if(reason===null) return;
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(byRole==='dung'){ p.rejectedByD=true; } else { p.rejectedByH=true; }
+  p.rejectReason=reason||''; p.status=calcStatus(p);
+  save(); renderAll(); showToast('❌ Đã từ chối');
+}
 function del(id){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng mới được xoá'); return; } if(!confirm('Xoá đề xuất này?')) return; proposals=proposals.filter(p=>p.id!==id); save(); renderAll(); showToast('🗑️ Đã xoá'); }
 
 // ══════════════════════════════════════════
 // EDIT PROPOSAL
 // ══════════════════════════════════════════
 let editId='';
-function openEditProposal(id){ const p=proposals.find(x=>x.id===id); if(!p) return; editId=id; document.getElementById('edit-title').value=p.title||''; document.getElementById('edit-site').value=p.site||''; document.getElementById('edit-amount').value=p.amount?Number(p.amount).toLocaleString('vi-VN'):''; document.getElementById('edit-date').value=p.date||''; document.getElementById('edit-note').value=p.note||''; document.getElementById('edit-person').value=p.person||''; document.getElementById('edit-modal').style.display='flex'; }
+function openEditProposal(id){
+  const p=proposals.find(x=>x.id===id); if(!p) return; editId=id;
+  const f=(eid,val)=>{ const el=document.getElementById(eid); if(el) el.value=val||''; };
+  f('edit-title',p.desc||p.title);
+  f('edit-site',p.site);
+  f('edit-amount',p.amount?Number(p.amount).toLocaleString('vi-VN'):'');
+  f('edit-note',p.note);
+  f('edit-person',p.person);
+  document.getElementById('edit-modal').style.display='flex';
+}
 function closeEditModal(){ document.getElementById('edit-modal').style.display='none'; }
-function saveEditProposal(){ const p=proposals.find(x=>x.id===editId); if(!p) return; p.title=document.getElementById('edit-title').value.trim(); p.site=document.getElementById('edit-site').value.trim(); p.amount=parseVND(document.getElementById('edit-amount').value); p.date=document.getElementById('edit-date').value; p.note=document.getElementById('edit-note').value.trim(); if(currentRole==='dung') p.person=document.getElementById('edit-person').value.trim(); save(); closeEditModal(); renderAll(); showToast('✅ Đã cập nhật'); }
+function saveEditProposal(){
+  const p=proposals.find(x=>x.id===editId); if(!p) return;
+  const g=(eid)=>{ const el=document.getElementById(eid); return el?el.value.trim():''; };
+  const newDesc=g('edit-title'); if(newDesc) p.desc=newDesc;
+  const newSite=g('edit-site'); if(newSite) p.site=newSite;
+  const amtEl=document.getElementById('edit-amount'); if(amtEl) p.amount=parseVND(amtEl.value);
+  p.note=g('edit-note');
+  if(currentRole==='dung'){ const per=g('edit-person'); if(per) p.person=per; }
+  save(); closeEditModal(); renderAll(); showToast('✅ Đã cập nhật');
+}
 
 // ══════════════════════════════════════════
 // IMAGE GALLERY / VIEWER
 // ══════════════════════════════════════════
-function viewImg(src){ document.getElementById('image-modal-img').src=src; document.getElementById('image-modal').style.display='flex'; }
-function closeImageModal(){ document.getElementById('image-modal').style.display='none'; }
-function openImageGallery(id,type){ const p=proposals.find(x=>x.id===id); if(!p) return; const imgs=type==='proof'?(p.proofImages&&p.proofImages.length?p.proofImages:(p.proofB64?[p.proofB64]:[])):((p.imgImages&&p.imgImages.length?p.imgImages:(p.imgB64?[p.imgB64]:[]))); if(!imgs.length) return; if(imgs.length===1){ viewImg(imgs[0]); return; } document.getElementById('img-action-gallery').innerHTML=imgs.map(img=>`<img src="${img}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="viewImg('${img}')">`).join(''); document.getElementById('image-action-overlay').style.display='flex'; }
-function closeImgOverlay(){ document.getElementById('image-action-overlay').style.display='none'; }
+function viewImg(src){ const m=document.getElementById('image-modal'); const mi=document.getElementById('image-modal-img'); if(m&&mi){ mi.src=src; m.style.display='flex'; } }
+function closeImageModal(){ const m=document.getElementById('image-modal'); if(m) m.style.display='none'; }
+function openImageGallery(id,type){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  let imgs=[];
+  if(type==='proof'){
+    imgs=(Array.isArray(p.transfers)?p.transfers.reduce((a,t)=>a.concat(t.proofImages||[]),[]):[]);
+    if(!imgs.length) imgs=p.proofImages||[];
+    if(!imgs.length&&p.proofB64) imgs=[p.proofB64];
+  } else {
+    imgs=p.imgImages||[];
+    if(!imgs.length&&p.imgB64) imgs=[p.imgB64];
+  }
+  if(!imgs.length) return;
+  if(imgs.length===1){ viewImg(imgs[0]); return; }
+  const gal=document.getElementById('img-action-gallery'); if(gal) gal.innerHTML=imgs.map(img=>`<img src="${img}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer;margin:4px" onclick="viewImg('${img}')">`).join('');
+  const ov=document.getElementById('image-action-overlay'); if(ov) ov.style.display='flex';
+}
+function closeImgOverlay(){ const ov=document.getElementById('image-action-overlay'); if(ov) ov.style.display='none'; }
 
 // ══════════════════════════════════════════
 // SHARE
 // ══════════════════════════════════════════
-function shareCard(id){ const p=proposals.find(x=>x.id===id); if(!p) return; const text=`📋 ${p.title}\n🏗️ ${p.site}\n👤 ${p.person}\n💰 ${fmtVND(p.amount)}\n📅 ${fmt(p.ts)||p.date}\n${p.note?'📝 '+p.note+'\n':''}${STATUS_LABEL[p.status]||p.status}`; if(navigator.share){ navigator.share({title:p.title,text}).catch(()=>{}); } else{ navigator.clipboard.writeText(text).then(()=>showToast('✅ Đã copy!')).catch(()=>showToast('⚠️ Không copy được')); } }
+function shareCard(id){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  const title=p.desc||p.title||'';
+  const text=`📋 ${title}\n🏗️ ${p.site||''}\n👤 ${p.person||''}\n💰 ${fmtVND(p.amount)}\n${p.note?'📝 '+p.note+'\n':''}${STATUS_LABEL[p.status]||p.status}`;
+  if(navigator.share){ navigator.share({title,text}).catch(()=>{}); }
+  else{ navigator.clipboard.writeText(text).then(()=>showToast('✅ Đã copy!')).catch(()=>showToast('⚠️ Không copy được')); }
+}
 
 // ══════════════════════════════════════════
 // REPORT
 // ══════════════════════════════════════════
-let reportFilter={month:'',site:'',person:''};
+let reportFilter={site:'',person:''};
+let reportTab='summary';
+function setReportTab(tab,btn){
+  reportTab=tab;
+  document.querySelectorAll('.report-subtab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.querySelectorAll('.report-tab-panel').forEach(el=>el.style.display='none');
+  const panel=document.getElementById('report-tab-'+tab); if(panel) panel.style.display='';
+  applyReportFilter();
+}
 function renderReportFilters(){
-  const months=document.getElementById('rpt-month'); if(!months) return;
-  const allMonths=[...new Set(proposals.map(p=>{ const d=new Date(p.ts||Date.now()); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }).filter(Boolean))].sort().reverse();
   const allSites=[...new Set(proposals.map(p=>p.site).filter(Boolean))].sort();
   const allPersons=[...new Set(proposals.map(p=>p.person).filter(Boolean))].sort();
-  const f=(el,arr,cur)=>{ el.innerHTML='<option value="">Tất cả</option>'+arr.map(v=>`<option value="${v}"${cur===v?' selected':''}>${v}</option>`).join(''); };
-  f(months,allMonths,reportFilter.month); f(document.getElementById('rpt-site'),allSites,reportFilter.site); f(document.getElementById('rpt-person'),allPersons,reportFilter.person);
+  const fs=document.getElementById('filter-site'); if(fs){ fs.innerHTML='<option value="">🏗 Tất cả CT</option>'+allSites.map(v=>`<option value="${v}"${reportFilter.site===v?' selected':''}>${v}</option>`).join(''); }
+  const fp=document.getElementById('filter-person'); if(fp){ fp.innerHTML='<option value="">👤 Tất cả người</option>'+allPersons.map(v=>`<option value="${v}"${reportFilter.person===v?' selected':''}>${v}</option>`).join(''); }
 }
-function applyReportFilter(){ reportFilter.month=document.getElementById('rpt-month').value; reportFilter.site=document.getElementById('rpt-site').value; reportFilter.person=document.getElementById('rpt-person').value; renderReportSummary(); renderReportTables(); }
-function filteredForReport(){ return proposals.filter(p=>{ if(reportFilter.month){ const d=new Date(p.ts||0); const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; if(m!==reportFilter.month) return false; } if(reportFilter.site&&p.site!==reportFilter.site) return false; if(reportFilter.person&&p.person!==reportFilter.person) return false; return true; }); }
-function renderReportSummary(){ const arr=filteredForReport(); const total=arr.reduce((s,p)=>s+p.amount,0); const pending=arr.filter(p=>p.status==='pending').length; const approved=arr.filter(p=>p.status==='approved'||p.status==='partial'); const approvedAmt=approved.reduce((s,p)=>s+(p.approvedAmount||p.amount),0); const done=arr.filter(p=>p.status==='done'); const doneAmt=done.reduce((s,p)=>s+(p.transferAmount||p.approvedAmount||p.amount),0); const el=document.getElementById('rpt-summary'); if(!el) return; el.innerHTML=`<div class="rpt-card"><div class="rpt-label">Tổng</div><div class="rpt-val">${arr.length}</div><div class="rpt-amt">${fmtVND(total)}</div></div><div class="rpt-card"><div class="rpt-label">Chờ</div><div class="rpt-val" style="color:var(--yellow)">${pending}</div></div><div class="rpt-card"><div class="rpt-label">Duyệt</div><div class="rpt-val" style="color:var(--green)">${approved.length}</div><div class="rpt-amt">${fmtVND(approvedAmt)}</div></div><div class="rpt-card"><div class="rpt-label">Đã chi</div><div class="rpt-val" style="color:var(--blue)">${done.length}</div><div class="rpt-amt">${fmtVND(doneAmt)}</div></div>`; }
-function renderReportTables(){ const arr=filteredForReport().sort((a,b)=>b.ts-a.ts); const el=document.getElementById('rpt-table'); if(!el) return; if(!arr.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-sub)">Không có dữ liệu</div>'; return; } el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)"><th style="padding:8px;text-align:left">Tiêu đề</th><th>Người</th><th>CT</th><th>Số tiền</th><th>TT</th></tr></thead><tbody>${arr.map(p=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px">${p.title}</td><td style="padding:8px;text-align:center">${p.person||''}</td><td style="padding:8px;text-align:center">${p.site||''}</td><td style="padding:8px;text-align:right">${fmtVND(p.amount)}</td><td style="padding:8px;text-align:center"><span class="status-badge" style="background:${STATUS_COLOR[p.status]||'#888'};font-size:11px">${STATUS_LABEL[p.status]||p.status}</span></td></tr>`).join('')}</tbody></table>`; }
-function exportReport(){ const arr=filteredForReport().sort((a,b)=>b.ts-a.ts); const rows=[['Tiêu đề','CT','Người','Ngày','Số tiền','Duyệt','Chuyển','TT','Ghi chú']]; arr.forEach(p=>rows.push([p.title,p.site,p.person,p.date||fmt(p.ts),p.amount,p.approvedAmount||'',p.transferAmount||'',p.status,p.note||''])); const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'); const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv); a.download='bao-cao.csv'; a.click(); }
+function applyReportFilter(){
+  reportFilter.site=(document.getElementById('filter-site')||{}).value||'';
+  reportFilter.person=(document.getElementById('filter-person')||{}).value||'';
+  renderReportFilters();
+  if(reportTab==='summary') renderReportSummary();
+  else if(reportTab==='list') renderReportList();
+  else if(reportTab==='done') renderReportDone();
+  else if(reportTab==='pending') renderReportPending();
+  else if(reportTab==='rejected') renderReportRejected();
+}
+function filteredForReport(){
+  return proposals.filter(p=>{
+    if(reportFilter.site&&p.site!==reportFilter.site) return false;
+    if(reportFilter.person&&p.person!==reportFilter.person) return false;
+    return true;
+  });
+}
+function rptTableHTML(arr){
+  if(!arr.length) return '<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Không có dữ liệu</div>';
+  return `<table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--surface2);font-size:11px">
+      <th style="padding:6px 8px;text-align:left">Nội dung</th>
+      <th style="padding:6px 4px">CT</th>
+      <th style="padding:6px 4px;text-align:right">Số tiền</th>
+      <th style="padding:6px 4px">TT</th>
+    </tr></thead>
+    <tbody>${arr.map(p=>`<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:6px 8px"><div style="font-weight:600">${p.desc||p.title||''}</div><div style="font-size:11px;color:var(--text-sub)">${p.person||''} · ${fmtFull(p.ts)}</div></td>
+      <td style="padding:6px 4px;font-size:11px;text-align:center">${p.site||''}</td>
+      <td style="padding:6px 4px;text-align:right;font-weight:700">${fmtVND(p.amount)}</td>
+      <td style="padding:6px 4px;text-align:center"><span style="background:${STATUS_COLOR[p.status]||'#888'};color:#fff;border-radius:4px;padding:1px 5px;font-size:10px">${STATUS_LABEL[p.status]||p.status}</span></td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+function renderReportSummary(){
+  const arr=filteredForReport();
+  const total=arr.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+  const pen=arr.filter(p=>normStatus(p)==='pending');
+  const app=arr.filter(p=>normStatus(p)==='approved');
+  const tra=arr.filter(p=>normStatus(p)==='transferred');
+  const rej=arr.filter(p=>normStatus(p)==='rejected');
+  const traAmt=tra.reduce((s,p)=>s+getTotalTransferred(p),0);
+  const el=document.getElementById('report-summary-content'); if(!el) return;
+  el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px">
+    <div style="background:#f8fafc;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">📋 Tổng đề xuất</div><div style="font-size:22px;font-weight:800">${arr.length}</div><div style="font-size:12px;color:var(--purple);font-weight:700">${fmtVND(total)}</div></div>
+    <div style="background:#fef9c3;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">⏳ Chờ duyệt</div><div style="font-size:22px;font-weight:800;color:#f59e0b">${pen.length}</div><div style="font-size:12px;color:#f59e0b;font-weight:700">${fmtVND(pen.reduce((s,p)=>s+(parseFloat(p.amount)||0),0))}</div></div>
+    <div style="background:#ecfdf5;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">✅ Đã duyệt</div><div style="font-size:22px;font-weight:800;color:#10b981">${app.length}</div><div style="font-size:12px;color:#10b981;font-weight:700">${fmtVND(app.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||parseFloat(p.amount)||0),0))}</div></div>
+    <div style="background:#eff6ff;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">💸 Đã chuyển</div><div style="font-size:22px;font-weight:800;color:#3b82f6">${tra.length}</div><div style="font-size:12px;color:#3b82f6;font-weight:700">${fmtVND(traAmt)}</div></div>
+    <div style="background:#fef2f2;border-radius:10px;padding:12px;text-align:center;grid-column:1/-1"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">❌ Từ chối</div><div style="font-size:22px;font-weight:800;color:#ef4444">${rej.length}</div></div>
+  </div>`;
+}
+function renderReportList(){ const el=document.getElementById('report-table-list'); if(el) el.innerHTML=rptTableHTML(filteredForReport().sort((a,b)=>(b.ts||0)-(a.ts||0))); }
+function renderReportDone(){ const el=document.getElementById('report-table-done'); if(el) el.innerHTML=rptTableHTML(filteredForReport().filter(p=>normStatus(p)==='transferred').sort((a,b)=>(b.transferredAt||b.ts||0)-(a.transferredAt||a.ts||0))); }
+function renderReportPending(){ const el=document.getElementById('report-table-pending'); if(el) el.innerHTML=rptTableHTML(filteredForReport().filter(p=>{ const s=normStatus(p); return s!=='transferred'&&s!=='rejected'; }).sort((a,b)=>(b.ts||0)-(a.ts||0))); }
+function renderReportRejected(){ const el=document.getElementById('report-table-rejected'); if(el) el.innerHTML=rptTableHTML(filteredForReport().filter(p=>normStatus(p)==='rejected').sort((a,b)=>(b.ts||0)-(a.ts||0))); }
+function copyReport(){
+  const arr=filteredForReport();
+  const lines=['📊 BÁO CÁO DUYỆT CHI','─'.repeat(30)];
+  lines.push(`📋 Tổng: ${arr.length} đề xuất — ${fmtVND(arr.reduce((s,p)=>s+(parseFloat(p.amount)||0),0))}`);
+  lines.push(`⏳ Chờ: ${arr.filter(p=>normStatus(p)==='pending').length}`);
+  lines.push(`✅ Duyệt: ${arr.filter(p=>normStatus(p)==='approved').length}`);
+  lines.push(`💸 Đã chuyển: ${arr.filter(p=>normStatus(p)==='transferred').length}`);
+  lines.push(`❌ Từ chối: ${arr.filter(p=>normStatus(p)==='rejected').length}`);
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('✅ Đã copy báo cáo!')).catch(()=>showToast('⚠️ Không copy được'));
+}
 
 // ══════════════════════════════════════════
 // SETTINGS
 // ══════════════════════════════════════════
 function renderSettings(){
-  const el=document.getElementById('persons-list'); if(el) el.innerHTML=(persons||[]).map((p,i)=>{ const n=typeof p==='string'?p:p.name; return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="flex:1">${n}</span>${currentRole==='dung'?`<button class="btn btn-del" onclick="removePerson(${i})" style="padding:2px 8px;font-size:11px">×</button>`:''}</div>`; }).join('')||'<div style="color:var(--text-sub);font-size:13px">Chưa có</div>';
-  const sl=document.getElementById('sites-list'); if(sl) sl.innerHTML=(sites||[]).map((s,i)=>{ const n=typeof s==='string'?s:s.name; return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="flex:1">${n}</span>${currentRole==='dung'?`<button class="btn btn-del" onclick="removeSite(${i})" style="padding:2px 8px;font-size:11px">×</button>`:''}</div>`; }).join('')||'<div style="color:var(--text-sub);font-size:13px">Chưa có</div>';
+  const pl=document.getElementById('person-list');
+  if(pl) pl.innerHTML=(persons||[]).map((p,i)=>{
+    const n=typeof p==='object'?`${p.name}${p.role?' ('+p.role+')':''}`:p;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:13px">${n}</span>${currentRole==='dung'?`<button onclick="delPerson(${i})" style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer">×</button>`:''}</div>`;
+  }).join('')||'<div style="color:var(--text-sub);font-size:13px">Chưa có</div>';
+  const sl=document.getElementById('site-list');
+  if(sl) sl.innerHTML=(sites||[]).map((s,i)=>{
+    const n=typeof s==='object'?s.name:s;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border)"><span style="flex:1;font-size:13px">${n}</span>${currentRole==='dung'?`<button onclick="delSite(${i})" style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;border-radius:6px;padding:2px 8px;font-size:12px;cursor:pointer">×</button>`:''}</div>`;
+  }).join('')||'<div style="color:var(--text-sub);font-size:13px">Chưa có</div>';
   const inp=document.getElementById('inp-sheet-url'); if(inp) inp.value=sheetUrl||'';
-  updateNotifSettingsStatus();
+  const ai=document.getElementById('account-info');
+  if(ai) ai.innerHTML=`<b>${currentUserName}</b> · ${currentRole} · ${currentUserEmail||''}`;
+  updateSheetBadge();
 }
-function addPerson(){ const inp=document.getElementById('inp-new-person'); if(!inp) return; const n=inp.value.trim(); if(!n){ showToast('⚠️ Nhập tên'); return; } if((persons||[]).some(p=>(typeof p==='string'?p:p.name)===n)){ showToast('⚠️ Tên đã có'); return; } persons.push(n); inp.value=''; save(); renderSettings(); }
-function removePerson(i){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng'); return; } persons.splice(i,1); save(); renderSettings(); }
-function addSite(){ const inp=document.getElementById('inp-new-site'); if(!inp) return; const n=inp.value.trim(); if(!n){ showToast('⚠️ Nhập tên CT'); return; } if((sites||[]).some(s=>(typeof s==='string'?s:s.name)===n)){ showToast('⚠️ CT đã có'); return; } sites.push(n); inp.value=''; save(); renderSettings(); }
-function removeSite(i){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng'); return; } sites.splice(i,1); save(); renderSettings(); }
-function saveSheetUrl(){ sheetUrl=document.getElementById('inp-sheet-url').value.trim(); localStorage.setItem('dc_sheetUrl',sheetUrl); save(); showToast('✅ Đã lưu link Sheet'); }
-function openSheet(){ if(sheetUrl) window.open(sheetUrl,'_blank'); else showToast('⚠️ Chưa có link Sheet'); }
-function syncToSheet(){ if(!sheetUrl){ showToast('⚠️ Chưa có link Sheet'); return; } showToast('⏳ Đang đồng bộ...'); const rows=proposals.map(p=>([p.title,p.site,p.person,p.date||fmt(p.ts),p.amount,p.approvedAmount||'',p.transferAmount||'',p.status,p.note||'',p.approvedBy||'',p.transferBy||''])); fetch(sheetUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows,source:'app3-v14'})}).then(r=>{ if(r.ok) showToast('✅ Sheet OK'); else showToast('⚠️ Sheet lỗi '+r.status); }).catch(e=>showToast('❌ '+e.message)); }
+function addPerson(){
+  const nameEl=document.getElementById('new-person-name'); const roleEl=document.getElementById('new-person-role');
+  if(!nameEl) return; const n=nameEl.value.trim(); if(!n){ showToast('⚠️ Nhập tên'); return; }
+  const r=roleEl?roleEl.value.trim():'';
+  const entry=r?{name:n,role:r}:n;
+  if((persons||[]).some(p=>(typeof p==='object'?p.name:p)===n)){ showToast('⚠️ Tên đã có'); return; }
+  persons.push(entry); nameEl.value=''; if(roleEl) roleEl.value='';
+  save(); renderSettings();
+}
+function delPerson(i){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng'); return; } persons.splice(i,1); save(); renderSettings(); }
+function addSite(){
+  const inp=document.getElementById('new-site'); if(!inp) return;
+  const n=inp.value.trim(); if(!n){ showToast('⚠️ Nhập tên công trình'); return; }
+  if((sites||[]).some(s=>(typeof s==='object'?s.name:s)===n)){ showToast('⚠️ CT đã có'); return; }
+  sites.push(n); inp.value=''; save(); renderSettings();
+}
+function delSite(i){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng'); return; } sites.splice(i,1); save(); renderSettings(); }
+function saveSheet(){
+  const inp=document.getElementById('inp-sheet-url'); if(!inp) return;
+  sheetUrl=inp.value.trim(); localStorage.setItem('dc_sheetUrl',sheetUrl); save();
+  updateSheetBadge(); showToast('✅ Đã lưu link Sheet');
+}
+function updateSheetBadge(){
+  const b=document.getElementById('sheet-badge-settings'); if(!b) return;
+  if(sheetUrl){ b.textContent='● Đã kết nối'; b.style.background='#d1fae5'; b.style.color='#065f46'; }
+  else{ b.textContent='● Chưa kết nối'; b.style.background=''; b.style.color=''; }
+}
 
 // ══════════════════════════════════════════
 // NOTIFICATION PANEL
 // ══════════════════════════════════════════
-function toggleNotifPanel(){ const p=document.getElementById('notif-panel'); p.style.display=p.style.display==='block'?'none':'block'; renderNotifPanel(); }
-function closeNotifPanel(){ document.getElementById('notif-panel').style.display='none'; }
-function renderNotifPanel(){ const el=document.getElementById('notif-list'); if(!el) return; const recent=proposals.filter(p=>p.ts&&Date.now()-p.ts<7*24*3600*1000).sort((a,b)=>b.ts-a.ts).slice(0,10); el.innerHTML=recent.map(p=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:13px">${p.title}</div><div style="font-size:11px;color:var(--text-sub)">${p.person} • ${fmt(p.ts)} • ${STATUS_LABEL[p.status]||p.status}</div></div>`).join('')||'<div style="color:var(--text-sub);font-size:13px;padding:12px 0">Không có</div>'; }
-function updateNotifBadge(){ const badge=document.getElementById('notif-badge'); if(!badge) return; const count=proposals.filter(p=>p.status==='pending').length; badge.textContent=count; badge.style.display=count?'flex':'none'; }
+function toggleNotifPanel(){ const p=document.getElementById('notif-panel'); if(!p) return; p.style.display=p.style.display==='block'?'none':'block'; renderNotifPanel(); }
+function closeNotifPanel(){ const p=document.getElementById('notif-panel'); if(p) p.style.display='none'; }
+function renderNotifPanel(){
+  const el=document.getElementById('notif-list'); if(!el) return;
+  const recent=proposals.slice().sort((a,b)=>(b.ts||0)-(a.ts||0)).slice(0,12);
+  el.innerHTML=recent.map(p=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)">
+    <div style="font-weight:600;font-size:13px">${p.desc||p.title||''}</div>
+    <div style="font-size:11px;color:var(--text-sub)">${p.person||''} · ${fmtFull(p.ts)} · <span style="color:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span></div>
+  </div>`).join('')||'<div style="color:var(--text-sub);font-size:13px;padding:12px 0">Không có</div>';
+}
+function updateNotifBadge(){
+  const badge=document.getElementById('notif-badge'); if(!badge) return;
+  const count=proposals.filter(p=>normStatus(p)==='pending').length;
+  badge.textContent=count; badge.style.display=count?'flex':'none';
+}
 
 // ══════════════════════════════════════════
 // TOAST
@@ -1488,8 +1706,19 @@ function showToast(msg,duration=3000){ const t=document.getElementById('toast');
 // ══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('search-input')?.addEventListener('input',()=>renderAll());
+  // paste ảnh vào upload zone
+  const pasteZone=document.getElementById('paste-zone');
+  if(pasteZone){
+    pasteZone.addEventListener('paste',e=>{
+      const items=e.clipboardData?.items||[]; let handled=false;
+      for(const item of items){ if(item.type.startsWith('image/')){ const f=item.getAsFile(); if(!f) continue; handled=true; const r=new FileReader(); r.onload=ev=>{ uploadedImages.push(ev.target.result); renderUploadPreview(); }; r.readAsDataURL(f); } }
+      if(handled) e.preventDefault();
+    });
+  }
   ['edit-modal','approve-amount-modal','transfer-amount-modal','change-pw-modal','image-action-overlay'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click',e=>{ if(e.target===el) el.style.display='none'; }); });
   document.getElementById('image-modal')?.addEventListener('click',closeImageModal);
+  // format amount inputs in modals
+  ['approve-amount-input','transfer-amount-input'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('input',()=>fmtAmountInput(el)); });
 });
 
 setInterval(()=>{ const el=document.getElementById('header-date'); if(el&&currentUser) el.textContent=new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); localStorage.setItem('dc_last_active',Date.now().toString()); },60*1000);
