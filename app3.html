@@ -1073,10 +1073,15 @@ function initAuth(){
       currentUser = user;
       const snap = await db.ref('duyetchi/userRoles/'+user.uid).get();
       const role_val = snap.exists() ? snap.val() : null;
-      const role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : 'other';
+      const role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
       currentUserName = (role_val && typeof role_val === 'object' && role_val.name) ? role_val.name : '';
       document.getElementById('role-screen').style.display='none';
-      setRole(role);
+      if(role){
+        setRole(role);
+      } else {
+        // Chưa có role → hiện popup chọn tên ngay sau đăng nhập
+        showUpdateRolePrompt();
+      }
     } else {
       currentUser = null;
       currentRole = '';
@@ -2722,10 +2727,12 @@ function submitProposal(){
 function populateSelects(){
   const ps=document.getElementById('inp-person');
   const ss=document.getElementById('inp-site');
-  // Nếu không phải D → khóa tên, chỉ được chọn tên của mình
-  if(currentRole !== 'dung' && currentUserName){
-    ps.innerHTML=`<option value="${currentUserName}">${currentUserName}</option>`;
-    ps.value = currentUserName;
+  // Xác định tên bị khóa theo role hoặc currentUserName
+  const roleName = currentRole==='hien'?'Hiền': currentRole==='trang'?'Trang': '';
+  const lockedName = currentUserName || roleName;
+  if(currentRole !== 'dung' && lockedName){
+    ps.innerHTML=`<option value="${lockedName}">${lockedName}</option>`;
+    ps.value = lockedName;
     ps.disabled = true;
   } else {
     ps.disabled = false;
@@ -2739,6 +2746,17 @@ function autofillPerson(name){
 }
 
 // ── SETTINGS ──
+function showUpdateRolePrompt(){
+  setRole('other'); // vào app trước
+  // Hiện modal yêu cầu chọn tên
+  setTimeout(()=>{
+    showPage('settings', document.querySelectorAll('.nav-item')[3]);
+    const det = document.querySelector('#page-settings details');
+    if(det) det.open = true;
+    showToast('⚠️ Vui lòng chọn tên của bạn trong Cài đặt → Tài khoản');
+  }, 500);
+}
+
 async function doUpdateRole(){
   const name = document.getElementById('update-role-name').value;
   const msg  = document.getElementById('update-role-msg');
