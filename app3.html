@@ -206,10 +206,10 @@ textarea.form-input{resize:vertical;min-height:70px}
 /* ── IMG ACTION OVERLAY ── */
 .img-action-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:none;align-items:flex-end;justify-content:center;padding:16px}
 .img-action-overlay.open{display:flex}
-.img-action-menu{background:#fff;border-radius:16px;padding:8px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:4px}
-.img-action-btn{display:flex;align-items:center;gap:12px;padding:14px 16px;border:none;background:none;font-size:15px;font-weight:600;cursor:pointer;border-radius:10px;color:var(--text);-webkit-tap-highlight-color:transparent}
+.img-action-menu{background:#fff;border-radius:16px;padding:16px 8px;width:100%;max-width:320px;display:flex;flex-direction:row;gap:0}
+.img-action-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:10px 0;flex:1;border:none;background:none;font-size:13px;font-weight:600;cursor:pointer;border-radius:10px;color:var(--text);-webkit-tap-highlight-color:transparent}
 .img-action-btn:active{background:#f1f5f9}
-.img-action-icon{font-size:20px;width:28px;text-align:center}
+.img-action-icon{font-size:26px;line-height:1}
 .img-action-danger{color:var(--red)}
 
 /* ── TOAST ── */
@@ -715,7 +715,7 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14v';
+const APP_VERSION = '20260627-v14w';
 (function(){
   const KEY = 'app_ver_v14_' + APP_VERSION;
   if(!localStorage.getItem(KEY)){
