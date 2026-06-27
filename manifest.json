@@ -1,7 +1,9 @@
 {
-  "name": "Duyệt Chi PVA-379",
-  "short_name": "DC",
-  "start_url": "app2.html?t=pwa",
+  "id": "dc-v13",
+  "name": "Duyệt Chi v13",
+  "short_name": "DC v13",
+  "start_url": "/Duyet-Chi/app2.html?t=pwa",
+  "scope": "/Duyet-Chi/app2.html",
   "display": "standalone",
   "background_color": "#1a56db",
   "theme_color": "#1a56db",

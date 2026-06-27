@@ -1,7 +1,9 @@
 {
+  "id": "dc-v14",
   "name": "Duyệt Chi v14",
   "short_name": "DC v14",
-  "start_url": "app3.html?t=pwa",
+  "start_url": "/Duyet-Chi/app3.html?t=pwa",
+  "scope": "/Duyet-Chi/app3.html",
   "display": "standalone",
   "background_color": "#6d28d9",
   "theme_color": "#6d28d9",
