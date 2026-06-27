@@ -616,6 +616,17 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-header">🔐 Tài khoản</div>
     <div class="card-body">
       <div id="auth-account-info" style="font-size:13px;color:var(--text-sub);margin-bottom:12px"></div>
+      <details style="margin-bottom:10px">
+        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Cập nhật tên &amp; vai trò</summary>
+        <div style="margin-top:10px">
+          <p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chọn lại tên của bạn nếu đăng nhập trước khi có hệ thống mới.</p>
+          <select id="update-role-name" class="form-input" style="font-size:14px;margin-bottom:8px">
+            <option value="">-- Chọn tên của bạn --</option>
+          </select>
+          <div id="update-role-msg" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
+          <button onclick="doUpdateRole()" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">Cập nhật</button>
+        </div>
+      </details>
       <details style="margin-bottom:6px">
         <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Đổi mật khẩu</summary>
         <div style="margin-top:10px">
@@ -2728,6 +2739,19 @@ function autofillPerson(name){
 }
 
 // ── SETTINGS ──
+async function doUpdateRole(){
+  const name = document.getElementById('update-role-name').value;
+  const msg  = document.getElementById('update-role-msg');
+  msg.style.color='var(--red)'; msg.textContent='';
+  if(!name){ msg.textContent='Vui lòng chọn tên'; return; }
+  if(!currentUser){ msg.textContent='Chưa đăng nhập'; return; }
+  const role = nameToRole(name);
+  currentUserName = name;
+  await db.ref('duyetchi/userRoles/'+currentUser.uid).set({ role, name });
+  setRole(role);
+  msg.style.color='var(--green)'; msg.textContent='✅ Đã cập nhật: '+name;
+}
+
 async function doChangePassword(){
   const oldPw = document.getElementById('chpw-old').value;
   const newPw = document.getElementById('chpw-new').value;
@@ -2757,8 +2781,11 @@ function renderSettings(){
   const infoEl = document.getElementById('auth-account-info');
   if(infoEl && currentUser){
     const r = ROLES[currentRole]||ROLES.other;
-    infoEl.innerHTML = `<span style="font-weight:700;color:${r.color}">${r.icon} ${r.label}</span> — ${currentUser.email}`;
+    infoEl.innerHTML = `<span style="font-weight:700;color:${r.color}">${r.icon} ${r.label}</span>${currentUserName?' — '+currentUserName:''} &nbsp;<span style="color:var(--text-sub)">${currentUser.email}</span>`;
   }
+  // Điền dropdown cập nhật tên
+  const selRole = document.getElementById('update-role-name');
+  if(selRole) selRole.innerHTML = '<option value="">-- Chọn tên của bạn --</option>'+persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
   updateNotifSettingsStatus();
   const pl=document.getElementById('person-list');
   pl.innerHTML=persons.length
