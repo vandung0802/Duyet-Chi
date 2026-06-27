@@ -628,6 +628,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-header">🔐 Tài khoản</div>
     <div class="card-body">
       <div id="auth-account-info" style="font-size:13px;color:var(--text-sub);margin-bottom:12px"></div>
+      <div id="admin-reset-section" style="display:none;margin-bottom:12px;padding:10px;background:#fde8e8;border-radius:8px">
+        <div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:6px">⚠️ Chỉ dành cho Admin (D)</div>
+        <button onclick="adminResetAllRoles()" style="width:100%;padding:8px;font-size:13px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">🗑 Xóa toàn bộ dữ liệu đăng nhập (userRoles)</button>
+      </div>
       <details style="margin-bottom:10px">
         <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Cập nhật tên &amp; vai trò</summary>
         <div style="margin-top:10px">
@@ -2780,6 +2784,13 @@ async function confirmFirstLogin(){
   setRole(role);
 }
 
+async function adminResetAllRoles(){
+  if(currentRole !== 'dung'){ showToast('Chỉ D mới làm được'); return; }
+  if(!confirm('Xóa toàn bộ dữ liệu vai trò của tất cả người dùng?\nMọi người phải đăng ký lại từ đầu.')) return;
+  await db.ref('duyetchi/userRoles').remove();
+  showToast('✅ Đã xóa toàn bộ userRoles');
+}
+
 async function doUpdateRole(){
   const name = document.getElementById('update-role-name').value;
   const msg  = document.getElementById('update-role-msg');
@@ -2827,6 +2838,9 @@ function renderSettings(){
   // Điền dropdown cập nhật tên
   const selRole = document.getElementById('update-role-name');
   if(selRole) selRole.innerHTML = '<option value="">-- Chọn tên của bạn --</option>'+persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
+  // Hiện nút admin reset chỉ cho D
+  const adminSec = document.getElementById('admin-reset-section');
+  if(adminSec) adminSec.style.display = currentRole==='dung' ? 'block' : 'none';
   updateNotifSettingsStatus();
   const pl=document.getElementById('person-list');
   pl.innerHTML=persons.length
