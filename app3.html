@@ -226,6 +226,8 @@ textarea.form-input{resize:vertical;min-height:70px}
 .report-subtab.active{color:var(--purple);border-bottom-color:var(--purple);background:rgba(109,40,217,.07)}
 .report-tab-panel{}
 .excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.excel-scroll-top{overflow-x:auto;overflow-y:hidden;height:12px;margin-bottom:2px}
+.excel-scroll-top>div{height:1px}
 .excel-table{width:100%;border-collapse:collapse;min-width:340px;table-layout:auto}
 .excel-table th,.excel-table td{padding:6px 8px;font-size:11px;text-align:left;border-bottom:1px solid var(--gray-border);vertical-align:middle}
 .excel-table th{background:var(--blue-dark);color:#fff;font-weight:700;white-space:nowrap}
@@ -1811,6 +1813,7 @@ function renderExcelTable(containerId,items,kind){
     </tr></thead>
     <tbody>${rows}</tbody></table></div>
   <div class="excel-table-footer"><span>Tổng cộng: ${sorted.length} khoản</span><span>${fmtVND(totalAmt)}</span></div>`;
+  attachTopScroll(el);
 }
 function renderReportRejected(){
   const el=document.getElementById('report-table-rejected'); if(!el) return;
@@ -1885,6 +1888,7 @@ function renderReportList(){
     <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
   <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtVND(total)}</span><span>Đã chuyển: ${fmtVND(totalTrans)}</span></div>`;
+  attachTopScroll(el);
 }
 function renderReportSummary(){
   renderReportFilters();
@@ -2008,6 +2012,18 @@ function updateSheetBadge(){
 }
 
 // ══════════════════════════════════════════
+// TOP SCROLLBAR MIRROR
+function attachTopScroll(container){
+  const wrap=container.querySelector('.excel-table-wrap'); if(!wrap) return;
+  const mirror=document.createElement('div'); mirror.className='excel-scroll-top';
+  const inner=document.createElement('div'); mirror.appendChild(inner);
+  wrap.parentNode.insertBefore(mirror,wrap);
+  function syncWidth(){ inner.style.width=wrap.scrollWidth+'px'; }
+  syncWidth(); new ResizeObserver(syncWidth).observe(wrap);
+  mirror.addEventListener('scroll',()=>{ wrap.scrollLeft=mirror.scrollLeft; },{ passive:true });
+  wrap.addEventListener('scroll',()=>{ mirror.scrollLeft=wrap.scrollLeft; },{ passive:true });
+}
+
 // NOTIFICATION PANEL
 // ══════════════════════════════════════════
 function getNotifSeenTs(){ return parseInt(localStorage.getItem('dc_notif_seen_ts')||'0',10); }
