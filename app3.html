@@ -122,13 +122,13 @@ body{font-family:'Roboto',sans-serif;background:#f8fafc;color:var(--text);min-he
 .excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .excel-table{width:100%;border-collapse:collapse;font-size:11px;min-width:560px;border:1.5px solid #b0b8c9}
 .excel-table th{background:var(--blue-dark);color:#fff;padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.25)}
-.excel-table td{padding:7px 6px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;white-space:nowrap}
+.excel-table td{padding:7px 6px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;white-space:nowrap;vertical-align:middle}
 .excel-table tr:nth-child(even) td{background:#f4f6fa}
 .excel-table tr:hover td{background:#e8f0fe}
 .excel-table .col-amount{text-align:right;font-weight:700;color:var(--blue)}
 .report-table{width:100%;border-collapse:collapse;font-size:11px;border:1.5px solid #b0b8c9;table-layout:fixed}
 .report-table th{background:var(--blue-dark);color:#fff;padding:6px 5px;text-align:left;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.25);overflow:hidden}
-.report-table td{padding:5px 5px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;vertical-align:top;word-break:break-word}
+.report-table td{padding:5px 5px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;vertical-align:middle;word-break:break-word}
 .report-table tr:nth-child(even) td{background:#f4f6fa}
 .report-table .col-desc{width:80px;font-size:10px}
 .report-table .col-person{width:42px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -227,11 +227,11 @@ textarea.form-input{resize:vertical;min-height:70px}
 .report-tab-panel{}
 .excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .excel-table{width:100%;border-collapse:collapse;min-width:340px;table-layout:auto}
-.excel-table th,.excel-table td{padding:6px 8px;font-size:11px;text-align:left;border-bottom:1px solid var(--gray-border);vertical-align:top}
+.excel-table th,.excel-table td{padding:6px 8px;font-size:11px;text-align:left;border-bottom:1px solid var(--gray-border);vertical-align:middle}
 .excel-table th{background:#f8fafc;font-weight:700;color:var(--text-sub);white-space:nowrap}
 .col-amount{text-align:right;font-weight:700;white-space:nowrap;color:var(--blue-dark)}
 .report-table{width:100%;border-collapse:collapse;table-layout:fixed}
-.report-table th,.report-table td{padding:6px 8px;font-size:11px;text-align:left;border-bottom:1px solid var(--gray-border);vertical-align:top;overflow:hidden;text-overflow:ellipsis}
+.report-table th,.report-table td{padding:6px 8px;font-size:11px;text-align:left;border-bottom:1px solid var(--gray-border);vertical-align:middle;overflow:hidden;text-overflow:ellipsis}
 .report-table th{background:#f8fafc;font-weight:700;color:var(--text-sub)}
 .col-desc{width:auto}
 .col-person{width:42px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1864,18 +1864,18 @@ function renderReportList(){
     const stIcon={pending:'⏳',approved:'✅',transferred:'💸',done:'💸',rejected:'❌'};
     const prv=p.priority||'normal';
     const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv==='low'?'🟢':'🟡';
-    const cb='style="vertical-align:top;white-space:normal;line-height:1.5"';
+    const cb='style="vertical-align:middle;white-space:normal;line-height:1.5"';
     return `<tr>
-      <td style="vertical-align:top;text-align:center">${sorted.length-i}</td>
-      <td ${cb} style="vertical-align:top;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc||p.title||''}</td>
+      <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
+      <td ${cb} style="vertical-align:middle;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc||p.title||''}</td>
       <td ${cb} style="font-size:10px">${p.person||'—'}</td>
       <td ${cb} style="font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount" style="vertical-align:top">${fmtVND(p.amount)}</td>
-      <td style="vertical-align:top;text-align:center;font-size:14px">${prCell}</td>
+      <td class="col-amount" style="vertical-align:middle">${fmtVND(p.amount)}</td>
+      <td style="vertical-align:middle;text-align:center;font-size:14px">${prCell}</td>
       <td ${cb} style="font-size:9px;color:var(--blue)">${dHist}</td>
       <td ${cb} style="font-size:9px;color:#7c3aed">${hHist}</td>
       <td ${cb} style="font-size:9px;color:var(--yellow)">${tHist}</td>
-      <td style="vertical-align:top"><span class="badge ${stBadge[st]||'badge-wait'}" style="font-size:8px;padding:1px 5px">${stIcon[st]||'⏳'}</span></td>
+      <td style="vertical-align:middle"><span class="badge ${stBadge[st]||'badge-wait'}" style="font-size:8px;padding:1px 5px">${stIcon[st]||'⏳'}</span></td>
       <td ${cb} style="font-size:9px;color:var(--red)">${rejStr}</td>
     </tr>`;
   }).join('');
