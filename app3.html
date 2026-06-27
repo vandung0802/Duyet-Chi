@@ -2010,7 +2010,14 @@ function updateSheetBadge(){
 // ══════════════════════════════════════════
 // NOTIFICATION PANEL
 // ══════════════════════════════════════════
-function toggleNotifPanel(){ const p=document.getElementById('notif-panel'); if(!p) return; p.style.display=p.style.display==='block'?'none':'block'; renderNotifPanel(); }
+function getNotifSeenTs(){ return parseInt(localStorage.getItem('dc_notif_seen_ts')||'0',10); }
+function markNotifSeen(){ localStorage.setItem('dc_notif_seen_ts', Date.now().toString()); }
+function toggleNotifPanel(){
+  const p=document.getElementById('notif-panel'); if(!p) return;
+  const opening=p.style.display!=='block';
+  p.style.display=opening?'block':'none';
+  if(opening){ markNotifSeen(); updateNotifBadge(); renderNotifPanel(); }
+}
 function closeNotifPanel(){ const p=document.getElementById('notif-panel'); if(p) p.style.display='none'; }
 function renderNotifPanel(){
   const el=document.getElementById('notif-list'); if(!el) return;
@@ -2022,7 +2029,8 @@ function renderNotifPanel(){
 }
 function updateNotifBadge(){
   const badge=document.getElementById('notif-badge'); if(!badge) return;
-  const count=proposals.filter(p=>normStatus(p)==='pending').length;
+  const seenTs=getNotifSeenTs();
+  const count=proposals.filter(p=>(p.ts||0)>seenTs).length;
   badge.textContent=count; badge.style.display=count?'flex':'none';
 }
 
