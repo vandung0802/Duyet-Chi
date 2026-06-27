@@ -299,16 +299,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
-<!-- ROLE PICK SCREEN — hiện sau lần đăng nhập đầu tiên -->
-<div class="role-screen" id="role-pick-screen" style="display:none;z-index:10001">
-  <div style="font-size:40px;margin-bottom:12px">👤</div>
-  <h2>Bạn là ai?</h2>
-  <p style="margin-bottom:24px">Chọn vai trò của bạn (1 lần duy nhất)</p>
-  <button type="button" onclick="pickRole('dung')" class="role-btn role-d" style="max-width:280px"><span class="role-avatar" style="background:var(--blue);color:#fff">D</span>Dũng — Giám đốc</button>
-  <button type="button" onclick="pickRole('hien')" class="role-btn role-h" style="max-width:280px"><span class="role-avatar" style="background:#7c3aed;color:#fff">H</span>Hiền — Phó GĐ</button>
-  <button type="button" onclick="pickRole('trang')" class="role-btn role-trang" style="max-width:280px"><span class="role-avatar" style="background:#b45309;color:#fff">T</span>Trang — Thủ quỹ</button>
-  <button type="button" onclick="pickRole('other')" class="role-btn role-other" style="max-width:280px"><span class="role-avatar" style="background:rgba(255,255,255,0.3)">👤</span>Khác — Xem &amp; thêm phiếu</button>
-</div>
 
 <!-- Modal Sửa đề xuất — chỉ dùng khi phiếu đang ở trạng thái Chờ duyệt -->
 <div class="role-screen" id="edit-modal" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
@@ -1063,14 +1053,6 @@ async function doForgotPass(){
   }
 }
 
-async function pickRole(role){
-  if(!currentUser) return;
-  const name = ROLES[role]?.label || '';
-  currentUserName = name;
-  await db.ref('duyetchi/userRoles/'+currentUser.uid).set({ role, name });
-  document.getElementById('role-pick-screen').style.display='none';
-  setRole(role);
-}
 
 let currentUserName = ''; // tên người dùng theo danh sách persons
 
@@ -1079,25 +1061,16 @@ function initAuth(){
     if(user){
       currentUser = user;
       const snap = await db.ref('duyetchi/userRoles/'+user.uid).get();
-      if(snap.exists()){
-        const val = snap.val();
-        // Hỗ trợ cả cấu trúc cũ (string) và mới ({ role, name })
-        const role = typeof val === 'string' ? val : val.role;
-        currentUserName = typeof val === 'object' && val.name ? val.name : '';
-        document.getElementById('role-screen').style.display='none';
-        document.getElementById('role-pick-screen').style.display='none';
-        setRole(role);
-      } else {
-        // Chưa có role → hiện màn chọn vai trò (fallback)
-        document.getElementById('role-screen').style.display='none';
-        document.getElementById('role-pick-screen').style.display='flex';
-      }
+      const role_val = snap.exists() ? snap.val() : null;
+      const role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : 'other';
+      currentUserName = (role_val && typeof role_val === 'object' && role_val.name) ? role_val.name : '';
+      document.getElementById('role-screen').style.display='none';
+      setRole(role);
     } else {
       currentUser = null;
       currentRole = '';
       currentUserName = '';
       document.getElementById('role-screen').style.display='flex';
-      document.getElementById('role-pick-screen').style.display='none';
       const btn = document.getElementById('auth-btn');
       if(btn){ btn.disabled=false; btn.textContent='Đăng nhập'; }
     }
