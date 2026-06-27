@@ -711,22 +711,29 @@ let currentUserEmail = '';
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
 
-// Tải danh sách tên cho form đăng ký (không cần auth vì rules đang mở)
+// Tên mặc định — luôn có sẵn dù chưa đăng nhập
+const DEFAULT_NAMES = ['Dũng','Hiền','Trang'];
 let regPersonsList = [];
-db.ref('duyetchi/meta/persons').once('value').then(snap => {
-  if(snap.exists()) regPersonsList = snap.val() || [];
-  populateRegSelect();
-}).catch(()=>{});
 
 function populateRegSelect(){
   const sel = document.getElementById('su-name');
   if(!sel) return;
-  sel.innerHTML = '<option value="">— Chọn tên —</option>';
-  (regPersonsList||[]).forEach(p=>{
-    const n = typeof p === 'string' ? p : p.name;
-    if(n) sel.innerHTML += `<option value="${n}">${n}</option>`;
-  });
+  // Gộp tên mặc định + persons từ localStorage (nếu có), loại trùng
+  const localPersons = JSON.parse(localStorage.getItem('dc_persons')||'[]');
+  const fromLocal = localPersons.map(p=>typeof p==='string'?p:p.name).filter(Boolean);
+  const allNames = [...new Set([...DEFAULT_NAMES, ...fromLocal, ...regPersonsList.map(p=>typeof p==='string'?p:p.name).filter(Boolean)])];
+  sel.innerHTML = '<option value="">— Chọn tên của bạn —</option>';
+  allNames.forEach(n => { sel.innerHTML += `<option value="${n}">${n}</option>`; });
 }
+
+// Cũng thử load từ Firebase nếu rules cho phép (để cập nhật tên mới nhất)
+db.ref('duyetchi/meta/persons').once('value').then(snap => {
+  if(snap.exists()) regPersonsList = snap.val() || [];
+  populateRegSelect();
+}).catch(()=>{ populateRegSelect(); }); // Nếu lỗi vẫn hiển thị tên mặc định
+
+// Gọi ngay lần đầu không cần đợi Firebase
+populateRegSelect();
 
 // Lắng nghe trạng thái đăng nhập
 auth.onAuthStateChanged(async user => {
