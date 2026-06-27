@@ -1855,37 +1855,37 @@ function renderReportList(){
   const rows=sorted.map((p,i)=>{
     const dAmt=parseFloat(p.approvedDAmount)||0, hAmt=parseFloat(p.approvedHAmount)||0;
     const trans=getTotalTransferred(p);
-    const st=normStatus(p);
     const dRej=p.rejectedByD, hRej=p.rejectedByH;
-    const rejD=dRej?(dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'';
-    const rejH=hRej?(hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):'';
-    const rejStr=[rejD,rejH].filter(Boolean).join('<br>');
+    const rejD=dRej?(dRej.reason?`D: ${dRej.reason}`:'D từ chối'):'';
+    const rejH=hRej?(hRej.reason?`H: ${hRej.reason}`:'H từ chối'):'';
+    const rejNote=[rejD,rejH].filter(Boolean).map(r=>`<div style="font-size:9px;color:#dc2626;font-style:italic">${r}</div>`).join('');
     const dHist=Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length?p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.at||t.ts)}`).join('<br>'):(dAmt>0?fmtVND(dAmt):'');
     const hHist=Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length?p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.at||t.ts)}`).join('<br>'):(hAmt>0?fmtVND(hAmt):'');
     const tHist=Array.isArray(p.transfers)&&p.transfers.length?p.transfers.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.at||t.ts)}`).join('<br>'):(trans>0?fmtVND(trans):'');
-    const stBadge={pending:'badge-wait',approved:'badge-approved',transferred:'badge-done',done:'badge-done',rejected:'badge-reject'};
-    const stIcon={pending:'⏳',approved:'✅',transferred:'💸',done:'💸',rejected:'❌'};
     const prv=p.priority||'normal';
-    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv==='low'?'🟢':'🟡';
-    const cb='style="vertical-align:middle;white-space:normal;line-height:1.5"';
+    const prCell=prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
+    const vm='vertical-align:middle';
+    const cb=`style="${vm};white-space:normal;line-height:1.5"`;
     return `<tr>
-      <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
-      <td ${cb} style="vertical-align:middle;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc||p.title||''}</td>
-      <td ${cb} style="font-size:10px">${p.person||'—'}</td>
-      <td ${cb} style="font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount" style="vertical-align:middle">${fmtVND(p.amount)}</td>
-      <td style="vertical-align:middle;text-align:center;font-size:14px">${prCell}</td>
-      <td ${cb} style="font-size:9px;color:var(--blue)">${dHist}</td>
-      <td ${cb} style="font-size:9px;color:#7c3aed">${hHist}</td>
-      <td ${cb} style="font-size:9px;color:var(--yellow)">${tHist}</td>
-      <td style="vertical-align:middle"><span class="badge ${stBadge[st]||'badge-wait'}" style="font-size:8px;padding:1px 5px">${stIcon[st]||'⏳'}</span></td>
-      <td ${cb} style="font-size:9px;color:var(--red)">${rejStr}</td>
+      <td style="${vm};text-align:center;font-size:11px">${sorted.length-i}</td>
+      <td style="${vm};white-space:normal;line-height:1.4;font-size:10px;font-weight:700">${p.desc||p.title||''}${rejNote}</td>
+      <td ${cb} style="${vm};font-size:10px">${p.person||'—'}</td>
+      <td ${cb} style="${vm};font-size:9px;color:#475569">${(p.site||'—').replace('CT ','')}</td>
+      <td style="${vm};text-align:right;font-weight:700;font-size:11px;color:var(--blue);white-space:nowrap">${fmtVND(p.amount)}</td>
+      <td style="${vm};text-align:center;font-size:14px">${prCell}</td>
+      <td ${cb} style="${vm};font-size:9px;color:var(--blue)">${dHist}</td>
+      <td ${cb} style="${vm};font-size:9px;color:#7c3aed">${hHist}</td>
+      <td ${cb} style="${vm};font-size:9px;color:#059669">${tHist}</td>
     </tr>`;
   }).join('');
   const total=fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const totalTrans=fp.reduce((a,p)=>a+getTotalTransferred(p),0);
-  el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
-    <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
+  el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table" style="table-layout:fixed;min-width:600px">
+    <colgroup>
+      <col style="width:30px"><col style="width:150px"><col style="width:60px"><col style="width:90px">
+      <col style="width:100px"><col style="width:34px"><col style="width:110px"><col style="width:110px"><col style="width:110px">
+    </colgroup>
+    <thead><tr><th style="text-align:center">#</th><th>Nội dung</th><th>Người</th><th>Công trình</th><th style="text-align:right">Đề xuất</th><th style="text-align:center">Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
   <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtVND(total)}</span><span>Đã chuyển: ${fmtVND(totalTrans)}</span></div>`;
   attachTopScroll(el);
