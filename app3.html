@@ -510,9 +510,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
       <div class="form-group">
         <label class="form-label">Người đề xuất <span class="req">*</span></label>
-        <select class="form-input form-select" id="inp-person" onchange="autofillPerson(this.value)">
+        <!-- D: dropdown chọn tự do | non-D: input readonly hiển thị tên cố định -->
+        <select class="form-input form-select" id="inp-person" onchange="autofillPerson(this.value)" style="display:none">
           <option value="">— Chọn tên —</option>
         </select>
+        <input type="text" id="inp-person-readonly" class="form-input" readonly style="display:none;background:#f3f4f6;color:var(--text);cursor:default">
       </div>
 
       <div class="form-group">
@@ -2686,7 +2688,8 @@ function removeZaloImage(id, idx){
 function submitProposal(){
   try{
     const desc=document.getElementById('inp-desc').value.trim();
-    const person=document.getElementById('inp-person').value;
+    const roInput = document.getElementById('inp-person-readonly');
+    const person = roInput && roInput.style.display!=='none' ? roInput.value : document.getElementById('inp-person').value;
     const site=document.getElementById('inp-site').value;
     const amountRaw=parseAmountInput(document.getElementById('inp-amount'));
     if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
@@ -2729,6 +2732,7 @@ function submitProposal(){
     document.getElementById('inp-amount').value='';
     document.getElementById('inp-note').value='';
     document.getElementById('inp-person').value='';
+    const _ro = document.getElementById('inp-person-readonly'); if(_ro) _ro.value='';
     document.getElementById('inp-site').value='';
     removeImg();
     showToast('Đã gửi đề xuất!');
@@ -2750,20 +2754,19 @@ function submitProposal(){
 function populateSelects(){
   const ps=document.getElementById('inp-person');
   const ss=document.getElementById('inp-site');
-  // Xác định tên bị khóa theo role hoặc currentUserName
   const roleName = currentRole==='hien'?'Hiền': currentRole==='trang'?'Trang': '';
   const lockedName = currentUserName || roleName;
+  const roInput = document.getElementById('inp-person-readonly');
   if(currentRole !== 'dung' && lockedName){
-    ps.innerHTML=`<option value="${lockedName}">${lockedName}</option>`;
-    ps.value = lockedName;
-    ps.disabled = true;
-    ps.style.pointerEvents = 'none';
-    ps.style.opacity = '1';
-    ps.style.background = '#f3f4f6';
+    // Non-D: ẩn dropdown, hiện input readonly
+    ps.style.display = 'none';
+    roInput.style.display = 'block';
+    roInput.value = lockedName;
   } else {
+    // D: hiện dropdown, ẩn input readonly
+    roInput.style.display = 'none';
+    ps.style.display = 'block';
     ps.disabled = false;
-    ps.style.pointerEvents = '';
-    ps.style.background = '';
     ps.innerHTML='<option value="">— Chọn tên —</option>'+persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
     ps.value = '';
   }
