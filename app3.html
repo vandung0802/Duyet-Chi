@@ -102,7 +102,7 @@ body{font-family:'Roboto',sans-serif;background:#f8fafc;color:var(--text);min-he
 .proposal-top-row{display:flex;justify-content:space-between;align-items:stretch;gap:0}
 .proposal-left-col{flex:1;min-width:0;padding-right:10px;border-right:2px solid #b0b8c9}
 .proposal-desc{font-size:14px;font-weight:700;line-height:1.3;margin-bottom:5px;word-break:break-word}
-.proposal-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--text-sub)}
+.proposal-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--text-sub)}
 .proposal-amount{font-size:17px;font-weight:700;color:var(--blue);margin-top:5px}
 .proposal-badge-area{padding-left:8px;flex-shrink:0;width:33%;min-width:33%;word-break:break-word;text-align:right}
 .proposal-note{font-size:14px;font-weight:600;color:var(--text);margin-top:5px;background:var(--gray-light);padding:5px 8px;border-radius:6px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
@@ -344,11 +344,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div class="form-group">
       <label class="form-label">Người đề xuất <span class="req">*</span></label>
-      <select class="form-input form-select" id="edit-person"><option value="">— Chọn tên —</option></select>
+      <input class="form-input" id="edit-person" list="edit-person-list" placeholder="— Chọn hoặc nhập tên —" autocomplete="off">
+      <datalist id="edit-person-list"></datalist>
     </div>
     <div class="form-group">
       <label class="form-label">Công trường <span class="req">*</span></label>
-      <select class="form-input form-select" id="edit-site"><option value="">— Chọn công trường —</option></select>
+      <input class="form-input" id="edit-site" list="edit-site-list" placeholder="— Chọn hoặc nhập công trường —" autocomplete="off">
+      <datalist id="edit-site-list"></datalist>
     </div>
     <div class="form-group">
       <label class="form-label">Nội dung đề xuất <span class="req">*</span></label>
@@ -386,7 +388,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 
 <!-- ══ APPROVE AMOUNT MODAL ══ -->
-<div class="role-screen" id="approve-amount-modal" style="display:none;z-index:9500;background:rgba(0,0,0,0.55);pointer-events:none">
+<div class="role-screen" id="approve-amount-modal" style="display:none;z-index:9500;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:22px 20px;width:100%;max-width:320px">
     <div id="aa-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Duyệt chi</div>
     <div id="aa-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
@@ -713,12 +715,13 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14d';
+const APP_VERSION = '20260627-v14s';
 (function(){
-  if(localStorage.getItem('app_version_v14') !== APP_VERSION){
-    localStorage.setItem('app_version_v14', APP_VERSION);
+  const KEY = 'app_ver_v14_' + APP_VERSION;
+  if(!localStorage.getItem(KEY)){
+    localStorage.setItem(KEY, '1');
     const base = location.pathname;
-    location.replace(base + '?v=' + APP_VERSION);
+    location.replace(base + '?v=' + APP_VERSION + '&t=' + Date.now());
   }
 })();
 
@@ -1347,8 +1350,7 @@ async function submitProposal(){
   const p={id:uid(),desc,site,amount,note,priority,person:currentUserName,personRole:currentRole,ts:Date.now(),status:'pending',imgImages,transfers:[],amountUnit:'dong'};
   proposals.unshift(p); save(); uploadedImages=[]; renderUploadPreview();
   showToast('✅ Đã gửi đề xuất!');
-  const others=['dung','hien','trang'].filter(r=>r!==currentRole);
-  sendPushNotif('📋 Đề xuất mới',`${currentUserName}: ${desc} — ${fmtVND(amount)}`,others);
+  sendPushNotif('📋 Đề xuất mới',`${currentUserName}: ${desc} — ${fmtVND(amount)}`,['dung','hien','trang']);
   showPage('home',document.querySelectorAll('.nav-item')[0]);
 }
 
@@ -1402,7 +1404,32 @@ function renderProposals(){
   if(q) arr=arr.filter(p=>((p.desc||p.title||'')+' '+(p.site||'')+' '+(p.person||'')+' '+(p.note||'')).toLowerCase().includes(q));
   arr=arr.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
   list.innerHTML=arr.length?arr.map(renderCard).join(''):'<div style="text-align:center;padding:40px;color:var(--text-sub);font-size:13px">Không có đề xuất nào</div>';
+  attachCardImageLongPress(arr);
 }
+function removeZaloImage(proposalId, idx){
+  const p=proposals.find(x=>x.id===proposalId); if(!p) return;
+  const imgs=Array.isArray(p.imgImages)&&p.imgImages.length?p.imgImages:(p.imgB64?[p.imgB64]:[]);
+  imgs.splice(idx,1);
+  p.imgImages=imgs; p.imgB64=undefined;
+  save(); renderAll(); showToast('🗑 Đã xóa ảnh');
+}
+
+function attachCardImageLongPress(arr){
+  arr.forEach(p=>{
+    const card=document.getElementById('card-'+p.id); if(!card) return;
+    const imgImages=Array.isArray(p.imgImages)&&p.imgImages.length?p.imgImages:(p.imgB64?[p.imgB64]:[]);
+    card.querySelectorAll('.proof-thumb img').forEach((img,idx)=>{
+      if(idx>=imgImages.length) return;
+      const canDelete=(currentRole==='dung'||p.person===currentUserName);
+      attachLongPress(
+        img,
+        ()=>imgImages[idx],
+        canDelete?(()=>(()=>removeZaloImage(p.id,idx))):null
+      );
+    });
+  });
+}
+
 function renderCard(p){
   const st=normStatus(p);
   // Badge area (right column)
@@ -1581,12 +1608,42 @@ function openImg(id,type,idx){
 // APPROVE / TRANSFER / REJECT
 // ══════════════════════════════════════════
 let pendingApproveId='', pendingApproveRole='';
-function approveByD(e,id){ e.stopPropagation(); pendingApproveId=id; pendingApproveRole='dung'; const p=proposals.find(x=>x.id===id); if(!p) return; document.getElementById('approve-amount-input').value=Number(p.amount).toLocaleString('vi-VN'); document.getElementById('approve-amount-modal').style.display='flex'; }
-function approveByH(e,id){ e.stopPropagation(); pendingApproveId=id; pendingApproveRole='hien'; const p=proposals.find(x=>x.id===id); if(!p) return; document.getElementById('approve-amount-input').value=Number(p.amount).toLocaleString('vi-VN'); document.getElementById('approve-amount-modal').style.display='flex'; }
+function approveByD(e,id){
+  e.stopPropagation(); pendingApproveId=id; pendingApproveRole='dung';
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  const dAmt=parseFloat(p.approvedDAmount)||0;
+  const el=document.getElementById('aa-amount'); if(el) el.value=Number(p.amount).toLocaleString('vi-VN');
+  const title=document.getElementById('aa-title'); if(title) title.textContent='Duyệt chi (D)';
+  const sub=document.getElementById('aa-sub'); if(sub) sub.textContent=(p.desc||p.title||'')+' — '+fmtVND(p.amount);
+  const undoBtn=document.getElementById('aa-undo-btn'); if(undoBtn) undoBtn.style.display=dAmt>0?'block':'none';
+  document.getElementById('approve-amount-modal').style.display='flex';
+}
+function approveByH(e,id){
+  e.stopPropagation(); pendingApproveId=id; pendingApproveRole='hien';
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  const hAmt=parseFloat(p.approvedHAmount)||0;
+  const el=document.getElementById('aa-amount'); if(el) el.value=Number(p.amount).toLocaleString('vi-VN');
+  const title=document.getElementById('aa-title'); if(title) title.textContent='Duyệt chi (H)';
+  const sub=document.getElementById('aa-sub'); if(sub) sub.textContent=(p.desc||p.title||'')+' — '+fmtVND(p.amount);
+  const undoBtn=document.getElementById('aa-undo-btn'); if(undoBtn) undoBtn.style.display=hAmt>0?'block':'none';
+  document.getElementById('approve-amount-modal').style.display='flex';
+}
 function closeApproveModal(){ document.getElementById('approve-amount-modal').style.display='none'; }
+function closeApproveAmountModal(){ closeApproveModal(); }
+function aaFillFull(){
+  const p=proposals.find(x=>x.id===pendingApproveId); if(!p) return;
+  const el=document.getElementById('aa-amount'); if(el) el.value=Number(p.amount).toLocaleString('vi-VN');
+}
+function undoApproveFromModal(){
+  const p=proposals.find(x=>x.id===pendingApproveId); if(!p) return;
+  if(pendingApproveRole==='dung'){ delete p.approvedD; delete p.approvedDAmount; p.approvedDHistory=[]; }
+  else { delete p.approvedH; delete p.approvedHAmount; p.approvedHHistory=[]; }
+  p.status=calcStatus(p);
+  save(); closeApproveModal(); renderAll(); showToast('↩️ Đã bỏ duyệt');
+}
 function confirmApproveAmount(){
   const p=proposals.find(x=>x.id===pendingApproveId); if(!p) return;
-  const amt=parseVND(document.getElementById('approve-amount-input').value);
+  const amt=parseVND(document.getElementById('aa-amount').value);
   if(!amt||amt<=0){ showToast('⚠️ Nhập số tiền'); return; }
   const now=Date.now();
   if(pendingApproveRole==='dung'){ p.approvedD=now; p.approvedDAmount=amt; if(!Array.isArray(p.approvedDHistory)) p.approvedDHistory=[]; p.approvedDHistory.push({amount:amt,at:now,by:currentUserName}); }
@@ -1673,26 +1730,138 @@ function del(id){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng mới đ�
 // EDIT PROPOSAL
 // ══════════════════════════════════════════
 let editId='';
+let editImgList = [];
+
 function openEditProposal(id){
-  const p=proposals.find(x=>x.id===id); if(!p) return; editId=id;
+  const p=proposals.find(x=>x.id===id); if(!p){ showToast('Không tìm thấy đề xuất id='+id,5000); return; } editId=id;
+  showToast('person="'+p.person+'" site="'+p.site+'" desc="'+(p.desc||p.title||'')+'"',8000);
+  // Populate datalists
+  const pList=document.getElementById('edit-person-list');
+  if(pList){ const pNames=[...new Set([...(persons||[]).map(x=>typeof x==='object'?x.name:x),(p.person||'')])].filter(Boolean); pList.innerHTML=pNames.map(n=>`<option value="${n}">`).join(''); }
+  const pInp=document.getElementById('edit-person');
+  if(pInp) pInp.value=p.person||'';
+  const sList=document.getElementById('edit-site-list');
+  if(sList){ const sNames=[...new Set([...(sites||[]).map(s=>typeof s==='object'?s.name:s),(p.site||'')])].filter(Boolean); sList.innerHTML=sNames.map(s=>`<option value="${s}">`).join(''); }
+  const sInp=document.getElementById('edit-site');
+  if(sInp) sInp.value=p.site||'';
+  // Fill fields
   const f=(eid,val)=>{ const el=document.getElementById(eid); if(el) el.value=val||''; };
-  f('edit-title',p.desc||p.title);
-  f('edit-site',p.site);
+  f('edit-desc',p.desc||p.title||'');
   f('edit-amount',p.amount?Number(p.amount).toLocaleString('vi-VN'):'');
-  f('edit-note',p.note);
-  f('edit-person',p.person);
+  f('edit-note',p.note||'');
+  // Priority
+  const pri=p.priority||'normal';
+  const priEl=document.querySelector(`input[name="edit-priority"][value="${pri}"]`);
+  if(priEl) priEl.checked=true;
+  // Images
+  editImgList=(p.imgImages&&p.imgImages.length)?p.imgImages.slice():(p.imgB64?[p.imgB64]:[]);
+  renderEditImgPreview();
   document.getElementById('edit-modal').style.display='flex';
 }
-function closeEditModal(){ document.getElementById('edit-modal').style.display='none'; }
-function saveEditProposal(){
+function closeEditModal(){ document.getElementById('edit-modal').style.display='none'; editImgList=[]; }
+async function saveEditProposal(){
   const p=proposals.find(x=>x.id===editId); if(!p) return;
   const g=(eid)=>{ const el=document.getElementById(eid); return el?el.value.trim():''; };
-  const newDesc=g('edit-title'); if(newDesc) p.desc=newDesc;
+  const newDesc=g('edit-desc'); if(newDesc) p.desc=newDesc;
   const newSite=g('edit-site'); if(newSite) p.site=newSite;
   const amtEl=document.getElementById('edit-amount'); if(amtEl) p.amount=parseVND(amtEl.value);
   p.note=g('edit-note');
+  p.priority=document.querySelector('input[name="edit-priority"]:checked')?.value||'normal';
   if(currentRole==='dung'){ const per=g('edit-person'); if(per) p.person=per; }
+  // Upload any new base64 images
+  const finalImgs=[];
+  for(let i=0;i<editImgList.length;i++){
+    const src=editImgList[i];
+    if(src.startsWith('http')){ finalImgs.push(src); }
+    else { try{ const url=await uploadToStorage(src,`duyetchi/proposals/${p.id}_edit_${Date.now()}_${i}.jpg`); finalImgs.push(url); }catch(e){ finalImgs.push(src); } }
+  }
+  p.imgImages=finalImgs; p.imgB64=undefined;
   save(); closeEditModal(); renderAll(); showToast('✅ Đã cập nhật');
+}
+
+function handleEditImg(input){
+  const files=Array.from(input.files||[]); if(!files.length) return;
+  files.filter(f=>f.type.startsWith('image/')).forEach(file=>{
+    const r=new FileReader(); r.onload=ev=>{ editImgList.push(ev.target.result); renderEditImgPreview(); }; r.readAsDataURL(file);
+  });
+  input.value='';
+}
+function renderEditImgPreview(){
+  const wrap=document.getElementById('edit-img-preview-wrap'); if(!wrap) return;
+  if(!editImgList.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML=editImgList.map((src,i)=>`<div class="img-preview-item" data-idx="${i}"><img src="${src}" alt="Ảnh ${i+1}"></div>`).join('');
+  wrap.querySelectorAll('.img-preview-item').forEach(item=>{
+    const idx=parseInt(item.dataset.idx,10);
+    const img=item.querySelector('img');
+    attachLongPress(img, ()=>editImgList[idx], ()=>(()=>{ editImgList.splice(idx,1); renderEditImgPreview(); }));
+  });
+}
+
+// ── LONG PRESS & IMAGE ACTION MENU ──
+let imgActionContext=null, longPressTimer=null;
+const LONG_PRESS_MS=450;
+function attachLongPress(el, getSrc, getDeleteFn){
+  let startX=0,startY=0,moved=false,fired=false;
+  const start=(e)=>{ moved=false;fired=false; const pt=e.touches?e.touches[0]:e; startX=pt.clientX;startY=pt.clientY; longPressTimer=setTimeout(()=>{ if(moved)return; fired=true; showImgActionMenu(getSrc(), getDeleteFn?getDeleteFn():null); },LONG_PRESS_MS); };
+  const move=(e)=>{ const pt=e.touches?e.touches[0]:e; if(Math.abs(pt.clientX-startX)>8||Math.abs(pt.clientY-startY)>8){moved=true;clearTimeout(longPressTimer);} };
+  const cancel=()=>clearTimeout(longPressTimer);
+  const stopIfFired=(e)=>{ if(fired){e.preventDefault();e.stopPropagation();} };
+  el.addEventListener('touchstart',start,{passive:true});
+  el.addEventListener('touchmove',move,{passive:true});
+  el.addEventListener('touchend',(e)=>{cancel();stopIfFired(e);});
+  el.addEventListener('touchcancel',cancel);
+  el.addEventListener('mousedown',start);
+  el.addEventListener('mousemove',move);
+  el.addEventListener('mouseup',(e)=>{cancel();stopIfFired(e);});
+  el.addEventListener('mouseleave',cancel);
+  el.addEventListener('click',(e)=>{if(fired){e.preventDefault();e.stopPropagation();}},true);
+  el.addEventListener('contextmenu',(e)=>e.preventDefault());
+}
+function showImgActionMenu(src,deleteFn){
+  imgActionContext={src,onDelete:deleteFn};
+  const delBtn=document.getElementById('imgActionDelete');
+  if(delBtn) delBtn.style.display=deleteFn?'flex':'none';
+  const ov=document.getElementById('imgActionOverlay');
+  if(ov) ov.classList.add('open');
+}
+function hideImgActionMenu(){
+  const ov=document.getElementById('imgActionOverlay');
+  if(ov) ov.classList.remove('open');
+  imgActionContext=null;
+}
+function dataUrlToBlob(dataUrl){
+  return fetch(dataUrl).then(r=>r.blob());
+}
+function convertBlobToPng(blob){
+  return new Promise((resolve,reject)=>{ const url=URL.createObjectURL(blob); const img=new Image(); img.onload=()=>{ const c=document.createElement('canvas'); c.width=img.naturalWidth;c.height=img.naturalHeight; c.getContext('2d').drawImage(img,0,0); URL.revokeObjectURL(url); c.toBlob(b=>b?resolve(b):reject(new Error('PNG thất bại')),'image/png'); }; img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Load thất bại'));}; img.src=url; });
+}
+function downloadImageDataUrl(src){
+  const a=document.createElement('a'); a.href=src; a.download='anh_'+Date.now()+'.jpg'; a.click();
+}
+async function imgActionCopy(){
+  if(!imgActionContext) return;
+  try{
+    const blob=await dataUrlToBlob(imgActionContext.src);
+    if(navigator.clipboard&&window.ClipboardItem){
+      let b=blob;
+      if(!['image/png','image/jpeg'].includes(blob.type)) b=await convertBlobToPng(blob);
+      await navigator.clipboard.write([new ClipboardItem({[b.type]:b})]);
+      showToast('📋 Đã sao chép ảnh');
+    } else { showToast('❌ Trình duyệt không hỗ trợ sao chép ảnh'); }
+  }catch(err){ showToast('❌ Không sao chép được: '+(err.message||'lỗi')); }
+  hideImgActionMenu();
+}
+async function imgActionDownload(){
+  if(!imgActionContext) return;
+  downloadImageDataUrl(imgActionContext.src);
+  hideImgActionMenu();
+}
+function imgActionDelete(){
+  if(!imgActionContext||!imgActionContext.onDelete){ hideImgActionMenu(); return; }
+  if(!confirm('Xóa ảnh này?')){ hideImgActionMenu(); return; }
+  imgActionContext.onDelete();
+  hideImgActionMenu();
 }
 
 // ══════════════════════════════════════════
@@ -2048,11 +2217,39 @@ function renderNotifPanel(){
     <div style="font-size:11px;color:var(--text-sub)">${p.person||''} · ${fmtFull(p.ts)} · <span style="color:${STATUS_COLOR[p.status]||'#888'}">${STATUS_LABEL[p.status]||p.status}</span></div>
   </div>`).join('')||'<div style="color:var(--text-sub);font-size:13px;padding:12px 0">Không có</div>';
 }
+function getMyPendingItems(){
+  const items=[];
+  proposals.forEach(p=>{
+    if(p.status==='rejected') return;
+    const total=parseFloat(p.amount)||0;
+    const dAmt=parseFloat(p.approvedDAmount)||0;
+    const hAmt=parseFloat(p.approvedHAmount)||0;
+    const transferred=(Array.isArray(p.transfers)?p.transfers.reduce((s,t)=>s+(parseFloat(t.amount)||0),0):0);
+    const official=Math.min(dAmt,hAmt);
+    if(currentRole==='dung'){
+      if(dAmt<total-0.0001&&p.status!=='transferred') items.push(p);
+    } else if(currentRole==='hien'){
+      if(hAmt<total-0.0001&&p.status!=='transferred') items.push(p);
+    } else if(currentRole==='trang'){
+      if(official>0&&transferred<official-0.0001) items.push(p);
+    } else {
+      const seenTs=getNotifSeenTs();
+      if((p.ts||0)>seenTs) items.push(p);
+    }
+  });
+  return items;
+}
 function updateNotifBadge(){
   const badge=document.getElementById('notif-badge'); if(!badge) return;
-  const seenTs=getNotifSeenTs();
-  const count=proposals.filter(p=>(p.ts||0)>seenTs).length;
-  badge.textContent=count; badge.style.display=count?'flex':'none';
+  const n=getMyPendingItems().length;
+  badge.textContent=n>99?'99+':n; badge.style.display=n>0?'flex':'none';
+  if(navigator.setAppBadge){ n>0?navigator.setAppBadge(n):navigator.clearAppBadge(); }
+  if(navigator.serviceWorker){
+    navigator.serviceWorker.ready.then(reg=>{
+      if(reg.active) reg.active.postMessage({type:'SET_BADGE',count:n});
+    }).catch(()=>{});
+  }
+  document.title=n>0?`(${n}) Duyệt Chi v14`:'Duyệt Chi v14';
 }
 
 // ══════════════════════════════════════════
