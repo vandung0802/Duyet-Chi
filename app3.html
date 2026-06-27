@@ -1515,14 +1515,14 @@ function renderBtnReject(p){
   const canRejectD=currentRole==='dung'&&st!=='transferred';
   const canRejectH=currentRole==='hien'&&st!=='transferred';
   if(st==='rejected'){
-    const who=(dRej&&hRej)?'D+H':(dRej?'D':'H');
+    const who=(dRej&&hRej)?'D, H':(dRej?'D':'H');
     const inner=`<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">${who}</span><span class="ab-mid-label" style="color:#c81e1e">Từ chối</span></div>`;
     if(canRejectD&&dRej) return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" onclick="undoRejectBy('${p.id}','D')" title="Bỏ từ chối">${inner}</button></div>`;
     if(canRejectH&&hRej) return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" onclick="undoRejectBy('${p.id}','H')" title="Bỏ từ chối">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><div class="ab-done-btn">${inner}</div></div>`;
   }
-  if(canRejectD) return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy(event,'${p.id}','D')"><span style="color:var(--red)">D</span> ✕ Từ chối</button></div>`;
-  if(canRejectH) return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy(event,'${p.id}','H')"><span style="color:#7c3aed">H</span> ✕ Từ chối</button></div>`;
+  if(canRejectD) return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy(event,'${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">D</span><span class="ab-mid-label">Từ chối</span></div></button></div>`;
+  if(canRejectH) return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy(event,'${p.id}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label">Từ chối</span></div></button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">—</div></div>`;
 }
 function renderBtnTransfer(p){
