@@ -710,7 +710,7 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14b';
+const APP_VERSION = '20260627-v14c';
 (function(){
   if(localStorage.getItem('app_version_v14') !== APP_VERSION){
     localStorage.setItem('app_version_v14', APP_VERSION);
@@ -1151,14 +1151,10 @@ function pushToFirebase(){
 }
 
 function initFirebaseSync(){
-  db.ref('.info/connected').on('value', snap=>{
-    const ok = snap.val() === true;
-    fbConnected = ok;
-    updateFbBadge(ok);
-  });
+  const connTimeout=setTimeout(()=>{ if(!fbConnected) updateFbBadge(false); }, 8000);
   const ref = db.ref('duyetchi');
   ref.on('value', (snapshot)=>{
-    fbConnected = true; updateFbBadge(true);
+    fbConnected = true; clearTimeout(connTimeout); updateFbBadge(true);
     const data = snapshot.val();
     if(data && Array.isArray(data.proposals)){
       proposals = data.proposals || []; persons = data.persons||[]; sites = data.sites||[];
