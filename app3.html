@@ -2690,6 +2690,14 @@ function submitProposal(){
     const site=document.getElementById('inp-site').value;
     const amountRaw=parseAmountInput(document.getElementById('inp-amount'));
     if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
+    // Kiểm tra tên đúng với tài khoản đang đăng nhập
+    const roleName = currentRole==='hien'?'Hiền': currentRole==='trang'?'Trang': '';
+    const lockedName = currentUserName || roleName;
+    if(currentRole !== 'dung' && lockedName && person !== lockedName){
+      showToast('⛔ Bạn chỉ được đề xuất với tên của mình: '+lockedName);
+      document.getElementById('inp-person').value = lockedName;
+      return;
+    }
     if(!desc){ showToast('Vui lòng nhập nội dung'); document.getElementById('inp-desc').focus(); return; }
     if(!amountRaw){ showToast('Vui lòng nhập số tiền'); document.getElementById('inp-amount').focus(); return; }
 
@@ -2749,8 +2757,13 @@ function populateSelects(){
     ps.innerHTML=`<option value="${lockedName}">${lockedName}</option>`;
     ps.value = lockedName;
     ps.disabled = true;
+    ps.style.pointerEvents = 'none';
+    ps.style.opacity = '1';
+    ps.style.background = '#f3f4f6';
   } else {
     ps.disabled = false;
+    ps.style.pointerEvents = '';
+    ps.style.background = '';
     ps.innerHTML='<option value="">— Chọn tên —</option>'+persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
     ps.value = '';
   }
