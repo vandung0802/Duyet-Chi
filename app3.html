@@ -15,6 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -266,28 +267,33 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <body id="artifacts-component-root-html">
 
 <!-- ROLE SCREEN -->
+<!-- LOGIN SCREEN — Firebase Auth -->
 <div class="role-screen" id="role-screen">
-  <div style="font-size:48px;margin-bottom:16px">📋</div>
-  <h2>App Duyệt Chi</h2>
-  <p>PVA - 379 — Chọn vai trò</p>
-  <div style="display:flex;gap:16px;margin-top:8px">
-    <button type="button" onclick="requestRole('dung')" style="width:80px;height:80px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:var(--blue);cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);border:none;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation">D</button>
-    <button type="button" onclick="requestRole('hien')" style="width:80px;height:80px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:#7c3aed;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);border:none;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation">H</button>
-    <button type="button" onclick="requestRole('trang')" style="width:80px;height:80px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:900;color:#b45309;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);border:none;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation">T</button>
-    <button type="button" onclick="requestRole('other')" style="width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,0.2);border:none;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation">👤</button>
+  <div style="font-size:48px;margin-bottom:12px">📋</div>
+  <h2>Duyệt Chi</h2>
+  <p style="margin-bottom:24px">PVA - 379</p>
+  <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;text-align:center">Đăng nhập</div>
+    <input type="email" id="auth-email" class="form-input" placeholder="Email" autocomplete="email" style="margin-bottom:10px;font-size:15px">
+    <div style="position:relative">
+      <input type="password" id="auth-pass" class="form-input" placeholder="Mật khẩu" autocomplete="current-password" style="font-size:15px;padding-right:40px">
+      <button type="button" onclick="toggleAuthPass()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--gray);padding:4px" id="auth-pass-eye">👁</button>
+    </div>
+    <div id="auth-error" style="color:var(--red);font-size:12px;margin-top:6px;min-height:16px;text-align:center"></div>
+    <button id="auth-btn" class="btn-full btn-primary-full" style="margin-top:12px" onclick="doLogin()">Đăng nhập</button>
+    <button onclick="doForgotPass()" style="margin-top:8px;width:100%;background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:4px">Quên mật khẩu?</button>
   </div>
 </div>
 
-<!-- PASSWORD MODAL -->
-<div class="role-screen" id="pw-modal" style="display:none;z-index:10000;background:rgba(0,0,0,0.55);pointer-events:none">
-  <div style="background:#fff;border-radius:18px;padding:26px 22px;width:100%;max-width:300px;text-align:center">
-    <div id="pw-avatar" style="width:56px;height:56px;border-radius:50%;margin:0 auto 12px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff"></div>
-    <div id="pw-title" style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:14px">Nhập mật khẩu</div>
-    <input type="password" id="pw-input" class="form-input" placeholder="Mật khẩu" style="text-align:center;font-size:16px;letter-spacing:2px" autocomplete="off">
-    <div id="pw-error" style="color:var(--red);font-size:12px;margin-top:6px;min-height:16px"></div>
-    <button class="btn-full btn-primary-full" style="margin-top:10px" onclick="checkPassword()">Xác nhận</button>
-    <button class="btn-full btn-outline-full" onclick="closePwModal()">Hủy</button>
-  </div>
+<!-- ROLE PICK SCREEN — hiện sau lần đăng nhập đầu tiên -->
+<div class="role-screen" id="role-pick-screen" style="display:none;z-index:10001">
+  <div style="font-size:40px;margin-bottom:12px">👤</div>
+  <h2>Bạn là ai?</h2>
+  <p style="margin-bottom:24px">Chọn vai trò của bạn (1 lần duy nhất)</p>
+  <button type="button" onclick="pickRole('dung')" class="role-btn role-d" style="max-width:280px"><span class="role-avatar" style="background:var(--blue);color:#fff">D</span>Dũng — Giám đốc</button>
+  <button type="button" onclick="pickRole('hien')" class="role-btn role-h" style="max-width:280px"><span class="role-avatar" style="background:#7c3aed;color:#fff">H</span>Hiền — Phó GĐ</button>
+  <button type="button" onclick="pickRole('trang')" class="role-btn role-trang" style="max-width:280px"><span class="role-avatar" style="background:#b45309;color:#fff">T</span>Trang — Thủ quỹ</button>
+  <button type="button" onclick="pickRole('other')" class="role-btn role-other" style="max-width:280px"><span class="role-avatar" style="background:rgba(255,255,255,0.3)">👤</span>Khác — Xem &amp; thêm phiếu</button>
 </div>
 
 <!-- Modal Sửa đề xuất — chỉ dùng khi phiếu đang ở trạng thái Chờ duyệt -->
@@ -601,6 +607,24 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- PAGE: SETTINGS -->
 <div id="page-settings" class="main" style="display:none">
 
+  <!-- Tài khoản -->
+  <div class="card">
+    <div class="card-header">🔐 Tài khoản</div>
+    <div class="card-body">
+      <div id="auth-account-info" style="font-size:13px;color:var(--text-sub);margin-bottom:12px"></div>
+      <details style="margin-bottom:6px">
+        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Đổi mật khẩu</summary>
+        <div style="margin-top:10px">
+          <input type="password" id="chpw-old" class="form-input" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px;font-size:14px">
+          <input type="password" id="chpw-new" class="form-input" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" style="margin-bottom:8px;font-size:14px">
+          <input type="password" id="chpw-confirm" class="form-input" placeholder="Nhập lại mật khẩu mới" style="margin-bottom:8px;font-size:14px">
+          <div id="chpw-msg" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
+          <button onclick="doChangePassword()" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">Đổi mật khẩu</button>
+        </div>
+      </details>
+    </div>
+  </div>
+
   <!-- Thông báo đẩy -->
   <div class="card">
     <div class="card-header">🔔 Thông báo đẩy (Push Notification)</div>
@@ -907,7 +931,8 @@ function imgActionDelete(){
   imgActionContext.onDelete();
   hideImgActionMenu();
 }
-let currentRole = localStorage.getItem('dc_role')||'';
+let currentRole = '';
+let currentUser = null; // Firebase Auth user
 
 const ROLES = {
   dung:  {label:'Dũng',  icon:'D', color:'var(--blue)'},
@@ -923,56 +948,91 @@ function getCurrentUserName(){
   return '';
 }
 
-// Mật khẩu cho từng vai trò (chỉ D/H/T cần — "other" ai cũng vào được)
-const ROLE_PASSWORDS = { dung:'D123', hien:'H123', trang:'T123' };
-let pendingRole = null;
-
-function requestRole(role){
-  if(role==='other'){ setRole(role); return; }
-  pendingRole = role;
-  const r = ROLES[role];
-  document.getElementById('pw-avatar').style.background = r.color;
-  document.getElementById('pw-avatar').textContent = r.icon;
-  document.getElementById('pw-title').textContent = 'Nhập mật khẩu — ' + r.label;
-  document.getElementById('pw-input').value = '';
-  document.getElementById('pw-error').textContent = '';
-  const modal = document.getElementById('pw-modal');
-  modal.style.display = 'flex';
-  modal.style.pointerEvents = 'auto';
-  setTimeout(()=>document.getElementById('pw-input').focus(), 100);
+// ── FIREBASE AUTH ──
+function toggleAuthPass(){
+  const inp = document.getElementById('auth-pass');
+  const eye = document.getElementById('auth-pass-eye');
+  if(inp.type==='password'){ inp.type='text'; eye.textContent='🙈'; }
+  else { inp.type='password'; eye.textContent='👁'; }
 }
 
-function closePwModal(){
-  const modal = document.getElementById('pw-modal');
-  modal.style.display = 'none';
-  modal.style.pointerEvents = 'none';
-  pendingRole = null;
-}
-
-function checkPassword(){
-  const input = document.getElementById('pw-input').value;
-  if(input === ROLE_PASSWORDS[pendingRole]){
-    const role = pendingRole;
-    closePwModal();
-    setRole(role);
-  } else {
-    document.getElementById('pw-error').textContent = '❌ Sai mật khẩu, vui lòng thử lại';
-    document.getElementById('pw-input').value = '';
-    document.getElementById('pw-input').focus();
+async function doLogin(){
+  const email = document.getElementById('auth-email').value.trim();
+  const pass  = document.getElementById('auth-pass').value;
+  const errEl = document.getElementById('auth-error');
+  const btn   = document.getElementById('auth-btn');
+  errEl.textContent = '';
+  if(!email || !pass){ errEl.textContent='Vui lòng nhập email và mật khẩu'; return; }
+  btn.disabled = true; btn.textContent = '⏳ Đang đăng nhập...';
+  try {
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged sẽ xử lý tiếp
+  } catch(e) {
+    let msg = 'Đăng nhập thất bại';
+    if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') msg='Email hoặc mật khẩu không đúng';
+    else if(e.code==='auth/invalid-email') msg='Email không hợp lệ';
+    else if(e.code==='auth/too-many-requests') msg='Thử lại quá nhiều, vui lòng chờ';
+    errEl.textContent = msg;
+    btn.disabled = false; btn.textContent = 'Đăng nhập';
   }
 }
 
-// Cho phép bấm Enter để xác nhận mật khẩu
-document.addEventListener('DOMContentLoaded', ()=>{
-  const pwInput = document.getElementById('pw-input');
-  if(pwInput) pwInput.addEventListener('keydown', e=>{ if(e.key==='Enter') checkPassword(); });
-});
+async function doForgotPass(){
+  const email = document.getElementById('auth-email').value.trim();
+  const errEl = document.getElementById('auth-error');
+  if(!email){ errEl.textContent='Nhập email trước rồi bấm Quên mật khẩu'; return; }
+  try {
+    await firebase.auth().sendPasswordResetEmail(email);
+    errEl.style.color='var(--green)';
+    errEl.textContent='✅ Đã gửi email đặt lại mật khẩu';
+    setTimeout(()=>{ errEl.style.color='var(--red)'; errEl.textContent=''; }, 4000);
+  } catch(e) {
+    errEl.textContent='Không tìm thấy email này';
+  }
+}
 
-function logoutRole(){
-  if(!confirm('Thoát và quay về màn hình chọn vai trò?')) return;
+async function pickRole(role){
+  if(!currentUser) return;
+  await db.ref('duyetchi/userRoles/'+currentUser.uid).set(role);
+  document.getElementById('role-pick-screen').style.display='none';
+  setRole(role);
+}
+
+function initAuth(){
+  firebase.auth().onAuthStateChanged(async user=>{
+    if(user){
+      currentUser = user;
+      // Lấy role từ Firebase
+      const snap = await db.ref('duyetchi/userRoles/'+user.uid).get();
+      if(snap.exists()){
+        document.getElementById('role-screen').style.display='none';
+        document.getElementById('role-pick-screen').style.display='none';
+        setRole(snap.val());
+      } else {
+        // Lần đầu đăng nhập — chọn vai trò
+        document.getElementById('role-screen').style.display='none';
+        document.getElementById('role-pick-screen').style.display='flex';
+      }
+    } else {
+      currentUser = null;
+      currentRole = '';
+      document.getElementById('role-screen').style.display='flex';
+      document.getElementById('role-pick-screen').style.display='none';
+      // Reset auth form
+      const btn = document.getElementById('auth-btn');
+      if(btn){ btn.disabled=false; btn.textContent='Đăng nhập'; }
+    }
+  });
+  // Enter để đăng nhập
+  document.getElementById('auth-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+  document.getElementById('auth-email').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('auth-pass').focus(); });
+}
+
+
+async function logoutRole(){
+  if(!confirm('Đăng xuất?')) return;
   currentRole = '';
-  localStorage.removeItem('dc_role');
-  document.getElementById('role-screen').style.display='flex';
+  await firebase.auth().signOut();
 }
 
 function checkNotifBanner() {
@@ -989,10 +1049,11 @@ function checkNotifBanner() {
 
 function setRole(role){
   currentRole = role;
-  localStorage.setItem('dc_role', role);
   const r = ROLES[role]||ROLES.other;
-  document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}`;
+  const emailLabel = currentUser ? `<span style="font-size:9px;opacity:.75;margin-left:2px">(${currentUser.email})</span>` : '';
+  document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}${emailLabel}`;
   document.getElementById('role-screen').style.display='none';
+  document.getElementById('role-pick-screen').style.display='none';
   // Đăng ký FCM nếu đã có quyền
   if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     fcmRegister(role).catch(()=>{});
@@ -1022,7 +1083,7 @@ async function fcmRegister(role) {
         applicationServerKey: urlB64ToUint8Array(VAPID_PUBLIC)
       });
     }
-    const r = role || currentRole || localStorage.getItem('dc_role') || 'other';
+    const r = role || currentRole || 'other';
     const subKey = btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 80);
     const subObj = { endpoint: sub.endpoint, keys: { p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')))) } };
     await db.ref('push-subs/' + r + '/' + subKey).set(subObj);
@@ -1376,11 +1437,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   showPage('home', document.querySelector('.nav-item'));
   renderAll();
   initFirebaseSync();
-  if(currentRole){
-    setRole(currentRole);
-  } else {
-    document.getElementById('role-screen').style.display='flex';
-  }
+  initAuth();
 });
 
 // ── NAVIGATION ──
@@ -2612,7 +2669,37 @@ function autofillPerson(name){
 }
 
 // ── SETTINGS ──
+async function doChangePassword(){
+  const oldPw = document.getElementById('chpw-old').value;
+  const newPw = document.getElementById('chpw-new').value;
+  const conf  = document.getElementById('chpw-confirm').value;
+  const msg   = document.getElementById('chpw-msg');
+  msg.style.color = 'var(--red)'; msg.textContent = '';
+  if(!oldPw||!newPw||!conf){ msg.textContent='Vui lòng điền đủ 3 ô'; return; }
+  if(newPw.length < 6){ msg.textContent='Mật khẩu mới tối thiểu 6 ký tự'; return; }
+  if(newPw !== conf){ msg.textContent='Mật khẩu mới không khớp'; return; }
+  if(!currentUser){ msg.textContent='Chưa đăng nhập'; return; }
+  try {
+    const cred = firebase.auth.EmailAuthProvider.credential(currentUser.email, oldPw);
+    await currentUser.reauthenticateWithCredential(cred);
+    await currentUser.updatePassword(newPw);
+    msg.style.color='var(--green)'; msg.textContent='✅ Đổi mật khẩu thành công';
+    document.getElementById('chpw-old').value='';
+    document.getElementById('chpw-new').value='';
+    document.getElementById('chpw-confirm').value='';
+  } catch(e) {
+    if(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') msg.textContent='Mật khẩu hiện tại không đúng';
+    else msg.textContent='Lỗi: '+e.message;
+  }
+}
+
 function renderSettings(){
+  // Hiển thị thông tin tài khoản
+  const infoEl = document.getElementById('auth-account-info');
+  if(infoEl && currentUser){
+    const r = ROLES[currentRole]||ROLES.other;
+    infoEl.innerHTML = `<span style="font-weight:700;color:${r.color}">${r.icon} ${r.label}</span> — ${currentUser.email}`;
+  }
   updateNotifSettingsStatus();
   const pl=document.getElementById('person-list');
   pl.innerHTML=persons.length
