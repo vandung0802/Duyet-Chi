@@ -382,7 +382,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </label>
       <input type="file" id="edit-file-input" accept="image/*" multiple style="display:none" onchange="handleEditImg(this)">
     </div>
-    <button class="btn-full btn-primary-full" onclick="saveEditProposal()">💾 Lưu thay đổi</button>
+    <button class="btn-full btn-primary-full" id="btn-edit-save" onclick="saveEditProposal()">💾 Lưu thay đổi</button>
     <button class="btn-full btn-outline-full" onclick="closeEditModal()">Hủy</button>
   </div>
 </div>
@@ -571,7 +571,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <label class="form-label">Ghi chú</label>
         <textarea class="form-input" id="inp-note" rows="2" placeholder="Ghi chú thêm nếu có..."></textarea>
       </div>
-      <button class="btn-full btn-primary-full" onclick="submitProposal()">Gửi đề xuất</button>
+      <button class="btn-full btn-primary-full" id="btn-submit-proposal" onclick="submitProposal()">Gửi đề xuất</button>
     </div>
   </div>
 </div>
@@ -715,7 +715,7 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14y';
+const APP_VERSION = '20260627-v14z';
 (function(){
   const KEY = 'app_ver_v14_' + APP_VERSION;
   if(!localStorage.getItem(KEY)){
@@ -1310,9 +1310,23 @@ function resetAddForm(){
 // ══════════════════════════════════════════
 // ADD PROPOSAL – IMAGE UPLOAD
 // ══════════════════════════════════════════
+let _imgLoadingCount=0;
+function _setImgLoading(delta,btnId){
+  _imgLoadingCount=Math.max(0,_imgLoadingCount+delta);
+  const btn=document.getElementById(btnId||'btn-submit-proposal');
+  if(!btn) return;
+  if(_imgLoadingCount>0){ btn.disabled=true; btn.textContent='⏳ Đang tải ảnh...'; }
+  else{ btn.disabled=false; btn.textContent='💾 Lưu đề xuất'; }
+}
 function handleImg(inp){
   const files=inp.files; if(!files||!files.length) return;
-  Array.from(files).forEach(f=>{ const r=new FileReader(); r.onload=ev=>{ uploadedImages.push(ev.target.result); renderUploadPreview(); }; r.readAsDataURL(f); });
+  Array.from(files).forEach(f=>{
+    _setImgLoading(1,'btn-submit-proposal');
+    const r=new FileReader();
+    r.onload=ev=>{ uploadedImages.push(ev.target.result); renderUploadPreview(); _setImgLoading(-1,'btn-submit-proposal'); };
+    r.onerror=()=>_setImgLoading(-1,'btn-submit-proposal');
+    r.readAsDataURL(f);
+  });
   inp.value='';
 }
 function renderUploadPreview(){
@@ -1420,7 +1434,8 @@ function attachCardImageLongPress(arr){
     const imgImages=Array.isArray(p.imgImages)&&p.imgImages.length?p.imgImages:(p.imgB64?[p.imgB64]:[]);
     card.querySelectorAll('.proof-thumb img').forEach((img,idx)=>{
       if(idx>=imgImages.length) return;
-      attachLongPress(img, ()=>imgImages[idx], ()=>(()=>removeZaloImage(p.id,idx)));
+      const canDel=(currentRole==='dung'||p.person===currentUserName);
+      attachLongPress(img, ()=>imgImages[idx], canDel?()=>(()=>removeZaloImage(p.id,idx)):null);
     });
   });
 }
@@ -1761,9 +1776,18 @@ async function saveEditProposal(){
 }
 
 function handleEditImg(input){
-  const files=Array.from(input.files||[]); if(!files.length) return;
-  files.filter(f=>f.type.startsWith('image/')).forEach(file=>{
-    const r=new FileReader(); r.onload=ev=>{ editImgList.push(ev.target.result); renderEditImgPreview(); }; r.readAsDataURL(file);
+  const files=Array.from(input.files||[]).filter(f=>f.type.startsWith('image/')); if(!files.length) return;
+  const saveBtn=document.getElementById('btn-edit-save');
+  let pending=files.length;
+  if(saveBtn){ saveBtn.disabled=true; saveBtn.textContent='⏳ Đang tải ảnh...'; }
+  files.forEach(file=>{
+    const r=new FileReader();
+    r.onload=ev=>{
+      editImgList.push(ev.target.result); renderEditImgPreview();
+      if(--pending===0&&saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Lưu thay đổi'; }
+    };
+    r.onerror=()=>{ if(--pending===0&&saveBtn){ saveBtn.disabled=false; saveBtn.textContent='💾 Lưu thay đổi'; } };
+    r.readAsDataURL(file);
   });
   input.value='';
 }
