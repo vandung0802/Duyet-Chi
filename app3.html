@@ -267,6 +267,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <body id="artifacts-component-root-html">
 
 <!-- ROLE SCREEN -->
+<!-- FIRST LOGIN MODAL — chọn tên lần đầu -->
+<div id="first-login-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10002;align-items:center;justify-content:center;padding:24px">
+  <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
+    <div style="font-size:32px;text-align:center;margin-bottom:8px">👤</div>
+    <div style="font-size:16px;font-weight:800;text-align:center;color:var(--text);margin-bottom:6px">Bạn tên gì?</div>
+    <div style="font-size:12px;color:var(--text-sub);text-align:center;margin-bottom:16px">Chọn tên để app nhận diện quyền của bạn</div>
+    <select id="first-login-name" class="form-input" style="font-size:15px;margin-bottom:10px"></select>
+    <div id="first-login-msg" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>
+    <button onclick="confirmFirstLogin()" class="btn-full btn-primary-full" style="font-size:15px;padding:12px">Xác nhận</button>
+  </div>
+</div>
+
 <!-- LOGIN SCREEN — Firebase Auth -->
 <div class="role-screen" id="role-screen">
   <div style="font-size:48px;margin-bottom:12px">📋</div>
@@ -2747,14 +2759,25 @@ function autofillPerson(name){
 
 // ── SETTINGS ──
 function showUpdateRolePrompt(){
-  setRole('other'); // vào app trước
-  // Hiện modal yêu cầu chọn tên
-  setTimeout(()=>{
-    showPage('settings', document.querySelectorAll('.nav-item')[3]);
-    const det = document.querySelector('#page-settings details');
-    if(det) det.open = true;
-    showToast('⚠️ Vui lòng chọn tên của bạn trong Cài đặt → Tài khoản');
-  }, 500);
+  // Hiện modal chặn — bắt buộc chọn tên trước khi dùng app
+  const overlay = document.getElementById('first-login-overlay');
+  if(!overlay) return;
+  const sel = document.getElementById('first-login-name');
+  sel.innerHTML = '<option value="">-- Chọn tên của bạn --</option>' +
+    persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
+  overlay.style.display = 'flex';
+}
+
+async function confirmFirstLogin(){
+  const name = document.getElementById('first-login-name').value;
+  const msg  = document.getElementById('first-login-msg');
+  if(!name){ msg.textContent='Vui lòng chọn tên của bạn'; return; }
+  if(!currentUser){ return; }
+  const role = nameToRole(name);
+  currentUserName = name;
+  await db.ref('duyetchi/userRoles/'+currentUser.uid).set({ role, name });
+  document.getElementById('first-login-overlay').style.display = 'none';
+  setRole(role);
 }
 
 async function doUpdateRole(){
