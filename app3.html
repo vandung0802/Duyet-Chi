@@ -710,12 +710,12 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14';
+const APP_VERSION = '20260627-v14b';
 (function(){
   if(localStorage.getItem('app_version_v14') !== APP_VERSION){
     localStorage.setItem('app_version_v14', APP_VERSION);
     const base = location.pathname;
-    if(!location.search.includes('v=')) location.replace(base + '?v=' + APP_VERSION);
+    location.replace(base + '?v=' + APP_VERSION);
   }
 })();
 
