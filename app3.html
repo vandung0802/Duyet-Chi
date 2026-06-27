@@ -715,13 +715,17 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260628-v14ac';
+const APP_VERSION = '20260628-v14ad';
 (function(){
   const KEY = 'app_ver_v14_' + APP_VERSION;
   if(!localStorage.getItem(KEY)){
+    // Xóa key version cũ
+    Object.keys(localStorage).filter(k=>k.startsWith('app_ver_v14_')&&k!==KEY).forEach(k=>localStorage.removeItem(k));
     localStorage.setItem(KEY, '1');
-    const base = location.pathname;
-    location.replace(base + '?v=' + APP_VERSION + '&t=' + Date.now());
+    // Chỉ reload nếu URL còn query cũ, không redirect thêm
+    if(location.search && !location.search.includes(APP_VERSION)){
+      location.replace(location.pathname);
+    }
   }
 })();
 
@@ -1160,15 +1164,20 @@ function pushToFirebase(){
 
 let _fbRetryTimer=null;
 function initFirebaseSync(){
+  // Theo dõi trạng thái kết nối Firebase realtime
+  db.ref('.info/connected').on('value', snap=>{
+    if(snap.val()===true){
+      fbConnected=true; if(_fbRetryTimer){clearInterval(_fbRetryTimer);_fbRetryTimer=null;} updateFbBadge(true);
+    } else {
+      if(fbConnected){ fbConnected=false; updateFbBadge(false); }
+    }
+  });
   let connTimeout=setTimeout(()=>{
     if(!fbConnected){
       updateFbBadge(false);
-      // Tự retry sau 10s nếu vẫn chưa kết nối
       _fbRetryTimer=setInterval(()=>{
         if(fbConnected){ clearInterval(_fbRetryTimer); return; }
-        const b=document.getElementById('fb-badge');
-        if(b) b.textContent='☁️ Đang thử lại...';
-        db.ref('duyetchi').once('value').then(()=>{ fbConnected=true; updateFbBadge(true); clearInterval(_fbRetryTimer); }).catch(()=>{});
+        const b=document.getElementById('fb-badge'); if(b) b.textContent='☁️ Đang thử lại...';
       },10000);
     }
   }, 12000);
