@@ -118,6 +118,27 @@ body{font-family:'Roboto',sans-serif;background:#f8fafc;color:var(--text);min-he
 .badge-history{font-size:11px;color:var(--text-sub);text-align:right;line-height:1.5;font-weight:600;padding:0 4px}
 .badge-stack .badge-history{white-space:normal}
 
+/* ── REPORT TABLES ── */
+.excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.excel-table{width:100%;border-collapse:collapse;font-size:11px;min-width:560px;border:1.5px solid #b0b8c9}
+.excel-table th{background:var(--blue-dark);color:#fff;padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.25)}
+.excel-table td{padding:7px 6px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;white-space:nowrap}
+.excel-table tr:nth-child(even) td{background:#f4f6fa}
+.excel-table tr:hover td{background:#e8f0fe}
+.excel-table .col-amount{text-align:right;font-weight:700;color:var(--blue)}
+.report-table{width:100%;border-collapse:collapse;font-size:11px;border:1.5px solid #b0b8c9;table-layout:fixed}
+.report-table th{background:var(--blue-dark);color:#fff;padding:6px 5px;text-align:left;font-weight:700;white-space:nowrap;border-right:1px solid rgba(255,255,255,0.25);overflow:hidden}
+.report-table td{padding:5px 5px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;vertical-align:top;word-break:break-word}
+.report-table tr:nth-child(even) td{background:#f4f6fa}
+.report-table .col-desc{width:80px;font-size:10px}
+.report-table .col-person{width:42px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.report-table .col-site{width:84px;font-size:10px;white-space:normal;word-break:break-word}
+.report-table .col-pri{width:28px;text-align:center;font-size:12px;white-space:nowrap}
+.report-table .col-amt{width:84px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap}
+.report-table .col-rej{width:80px;font-size:9px;color:var(--red);white-space:normal;word-break:break-word}
+.excel-table-empty{padding:30px 16px;text-align:center;color:var(--text-sub);font-size:12px}
+.excel-table-footer{padding:10px 12px;background:var(--gray-light);font-size:12px;font-weight:700;display:flex;justify-content:space-between;border-top:2px solid var(--gray-border)}
+
 /* ── PROOF GRID ── */
 .proof-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:4px;padding:6px;border-top:1px solid var(--gray-border);background:#fafafa}
 .proof-thumb{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--gray-border)}
@@ -1706,86 +1727,237 @@ function shareCard(id){
 // ══════════════════════════════════════════
 // REPORT
 // ══════════════════════════════════════════
-let reportFilter={site:'',person:''};
 let reportTab='summary';
 function setReportTab(tab,btn){
   reportTab=tab;
   document.querySelectorAll('.report-subtab').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  document.querySelectorAll('.report-tab-panel').forEach(el=>el.style.display='none');
-  const panel=document.getElementById('report-tab-'+tab); if(panel) panel.style.display='';
-  applyReportFilter();
+  ['summary','list','done','pending','rejected'].forEach(t=>{
+    const el=document.getElementById('report-tab-'+t); if(el) el.style.display=(t===tab)?'block':'none';
+  });
+  if(tab==='summary') renderReportSummary();
+  else if(tab==='done'||tab==='pending') renderReportTables();
+  else if(tab==='list') renderReportList();
+  else if(tab==='rejected') renderReportRejected();
 }
 function renderReportFilters(){
-  const allSites=[...new Set(proposals.map(p=>p.site).filter(Boolean))].sort();
-  const allPersons=[...new Set(proposals.map(p=>p.person).filter(Boolean))].sort();
-  const fs=document.getElementById('filter-site'); if(fs){ fs.innerHTML='<option value="">🏗 Tất cả CT</option>'+allSites.map(v=>`<option value="${v}"${reportFilter.site===v?' selected':''}>${v}</option>`).join(''); }
-  const fp=document.getElementById('filter-person'); if(fp){ fp.innerHTML='<option value="">👤 Tất cả người</option>'+allPersons.map(v=>`<option value="${v}"${reportFilter.person===v?' selected':''}>${v}</option>`).join(''); }
+  const selP=document.getElementById('filter-person'), selS=document.getElementById('filter-site');
+  if(!selP||!selS) return;
+  const curP=selP.value, curS=selS.value;
+  const names=[...new Set(proposals.map(p=>p.person||'').filter(Boolean))].sort();
+  const siteList=[...new Set(proposals.map(p=>p.site||'').filter(Boolean))].sort();
+  selP.innerHTML='<option value="">👤 Tất cả người</option>'+names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}"${curP===n?' selected':''}>${n}</option>`).join('');
+  selS.innerHTML='<option value="">🏗 Tất cả CT</option>'+siteList.map(s=>`<option value="${s.replace(/"/g,'&quot;')}"${curS===s?' selected':''}>${s}</option>`).join('');
+}
+function getFilteredProposals(){
+  const p=(document.getElementById('filter-person')||{}).value||'';
+  const s=(document.getElementById('filter-site')||{}).value||'';
+  return proposals.filter(x=>(!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
 }
 function applyReportFilter(){
-  reportFilter.site=(document.getElementById('filter-site')||{}).value||'';
-  reportFilter.person=(document.getElementById('filter-person')||{}).value||'';
-  renderReportFilters();
-  if(reportTab==='summary') renderReportSummary();
-  else if(reportTab==='list') renderReportList();
-  else if(reportTab==='done') renderReportDone();
-  else if(reportTab==='pending') renderReportPending();
-  else if(reportTab==='rejected') renderReportRejected();
+  const tab=document.querySelector('.report-subtab.active');
+  const t=tab?tab.dataset.tab:'summary';
+  if(t==='summary') renderReportSummary();
+  else if(t==='done'||t==='pending') renderReportTables();
+  else if(t==='list') renderReportList();
+  else if(t==='rejected') renderReportRejected();
 }
-function filteredForReport(){
-  return proposals.filter(p=>{
-    if(reportFilter.site&&p.site!==reportFilter.site) return false;
-    if(reportFilter.person&&p.person!==reportFilter.person) return false;
-    return true;
-  });
+function renderReportTables(){
+  const fp=getFilteredProposals();
+  renderExcelTable('report-table-done',fp.filter(p=>getTotalTransferred(p)>0),'done');
+  renderExcelTable('report-table-pending',fp.filter(p=>{
+    if(normStatus(p)==='rejected') return false;
+    const approved=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0;
+    return getTotalTransferred(p)<approved-0.001;
+  }),'pending');
 }
-function rptTableHTML(arr){
-  if(!arr.length) return '<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Không có dữ liệu</div>';
-  return `<table style="width:100%;border-collapse:collapse;font-size:12px">
-    <thead><tr style="background:var(--surface2);font-size:11px">
-      <th style="padding:6px 8px;text-align:left">Nội dung</th>
-      <th style="padding:6px 4px">CT</th>
-      <th style="padding:6px 4px;text-align:right">Số tiền</th>
-      <th style="padding:6px 4px">TT</th>
+function renderExcelTable(containerId,items,kind){
+  const el=document.getElementById(containerId); if(!el) return;
+  if(!items.length){ el.innerHTML=`<div class="excel-table-empty">Không có khoản nào ${kind==='done'?'đã chuyển':'chưa chuyển'}.</div>`; return; }
+  const getLastTs=p=>{ if(Array.isArray(p.transfers)&&p.transfers.length) return p.transfers[p.transfers.length-1].at||p.transfers[p.transfers.length-1].ts||0; return p.transferredAt||0; };
+  const sorted=items.slice().sort((a,b)=>kind==='done'?getLastTs(b)-getLastTs(a):b.ts-a.ts);
+  const rows=sorted.map(p=>{
+    const transferred=getTotalTransferred(p);
+    const remaining=(getOfficialApprovedAmount(p)||parseFloat(p.amount)||0)-transferred;
+    const lastTs=getLastTs(p);
+    const dateCol=kind==='done'?(lastTs?fmtFull(lastTs):'—'):new Date(p.ts).toLocaleDateString('vi-VN');
+    const amtLabel=kind==='done'
+      ?`<span style="color:var(--yellow);font-weight:700">${fmtVND(transferred)}</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub)">còn ${fmtVND(remaining)}</span>`:''}`
+      :transferred>0.001
+        ?`<span style="font-weight:700">${fmtVND(remaining)}</span><br><span style="font-size:9px;color:var(--red);font-weight:600">⚠ đã chuyển ${fmtVND(transferred)}</span>`
+        :`${fmtVND(p.amount)}`;
+    const prv=p.priority||'normal';
+    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'<span style="color:#1a7a3c">🟢 Chờ</span>':'🟡';
+    const dAmt=parseFloat(p.approvedDAmount)||0, hAmt=parseFloat(p.approvedHAmount)||0;
+    const dCell=kind==='pending'?(dAmt>0?`<span style="color:var(--blue);font-weight:700">${fmtVND(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>'):'';
+    const hCell=kind==='pending'?(hAmt>0?`<span style="color:#7c3aed;font-weight:700">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>'):'';
+    return `<tr>
+      <td style="white-space:normal;word-break:break-word;font-weight:600">${p.desc||p.title||''}</td>
+      <td class="col-amount">${amtLabel}</td>
+      <td style="white-space:nowrap;font-size:10px">${p.person||'—'}</td>
+      <td style="white-space:normal;word-break:break-word;font-size:10px">${(p.site||'—').replace('CT ','')}</td>
+      ${kind==='pending'?`<td style="text-align:center;font-size:10px;white-space:normal">${dCell}</td><td style="text-align:center;font-size:10px;white-space:normal">${hCell}</td><td style="text-align:center">${prCell}</td>`:''}
+      <td style="font-size:10px;white-space:nowrap">${dateCol}</td>
+    </tr>`;
+  }).join('');
+  const totalAmt=kind==='done'
+    ?sorted.reduce((a,p)=>a+getTotalTransferred(p),0)
+    :sorted.reduce((a,p)=>{ const app=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0; return a+(app-getTotalTransferred(p)); },0);
+  el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
+    <thead><tr>
+      <th>Tên đề xuất</th><th>${kind==='done'?'Đã chuyển':'Còn chuyển'}</th><th>Người</th><th>CT</th>
+      ${kind==='pending'?'<th>D duyệt</th><th>H duyệt</th><th>Mức</th>':''}
+      <th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
     </tr></thead>
-    <tbody>${arr.map(p=>`<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:6px 8px"><div style="font-weight:600">${p.desc||p.title||''}</div><div style="font-size:11px;color:var(--text-sub)">${p.person||''} · ${fmtFull(p.ts)}</div></td>
-      <td style="padding:6px 4px;font-size:11px;text-align:center">${p.site||''}</td>
-      <td style="padding:6px 4px;text-align:right;font-weight:700">${fmtVND(p.amount)}</td>
-      <td style="padding:6px 4px;text-align:center"><span style="background:${STATUS_COLOR[p.status]||'#888'};color:#fff;border-radius:4px;padding:1px 5px;font-size:10px">${STATUS_LABEL[p.status]||p.status}</span></td>
-    </tr>`).join('')}</tbody>
-  </table>`;
+    <tbody>${rows}</tbody></table></div>
+  <div class="excel-table-footer"><span>Tổng cộng: ${sorted.length} khoản</span><span>${fmtVND(totalAmt)}</span></div>`;
 }
-function renderReportSummary(){
-  const arr=filteredForReport();
-  const total=arr.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
-  const pen=arr.filter(p=>normStatus(p)==='pending');
-  const app=arr.filter(p=>normStatus(p)==='approved');
-  const tra=arr.filter(p=>normStatus(p)==='transferred');
-  const rej=arr.filter(p=>normStatus(p)==='rejected');
-  const traAmt=tra.reduce((s,p)=>s+getTotalTransferred(p),0);
-  const el=document.getElementById('report-summary-content'); if(!el) return;
-  el.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px">
-    <div style="background:#f8fafc;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">📋 Tổng đề xuất</div><div style="font-size:22px;font-weight:800">${arr.length}</div><div style="font-size:12px;color:var(--purple);font-weight:700">${fmtVND(total)}</div></div>
-    <div style="background:#fef9c3;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">⏳ Chờ duyệt</div><div style="font-size:22px;font-weight:800;color:#f59e0b">${pen.length}</div><div style="font-size:12px;color:#f59e0b;font-weight:700">${fmtVND(pen.reduce((s,p)=>s+(parseFloat(p.amount)||0),0))}</div></div>
-    <div style="background:#ecfdf5;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">✅ Đã duyệt</div><div style="font-size:22px;font-weight:800;color:#10b981">${app.length}</div><div style="font-size:12px;color:#10b981;font-weight:700">${fmtVND(app.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||parseFloat(p.amount)||0),0))}</div></div>
-    <div style="background:#eff6ff;border-radius:10px;padding:12px;text-align:center"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">💸 Đã chuyển</div><div style="font-size:22px;font-weight:800;color:#3b82f6">${tra.length}</div><div style="font-size:12px;color:#3b82f6;font-weight:700">${fmtVND(traAmt)}</div></div>
-    <div style="background:#fef2f2;border-radius:10px;padding:12px;text-align:center;grid-column:1/-1"><div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">❌ Từ chối</div><div style="font-size:22px;font-weight:800;color:#ef4444">${rej.length}</div></div>
+function renderReportRejected(){
+  const el=document.getElementById('report-table-rejected'); if(!el) return;
+  const fp=getFilteredProposals().filter(p=>normStatus(p)==='rejected');
+  if(!fp.length){ el.innerHTML='<div class="excel-table-empty">Không có phiếu nào bị từ chối.</div>'; return; }
+  const sorted=fp.slice().sort((a,b)=>b.ts-a.ts);
+  const rows=sorted.map(p=>{
+    const dRej=p.rejectedByD, hRej=p.rejectedByH;
+    const dLine=dRej?(dRej.reason?`"${dRej.reason}"`:'—'):'';
+    const hLine=hRej?(hRej.reason?`"${hRej.reason}"`:'—'):'';
+    const prv=p.priority||'normal';
+    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Chờ':'🟡 BT';
+    const rejNote=[dLine?`D: ${dLine}`:'',hLine?`H: ${hLine}`:''].filter(Boolean).join('<br>');
+    return `<tr>
+      <td class="col-desc" style="font-weight:600">${p.desc||p.title||''}</td>
+      <td class="col-person">${p.person||'—'}</td>
+      <td class="col-site" style="color:#64748b">${(p.site||'—').replace('CT ','')}</td>
+      <td class="col-pri">${prCell}</td>
+      <td class="col-amt" style="color:var(--red)">${fmtVND(p.amount)}</td>
+      <td class="col-rej">${rejNote||'—'}</td>
+    </tr>`;
+  }).join('');
+  const total=fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  el.innerHTML=`<div style="padding:0 12px 12px">
+    <div style="font-size:11px;font-weight:700;color:#dc2626;background:#fff1f2;padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid #dc2626">❌ Từ chối — ${fp.length} phiếu · ${fmtVND(total)}</div>
+    <div style="border-radius:0 0 8px 8px;overflow:hidden">
+      <table class="report-table">
+        <thead><tr><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">Số tiền</th><th class="col-rej">Lý do từ chối</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
   </div>`;
 }
-function renderReportList(){ const el=document.getElementById('report-table-list'); if(el) el.innerHTML=rptTableHTML(filteredForReport().sort((a,b)=>(b.ts||0)-(a.ts||0))); }
-function renderReportDone(){ const el=document.getElementById('report-table-done'); if(el) el.innerHTML=rptTableHTML(filteredForReport().filter(p=>normStatus(p)==='transferred').sort((a,b)=>(b.transferredAt||b.ts||0)-(a.transferredAt||a.ts||0))); }
-function renderReportPending(){ const el=document.getElementById('report-table-pending'); if(el) el.innerHTML=rptTableHTML(filteredForReport().filter(p=>{ const s=normStatus(p); return s!=='transferred'&&s!=='rejected'; }).sort((a,b)=>(b.ts||0)-(a.ts||0))); }
-function renderReportRejected(){ const el=document.getElementById('report-table-rejected'); if(el) el.innerHTML=rptTableHTML(filteredForReport().filter(p=>normStatus(p)==='rejected').sort((a,b)=>(b.ts||0)-(a.ts||0))); }
+function renderReportList(){
+  const el=document.getElementById('report-table-list'); if(!el) return;
+  const fp=getFilteredProposals();
+  if(!fp.length){ el.innerHTML='<div class="excel-table-empty">Không có đề xuất nào phù hợp.</div>'; return; }
+  const sorted=fp.slice().sort((a,b)=>b.ts-a.ts);
+  const rows=sorted.map((p,i)=>{
+    const dAmt=parseFloat(p.approvedDAmount)||0, hAmt=parseFloat(p.approvedHAmount)||0;
+    const trans=getTotalTransferred(p);
+    const st=normStatus(p);
+    const dRej=p.rejectedByD, hRej=p.rejectedByH;
+    const rejD=dRej?(dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'';
+    const rejH=hRej?(hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):'';
+    const rejStr=[rejD,rejH].filter(Boolean).join('<br>');
+    const dHist=Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length?p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.at||t.ts)}`).join('<br>'):(dAmt>0?fmtVND(dAmt):'');
+    const hHist=Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length?p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.at||t.ts)}`).join('<br>'):(hAmt>0?fmtVND(hAmt):'');
+    const tHist=Array.isArray(p.transfers)&&p.transfers.length?p.transfers.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.at||t.ts)}`).join('<br>'):(trans>0?fmtVND(trans):'');
+    const stBadge={pending:'badge-wait',approved:'badge-approved',transferred:'badge-done',done:'badge-done',rejected:'badge-reject'};
+    const stIcon={pending:'⏳',approved:'✅',transferred:'💸',done:'💸',rejected:'❌'};
+    const prv=p.priority||'normal';
+    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv==='low'?'🟢':'🟡';
+    const cb='style="vertical-align:top;white-space:normal;line-height:1.5"';
+    return `<tr>
+      <td style="vertical-align:top;text-align:center">${sorted.length-i}</td>
+      <td ${cb} style="vertical-align:top;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc||p.title||''}</td>
+      <td ${cb} style="font-size:10px">${p.person||'—'}</td>
+      <td ${cb} style="font-size:9px">${p.site||'—'}</td>
+      <td class="col-amount" style="vertical-align:top">${fmtVND(p.amount)}</td>
+      <td style="vertical-align:top;text-align:center;font-size:14px">${prCell}</td>
+      <td ${cb} style="font-size:9px;color:var(--blue)">${dHist}</td>
+      <td ${cb} style="font-size:9px;color:#7c3aed">${hHist}</td>
+      <td ${cb} style="font-size:9px;color:var(--yellow)">${tHist}</td>
+      <td style="vertical-align:top"><span class="badge ${stBadge[st]||'badge-wait'}" style="font-size:8px;padding:1px 5px">${stIcon[st]||'⏳'}</span></td>
+      <td ${cb} style="font-size:9px;color:var(--red)">${rejStr}</td>
+    </tr>`;
+  }).join('');
+  const total=fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const totalTrans=fp.reduce((a,p)=>a+getTotalTransferred(p),0);
+  el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
+    <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtVND(total)}</span><span>Đã chuyển: ${fmtVND(totalTrans)}</span></div>`;
+}
+function renderReportSummary(){
+  renderReportFilters();
+  const el=document.getElementById('report-summary-content'); if(!el) return;
+  const fp=getFilteredProposals();
+  if(!fp.length){ el.innerHTML='<div style="padding:16px;font-size:13px;color:var(--text-sub)">Không có đề xuất nào phù hợp.</div>'; return; }
+  const tot=fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const transTotal=fp.reduce((a,p)=>a+getTotalTransferred(p),0);
+  const hasTrans=fp.filter(p=>getTotalTransferred(p)>0);
+  const appd=fp.filter(p=>normStatus(p)==='approved');
+  const pend=fp.filter(p=>normStatus(p)==='pending');
+  const rej=fp.filter(p=>normStatus(p)==='rejected');
+  const urgent=fp.filter(p=>(p.priority||'normal')==='urgent'&&normStatus(p)!=='transferred'&&normStatus(p)!=='rejected');
+  const pendAmt=pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const appdAmt=appd.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p),0);
+  const statCards=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px">
+    <div style="background:#eff6ff;border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:9px;color:#1a56db;font-weight:600">TỔNG ĐỀ XUẤT</div><div style="font-size:15px;font-weight:800;color:#1a56db;white-space:nowrap">${proposals.length} <span style="font-size:9px;font-weight:500">phiếu</span></div><div style="font-size:9px;color:#1a56db;font-weight:600">${fmtVND(tot)}</div></div>
+    <div style="background:#f0fdf4;border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:9px;color:#16a34a;font-weight:600">ĐÃ CHUYỂN</div><div style="font-size:15px;font-weight:800;color:#16a34a;white-space:nowrap">${hasTrans.length} <span style="font-size:9px;font-weight:500">phiếu</span></div><div style="font-size:9px;color:#16a34a;font-weight:600">${fmtVND(transTotal)}</div></div>
+    <div style="background:#fffbeb;border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:9px;color:#d97706;font-weight:600">DT·CHỜ CK</div><div style="font-size:15px;font-weight:800;color:#d97706;white-space:nowrap">${appd.length} <span style="font-size:9px;font-weight:500">phiếu</span></div><div style="font-size:9px;color:#d97706;font-weight:600">${fmtVND(appdAmt)}</div></div>
+    <div style="background:#fdf4ff;border-radius:10px;padding:8px 6px;text-align:center"><div style="font-size:9px;color:#9333ea;font-weight:600">CHỜ DUYỆT</div><div style="font-size:15px;font-weight:800;color:#9333ea;white-space:nowrap">${pend.length} <span style="font-size:9px;font-weight:500">phiếu</span></div><div style="font-size:9px;color:#9333ea;font-weight:600">${fmtVND(pendAmt)}</div></div>
+  </div>
+  ${urgent.length?`<div style="margin:0 12px 10px;border-radius:10px;overflow:hidden;border:1.5px solid #f5a0a0">
+    <div style="background:#c0392b;padding:6px 10px;font-size:10px;color:#fff;font-weight:700">🔴 VIỆC GẤP CẦN DUYỆT — ${urgent.length} phiếu · ${fmtVND(urgent.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}</div>
+    <table style="width:100%;border-collapse:collapse;background:#fff;table-layout:fixed">
+      <tr style="background:#fdecea"><th style="padding:5px 6px;font-size:10px;color:#1e293b;text-align:left;font-weight:800">Nội dung</th><th style="padding:5px 6px;font-size:10px;color:#1e293b;text-align:left;font-weight:800">Người</th><th style="padding:5px 6px;font-size:10px;color:#1e293b;text-align:left;font-weight:800">Công trình</th><th style="padding:5px 6px;font-size:10px;color:#1e293b;text-align:right;font-weight:800">Số tiền</th></tr>
+      ${urgent.map(p=>`<tr style="border-top:1px solid #fde8e8"><td style="padding:4px 6px;font-size:10px">${p.desc||p.title||'—'}</td><td style="padding:4px 6px;font-size:11px;color:#64748b">${p.person||''}</td><td style="padding:4px 6px;font-size:11px;color:#64748b">${p.site||'—'}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${fmtVND(p.amount)}</td></tr>`).join('')}
+    </table>
+  </div>`:''}`;
+  const makeTable=(title,color,bg,list,showRej)=>{
+    if(!list.length) return '';
+    const rows2=list.map(p=>{
+      const trans=getTotalTransferred(p), official=getOfficialApprovedAmount(p)||0, remaining=official-trans;
+      const dRej=p.rejectedByD, hRej=p.rejectedByH;
+      const rejStr=showRej?[dRej?(dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'',hRej?(hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):''].filter(Boolean).join('<br>'):'';
+      const amtCell=showRej?`<span style="color:var(--red)">${fmtVND(p.amount)}</span>`
+        :trans>0&&remaining>0.001?`<span style="color:var(--yellow)">${fmtVND(trans)}</span><br><span style="font-size:9px;color:var(--red)">còn ${fmtVND(remaining)}</span>`
+        :trans>0?`<span style="color:#16a34a">${fmtVND(trans)}</span>`
+        :official>0?`<span style="color:#d97706">${fmtVND(official)}</span>`
+        :`<span style="color:#64748b">${fmtVND(p.amount)}</span>`;
+      const prv=p.priority||'normal';
+      const prCell=prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
+      return `<tr><td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc||p.title||''}</td><td class="col-person">${p.person||'—'}</td><td class="col-site" style="color:#64748b">${(p.site||'').replace('CT ','')}</td><td class="col-pri">${prCell}</td><td class="col-amt">${amtCell}</td>${showRej?`<td class="col-rej">${rejStr||'—'}</td>`:''}</tr>`;
+    }).join('');
+    const grpTotal=showRej?list.reduce((a,p)=>a+(parseFloat(p.amount)||0),0):list.reduce((a,p)=>a+getTotalTransferred(p),0);
+    return `<div style="padding:0 12px 12px">
+      <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtVND(grpTotal)}</div>
+      <div style="border-radius:0 0 8px 8px;overflow:hidden">
+        <table class="report-table"><thead><tr><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th class="col-rej">Lý do</th>':''}</tr></thead><tbody>${rows2}</tbody></table>
+      </div>
+    </div>`;
+  };
+  el.innerHTML=statCards
+    +makeTable('💸 Đã chuyển tiền','#16a34a','#f0fdf4',hasTrans,false)
+    +makeTable('✅ Đã duyệt · chờ chuyển','#d97706','#fffbeb',appd,false)
+    +makeTable('⏳ Chờ duyệt','#9333ea','#fdf4ff',pend,false)
+    +makeTable('❌ Từ chối','#dc2626','#fff1f2',rej,true);
+}
+function generateReport(){
+  const fLine=p=>{ const trans=getTotalTransferred(p); const dAmt=parseFloat(p.approvedDAmount)||0,hAmt=parseFloat(p.approvedHAmount)||0; const dRej=p.rejectedByD,hRej=p.rejectedByH; const rejInfo=[(dRej?(dRej.reason?`D từ chối: "${dRej.reason}"`:'D từ chối'):''),(hRej?(hRej.reason?`H từ chối: "${hRej.reason}"`:'H từ chối'):'')].filter(Boolean).join(', '); const duyetInfo=[dAmt>0?`D:${fmtVND(dAmt)}`:'',hAmt>0?`H:${fmtVND(hAmt)}`:''].filter(Boolean).join(', '); let detail=''; if(duyetInfo) detail+=` [Duyệt: ${duyetInfo}]`; if(trans>0) detail+=` [Chuyển: ${fmtVND(trans)}]`; if(rejInfo) detail+=` [${rejInfo}]`; return `• ${p.desc||p.title||''} — ${p.person} — ${p.site||'?'} — ${fmtVND(p.amount)}${detail}`; };
+  const hasTrans=proposals.filter(p=>getTotalTransferred(p)>0);
+  const appd=proposals.filter(p=>normStatus(p)==='approved');
+  const pend=proposals.filter(p=>normStatus(p)==='pending');
+  const rej=proposals.filter(p=>normStatus(p)==='rejected');
+  const tot=proposals.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const transTotal=proposals.reduce((a,p)=>a+getTotalTransferred(p),0);
+  const lines=[`📊 BÁO CÁO TỔNG HỢP — ${new Date().toLocaleDateString('vi-VN')}`,`Tổng: ${proposals.length} đề xuất · ${fmtVND(tot)} · Đã chuyển: ${fmtVND(transTotal)}`,'',`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản):`,hasTrans.length?hasTrans.map(fLine).join('\n'):'(không có)','',`✅ ĐÃ DUYỆT CHỜ CHUYỂN (${appd.length} khoản):`,appd.length?appd.map(fLine).join('\n'):'(không có)','',`⏳ CHỜ DUYỆT (${pend.length} khoản):`,pend.length?pend.map(fLine).join('\n'):'(không có)','',`❌ TỪ CHỐI (${rej.length} khoản):`,rej.length?rej.map(fLine).join('\n'):'(không có)'];
+  if(pend.length) lines.push(`\n⚠️ CẦN XỬ LÝ: còn ${pend.length} khoản chờ duyệt.`);
+  return lines.join('\n');
+}
 function copyReport(){
-  const arr=filteredForReport();
-  const lines=['📊 BÁO CÁO DUYỆT CHI','─'.repeat(30)];
-  lines.push(`📋 Tổng: ${arr.length} đề xuất — ${fmtVND(arr.reduce((s,p)=>s+(parseFloat(p.amount)||0),0))}`);
-  lines.push(`⏳ Chờ: ${arr.filter(p=>normStatus(p)==='pending').length}`);
-  lines.push(`✅ Duyệt: ${arr.filter(p=>normStatus(p)==='approved').length}`);
-  lines.push(`💸 Đã chuyển: ${arr.filter(p=>normStatus(p)==='transferred').length}`);
-  lines.push(`❌ Từ chối: ${arr.filter(p=>normStatus(p)==='rejected').length}`);
-  navigator.clipboard.writeText(lines.join('\n')).then(()=>showToast('✅ Đã copy báo cáo!')).catch(()=>showToast('⚠️ Không copy được'));
+  const t=generateReport();
+  if(!t){ showToast('Chưa có đề xuất nào'); return; }
+  navigator.clipboard.writeText(t).then(()=>showToast('📋 Đã sao chép! Dán vào Zalo')).catch(()=>{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.left='-9999px'; document.body.appendChild(ta); ta.focus(); ta.select(); try{ document.execCommand('copy'); showToast('📋 Đã sao chép!'); }catch(e){ showToast('❌ Copy thất bại'); } document.body.removeChild(ta); });
 }
 
 // ══════════════════════════════════════════
