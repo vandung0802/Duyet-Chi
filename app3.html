@@ -715,7 +715,7 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14s';
+const APP_VERSION = '20260627-v14t';
 (function(){
   const KEY = 'app_ver_v14_' + APP_VERSION;
   if(!localStorage.getItem(KEY)){
@@ -1733,8 +1733,7 @@ let editId='';
 let editImgList = [];
 
 function openEditProposal(id){
-  const p=proposals.find(x=>x.id===id); if(!p){ showToast('Không tìm thấy đề xuất id='+id,5000); return; } editId=id;
-  showToast('person="'+p.person+'" site="'+p.site+'" desc="'+(p.desc||p.title||'')+'"',8000);
+  const p=proposals.find(x=>x.id===id); if(!p) return; editId=id;
   // Populate datalists
   const pList=document.getElementById('edit-person-list');
   if(pList){ const pNames=[...new Set([...(persons||[]).map(x=>typeof x==='object'?x.name:x),(p.person||'')])].filter(Boolean); pList.innerHTML=pNames.map(n=>`<option value="${n}">`).join(''); }
