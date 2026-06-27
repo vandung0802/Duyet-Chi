@@ -204,7 +204,7 @@ textarea.form-input{resize:vertical;min-height:70px}
 .img-modal-hint{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.5);font-size:11px;white-space:nowrap}
 
 /* ── IMG ACTION OVERLAY ── */
-.img-action-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:flex-end;justify-content:center;padding:16px}
+.img-action-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:none;align-items:flex-end;justify-content:center;padding:16px}
 .img-action-overlay.open{display:flex}
 .img-action-menu{background:#fff;border-radius:16px;padding:8px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:4px}
 .img-action-btn{display:flex;align-items:center;gap:12px;padding:14px 16px;border:none;background:none;font-size:15px;font-weight:600;cursor:pointer;border-radius:10px;color:var(--text);-webkit-tap-highlight-color:transparent}
@@ -715,7 +715,7 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14t';
+const APP_VERSION = '20260627-v14u';
 (function(){
   const KEY = 'app_ver_v14_' + APP_VERSION;
   if(!localStorage.getItem(KEY)){
