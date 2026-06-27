@@ -1769,12 +1769,14 @@ function applyReportFilter(){
 }
 function renderReportTables(){
   const fp=getFilteredProposals();
+  renderReportList();
   renderExcelTable('report-table-done',fp.filter(p=>getTotalTransferred(p)>0),'done');
   renderExcelTable('report-table-pending',fp.filter(p=>{
     if(normStatus(p)==='rejected') return false;
     const approved=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0;
     return getTotalTransferred(p)<approved-0.001;
   }),'pending');
+  renderReportRejected();
 }
 function renderExcelTable(containerId,items,kind){
   const el=document.getElementById(containerId); if(!el) return;
