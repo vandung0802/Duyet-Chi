@@ -1,0 +1,1478 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#4c1d95">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DC">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<title>Duyệt Chi v14</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#1a56db;--blue-dark:#1e3a8a;--blue-light:#eff6ff;
+  --green:#16a34a;--red:#dc2626;--yellow:#d97706;
+  --text:#1e293b;--text-sub:#64748b;
+  --gray:#94a3b8;--gray-light:#f1f5f9;--gray-border:#e2e8f0;
+  --purple:#4c1d95;--purple-mid:#6d28d9;--purple-light:#f5f3ff;
+}
+body{font-family:'Roboto',sans-serif;background:#f8fafc;color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ── LOGIN SCREEN ── */
+.login-screen{position:fixed;inset:0;background:linear-gradient(145deg,#4c1d95 0%,#6d28d9 60%,#7c3aed 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.login-card{background:#fff;border-radius:20px;padding:28px 22px;width:100%;max-width:360px;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.login-logo{text-align:center;margin-bottom:20px}
+.login-logo .logo-icon{width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,#4c1d95,#7c3aed);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;margin:0 auto 10px;letter-spacing:-1px}
+.login-logo h2{font-size:20px;font-weight:800;color:var(--text)}
+.login-logo p{font-size:12px;color:var(--text-sub);margin-top:2px}
+.login-tabs{display:flex;background:#f1f5f9;border-radius:10px;padding:3px;margin-bottom:20px}
+.login-tab{flex:1;padding:8px;text-align:center;font-size:13px;font-weight:700;border-radius:8px;cursor:pointer;color:var(--text-sub);transition:all .2s}
+.login-tab.active{background:#fff;color:var(--purple);box-shadow:0 1px 4px rgba(0,0,0,0.1)}
+.login-form{display:none}
+.login-form.active{display:block}
+.login-field{margin-bottom:14px}
+.login-label{font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:5px;display:block}
+.login-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s;background:#fff}
+.login-input:focus{border-color:var(--purple)}
+.login-select{width:100%;padding:11px 14px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;color:var(--text);outline:none;background:#fff;cursor:pointer}
+.login-select:focus{border-color:var(--purple)}
+.login-error{color:var(--red);font-size:12px;margin-top:6px;min-height:16px;font-weight:600}
+.login-btn{width:100%;padding:13px;border-radius:10px;background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff;border:none;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px;letter-spacing:.3px}
+.login-btn:active{opacity:.9}
+.login-link{text-align:center;margin-top:12px;font-size:12px;color:var(--text-sub)}
+.login-link a{color:var(--purple);font-weight:700;cursor:pointer;text-decoration:none}
+.login-divider{border:none;border-top:1px solid var(--gray-border);margin:16px 0}
+
+/* ── APP HEADER (purple) ── */
+.app-header{background:linear-gradient(135deg,#4c1d95 0%,#6d28d9 100%);color:#fff;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(76,29,149,.4)}
+.app-header h1{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.current-role{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:700;color:#fff;cursor:pointer;white-space:nowrap}
+
+/* ── PRESENCE BAR ── */
+.presence-bar{background:#3b0764;padding:5px 14px;display:flex;align-items:center;gap:8px;font-size:11px;color:rgba(255,255,255,0.7);min-height:30px}
+.presence-avatars{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.presence-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;position:relative;flex-shrink:0}
+.presence-dot.online{box-shadow:0 0 0 2px #22c55e}
+.presence-dot.offline{opacity:.45}
+.presence-dot::after{content:'';position:absolute;bottom:0;right:0;width:8px;height:8px;border-radius:50%;border:1.5px solid #3b0764}
+.presence-dot.online::after{background:#22c55e}
+.presence-dot.offline::after{background:#94a3b8}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;display:flex;border-top:1px solid var(--gray-border);z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px 6px;border:none;background:none;cursor:pointer;color:var(--text-sub);font-size:10px;font-weight:600;gap:2px;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.nav-item.active{color:var(--purple)}
+.nav-icon{font-size:20px;line-height:1}
+
+/* ── MAIN ── */
+.main{padding:10px 10px 80px;max-width:600px;margin:0 auto}
+
+/* ── CARD ── */
+.card{background:#fff;border-radius:14px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,.06);overflow:hidden}
+.card-header{padding:12px 14px;font-size:14px;font-weight:800;color:var(--text);border-bottom:1px solid var(--gray-border);background:#fafafa}
+.card-body{padding:14px}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
+@media(min-width:400px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+.stat-box{background:#fff;border-radius:10px;padding:8px 6px;cursor:pointer;border:1.5px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:all .15s;text-align:center}
+.stat-box.active{border-color:var(--purple);background:var(--purple-light)}
+.stat-row{display:flex;align-items:center;justify-content:center;gap:4px}
+.stat-val{font-size:18px;font-weight:800}
+.stat-lbl{font-size:9px;color:var(--text-sub);font-weight:600;white-space:nowrap}
+.stat-amt{font-size:9px;color:var(--text-sub);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;justify-content:center}
+
+/* ── PROPOSAL CARD ── */
+.proposal{background:#fff;border-radius:12px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,.07);overflow:hidden;border-left:4px solid var(--gray-border)}
+.proposal.status-pending{border-left-color:var(--yellow)}
+.proposal.status-approved{border-left-color:var(--blue)}
+.proposal.status-transferred{border-left-color:var(--green)}
+.proposal.status-rejected{border-left-color:var(--red)}
+.proposal-top{padding:10px 12px 8px}
+.proposal-top-row{display:flex;gap:8px;align-items:flex-start}
+.proposal-left-col{flex:1;min-width:0}
+.proposal-desc{font-size:14px;font-weight:700;line-height:1.4;margin-bottom:4px}
+.proposal-meta{display:flex;flex-wrap:wrap;gap:6px;font-size:11px;color:var(--text-sub);margin-bottom:6px}
+.proposal-amount{font-size:16px;font-weight:800;color:var(--blue-dark)}
+.proposal-badge-area{flex-shrink:0;text-align:right;max-width:140px}
+.proposal-note{font-size:12px;color:var(--text-sub);background:#f8fafc;border-radius:6px;padding:5px 8px;margin-top:6px;font-style:italic}
+
+/* ── BADGES ── */
+.badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;white-space:nowrap}
+.badge-wait{background:#fef9c3;color:#a16207}
+.badge-approved{background:#dcfce7;color:#15803d}
+.badge-done{background:#d1fae5;color:#065f46}
+.badge-reject{background:#fee2e2;color:#b91c1c}
+.badge-stack{display:flex;flex-direction:column;gap:3px;align-items:flex-end}
+.badge-history{font-size:9px;color:var(--text-sub);text-align:right;line-height:1.4;font-style:italic;max-width:130px}
+
+/* ── APPROVE ROW ── */
+.approve-row{display:flex;gap:4px;padding:8px 10px;background:#fafafa;border-top:1px solid var(--gray-border);flex-wrap:wrap}
+.approve-box{flex:1;min-width:50px}
+.ab-btn{width:100%;padding:7px 4px;border-radius:8px;font-size:11px;font-weight:700;border:1.5px solid var(--gray-border);background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px;line-height:1.3;text-align:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.ab-btn-tight{font-size:10px;padding:6px 3px}
+.ab-btn-reject-outline{border-color:#fca5a5;color:var(--red);background:#fff0f0}
+.ab-btn-transfer{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:var(--yellow);color:#92400e}
+.ab-done-box{border-radius:8px;overflow:hidden;border:1.5px solid}
+.ab-done-btn{width:100%;padding:6px 4px;background:none;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;-webkit-tap-highlight-color:transparent}
+.ab-row-top{display:flex;align-items:center;gap:3px}
+.ab-big-letter{font-size:16px;font-weight:900;line-height:1}
+.ab-mid-label{font-size:9px;font-weight:700;line-height:1.2}
+.ab-flat-locked{text-align:center;font-size:12px;padding:8px 4px;color:var(--gray);font-weight:600}
+.ab-prev-info{font-size:8px;color:var(--text-sub);display:block}
+.ab-share-stack{display:flex;flex-direction:column;gap:3px}
+.ab-del-mini{color:var(--text-sub) !important;font-size:14px !important;background:none !important;border-color:transparent !important}
+
+/* ── FORM ── */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:5px}
+.req{color:var(--red)}
+.form-input{width:100%;padding:10px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;color:var(--text);outline:none;background:#fff;transition:border-color .15s;font-family:inherit}
+.form-input:focus{border-color:var(--purple)}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+textarea.form-input{resize:vertical;min-height:70px}
+.btn-full{width:100%;padding:12px;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;border:none;margin-top:6px;font-family:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.btn-primary-full{background:linear-gradient(135deg,#4c1d95,#7c3aed);color:#fff}
+.btn-outline-full{background:#fff;color:var(--text);border:1.5px solid var(--gray-border) !important}
+
+/* ── UPLOAD / IMG ── */
+.upload-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px dashed var(--gray-border);border-radius:12px;padding:20px;cursor:pointer;background:#fafafa;text-align:center;min-height:100px}
+.upload-icon{font-size:28px;margin-bottom:6px}
+.upload-txt{font-size:13px;font-weight:700;color:var(--text-sub)}
+.upload-sub{font-size:11px;color:var(--gray);margin-top:3px}
+.img-preview-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.img-preview-item{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:2px solid var(--gray-border)}
+.img-preview-item img{width:100%;height:100%;object-fit:cover}
+.proof-grid{display:flex;flex-wrap:wrap;gap:4px;padding:8px 10px;background:#f8fafc;border-top:1px solid var(--gray-border)}
+.proof-thumb{width:64px;height:64px;border-radius:8px;overflow:hidden;border:2px solid var(--gray-border);flex-shrink:0}
+.proof-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* ── MODAL ── */
+.role-screen{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(76,29,149,.85);z-index:500;padding:16px}
+
+/* ── IMG MODAL ── */
+.img-modal{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.img-modal.open{opacity:1;pointer-events:auto}
+.img-modal img{max-width:96vw;max-height:88vh;border-radius:8px;object-fit:contain;display:block;user-select:none;-webkit-user-select:none}
+.img-modal-close{position:absolute;top:14px;right:16px;font-size:24px;color:#fff;cursor:pointer;padding:4px;line-height:1}
+.img-modal-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:none;color:#fff;font-size:32px;padding:10px 14px;cursor:pointer;border-radius:8px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.img-modal-prev{left:8px}
+.img-modal-next{right:8px}
+.img-modal-counter{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:13px;font-weight:600}
+.img-modal-hint{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.5);font-size:11px;white-space:nowrap}
+
+/* ── IMG ACTION OVERLAY ── */
+.img-action-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;display:none;align-items:flex-end;justify-content:center;padding:16px}
+.img-action-overlay.open{display:flex}
+.img-action-menu{background:#fff;border-radius:16px;padding:8px;width:100%;max-width:320px;display:flex;flex-direction:column;gap:4px}
+.img-action-btn{display:flex;align-items:center;gap:12px;padding:14px 16px;border:none;background:none;font-size:15px;font-weight:600;cursor:pointer;border-radius:10px;color:var(--text);-webkit-tap-highlight-color:transparent}
+.img-action-btn:active{background:#f1f5f9}
+.img-action-icon{font-size:20px;width:28px;text-align:center}
+.img-action-danger{color:var(--red)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#1e293b;color:#fff;padding:10px 18px;border-radius:12px;font-size:13px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:3000;white-space:pre-wrap;max-width:90vw;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── NOTIF PANEL ── */
+.notif-remind-banner{display:none;background:#b45309;color:#fff;font-size:13px;font-weight:600;padding:8px 14px;text-align:center;cursor:pointer}
+
+/* ── REPORT ── */
+.report-subtabs{display:flex;overflow-x:auto;gap:4px;padding:8px 12px 0;background:#fafafa;border-bottom:1px solid var(--gray-border);scrollbar-width:none}
+.report-subtabs::-webkit-scrollbar{display:none}
+.report-subtab{padding:6px 12px;border-radius:8px 8px 0 0;font-size:12px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--text-sub);white-space:nowrap;border-bottom:2px solid transparent}
+.report-subtab.active{color:var(--purple);border-bottom-color:var(--purple);background:rgba(109,40,217,.07)}
+.report-tab-panel{}
+.excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.excel-table{width:100%;border-collapse:collapse;min-width:340px;table-layout:auto}
+.excel-table th,.excel-table td{padding:6px 8px;font-size:11px;text-align:left;border-bottom:1px solid var(--gray-border);vertical-align:top}
+.excel-table th{background:#f8fafc;font-weight:700;color:var(--text-sub);white-space:nowrap}
+.col-amount{text-align:right;font-weight:700;white-space:nowrap;color:var(--blue-dark)}
+.report-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.report-table th,.report-table td{padding:6px 8px;font-size:11px;text-align:left;border-bottom:1px solid var(--gray-border);vertical-align:top;overflow:hidden;text-overflow:ellipsis}
+.report-table th{background:#f8fafc;font-weight:700;color:var(--text-sub)}
+.col-desc{width:auto}
+.col-person{width:42px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.col-site{width:84px;font-size:10px;white-space:normal;word-break:break-word}
+.col-pri{width:28px;text-align:center;font-size:12px;white-space:nowrap}
+.col-amt{width:84px;text-align:right;font-weight:700;font-size:11px;white-space:nowrap}
+.col-rej{width:80px;font-size:9px;color:var(--red);white-space:normal;word-break:break-word}
+.excel-table-empty{padding:30px 16px;text-align:center;color:var(--text-sub);font-size:12px}
+.excel-table-footer{padding:10px 12px;background:var(--gray-light);font-size:12px;font-weight:700;display:flex;justify-content:space-between;border-top:2px solid var(--gray-border)}
+
+/* ── SETTINGS ── */
+.setting-section{margin-bottom:14px}
+.ss-title{font-size:12px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.person-item,.site-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fff;border-radius:8px;margin-bottom:6px;border:1px solid var(--gray-border)}
+.person-info{display:flex;align-items:center;gap:8px}
+.person-avatar{width:30px;height:30px;border-radius:50%;background:var(--purple-light);color:var(--purple);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.person-name{font-size:13px;font-weight:600}
+.person-role{font-size:11px;color:var(--text-sub)}
+.site-name{font-size:13px;font-weight:600}
+.delete-btn{color:var(--red);font-size:18px;border:none;background:none;cursor:pointer;padding:4px}
+.add-row{display:flex;gap:6px;margin-top:6px}
+.add-input{flex:1;padding:8px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:13px;color:var(--text);background:#fff;outline:none}
+.add-input:focus{border-color:var(--purple)}
+.add-mini-btn{padding:8px 12px;border-radius:8px;background:var(--purple);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:700;white-space:nowrap}
+
+/* ── SETUP ── */
+.setup-step{display:flex;gap:10px;margin-bottom:12px}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-title{font-size:13px;font-weight:700;margin-bottom:2px}
+.step-desc{font-size:11px;color:var(--text-sub);line-height:1.5}
+code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10px;font-family:monospace;word-break:break-all}
+.install-box{background:var(--purple-light);border-radius:8px;padding:10px;font-size:11px;color:var(--purple);line-height:1.7}
+.sheet-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:3px 8px;border-radius:12px;font-weight:600}
+.sheet-ok{background:rgba(255,255,255,0.2);color:#fff}
+.sheet-err{background:rgba(255,0,0,0.2);color:#ffcccc}
+.sheet-none{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.8)}
+
+/* ── LOGIN HISTORY ── */
+.login-history-item{padding:8px 12px;background:#fff;border-radius:8px;margin-bottom:6px;border:1px solid var(--gray-border);font-size:12px}
+.login-history-item .lh-name{font-weight:700;color:var(--purple)}
+.login-history-item .lh-time{color:var(--text-sub);font-size:11px}
+.login-history-item .lh-device{color:var(--text-sub);font-size:10px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+
+<!-- ══ LOGIN SCREEN ══ -->
+<div class="login-screen" id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-icon">DC</div>
+      <h2>Duyệt Chi v14</h2>
+      <p>Phúc Vinh An (PVA 379)</p>
+    </div>
+    <div class="login-tabs">
+      <div class="login-tab active" onclick="switchLoginTab('signin')">Đăng nhập</div>
+      <div class="login-tab" onclick="switchLoginTab('signup')">Đăng ký</div>
+    </div>
+
+    <!-- ĐĂNG NHẬP -->
+    <div class="login-form active" id="form-signin">
+      <div class="login-field">
+        <label class="login-label">Email</label>
+        <input class="login-input" type="email" id="si-email" placeholder="email@example.com" autocomplete="email">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Mật khẩu</label>
+        <input class="login-input" type="password" id="si-pass" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="login-error" id="si-error"></div>
+      <button class="login-btn" onclick="doSignIn()">Đăng nhập</button>
+      <div class="login-link"><a onclick="showForgotPassword()">Quên mật khẩu?</a></div>
+    </div>
+
+    <!-- ĐĂNG KÝ -->
+    <div class="login-form" id="form-signup">
+      <div class="login-field">
+        <label class="login-label">Chọn tên của bạn <span style="color:var(--red)">*</span></label>
+        <select class="login-select" id="su-name">
+          <option value="">— Chọn tên —</option>
+        </select>
+      </div>
+      <div class="login-field">
+        <label class="login-label">Email thật của bạn <span style="color:var(--red)">*</span></label>
+        <input class="login-input" type="email" id="su-email" placeholder="email@example.com" autocomplete="email">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Đặt mật khẩu <span style="color:var(--red)">*</span></label>
+        <input class="login-input" type="password" id="su-pass" placeholder="Tối thiểu 6 ký tự" autocomplete="new-password">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Nhập lại mật khẩu <span style="color:var(--red)">*</span></label>
+        <input class="login-input" type="password" id="su-pass2" placeholder="Nhập lại mật khẩu" autocomplete="new-password">
+      </div>
+      <div class="login-error" id="su-error"></div>
+      <button class="login-btn" onclick="doSignUp()">Đăng ký</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDIT MODAL ══ -->
+<div class="role-screen" id="edit-modal" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">✏️ Sửa đề xuất</div>
+      <button onclick="closeEditModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Người đề xuất <span class="req">*</span></label>
+      <select class="form-input form-select" id="edit-person"><option value="">— Chọn tên —</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Công trường <span class="req">*</span></label>
+      <select class="form-input form-select" id="edit-site"><option value="">— Chọn công trường —</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nội dung đề xuất <span class="req">*</span></label>
+      <textarea class="form-input" id="edit-desc" rows="2"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Số tiền (đồng) <span class="req">*</span></label>
+      <input class="form-input" id="edit-amount" type="text" inputmode="numeric" placeholder="200.000.000" oninput="fmtAmountInput(this)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Mức độ ưu tiên</label>
+      <div style="display:flex;gap:8px">
+        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600"><input type="radio" name="edit-priority" value="urgent" style="accent-color:#e74c3c"> 🔴 Gấp</label>
+        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600"><input type="radio" name="edit-priority" value="normal" checked style="accent-color:#f39c12"> 🟡 BT</label>
+        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600"><input type="radio" name="edit-priority" value="low" style="accent-color:#27ae60"> 🟢 Chờ</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ghi chú</label>
+      <textarea class="form-input" id="edit-note" rows="2"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ảnh tin nhắn Zalo</label>
+      <div id="edit-img-preview-wrap" class="img-preview-grid" style="display:none"></div>
+      <label class="upload-zone" for="edit-file-input" id="edit-paste-zone" tabindex="0" style="margin-top:6px">
+        <div class="upload-icon">📸</div>
+        <div class="upload-txt">Thêm / Thay ảnh Zalo</div>
+        <div class="upload-sub">Có thể chọn nhiều ảnh · Nhấn giữ ảnh để xóa từng cái</div>
+      </label>
+      <input type="file" id="edit-file-input" accept="image/*" multiple style="display:none" onchange="handleEditImg(this)">
+    </div>
+    <button class="btn-full btn-primary-full" onclick="saveEditProposal()">💾 Lưu thay đổi</button>
+    <button class="btn-full btn-outline-full" onclick="closeEditModal()">Hủy</button>
+  </div>
+</div>
+
+<!-- ══ APPROVE AMOUNT MODAL ══ -->
+<div class="role-screen" id="approve-amount-modal" style="display:none;z-index:9500;background:rgba(0,0,0,0.55);pointer-events:none">
+  <div style="background:#fff;border-radius:18px;padding:22px 20px;width:100%;max-width:320px">
+    <div id="aa-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Duyệt chi</div>
+    <div id="aa-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
+    <label class="form-label">Số tiền duyệt (đồng)</label>
+    <input class="form-input" id="aa-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this)">
+    <button class="btn-full btn-outline-full" style="margin:0 0 14px" onclick="aaFillFull()">✓ Duyệt toàn bộ số còn lại</button>
+    <button class="btn-full btn-primary-full" onclick="confirmApproveAmount()">Xác nhận duyệt</button>
+    <button class="btn-full btn-outline-full" id="aa-undo-btn" style="display:none;color:var(--red);border-color:var(--red)" onclick="undoApproveFromModal()">🗑 Bỏ toàn bộ phần đã duyệt</button>
+    <button class="btn-full btn-outline-full" onclick="closeApproveAmountModal()">Hủy</button>
+  </div>
+</div>
+
+<!-- ══ TRANSFER AMOUNT MODAL ══ -->
+<div class="role-screen" id="transfer-amount-modal" style="display:none;z-index:9500;background:rgba(0,0,0,0.55);pointer-events:none">
+  <div style="background:#fff;border-radius:18px;padding:22px 20px;width:100%;max-width:320px">
+    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">💸 Xác nhận chuyển tiền</div>
+    <div id="ta-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
+    <label class="form-label">Số tiền chuyển (đồng)</label>
+    <input class="form-input" id="ta-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this)">
+    <button class="btn-full btn-outline-full" style="margin:0 0 14px" onclick="taFillFull()">✓ Chuyển toàn bộ số đã duyệt còn lại</button>
+    <button class="btn-full btn-primary-full" onclick="confirmTransferAmount()">Xác nhận chuyển</button>
+    <button class="btn-full btn-outline-full" onclick="closeTransferAmountModal()">Hủy</button>
+  </div>
+</div>
+
+<!-- ══ CHANGE PASSWORD MODAL ══ -->
+<div class="role-screen" id="change-pw-modal" style="display:none;z-index:9500;background:rgba(0,0,0,0.55);pointer-events:none">
+  <div style="background:#fff;border-radius:18px;padding:26px 22px;width:100%;max-width:320px">
+    <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:16px">🔐 Đổi mật khẩu</div>
+    <div class="login-field">
+      <label class="login-label">Mật khẩu hiện tại</label>
+      <input class="login-input" type="password" id="cp-old" placeholder="Mật khẩu cũ">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Mật khẩu mới</label>
+      <input class="login-input" type="password" id="cp-new" placeholder="Tối thiểu 6 ký tự">
+    </div>
+    <div class="login-field">
+      <label class="login-label">Nhập lại mật khẩu mới</label>
+      <input class="login-input" type="password" id="cp-new2" placeholder="Nhập lại">
+    </div>
+    <div class="login-error" id="cp-error"></div>
+    <button class="btn-full btn-primary-full" onclick="doChangePassword()">Đổi mật khẩu</button>
+    <button class="btn-full btn-outline-full" onclick="closeChangePwModal()">Hủy</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="img-modal" id="imgModal" onclick="closeImgModal(event)">
+  <span class="img-modal-close">✕</span>
+  <button class="img-modal-nav img-modal-prev" onclick="navModalImg(event,-1)" id="imgModalPrev">‹</button>
+  <img id="imgModalSrc" src="" alt="" oncontextmenu="return false">
+  <button class="img-modal-nav img-modal-next" onclick="navModalImg(event,1)" id="imgModalNext">›</button>
+  <div class="img-modal-counter" id="imgModalCounter"></div>
+  <div class="img-modal-hint">Nhấn giữ ảnh để copy / tải về / xóa</div>
+</div>
+
+<div class="img-action-overlay" id="imgActionOverlay" onclick="hideImgActionMenu()">
+  <div class="img-action-menu" id="imgActionMenu" onclick="event.stopPropagation()">
+    <button class="img-action-btn" id="imgActionCopy" onclick="imgActionCopy()"><span class="img-action-icon">📋</span><span>Sao chép</span></button>
+    <button class="img-action-btn" onclick="imgActionDownload()"><span class="img-action-icon">⬇</span><span>Tải về</span></button>
+    <button class="img-action-btn img-action-danger" id="imgActionDelete" onclick="imgActionDelete()"><span class="img-action-icon">🗑</span><span>Xóa</span></button>
+  </div>
+</div>
+
+<div id="notif-remind-banner" class="notif-remind-banner" onclick="enableNotifications()">
+  🔔 Thông báo chưa được bật — Bấm vào đây để bật
+</div>
+
+<!-- ══ APP HEADER ══ -->
+<div class="app-header" id="app-header" style="display:none">
+  <div>
+    <h1>Duyệt Chi <span style="font-size:9px;opacity:.6;font-weight:400">v14</span></h1>
+    <div style="font-size:10px;opacity:.8;margin-top:1px" id="header-date"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px">
+    <div style="position:relative;display:inline-flex">
+      <button id="notif-bell" onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative" title="Thông báo">🔔</button>
+      <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
+    </div>
+    <div class="current-role" id="role-badge">👤 ...</div>
+    <span id="fb-badge" class="sheet-badge sheet-none">☁️ Đang kết nối...</span>
+  </div>
+</div>
+
+<!-- Presence bar -->
+<div class="presence-bar" id="presence-bar" style="display:none">
+  <span style="font-size:10px">Online:</span>
+  <div class="presence-avatars" id="presence-avatars"></div>
+</div>
+
+<!-- Notif panel -->
+<div id="notif-panel" style="display:none;position:fixed;top:56px;right:8px;width:300px;max-width:calc(100vw - 16px);background:#fff;border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.18);z-index:200;overflow:hidden">
+  <div style="background:var(--purple);color:#fff;padding:10px 14px;font-size:13px;font-weight:700">🔔 Việc cần xử lý của bạn</div>
+  <div id="notif-list" style="max-height:320px;overflow-y:auto"></div>
+</div>
+
+<!-- ══ PAGE: HOME ══ -->
+<div id="page-home" class="main" style="display:none">
+  <div class="stats-grid" id="stats-grid">
+    <div class="stat-box active" data-f="all" onclick="setFilter('all',this)">
+      <div class="stat-row"><div class="stat-val" id="st-all">0</div><div class="stat-lbl">Tất cả</div></div>
+      <div class="stat-row stat-amt" id="st-all-amt">—</div>
+    </div>
+    <div class="stat-box" data-f="pending" onclick="setFilter('pending',this)">
+      <div class="stat-row"><div class="stat-val" style="color:var(--yellow)" id="st-pending">0</div><div class="stat-lbl">Chờ duyệt</div></div>
+      <div class="stat-row stat-amt" id="st-pending-amt">—</div>
+    </div>
+    <div class="stat-box" data-f="approved" onclick="setFilter('approved',this)">
+      <div class="stat-row"><div class="stat-val" style="color:var(--blue-dark)" id="st-approved">0</div><div class="stat-lbl">Đã duyệt</div></div>
+      <div class="stat-row stat-amt" id="st-approved-amt">—</div>
+    </div>
+    <div class="stat-box" data-f="transferred" onclick="setFilter('transferred',this)">
+      <div class="stat-row"><div class="stat-val" style="color:var(--green)" id="st-done">0</div><div class="stat-lbl">Đã chuyển</div></div>
+      <div class="stat-row stat-amt" id="st-done-amt">—</div>
+    </div>
+    <div class="stat-box" data-f="d_only" onclick="setFilter('d_only',this)">
+      <div class="stat-row"><div class="stat-val" style="color:var(--blue)" id="st-d">0</div><div class="stat-lbl">D duyệt</div></div>
+      <div class="stat-row stat-amt" id="st-d-amt">—</div>
+    </div>
+    <div class="stat-box" data-f="h_only" onclick="setFilter('h_only',this)">
+      <div class="stat-row"><div class="stat-val" style="color:#7c3aed" id="st-h">0</div><div class="stat-lbl">H duyệt</div></div>
+      <div class="stat-row stat-amt" id="st-h-amt">—</div>
+    </div>
+    <div class="stat-box" data-f="rejected" onclick="setFilter('rejected',this)">
+      <div class="stat-row"><div class="stat-val" style="color:var(--red)" id="st-rejected">0</div><div class="stat-lbl">Từ chối</div></div>
+      <div class="stat-row stat-amt" id="st-rejected-amt">—</div>
+    </div>
+  </div>
+  <div id="proposal-list"><div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có đề xuất nào<br><small>Nhấn ➕ để thêm mới</small></div></div>
+</div>
+
+<!-- ══ PAGE: ADD ══ -->
+<div id="page-add" class="main" style="display:none">
+  <div class="card">
+    <div class="card-header">Đề xuất mới từ công trường</div>
+    <div class="card-body">
+      <div class="form-group">
+        <label class="form-label">Ảnh tin nhắn Zalo</label>
+        <div id="upload-area">
+          <label class="upload-zone" for="file-input" id="paste-zone" tabindex="0">
+            <div class="upload-icon">📸</div>
+            <div class="upload-txt">Chọn / Chụp ảnh Zalo</div>
+            <div class="upload-sub">Có thể chọn nhiều ảnh cùng lúc · Máy tính: bấm vào đây rồi Ctrl+V để dán ảnh</div>
+          </label>
+          <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleImg(this)">
+        </div>
+        <div id="img-preview-wrap" class="img-preview-grid" style="display:none"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Người đề xuất</label>
+        <div id="inp-person-display" style="padding:10px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;font-weight:700;color:var(--purple);background:#f5f3ff"></div>
+        <input type="hidden" id="inp-person">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Công trường <span class="req">*</span></label>
+        <select class="form-input form-select" id="inp-site"><option value="">— Chọn công trường —</option></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nội dung đề xuất <span class="req">*</span></label>
+        <textarea class="form-input" id="inp-desc" rows="2" placeholder="Vd: Mua cát đổ móng trụ T5..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Số tiền (đồng) <span class="req">*</span></label>
+        <input class="form-input" id="inp-amount" type="text" inputmode="numeric" placeholder="200.000.000" oninput="fmtAmountInput(this)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mức độ ưu tiên</label>
+        <div style="display:flex;gap:8px">
+          <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600"><input type="radio" name="inp-priority" value="urgent" style="accent-color:#e74c3c"> 🔴 Gấp</label>
+          <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600"><input type="radio" name="inp-priority" value="normal" checked style="accent-color:#f39c12"> 🟡 Bình thường</label>
+          <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600"><input type="radio" name="inp-priority" value="low" style="accent-color:#27ae60"> 🟢 Có thể chờ</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ghi chú</label>
+        <textarea class="form-input" id="inp-note" rows="2" placeholder="Ghi chú thêm nếu có..."></textarea>
+      </div>
+      <button class="btn-full btn-primary-full" onclick="submitProposal()">Gửi đề xuất</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE: REPORT ══ -->
+<div id="page-report" class="main" style="display:none">
+  <div class="card">
+    <div class="card-header">📊 Báo cáo</div>
+    <div class="card-body" style="padding:10px 0 0">
+      <div class="report-subtabs">
+        <button class="report-subtab active" data-tab="summary" onclick="setReportTab('summary',this)">📝 Tóm tắt</button>
+        <button class="report-subtab" data-tab="list" onclick="setReportTab('list',this)">📋 Danh sách</button>
+        <button class="report-subtab" data-tab="done" onclick="setReportTab('done',this)">💸 Đã chuyển</button>
+        <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">⏳ Chưa chuyển</button>
+        <button class="report-subtab" data-tab="rejected" onclick="setReportTab('rejected',this)">❌ Từ chối</button>
+      </div>
+      <div style="display:flex;gap:8px;padding:8px 12px 10px">
+        <select id="filter-person" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff"><option value="">👤 Tất cả người</option></select>
+        <select id="filter-site" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff"><option value="">🏗 Tất cả CT</option></select>
+      </div>
+    </div>
+  </div>
+  <div class="card report-tab-panel" id="report-tab-summary"><div class="card-body" style="padding:0"><div id="report-summary-content"></div><div style="padding:12px 12px 4px"><button class="btn-full btn-outline-full" onclick="copyReport()" style="margin-top:4px">📋 Sao chép gửi Zalo</button></div></div></div>
+  <div class="card report-tab-panel" id="report-tab-list" style="display:none"><div class="card-body" style="padding:0"><div id="report-table-list"></div></div></div>
+  <div class="card report-tab-panel" id="report-tab-done" style="display:none"><div class="card-body" style="padding:0"><div id="report-table-done"></div></div></div>
+  <div class="card report-tab-panel" id="report-tab-pending" style="display:none"><div class="card-body" style="padding:0"><div id="report-table-pending"></div></div></div>
+  <div class="card report-tab-panel" id="report-tab-rejected" style="display:none"><div class="card-body" style="padding:0"><div id="report-table-rejected"></div></div></div>
+</div>
+
+<!-- ══ PAGE: SETTINGS ══ -->
+<div id="page-settings" class="main" style="display:none">
+
+  <!-- Thông tin tài khoản -->
+  <div class="card">
+    <div class="card-header">👤 Tài khoản</div>
+    <div class="card-body">
+      <div id="account-info" style="font-size:13px;margin-bottom:12px;line-height:1.8"></div>
+      <button onclick="openChangePwModal()" class="btn-full btn-outline-full" style="margin-top:0">🔐 Đổi mật khẩu</button>
+      <button onclick="doLogout()" class="btn-full" style="background:#fff0f0;color:var(--red);border:1.5px solid #fca5a5;border-radius:10px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:6px">🚪 Đăng xuất</button>
+    </div>
+  </div>
+
+  <!-- Push Notification -->
+  <div class="card">
+    <div class="card-header">🔔 Thông báo đẩy</div>
+    <div class="card-body">
+      <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px">Nhận thông báo khi có phiếu mới. Yêu cầu mở app từ biểu tượng DC.</p>
+      <div id="notif-status-text" style="font-size:13px;margin-bottom:10px;font-weight:600">Đang kiểm tra...</div>
+      <div id="notif-debug" style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6"></div>
+      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px;margin-bottom:8px">🔔 Bật thông báo</button>
+      <button onclick="updateNotifSettingsStatus()" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569">🔄 Kiểm tra lại</button>
+    </div>
+  </div>
+
+  <!-- Danh sách người đề xuất -->
+  <div class="card">
+    <div class="card-header">👤 Danh sách người đề xuất</div>
+    <div class="card-body">
+      <div id="person-list"></div>
+      <div class="add-row">
+        <input class="add-input" id="new-person-name" placeholder="Họ tên...">
+        <input class="add-input" id="new-person-role" placeholder="Chức vụ..." style="max-width:110px">
+        <button class="add-mini-btn" onclick="addPerson()">+ Thêm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Danh sách công trình -->
+  <div class="card">
+    <div class="card-header">🏗️ Danh sách công trình</div>
+    <div class="card-body">
+      <div id="site-list"></div>
+      <div class="add-row">
+        <input class="add-input" id="new-site" placeholder="Tên công trình...">
+        <button class="add-mini-btn" onclick="addSite()">+ Thêm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lịch sử đăng nhập (chỉ Dũng thấy) -->
+  <div class="card" id="login-history-card" style="display:none">
+    <div class="card-header">🔍 Lịch sử đăng nhập</div>
+    <div class="card-body">
+      <div id="login-history-list"><div style="font-size:12px;color:var(--text-sub)">Đang tải...</div></div>
+    </div>
+  </div>
+
+  <!-- Google Sheets -->
+  <div class="card">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span>🔗 Kết nối Google Sheets</span>
+      <span id="sheet-badge-settings" class="sheet-badge sheet-none" style="background:var(--gray-light);color:var(--text-sub)">● Chưa kết nối</span>
+    </div>
+    <div class="card-body">
+      <input class="form-input" id="inp-sheet-url" type="url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px;margin-bottom:8px">
+      <button class="btn-full btn-primary-full" onclick="saveSheet()">Lưu &amp; Kiểm tra kết nối</button>
+    </div>
+  </div>
+
+  <!-- Cài app -->
+  <div class="card">
+    <div class="card-header">📲 Cài app lên điện thoại</div>
+    <div class="card-body">
+      <div class="install-box">
+        <strong>iPhone:</strong> Mở Safari → biểu tượng Chia sẻ → "Thêm vào màn hình chính"<br>
+        <strong>Android:</strong> Mở Chrome → menu ⋮ → "Thêm vào màn hình chính"<br><br>
+        App sẽ có icon <strong>DC</strong> màu tím và tên <strong>Duyệt Chi</strong>.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ══ BOTTOM NAV ══ -->
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
+  <button class="nav-item active" onclick="showPage('home',this)">
+    <span class="nav-icon">📋</span><span>Danh sách</span>
+  </button>
+  <button class="nav-item" onclick="showPage('add',this)">
+    <span class="nav-icon">➕</span><span>Thêm mới</span>
+  </button>
+  <button class="nav-item" onclick="showPage('report',this)">
+    <span class="nav-icon">📊</span><span>Báo cáo</span>
+  </button>
+  <button class="nav-item" onclick="showPage('settings',this)">
+    <span class="nav-icon">⚙️</span><span>Cài đặt</span>
+  </button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════
+// FIREBASE CONFIG & KHỞI TẠO
+// ══════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
+  authDomain: "duyetchi-pva379.firebaseapp.com",
+  databaseURL: "https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "duyetchi-pva379",
+  storageBucket: "duyetchi-pva379.firebasestorage.app",
+  messagingSenderId: "366275914302",
+  appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
+};
+
+const APP_VERSION = '20260627-v14';
+(function(){
+  if(localStorage.getItem('app_version_v14') !== APP_VERSION){
+    localStorage.setItem('app_version_v14', APP_VERSION);
+    const base = location.pathname;
+    if(!location.search.includes('v=')) location.replace(base + '?v=' + APP_VERSION);
+  }
+})();
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const auth = firebase.auth();
+const storage = firebase.storage();
+
+// Tự reload sau 15 phút không dùng
+(function(){
+  let t = setTimeout(()=>location.reload(), 15*60*1000);
+  const reset = ()=>{ clearTimeout(t); t = setTimeout(()=>location.reload(), 15*60*1000); };
+  ['touchstart','click','keydown','scroll'].forEach(e=>document.addEventListener(e, reset, {passive:true}));
+})();
+
+// ══════════════════════════════════════════
+// AUTH STATE & USER PROFILE
+// ══════════════════════════════════════════
+// Mapping tên → role
+const ROLE_MAP = { 'Dũng':'dung', 'Hiền':'hien', 'Trang':'trang' };
+function getRoleForName(name){ return ROLE_MAP[name] || 'other'; }
+
+let currentUser = null;   // Firebase Auth user object
+let currentRole = '';     // 'dung' | 'hien' | 'trang' | 'other'
+let currentUserName = ''; // Tên hiển thị (vd: "Trang")
+let currentUserEmail = '';
+
+const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
+
+// Tải danh sách tên cho form đăng ký (không cần auth vì rules đang mở)
+let regPersonsList = [];
+db.ref('duyetchi/meta/persons').once('value').then(snap => {
+  if(snap.exists()) regPersonsList = snap.val() || [];
+  populateRegSelect();
+}).catch(()=>{});
+
+function populateRegSelect(){
+  const sel = document.getElementById('su-name');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">— Chọn tên —</option>';
+  (regPersonsList||[]).forEach(p=>{
+    const n = typeof p === 'string' ? p : p.name;
+    if(n) sel.innerHTML += `<option value="${n}">${n}</option>`;
+  });
+}
+
+// Lắng nghe trạng thái đăng nhập
+auth.onAuthStateChanged(async user => {
+  if(user){
+    // Kiểm tra tự động đăng xuất sau 2 ngày
+    const lastActive = parseInt(localStorage.getItem('dc_last_active')||'0');
+    if(lastActive && Date.now() - lastActive > TWO_DAYS_MS){
+      await auth.signOut();
+      showToast('⏰ Tự động đăng xuất sau 2 ngày không dùng');
+      return;
+    }
+    localStorage.setItem('dc_last_active', Date.now().toString());
+
+    // Đọc profile từ RTDB
+    const profileSnap = await db.ref('duyetchi/user-profiles/' + user.uid).get();
+    if(!profileSnap.exists()){
+      // Profile chưa có (edge case) — đăng xuất
+      await auth.signOut();
+      showLoginScreen();
+      return;
+    }
+    const profile = profileSnap.val();
+    currentUser = user;
+    currentUserName = profile.name || '';
+    currentRole = profile.role || getRoleForName(profile.name);
+    currentUserEmail = user.email || '';
+
+    // Ghi lịch sử đăng nhập
+    writeLoginHistory(user.uid, currentUserName);
+
+    showApp();
+    initPresence(user.uid, currentUserName, currentRole);
+    initFirebaseSync();
+    updateNotifBadge();
+
+  } else {
+    currentUser = null;
+    currentRole = '';
+    currentUserName = '';
+    showLoginScreen();
+  }
+});
+
+function showLoginScreen(){
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app-header').style.display = 'none';
+  document.getElementById('presence-bar').style.display = 'none';
+  document.getElementById('bottom-nav').style.display = 'none';
+  ['home','add','report','settings'].forEach(p=>{
+    document.getElementById('page-'+p).style.display = 'none';
+  });
+  document.getElementById('notif-remind-banner').style.display = 'none';
+}
+
+function showApp(){
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-header').style.display = 'flex';
+  document.getElementById('presence-bar').style.display = 'flex';
+  document.getElementById('bottom-nav').style.display = 'flex';
+  document.getElementById('header-date').textContent =
+    new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // Hiện tên role trên header
+  const roleLabels = {dung:'Dũng',hien:'Hiền',trang:'Trang',other:'Xem'};
+  const roleColors = {dung:'#60a5fa',hien:'#c084fc',trang:'#fbbf24',other:'rgba(255,255,255,0.7)'};
+  const lbl = roleLabels[currentRole] || currentUserName;
+  const clr = roleColors[currentRole] || 'rgba(255,255,255,0.7)';
+  document.getElementById('role-badge').innerHTML =
+    `<span style="color:${clr};font-weight:800">${currentUserName||lbl}</span>`;
+
+  // Điền thông tin tài khoản vào Settings
+  const ai = document.getElementById('account-info');
+  if(ai) ai.innerHTML =
+    `<b>Tên:</b> ${currentUserName}<br>` +
+    `<b>Email:</b> ${currentUserEmail}<br>` +
+    `<b>Quyền:</b> ${lbl}`;
+
+  // Chỉ Dũng thấy lịch sử đăng nhập
+  const lhCard = document.getElementById('login-history-card');
+  if(lhCard) lhCard.style.display = currentRole==='dung' ? 'block' : 'none';
+
+  showPage('home', document.querySelector('.nav-item'));
+  checkNotifBanner();
+
+  if(Notification && Notification.permission === 'granted'){
+    fcmRegister(currentRole).catch(()=>{});
+  }
+
+  // Điền tên vào form Thêm mới
+  const pd = document.getElementById('inp-person-display');
+  const ph = document.getElementById('inp-person');
+  if(pd) pd.textContent = currentUserName;
+  if(ph) ph.value = currentUserName;
+}
+
+// ══════════════════════════════════════════
+// AUTH FUNCTIONS
+// ══════════════════════════════════════════
+function switchLoginTab(tab){
+  document.querySelectorAll('.login-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.login-form').forEach(f=>f.classList.remove('active'));
+  if(tab==='signin'){
+    document.querySelector('.login-tab:first-child').classList.add('active');
+    document.getElementById('form-signin').classList.add('active');
+  } else {
+    document.querySelector('.login-tab:last-child').classList.add('active');
+    document.getElementById('form-signup').classList.add('active');
+    populateRegSelect();
+  }
+}
+
+async function doSignIn(){
+  const email = document.getElementById('si-email').value.trim();
+  const pass = document.getElementById('si-pass').value;
+  const errEl = document.getElementById('si-error');
+  errEl.textContent = '';
+  if(!email || !pass){ errEl.textContent = 'Vui lòng nhập email và mật khẩu'; return; }
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+    localStorage.setItem('dc_last_active', Date.now().toString());
+  } catch(e){
+    errEl.textContent = translateAuthError(e.code);
+  }
+}
+
+async function doSignUp(){
+  const name = document.getElementById('su-name').value;
+  const email = document.getElementById('su-email').value.trim();
+  const pass = document.getElementById('su-pass').value;
+  const pass2 = document.getElementById('su-pass2').value;
+  const errEl = document.getElementById('su-error');
+  errEl.textContent = '';
+  if(!name){ errEl.textContent = 'Vui lòng chọn tên'; return; }
+  if(!email){ errEl.textContent = 'Vui lòng nhập email'; return; }
+  if(pass.length < 6){ errEl.textContent = 'Mật khẩu tối thiểu 6 ký tự'; return; }
+  if(pass !== pass2){ errEl.textContent = 'Mật khẩu nhập lại không khớp'; return; }
+
+  // Kiểm tra tên đã được dùng chưa
+  const nameKey = name.replace(/\s+/g,'_').toLowerCase();
+  const existing = await db.ref('duyetchi/name-to-uid/' + nameKey).get();
+  if(existing.exists()){
+    errEl.textContent = `Tên "${name}" đã có người đăng ký rồi`;
+    return;
+  }
+
+  try {
+    errEl.textContent = '⏳ Đang đăng ký...';
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const uid = cred.user.uid;
+    const role = getRoleForName(name);
+    const device = navigator.userAgent.substring(0,80);
+
+    // Ghi profile
+    await db.ref('duyetchi/user-profiles/' + uid).set({
+      name, role, email, registeredAt: Date.now(), device
+    });
+    // Ghi name-to-uid index
+    await db.ref('duyetchi/name-to-uid/' + nameKey).set(uid);
+
+    localStorage.setItem('dc_last_active', Date.now().toString());
+
+    // Notify Dũng có người đăng ký mới
+    sendPushNotif('🆕 Người dùng mới đăng ký', `${name} vừa đăng ký tài khoản`, ['dung']);
+
+  } catch(e){
+    document.getElementById('su-error').textContent = translateAuthError(e.code);
+  }
+}
+
+async function doLogout(){
+  if(!confirm('Đăng xuất khỏi tài khoản?')) return;
+  // Xóa presence
+  if(currentUser) db.ref('duyetchi/presence/' + currentUser.uid).update({online:false, lastSeen: Date.now()});
+  await auth.signOut();
+  localStorage.removeItem('dc_last_active');
+}
+
+async function showForgotPassword(){
+  const email = document.getElementById('si-email').value.trim();
+  const input = email || prompt('Nhập email của bạn để đặt lại mật khẩu:');
+  if(!input) return;
+  try {
+    await auth.sendPasswordResetEmail(input);
+    showToast('✅ Đã gửi email đặt lại mật khẩu — kiểm tra hộp thư');
+  } catch(e){
+    showToast('❌ ' + translateAuthError(e.code));
+  }
+}
+
+function openChangePwModal(){
+  document.getElementById('cp-old').value='';
+  document.getElementById('cp-new').value='';
+  document.getElementById('cp-new2').value='';
+  document.getElementById('cp-error').textContent='';
+  const m = document.getElementById('change-pw-modal');
+  m.style.display='flex'; m.style.pointerEvents='auto';
+}
+function closeChangePwModal(){
+  const m = document.getElementById('change-pw-modal');
+  m.style.display='none'; m.style.pointerEvents='none';
+}
+
+async function doChangePassword(){
+  const oldPass = document.getElementById('cp-old').value;
+  const newPass = document.getElementById('cp-new').value;
+  const newPass2 = document.getElementById('cp-new2').value;
+  const errEl = document.getElementById('cp-error');
+  errEl.textContent = '';
+  if(!oldPass){ errEl.textContent = 'Nhập mật khẩu hiện tại'; return; }
+  if(newPass.length < 6){ errEl.textContent = 'Mật khẩu mới tối thiểu 6 ký tự'; return; }
+  if(newPass !== newPass2){ errEl.textContent = 'Mật khẩu mới không khớp'; return; }
+  try {
+    errEl.textContent = '⏳ Đang xử lý...';
+    // Re-authenticate trước
+    const cred = firebase.auth.EmailAuthProvider.credential(currentUserEmail, oldPass);
+    await currentUser.reauthenticateWithCredential(cred);
+    await currentUser.updatePassword(newPass);
+    closeChangePwModal();
+    showToast('✅ Đã đổi mật khẩu thành công');
+  } catch(e){
+    errEl.textContent = translateAuthError(e.code);
+  }
+}
+
+function translateAuthError(code){
+  const map = {
+    'auth/user-not-found': 'Email không tồn tại',
+    'auth/wrong-password': 'Mật khẩu không đúng',
+    'auth/invalid-credential': 'Email hoặc mật khẩu không đúng',
+    'auth/email-already-in-use': 'Email này đã được dùng',
+    'auth/invalid-email': 'Email không hợp lệ',
+    'auth/weak-password': 'Mật khẩu quá yếu (tối thiểu 6 ký tự)',
+    'auth/too-many-requests': 'Quá nhiều lần thử, thử lại sau',
+    'auth/network-request-failed': 'Lỗi mạng, kiểm tra kết nối',
+  };
+  return map[code] || 'Lỗi: ' + (code||'không xác định');
+}
+
+// Enter để đăng nhập
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('si-pass')?.addEventListener('keydown', e=>{ if(e.key==='Enter') doSignIn(); });
+  document.getElementById('su-pass2')?.addEventListener('keydown', e=>{ if(e.key==='Enter') doSignUp(); });
+});
+
+// ══════════════════════════════════════════
+// PRESENCE (Online/Offline)
+// ══════════════════════════════════════════
+function initPresence(uid, name, role){
+  const presRef = db.ref('duyetchi/presence/' + uid);
+  const connRef = db.ref('.info/connected');
+  connRef.on('value', snap => {
+    if(!snap.val()) return;
+    presRef.onDisconnect().update({ online:false, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+    presRef.update({ name, role, online:true, lastSeen: firebase.database.ServerValue.TIMESTAMP });
+  });
+  db.ref('duyetchi/presence').on('value', snap => {
+    renderPresenceBar(snap.val() || {});
+  });
+}
+
+const AVATAR_COLORS = {dung:'#3b82f6',hien:'#8b5cf6',trang:'#f59e0b',other:'#6b7280'};
+function renderPresenceBar(presObj){
+  const bar = document.getElementById('presence-avatars');
+  if(!bar) return;
+  const entries = Object.values(presObj).sort((a,b)=>(b.online?1:0)-(a.online?1:0));
+  bar.innerHTML = entries.map(p=>{
+    const clr = AVATAR_COLORS[p.role]||'#6b7280';
+    const cls = p.online ? 'online' : 'offline';
+    const letter = (p.name||'?')[0];
+    return `<div class="presence-dot ${cls}" style="background:${clr}" title="${p.name||''} — ${p.online?'Đang online':'Offline'}">${letter}</div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// LOGIN HISTORY
+// ══════════════════════════════════════════
+function writeLoginHistory(uid, name){
+  const device = navigator.userAgent.substring(0,100);
+  db.ref('duyetchi/login-history/' + uid).push({ ts: Date.now(), name, device }).catch(()=>{});
+}
+
+function loadLoginHistory(){
+  const el = document.getElementById('login-history-list');
+  if(!el) return;
+  db.ref('duyetchi/login-history').once('value').then(snap=>{
+    if(!snap.exists()){ el.innerHTML='<div style="font-size:12px;color:var(--text-sub)">Chưa có lịch sử</div>'; return; }
+    const allEntries = [];
+    snap.forEach(userSnap=>{
+      userSnap.forEach(entry=>{
+        const v = entry.val();
+        if(v && v.ts) allEntries.push(v);
+      });
+    });
+    allEntries.sort((a,b)=>b.ts-a.ts);
+    const recent = allEntries.slice(0,30);
+    el.innerHTML = recent.map(e=>`
+      <div class="login-history-item">
+        <div class="lh-name">${e.name||'?'}</div>
+        <div class="lh-time">${fmtFull(e.ts)}</div>
+        <div class="lh-device">${e.device||''}</div>
+      </div>`).join('') || '<div style="font-size:12px;color:var(--text-sub)">Chưa có</div>';
+  }).catch(()=>{ el.innerHTML='<div style="font-size:12px;color:var(--red)">Lỗi tải</div>'; });
+}
+
+// ══════════════════════════════════════════
+// STORAGE UPLOAD
+// ══════════════════════════════════════════
+async function uploadToStorage(dataUrl, storagePath){
+  const ref = storage.ref(storagePath);
+  await ref.putString(dataUrl, 'data_url', { contentType:'image/jpeg' });
+  return await ref.getDownloadURL();
+}
+
+// ══════════════════════════════════════════
+// FIREBASE DATA SYNC
+// ══════════════════════════════════════════
+let fbConnected = false;
+let fbInitialLoadDone = false;
+let proposals = JSON.parse(localStorage.getItem('dc_proposals')||'[]');
+let persons    = JSON.parse(localStorage.getItem('dc_persons')||'[]');
+let sites      = JSON.parse(localStorage.getItem('dc_sites')||'[]');
+let sheetUrl   = localStorage.getItem('dc_sheetUrl')||'';
+let filter     = 'all';
+let uploadedImages = [];
+let lastPushedSnapshot = null;
+
+function save(){
+  localStorage.setItem('dc_proposals', JSON.stringify(proposals));
+  localStorage.setItem('dc_persons',   JSON.stringify(persons));
+  localStorage.setItem('dc_sites',     JSON.stringify(sites));
+  pushToFirebase();
+}
+
+function pushToFirebase(){
+  if(!fbInitialLoadDone) return;
+  const updates = {};
+  let hasChange = false;
+  const metaNow = JSON.stringify({persons, sites, sheetUrl});
+  if(!lastPushedSnapshot || lastPushedSnapshot.meta !== metaNow){
+    updates['duyetchi/meta'] = {persons, sites, sheetUrl, updatedAt: Date.now()};
+    hasChange = true;
+  }
+  const prevProposalsMap = (lastPushedSnapshot && lastPushedSnapshot.proposalsMap) || {};
+  const nowProposalsMap = {};
+  proposals.forEach(p=>{
+    const { imgImages, imgB64, proofImages, proofB64, ...lightFields } = p;
+    const lightJson = JSON.stringify(lightFields);
+    nowProposalsMap[p.id] = lightJson;
+    if(prevProposalsMap[p.id] !== lightJson){ updates['duyetchi/proposals/'+p.id] = lightFields; hasChange = true; }
+  });
+  Object.keys(prevProposalsMap).forEach(id=>{ if(!nowProposalsMap[id]){ updates['duyetchi/proposals/'+id] = null; hasChange = true; } });
+  const prevImagesMap = (lastPushedSnapshot && lastPushedSnapshot.imagesMap) || {};
+  const nowImagesMap = {};
+  proposals.forEach(p=>{
+    const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64?[p.imgB64]:[]);
+    const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64?[p.proofB64]:[]);
+    if(!imgImages.length && !proofImages.length) return;
+    const imgJson = JSON.stringify({imgImages, proofImages});
+    nowImagesMap[p.id] = imgJson;
+    if(prevImagesMap[p.id] !== imgJson){ updates['duyetchi/images/'+p.id] = {imgImages, proofImages}; hasChange = true; }
+  });
+  Object.keys(prevImagesMap).forEach(id=>{ if(!nowImagesMap[id]){ updates['duyetchi/images/'+id] = null; hasChange = true; } });
+  if(!hasChange) return;
+  db.ref().update(updates).then(()=>{
+    lastPushedSnapshot = { meta:metaNow, proposalsMap:nowProposalsMap, imagesMap:nowImagesMap };
+  }).catch(err=>{ console.warn('Lỗi ghi Firebase:', err.message); showToast('⚠️ Không đồng bộ được — kiểm tra mạng'); });
+}
+
+function initFirebaseSync(){
+  const ref = db.ref('duyetchi');
+  ref.on('value', (snapshot)=>{
+    fbConnected = true; updateFbBadge(true);
+    const data = snapshot.val();
+    if(data && Array.isArray(data.proposals)){
+      proposals = data.proposals || []; persons = data.persons||[]; sites = data.sites||[];
+      if(data.sheetUrl){ sheetUrl=data.sheetUrl; localStorage.setItem('dc_sheetUrl',sheetUrl); const inp=document.getElementById('inp-sheet-url'); if(inp) inp.value=sheetUrl; }
+      localStorage.setItem('dc_proposals',JSON.stringify(proposals));
+      localStorage.setItem('dc_persons',JSON.stringify(persons));
+      localStorage.setItem('dc_sites',JSON.stringify(sites));
+      migrateAmountsToVND(); fbInitialLoadDone=true; renderAll();
+      if(document.getElementById('page-settings').style.display!=='none') renderSettings();
+      if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
+      pushToFirebase();
+      setTimeout(()=>{ db.ref('duyetchi/proposals').set(null); db.ref('duyetchi/persons').set(null); db.ref('duyetchi/sites').set(null); db.ref('duyetchi/sheetUrl').set(null); db.ref('duyetchi/updatedAt').set(null); }, 2000);
+      return;
+    }
+    if(data && (data.meta || data.proposals)){
+      const meta = data.meta||{};
+      persons = meta.persons||[]; sites = meta.sites||[];
+      if(meta.sheetUrl){ sheetUrl=meta.sheetUrl; localStorage.setItem('dc_sheetUrl',sheetUrl); const inp=document.getElementById('inp-sheet-url'); if(inp) inp.value=sheetUrl; }
+      const proposalsObj = data.proposals||{}; const imagesObj = data.images||{};
+      proposals = Object.keys(proposalsObj).map(id=>{ const p=proposalsObj[id]; const imgs=imagesObj[id]||{}; return {...p, imgImages:imgs.imgImages||[], proofImages:imgs.proofImages||}; }).sort((a,b)=>b.ts-a.ts);
+      localStorage.setItem('dc_proposals',JSON.stringify(proposals));
+      localStorage.setItem('dc_persons',JSON.stringify(persons));
+      localStorage.setItem('dc_sites',JSON.stringify(sites));
+      const proposalsMap={}, imagesMap={};
+      proposals.forEach(p=>{ const {imgImages,imgB64,proofImages,proofB64,...lightFields}=p; proposalsMap[p.id]=JSON.stringify(lightFields); if((imgImages&&imgImages.length)||(proofImages&&proofImages.length)) imagesMap[p.id]=JSON.stringify({imgImages,proofImages}); });
+      lastPushedSnapshot = { meta:JSON.stringify({persons,sites,sheetUrl}), proposalsMap, imagesMap };
+    } else if(!fbInitialLoadDone){ pushToFirebase(); }
+    migrateAmountsToVND(); fbInitialLoadDone=true; renderAll();
+    if(document.getElementById('page-settings').style.display!=='none') renderSettings();
+    if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
+  }, (err)=>{ fbConnected=false; updateFbBadge(false); fbInitialLoadDone=true; });
+}
+
+function updateFbBadge(ok){
+  const b=document.getElementById('fb-badge'); if(!b) return;
+  if(ok){ b.className='sheet-badge sheet-ok'; b.style.background='rgba(255,255,255,0.2)'; b.style.color='#fff'; b.textContent='☁️ OK'; }
+  else{ b.className='sheet-badge sheet-err'; b.style.background='rgba(255,0,0,0.25)'; b.style.color='#ffd6d6'; b.textContent='☁️ Mất mạng'; }
+}
+
+// ══════════════════════════════════════════
+// PUSH NOTIFICATIONS
+// ══════════════════════════════════════════
+const VAPID_PUBLIC = 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0';
+function urlB64ToUint8Array(b64){ const padding='='.repeat((4-b64.length%4)%4); const base64=(b64+padding).replace(/-/g,'+').replace(/_/g,'/'); const raw=atob(base64); const arr=new Uint8Array(raw.length); for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i); return arr; }
+async function fcmRegister(role){
+  try{
+    const swReg=await navigator.serviceWorker.ready;
+    let sub=await swReg.pushManager.getSubscription();
+    if(!sub) sub=await swReg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64ToUint8Array(VAPID_PUBLIC)});
+    const r=role||currentRole||'other';
+    const subKey=btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').substring(0,80);
+    const subObj={endpoint:sub.endpoint, keys:{p256dh:btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))), auth:btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth'))))}};
+    await db.ref('push-subs/'+r+'/'+subKey).set(subObj);
+    localStorage.setItem('dc_fcm_reg','✅ '+sub.endpoint.substring(0,30)+'...');
+  }catch(e){ localStorage.setItem('dc_fcm_reg','❌ '+e.message); }
+}
+async function sendPushNotif(title, body, targetRoles){
+  if(!Array.isArray(targetRoles)||!targetRoles.length) return;
+  try{ await db.ref('push-queue').push({title, body, roles:targetRoles, ts:Date.now()}); }catch(e){ console.error('Push queue error:',e); }
+}
+async function enableNotifications(){
+  const statusEl=document.getElementById('notif-status-text');
+  const btnEl=document.getElementById('btn-enable-notif');
+  const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+  if(!isStandalone){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">❌ Cần mở app từ biểu tượng DC</span>'; return; }
+  if(statusEl) statusEl.textContent='⏳ Đang xin quyền...';
+  try{
+    const perm=await Notification.requestPermission();
+    if(perm==='granted'){ await fcmRegister(currentRole); if(statusEl) statusEl.innerHTML='<span style="color:var(--green)">✅ Thông báo đã bật!</span>'; if(btnEl) btnEl.style.display='none'; document.getElementById('notif-remind-banner').style.display='none'; }
+    else{ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">❌ Bị từ chối — vào Cài đặt → Thông báo → DC</span>'; }
+  }catch(e){ if(statusEl) statusEl.innerHTML='<span style="color:var(--red)">❌ Lỗi: '+e.message+'</span>'; }
+}
+function updateNotifSettingsStatus(){
+  const statusEl=document.getElementById('notif-status-text'); const btnEl=document.getElementById('btn-enable-notif'); const debugEl=document.getElementById('notif-debug');
+  if(!statusEl) return;
+  const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+  const perm=(typeof Notification!=='undefined')?Notification.permission:'không hỗ trợ';
+  if(debugEl) debugEl.innerHTML=`PWA mode: <b>${isStandalone?'✅ Standalone':'❌ Browser'}</b><br>Notification: <b>${perm}</b><br>FCM: <b style="font-size:10px">${localStorage.getItem('dc_fcm_reg')||'chưa đăng ký'}</b>`;
+  if(!isStandalone){ statusEl.innerHTML='<span style="color:#b45309">⚠️ Cần mở từ biểu tượng DC</span>'; if(btnEl) btnEl.style.display='none'; return; }
+  if(perm==='granted'){ statusEl.innerHTML='<span style="color:var(--green)">✅ Đã bật</span>'; if(btnEl) btnEl.style.display='none'; }
+  else{ statusEl.innerHTML='<span style="color:var(--yellow)">🔔 Chưa bật</span>'; if(btnEl) btnEl.style.display='block'; }
+}
+function checkNotifBanner(){
+  const banner=document.getElementById('notif-remind-banner'); if(!banner||!currentRole||currentRole==='other') return;
+  const isStandalone=window.navigator.standalone||window.matchMedia('(display-mode: standalone)').matches;
+  if(!isStandalone){ banner.style.display='none'; return; }
+  banner.style.display=(typeof Notification!=='undefined'&&Notification.permission==='granted')?'none':'block';
+}
+
+// SW đăng ký
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.getRegistrations().then(regs=>{ for(const reg of regs){ if(!reg.scope.includes('/Duyet-Chi/')) reg.unregister(); } });
+  navigator.serviceWorker.register('/Duyet-Chi/sw.js').catch(e=>console.log('SW error:',e));
+}
+if(navigator.clearAppBadge) navigator.clearAppBadge();
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.ready.then(reg=>{ if(reg.active) reg.active.postMessage('CLEAR_BADGE'); });
+  navigator.serviceWorker.addEventListener('message', e=>{ if(e.data&&(e.data.type==='RELOAD'||e.data.type==='SW_UPDATED')) location.reload(); });
+}
+
+// ══════════════════════════════════════════
+// UTILITIES
+// ══════════════════════════════════════════
+function fmt(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}); }
+function fmtFull(ts){ if(!ts) return ''; const d=new Date(ts); return d.toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function fmtVND(n){ if(!n&&n!==0) return ''; return Number(n).toLocaleString('vi-VN')+'đ'; }
+function fmtAmountInput(inp){ let v=inp.value.replace(/\D/g,''); if(!v){ inp.value=''; return; } inp.value=Number(v).toLocaleString('vi-VN'); }
+function parseVND(s){ return parseInt((s||'').replace(/\D/g,'')||'0',10); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).substring(2,6); }
+function migrateAmountsToVND(){ proposals.forEach(p=>{ if(p.amount&&p.amount>100000000) p.amount=Math.round(p.amount/1000); if(p.approvedAmount&&p.approvedAmount>100000000) p.approvedAmount=Math.round(p.approvedAmount/1000); if(p.transferAmount&&p.transferAmount>100000000) p.transferAmount=Math.round(p.transferAmount/1000); }); }
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+let currentPage='home';
+function showPage(page,el){
+  ['home','add','report','settings'].forEach(p=>{ document.getElementById('page-'+p).style.display=p===page?'block':'none'; });
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  currentPage=page;
+  if(page==='home') renderAll();
+  if(page==='report'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
+  if(page==='settings'){ renderSettings(); updateNotifSettingsStatus(); if(currentRole==='dung') loadLoginHistory(); }
+  if(page==='add') resetAddForm();
+  window.scrollTo(0,0);
+}
+function resetAddForm(){
+  document.getElementById('inp-title').value='';
+  document.getElementById('inp-site').value='';
+  document.getElementById('inp-amount').value='';
+  document.getElementById('inp-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('inp-note').value='';
+  document.getElementById('inp-person').value=currentUserName;
+  const pd=document.getElementById('inp-person-display'); if(pd) pd.textContent=currentUserName;
+  uploadedImages=[]; renderUploadedImages();
+}
+
+// ══════════════════════════════════════════
+// ADD PROPOSAL
+// ══════════════════════════════════════════
+function triggerImageUpload(){ document.getElementById('inp-image').click(); }
+function handleImageSelect(e){
+  const files=e.target.files; if(!files||!files.length) return;
+  Array.from(files).forEach(f=>{ const r=new FileReader(); r.onload=ev=>{ uploadedImages.push(ev.target.result); renderUploadedImages(); }; r.readAsDataURL(f); });
+  e.target.value='';
+}
+function renderUploadedImages(){
+  const c=document.getElementById('uploaded-images-preview'); if(!c) return;
+  c.innerHTML=uploadedImages.map((img,i)=>`<div style="position:relative;display:inline-block"><img src="${img}" style="width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="viewImg('${img}')"><button onclick="removeUploadedImg(${i})" style="position:absolute;top:-6px;right:-6px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:20px;height:20px;font-size:12px;cursor:pointer;line-height:1">×</button></div>`).join('');
+}
+function removeUploadedImg(i){ uploadedImages.splice(i,1); renderUploadedImages(); }
+
+async function submitProposal(){
+  const title=document.getElementById('inp-title').value.trim();
+  const site=document.getElementById('inp-site').value.trim();
+  const amountStr=document.getElementById('inp-amount').value;
+  const date=document.getElementById('inp-date').value;
+  const note=document.getElementById('inp-note').value.trim();
+  if(!title){ showToast('⚠️ Nhập tiêu đề'); return; }
+  if(!site){ showToast('⚠️ Nhập công trình'); return; }
+  if(!amountStr){ showToast('⚠️ Nhập số tiền'); return; }
+  const amount=parseVND(amountStr);
+  if(!amount||amount<=0){ showToast('⚠️ Số tiền không hợp lệ'); return; }
+  const btn=document.getElementById('btn-submit-proposal');
+  btn.disabled=true; btn.textContent='⏳ Đang lưu...';
+  let imgImages=[];
+  if(uploadedImages.length){
+    try{ showToast('⏳ Đang tải ảnh...'); for(let i=0;i<uploadedImages.length;i++){ const url=await uploadToStorage(uploadedImages[i],`duyetchi/proposals/${Date.now()}_${i}.jpg`); imgImages.push(url); } }
+    catch(e){ showToast('⚠️ Lỗi tải ảnh: '+e.message); }
+  }
+  const p={id:uid(),title,site,amount,date:date||fmt(Date.now()),note,person:currentUserName,role:currentRole,ts:Date.now(),status:'pending',imgImages,proofImages:[]};
+  proposals.unshift(p); save(); uploadedImages=[]; renderUploadedImages();
+  btn.disabled=false; btn.textContent='💾 Gửi đề xuất';
+  showToast('✅ Đã gửi đề xuất!');
+  const others=['dung','hien','trang'].filter(r=>r!==currentRole);
+  sendPushNotif('📋 Đề xuất mới',`${currentUserName}: ${title} — ${fmtVND(amount)}`,others);
+  showPage('home',document.querySelectorAll('.nav-item')[0]);
+}
+
+// ══════════════════════════════════════════
+// RENDER HOME
+// ══════════════════════════════════════════
+function renderAll(){
+  const list=document.getElementById('proposals-list'); if(!list) return;
+  let filtered=proposals;
+  if(filter==='pending') filtered=proposals.filter(p=>p.status==='pending');
+  else if(filter==='approved') filtered=proposals.filter(p=>p.status==='approved'||p.status==='partial');
+  else if(filter==='done') filtered=proposals.filter(p=>p.status==='done');
+  else if(filter==='rejected') filtered=proposals.filter(p=>p.status==='rejected');
+  const q=(document.getElementById('search-input')||{}).value||'';
+  if(q.trim()) filtered=filtered.filter(p=>(p.title+p.site+p.person+p.note).toLowerCase().includes(q.toLowerCase()));
+  list.innerHTML=filtered.length?filtered.map(renderCard).join(''):'<div style="text-align:center;padding:40px;color:var(--text-sub)">Không có đề xuất nào</div>';
+  renderSummaryBar(proposals); updateNotifBadge();
+}
+function setFilter(f,el){ filter=f; document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active')); if(el) el.classList.add('active'); renderAll(); }
+const STATUS_LABEL={pending:'⏳ Chờ',approved:'✅ Duyệt',partial:'✅ 1 phần',done:'💸 Đã chi',rejected:'❌ Từ chối'};
+const STATUS_COLOR={pending:'var(--yellow)',approved:'var(--green)',partial:'#34d399',done:'var(--blue)',rejected:'var(--red)'};
+
+function renderCard(p){
+  const statusL=STATUS_LABEL[p.status]||p.status, statusC=STATUS_COLOR[p.status]||'#888';
+  const hasImg=(p.imgImages&&p.imgImages.length)||(p.imgB64);
+  const hasProof=(p.proofImages&&p.proofImages.length)||(p.proofB64);
+  const roleColors={dung:'#3b82f6',hien:'#8b5cf6',trang:'#f59e0b',other:'#6b7280'};
+  const personColor=roleColors[p.role||getRoleForName(p.person)]||'#6b7280';
+  return `<div class="card" id="card-${p.id}">
+    <div class="card-header">
+      <div><div class="card-title">${p.title}</div><div class="card-meta"><span style="color:${personColor};font-weight:700">${p.person||''}</span> • ${p.site||''} • ${fmt(p.ts)||p.date||''}</div></div>
+      <div class="status-badge" style="background:${statusC}">${statusL}</div>
+    </div>
+    <div class="card-amount">${fmtVND(p.amount)}</div>
+    ${p.approvedAmount&&p.approvedAmount!==p.amount?`<div style="font-size:12px;color:var(--green)">Duyệt: ${fmtVND(p.approvedAmount)}</div>`:''}
+    ${p.transferAmount?`<div style="font-size:12px;color:var(--blue)">Chuyển: ${fmtVND(p.transferAmount)}</div>`:''}
+    ${p.note?`<div class="card-note">${p.note}</div>`:''}
+    ${p.rejectReason?`<div style="font-size:12px;color:var(--red)">Lý do: ${p.rejectReason}</div>`:''}
+    <div class="card-imgs">
+      ${hasImg?`<div class="img-thumb-wrap"><img src="${(p.imgImages&&p.imgImages[0])||p.imgB64}" class="img-thumb" onclick="openImageGallery('${p.id}','img')"><span class="img-count">${(p.imgImages&&p.imgImages.length)||1} ảnh</span></div>`:''}
+      ${hasProof?`<div class="img-thumb-wrap"><img src="${(p.proofImages&&p.proofImages[0])||p.proofB64}" class="img-thumb" onclick="openImageGallery('${p.id}','proof')"><span class="img-count" style="background:#3b82f6">${(p.proofImages&&p.proofImages.length)||1} BC</span></div>`:''}
+    </div>
+    <div class="card-actions">${renderActionBtns(p)}</div>
+    <div class="approve-meta">${renderApproveMeta(p)}</div>
+  </div>`;
+}
+function renderApproveMeta(p){
+  const parts=[];
+  if(p.approvedBy) parts.push(`<span style="color:var(--green)">✅ ${p.approvedBy}${p.approvedAt?' ('+fmt(p.approvedAt)+')':''}</span>`);
+  if(p.transferBy) parts.push(`<span style="color:var(--blue)">💸 ${p.transferBy}${p.transferAt?' ('+fmt(p.transferAt)+')':''}</span>`);
+  if(p.rejectedBy) parts.push(`<span style="color:var(--red)">❌ ${p.rejectedBy}${p.rejectedAt?' ('+fmt(p.rejectedAt)+')':''}</span>`);
+  return parts.join(' ');
+}
+function renderActionBtns(p){
+  let btns='';
+  if(currentRole==='dung'){
+    if(p.status==='pending'||p.status==='rejected'){ btns+=`<button class="btn btn-approve" onclick="approveBy(event,'${p.id}')">✅ Duyệt</button><button class="btn btn-reject" onclick="rejectBy(event,'${p.id}')">❌ Từ chối</button>`; }
+    if(p.status==='approved'||p.status==='partial'){ btns+=`<button class="btn btn-transfer" onclick="transferBy(event,'${p.id}')">💸 Chuyển</button><button class="btn btn-reject" onclick="rejectBy(event,'${p.id}')">❌ Từ chối</button>`; }
+    btns+=`<button class="btn btn-edit" onclick="openEditProposal('${p.id}')">✏️ Sửa</button><button class="btn btn-del" onclick="del('${p.id}')">🗑️</button>`;
+  }
+  if(currentRole==='hien'){
+    if(p.status==='pending'||p.status==='rejected'){ btns+=`<button class="btn btn-approve" onclick="approveBy(event,'${p.id}')">✅ Duyệt</button><button class="btn btn-reject" onclick="rejectBy(event,'${p.id}')">❌ Từ chối</button>`; }
+    btns+=`<button class="btn btn-edit" onclick="openEditProposal('${p.id}')">✏️ Sửa</button>`;
+  }
+  if(currentRole==='trang'){
+    if(p.status==='approved'||p.status==='partial'){ btns+=`<button class="btn btn-transfer" onclick="transferBy(event,'${p.id}')">💸 Chuyển</button>`; }
+    btns+=`<button class="btn btn-edit" onclick="openEditProposal('${p.id}')">✏️ Sửa</button>`;
+  }
+  btns+=`<button class="btn" style="background:var(--surface2)" onclick="shareCard('${p.id}')">🔗</button>`;
+  return btns;
+}
+function renderSummaryBar(arr){
+  const total=arr.reduce((s,p)=>s+p.amount,0);
+  const approved=arr.filter(p=>p.status==='approved'||p.status==='partial'||p.status==='done').reduce((s,p)=>s+p.amount,0);
+  const done=arr.filter(p=>p.status==='done').reduce((s,p)=>s+(p.transferAmount||p.approvedAmount||p.amount),0);
+  const el=document.getElementById('summary-bar'); if(!el) return;
+  el.innerHTML=`<span>📋 ${arr.length}</span> <span>💰 ${fmtVND(total)}</span> <span style="color:var(--green)">✅ ${fmtVND(approved)}</span> <span style="color:var(--blue)">💸 ${fmtVND(done)}</span>`;
+}
+
+// ══════════════════════════════════════════
+// APPROVE / TRANSFER / REJECT
+// ══════════════════════════════════════════
+let pendingApproveId='';
+function approveBy(e,id){ e.stopPropagation(); const p=proposals.find(x=>x.id===id); if(!p) return; pendingApproveId=id; document.getElementById('approve-amount-input').value=Number(p.amount).toLocaleString('vi-VN'); document.getElementById('approve-amount-modal').style.display='flex'; }
+function closeApproveModal(){ document.getElementById('approve-amount-modal').style.display='none'; }
+function confirmApproveAmount(){
+  const p=proposals.find(x=>x.id===pendingApproveId); if(!p) return;
+  const amt=parseVND(document.getElementById('approve-amount-input').value);
+  if(!amt||amt<=0){ showToast('⚠️ Nhập số tiền'); return; }
+  p.approvedAmount=amt; p.approvedBy=currentUserName; p.approvedAt=Date.now(); p.status=amt<p.amount?'partial':'approved';
+  save(); closeApproveModal(); renderAll(); showToast('✅ Đã duyệt '+fmtVND(amt));
+  const others=['dung','hien','trang'].filter(r=>r!==currentRole);
+  sendPushNotif('✅ Đề xuất được duyệt',`${currentUserName} duyệt: ${p.title} — ${fmtVND(amt)}`,others);
+}
+
+let pendingTransferId='', pendingProofImages=[];
+function transferBy(e,id){ e.stopPropagation(); const p=proposals.find(x=>x.id===id); if(!p) return; pendingTransferId=id; pendingProofImages=[]; document.getElementById('transfer-amount-input').value=Number(p.approvedAmount||p.amount).toLocaleString('vi-VN'); document.getElementById('transfer-proof-preview').innerHTML=''; document.getElementById('transfer-amount-modal').style.display='flex'; }
+function closeTransferModal(){ document.getElementById('transfer-amount-modal').style.display='none'; }
+function handleProofSelect(e){
+  const files=e.target.files; if(!files||!files.length) return; pendingProofImages=[];
+  Array.from(files).forEach(f=>{ const r=new FileReader(); r.onload=ev=>{ pendingProofImages.push(ev.target.result); document.getElementById('transfer-proof-preview').innerHTML=pendingProofImages.map(img=>`<img src="${img}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;cursor:pointer" onclick="viewImg('${img}')">`).join(''); }; r.readAsDataURL(f); });
+  e.target.value='';
+}
+async function confirmTransferAmount(){
+  const p=proposals.find(x=>x.id===pendingTransferId); if(!p) return;
+  const amt=parseVND(document.getElementById('transfer-amount-input').value);
+  if(!amt||amt<=0){ showToast('⚠️ Nhập số tiền'); return; }
+  let proofImages=[...(p.proofImages||[])];
+  if(pendingProofImages.length){ showToast('⏳ Đang tải ảnh biên lai...'); for(let i=0;i<pendingProofImages.length;i++){ try{ const url=await uploadToStorage(pendingProofImages[i],`duyetchi/proofs/${p.id}_${Date.now()}_${i}.jpg`); proofImages.push(url); }catch(ex){ proofImages.push(pendingProofImages[i]); } } }
+  p.transferAmount=amt; p.transferBy=currentUserName; p.transferAt=Date.now(); p.status='done'; p.proofImages=proofImages;
+  save(); closeTransferModal(); renderAll(); pendingProofImages=[]; showToast('💸 Đã ghi nhận chuyển '+fmtVND(amt));
+  const others=['dung','hien','trang'].filter(r=>r!==currentRole);
+  sendPushNotif('💸 Đã chuyển tiền',`${currentUserName} chuyển: ${p.title} — ${fmtVND(amt)}`,others);
+}
+function rejectBy(e,id){ e.stopPropagation(); const reason=prompt('Lý do từ chối (có thể để trống):'); if(reason===null) return; const p=proposals.find(x=>x.id===id); if(!p) return; p.status='rejected'; p.rejectedBy=currentUserName; p.rejectedAt=Date.now(); p.rejectReason=reason||''; save(); renderAll(); showToast('❌ Đã từ chối'); }
+function del(id){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng mới được xoá'); return; } if(!confirm('Xoá đề xuất này?')) return; proposals=proposals.filter(p=>p.id!==id); save(); renderAll(); showToast('🗑️ Đã xoá'); }
+
+// ══════════════════════════════════════════
+// EDIT PROPOSAL
+// ══════════════════════════════════════════
+let editId='';
+function openEditProposal(id){ const p=proposals.find(x=>x.id===id); if(!p) return; editId=id; document.getElementById('edit-title').value=p.title||''; document.getElementById('edit-site').value=p.site||''; document.getElementById('edit-amount').value=p.amount?Number(p.amount).toLocaleString('vi-VN'):''; document.getElementById('edit-date').value=p.date||''; document.getElementById('edit-note').value=p.note||''; document.getElementById('edit-person').value=p.person||''; document.getElementById('edit-modal').style.display='flex'; }
+function closeEditModal(){ document.getElementById('edit-modal').style.display='none'; }
+function saveEditProposal(){ const p=proposals.find(x=>x.id===editId); if(!p) return; p.title=document.getElementById('edit-title').value.trim(); p.site=document.getElementById('edit-site').value.trim(); p.amount=parseVND(document.getElementById('edit-amount').value); p.date=document.getElementById('edit-date').value; p.note=document.getElementById('edit-note').value.trim(); if(currentRole==='dung') p.person=document.getElementById('edit-person').value.trim(); save(); closeEditModal(); renderAll(); showToast('✅ Đã cập nhật'); }
+
+// ══════════════════════════════════════════
+// IMAGE GALLERY / VIEWER
+// ══════════════════════════════════════════
+function viewImg(src){ document.getElementById('image-modal-img').src=src; document.getElementById('image-modal').style.display='flex'; }
+function closeImageModal(){ document.getElementById('image-modal').style.display='none'; }
+function openImageGallery(id,type){ const p=proposals.find(x=>x.id===id); if(!p) return; const imgs=type==='proof'?(p.proofImages&&p.proofImages.length?p.proofImages:(p.proofB64?[p.proofB64]:[])):((p.imgImages&&p.imgImages.length?p.imgImages:(p.imgB64?[p.imgB64]:[]))); if(!imgs.length) return; if(imgs.length===1){ viewImg(imgs[0]); return; } document.getElementById('img-action-gallery').innerHTML=imgs.map(img=>`<img src="${img}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;cursor:pointer" onclick="viewImg('${img}')">`).join(''); document.getElementById('image-action-overlay').style.display='flex'; }
+function closeImgOverlay(){ document.getElementById('image-action-overlay').style.display='none'; }
+
+// ══════════════════════════════════════════
+// SHARE
+// ══════════════════════════════════════════
+function shareCard(id){ const p=proposals.find(x=>x.id===id); if(!p) return; const text=`📋 ${p.title}\n🏗️ ${p.site}\n👤 ${p.person}\n💰 ${fmtVND(p.amount)}\n📅 ${fmt(p.ts)||p.date}\n${p.note?'📝 '+p.note+'\n':''}${STATUS_LABEL[p.status]||p.status}`; if(navigator.share){ navigator.share({title:p.title,text}).catch(()=>{}); } else{ navigator.clipboard.writeText(text).then(()=>showToast('✅ Đã copy!')).catch(()=>showToast('⚠️ Không copy được')); } }
+
+// ══════════════════════════════════════════
+// REPORT
+// ══════════════════════════════════════════
+let reportFilter={month:'',site:'',person:''};
+function renderReportFilters(){
+  const months=document.getElementById('rpt-month'); if(!months) return;
+  const allMonths=[...new Set(proposals.map(p=>{ const d=new Date(p.ts||Date.now()); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }).filter(Boolean))].sort().reverse();
+  const allSites=[...new Set(proposals.map(p=>p.site).filter(Boolean))].sort();
+  const allPersons=[...new Set(proposals.map(p=>p.person).filter(Boolean))].sort();
+  const f=(el,arr,cur)=>{ el.innerHTML='<option value="">Tất cả</option>'+arr.map(v=>`<option value="${v}"${cur===v?' selected':''}>${v}</option>`).join(''); };
+  f(months,allMonths,reportFilter.month); f(document.getElementById('rpt-site'),allSites,reportFilter.site); f(document.getElementById('rpt-person'),allPersons,reportFilter.person);
+}
+function applyReportFilter(){ reportFilter.month=document.getElementById('rpt-month').value; reportFilter.site=document.getElementById('rpt-site').value; reportFilter.person=document.getElementById('rpt-person').value; renderReportSummary(); renderReportTables(); }
+function filteredForReport(){ return proposals.filter(p=>{ if(reportFilter.month){ const d=new Date(p.ts||0); const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; if(m!==reportFilter.month) return false; } if(reportFilter.site&&p.site!==reportFilter.site) return false; if(reportFilter.person&&p.person!==reportFilter.person) return false; return true; }); }
+function renderReportSummary(){ const arr=filteredForReport(); const total=arr.reduce((s,p)=>s+p.amount,0); const pending=arr.filter(p=>p.status==='pending').length; const approved=arr.filter(p=>p.status==='approved'||p.status==='partial'); const approvedAmt=approved.reduce((s,p)=>s+(p.approvedAmount||p.amount),0); const done=arr.filter(p=>p.status==='done'); const doneAmt=done.reduce((s,p)=>s+(p.transferAmount||p.approvedAmount||p.amount),0); const el=document.getElementById('rpt-summary'); if(!el) return; el.innerHTML=`<div class="rpt-card"><div class="rpt-label">Tổng</div><div class="rpt-val">${arr.length}</div><div class="rpt-amt">${fmtVND(total)}</div></div><div class="rpt-card"><div class="rpt-label">Chờ</div><div class="rpt-val" style="color:var(--yellow)">${pending}</div></div><div class="rpt-card"><div class="rpt-label">Duyệt</div><div class="rpt-val" style="color:var(--green)">${approved.length}</div><div class="rpt-amt">${fmtVND(approvedAmt)}</div></div><div class="rpt-card"><div class="rpt-label">Đã chi</div><div class="rpt-val" style="color:var(--blue)">${done.length}</div><div class="rpt-amt">${fmtVND(doneAmt)}</div></div>`; }
+function renderReportTables(){ const arr=filteredForReport().sort((a,b)=>b.ts-a.ts); const el=document.getElementById('rpt-table'); if(!el) return; if(!arr.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-sub)">Không có dữ liệu</div>'; return; } el.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--surface2)"><th style="padding:8px;text-align:left">Tiêu đề</th><th>Người</th><th>CT</th><th>Số tiền</th><th>TT</th></tr></thead><tbody>${arr.map(p=>`<tr style="border-bottom:1px solid var(--border)"><td style="padding:8px">${p.title}</td><td style="padding:8px;text-align:center">${p.person||''}</td><td style="padding:8px;text-align:center">${p.site||''}</td><td style="padding:8px;text-align:right">${fmtVND(p.amount)}</td><td style="padding:8px;text-align:center"><span class="status-badge" style="background:${STATUS_COLOR[p.status]||'#888'};font-size:11px">${STATUS_LABEL[p.status]||p.status}</span></td></tr>`).join('')}</tbody></table>`; }
+function exportReport(){ const arr=filteredForReport().sort((a,b)=>b.ts-a.ts); const rows=[['Tiêu đề','CT','Người','Ngày','Số tiền','Duyệt','Chuyển','TT','Ghi chú']]; arr.forEach(p=>rows.push([p.title,p.site,p.person,p.date||fmt(p.ts),p.amount,p.approvedAmount||'',p.transferAmount||'',p.status,p.note||''])); const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'); const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,﻿'+encodeURIComponent(csv); a.download='bao-cao.csv'; a.click(); }
+
+// ══════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════
+function renderSettings(){
+  const el=document.getElementById('persons-list'); if(el) el.innerHTML=(persons||[]).map((p,i)=>{ const n=typeof p==='string'?p:p.name; return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="flex:1">${n}</span>${currentRole==='dung'?`<button class="btn btn-del" onclick="removePerson(${i})" style="padding:2px 8px;font-size:11px">×</button>`:''}</div>`; }).join('')||'<div style="color:var(--text-sub);font-size:13px">Chưa có</div>';
+  const sl=document.getElementById('sites-list'); if(sl) sl.innerHTML=(sites||[]).map((s,i)=>{ const n=typeof s==='string'?s:s.name; return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)"><span style="flex:1">${n}</span>${currentRole==='dung'?`<button class="btn btn-del" onclick="removeSite(${i})" style="padding:2px 8px;font-size:11px">×</button>`:''}</div>`; }).join('')||'<div style="color:var(--text-sub);font-size:13px">Chưa có</div>';
+  const inp=document.getElementById('inp-sheet-url'); if(inp) inp.value=sheetUrl||'';
+  updateNotifSettingsStatus();
+}
+function addPerson(){ const inp=document.getElementById('inp-new-person'); if(!inp) return; const n=inp.value.trim(); if(!n){ showToast('⚠️ Nhập tên'); return; } if((persons||[]).some(p=>(typeof p==='string'?p:p.name)===n)){ showToast('⚠️ Tên đã có'); return; } persons.push(n); inp.value=''; save(); renderSettings(); }
+function removePerson(i){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng'); return; } persons.splice(i,1); save(); renderSettings(); }
+function addSite(){ const inp=document.getElementById('inp-new-site'); if(!inp) return; const n=inp.value.trim(); if(!n){ showToast('⚠️ Nhập tên CT'); return; } if((sites||[]).some(s=>(typeof s==='string'?s:s.name)===n)){ showToast('⚠️ CT đã có'); return; } sites.push(n); inp.value=''; save(); renderSettings(); }
+function removeSite(i){ if(currentRole!=='dung'){ showToast('❌ Chỉ Dũng'); return; } sites.splice(i,1); save(); renderSettings(); }
+function saveSheetUrl(){ sheetUrl=document.getElementById('inp-sheet-url').value.trim(); localStorage.setItem('dc_sheetUrl',sheetUrl); save(); showToast('✅ Đã lưu link Sheet'); }
+function openSheet(){ if(sheetUrl) window.open(sheetUrl,'_blank'); else showToast('⚠️ Chưa có link Sheet'); }
+function syncToSheet(){ if(!sheetUrl){ showToast('⚠️ Chưa có link Sheet'); return; } showToast('⏳ Đang đồng bộ...'); const rows=proposals.map(p=>([p.title,p.site,p.person,p.date||fmt(p.ts),p.amount,p.approvedAmount||'',p.transferAmount||'',p.status,p.note||'',p.approvedBy||'',p.transferBy||''])); fetch(sheetUrl,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rows,source:'app3-v14'})}).then(r=>{ if(r.ok) showToast('✅ Sheet OK'); else showToast('⚠️ Sheet lỗi '+r.status); }).catch(e=>showToast('❌ '+e.message)); }
+
+// ══════════════════════════════════════════
+// NOTIFICATION PANEL
+// ══════════════════════════════════════════
+function toggleNotifPanel(){ const p=document.getElementById('notif-panel'); p.style.display=p.style.display==='block'?'none':'block'; renderNotifPanel(); }
+function closeNotifPanel(){ document.getElementById('notif-panel').style.display='none'; }
+function renderNotifPanel(){ const el=document.getElementById('notif-list'); if(!el) return; const recent=proposals.filter(p=>p.ts&&Date.now()-p.ts<7*24*3600*1000).sort((a,b)=>b.ts-a.ts).slice(0,10); el.innerHTML=recent.map(p=>`<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-weight:600;font-size:13px">${p.title}</div><div style="font-size:11px;color:var(--text-sub)">${p.person} • ${fmt(p.ts)} • ${STATUS_LABEL[p.status]||p.status}</div></div>`).join('')||'<div style="color:var(--text-sub);font-size:13px;padding:12px 0">Không có</div>'; }
+function updateNotifBadge(){ const badge=document.getElementById('notif-badge'); if(!badge) return; const count=proposals.filter(p=>p.status==='pending').length; badge.textContent=count; badge.style.display=count?'flex':'none'; }
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let toastTimer;
+function showToast(msg,duration=3000){ const t=document.getElementById('toast'); if(!t) return; t.textContent=msg; t.className='toast show'; clearTimeout(toastTimer); toastTimer=setTimeout(()=>{ t.className='toast'; },duration); }
+
+// ══════════════════════════════════════════
+// EVENT LISTENERS
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('search-input')?.addEventListener('input',()=>renderAll());
+  ['edit-modal','approve-amount-modal','transfer-amount-modal','change-pw-modal','image-action-overlay'].forEach(id=>{ const el=document.getElementById(id); if(el) el.addEventListener('click',e=>{ if(e.target===el) el.style.display='none'; }); });
+  document.getElementById('image-modal')?.addEventListener('click',closeImageModal);
+});
+
+setInterval(()=>{ const el=document.getElementById('header-date'); if(el&&currentUser) el.textContent=new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}); localStorage.setItem('dc_last_active',Date.now().toString()); },60*1000);
+</script>
+
+</body>
+</html>
