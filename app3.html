@@ -271,17 +271,25 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="role-screen">
   <div style="font-size:48px;margin-bottom:12px">📋</div>
   <h2>Duyệt Chi</h2>
-  <p style="margin-bottom:24px">PVA - 379</p>
+  <p style="margin-bottom:20px">PVA - 379</p>
   <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
-    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;text-align:center">Đăng nhập</div>
+    <!-- Tab switch -->
+    <div style="display:flex;border-bottom:2px solid var(--gray-border);margin-bottom:16px">
+      <button id="auth-tab-login" onclick="switchAuthTab('login')" style="flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:700;color:var(--blue);border-bottom:2px solid var(--blue);margin-bottom:-2px;cursor:pointer">Đăng nhập</button>
+      <button id="auth-tab-register" onclick="switchAuthTab('register')" style="flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:600;color:var(--gray);cursor:pointer">Đăng ký</button>
+    </div>
     <input type="email" id="auth-email" class="form-input" placeholder="Email" autocomplete="email" style="margin-bottom:10px;font-size:15px">
-    <div style="position:relative">
+    <div style="position:relative;margin-bottom:10px">
       <input type="password" id="auth-pass" class="form-input" placeholder="Mật khẩu" autocomplete="current-password" style="font-size:15px;padding-right:40px">
       <button type="button" onclick="toggleAuthPass()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--gray);padding:4px" id="auth-pass-eye">👁</button>
     </div>
-    <div id="auth-error" style="color:var(--red);font-size:12px;margin-top:6px;min-height:16px;text-align:center"></div>
-    <button id="auth-btn" class="btn-full btn-primary-full" style="margin-top:12px" onclick="doLogin()">Đăng nhập</button>
-    <button onclick="doForgotPass()" style="margin-top:8px;width:100%;background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:4px">Quên mật khẩu?</button>
+    <!-- Ô xác nhận mật khẩu — chỉ hiện khi đăng ký -->
+    <div id="auth-confirm-wrap" style="display:none;margin-bottom:10px">
+      <input type="password" id="auth-pass-confirm" class="form-input" placeholder="Nhập lại mật khẩu" style="font-size:15px">
+    </div>
+    <div id="auth-error" style="color:var(--red);font-size:12px;margin-top:4px;min-height:16px;text-align:center"></div>
+    <button id="auth-btn" class="btn-full btn-primary-full" style="margin-top:10px" onclick="doLogin()">Đăng nhập</button>
+    <button id="auth-forgot" onclick="doForgotPass()" style="margin-top:8px;width:100%;background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:4px">Quên mật khẩu?</button>
   </div>
 </div>
 
@@ -949,11 +957,49 @@ function getCurrentUserName(){
 }
 
 // ── FIREBASE AUTH ──
+let authMode = 'login'; // 'login' | 'register'
+
+function switchAuthTab(mode){
+  authMode = mode;
+  const isReg = mode === 'register';
+  document.getElementById('auth-tab-login').style.cssText    = `flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:${isReg?600:700};color:${isReg?'var(--gray)':'var(--blue)'};border-bottom:2px solid ${isReg?'transparent':'var(--blue)'};margin-bottom:-2px;cursor:pointer`;
+  document.getElementById('auth-tab-register').style.cssText = `flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:${isReg?700:600};color:${isReg?'var(--blue)':'var(--gray)'};border-bottom:2px solid ${isReg?'var(--blue)':'transparent'};margin-bottom:-2px;cursor:pointer`;
+  document.getElementById('auth-confirm-wrap').style.display = isReg ? 'block' : 'none';
+  document.getElementById('auth-forgot').style.display = isReg ? 'none' : 'block';
+  document.getElementById('auth-btn').textContent = isReg ? 'Đăng ký' : 'Đăng nhập';
+  document.getElementById('auth-btn').onclick = isReg ? doRegister : doLogin;
+  document.getElementById('auth-error').textContent = '';
+}
+
 function toggleAuthPass(){
   const inp = document.getElementById('auth-pass');
   const eye = document.getElementById('auth-pass-eye');
   if(inp.type==='password'){ inp.type='text'; eye.textContent='🙈'; }
   else { inp.type='password'; eye.textContent='👁'; }
+}
+
+async function doRegister(){
+  const email   = document.getElementById('auth-email').value.trim();
+  const pass    = document.getElementById('auth-pass').value;
+  const confirm = document.getElementById('auth-pass-confirm').value;
+  const errEl   = document.getElementById('auth-error');
+  const btn     = document.getElementById('auth-btn');
+  errEl.style.color = 'var(--red)'; errEl.textContent = '';
+  if(!email||!pass){ errEl.textContent='Vui lòng nhập email và mật khẩu'; return; }
+  if(pass.length < 6){ errEl.textContent='Mật khẩu tối thiểu 6 ký tự'; return; }
+  if(pass !== confirm){ errEl.textContent='Mật khẩu nhập lại không khớp'; return; }
+  btn.disabled = true; btn.textContent = '⏳ Đang đăng ký...';
+  try {
+    await firebase.auth().createUserWithEmailAndPassword(email, pass);
+    // onAuthStateChanged sẽ xử lý tiếp → hiện màn chọn vai trò
+  } catch(e) {
+    let msg = 'Đăng ký thất bại';
+    if(e.code==='auth/email-already-in-use') msg='Email này đã được đăng ký';
+    else if(e.code==='auth/invalid-email') msg='Email không hợp lệ';
+    else if(e.code==='auth/weak-password') msg='Mật khẩu quá yếu';
+    errEl.textContent = msg;
+    btn.disabled = false; btn.textContent = 'Đăng ký';
+  }
 }
 
 async function doLogin(){
