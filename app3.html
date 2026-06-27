@@ -283,6 +283,12 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <input type="password" id="auth-pass" class="form-input" placeholder="Mật khẩu" autocomplete="current-password" style="font-size:15px;padding-right:40px">
       <button type="button" onclick="toggleAuthPass()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--gray);padding:4px" id="auth-pass-eye">👁</button>
     </div>
+    <!-- Chọn tên — chỉ hiện khi đăng ký -->
+    <div id="auth-name-wrap" style="display:none;margin-bottom:10px">
+      <select id="auth-name" class="form-input" style="font-size:15px">
+        <option value="">-- Chọn tên của bạn --</option>
+      </select>
+    </div>
     <!-- Ô xác nhận mật khẩu — chỉ hiện khi đăng ký -->
     <div id="auth-confirm-wrap" style="display:none;margin-bottom:10px">
       <input type="password" id="auth-pass-confirm" class="form-input" placeholder="Nhập lại mật khẩu" style="font-size:15px">
@@ -950,6 +956,7 @@ const ROLES = {
 };
 
 function getCurrentUserName(){
+  if(currentUserName) return currentUserName;
   if(currentRole==='dung') return 'Dũng';
   if(currentRole==='hien') return 'Hiền';
   if(currentRole==='trang') return 'Trang';
@@ -964,11 +971,18 @@ function switchAuthTab(mode){
   const isReg = mode === 'register';
   document.getElementById('auth-tab-login').style.cssText    = `flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:${isReg?600:700};color:${isReg?'var(--gray)':'var(--blue)'};border-bottom:2px solid ${isReg?'transparent':'var(--blue)'};margin-bottom:-2px;cursor:pointer`;
   document.getElementById('auth-tab-register').style.cssText = `flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:${isReg?700:600};color:${isReg?'var(--blue)':'var(--gray)'};border-bottom:2px solid ${isReg?'var(--blue)':'transparent'};margin-bottom:-2px;cursor:pointer`;
+  document.getElementById('auth-name-wrap').style.display    = isReg ? 'block' : 'none';
   document.getElementById('auth-confirm-wrap').style.display = isReg ? 'block' : 'none';
   document.getElementById('auth-forgot').style.display = isReg ? 'none' : 'block';
   document.getElementById('auth-btn').textContent = isReg ? 'Đăng ký' : 'Đăng nhập';
   document.getElementById('auth-btn').onclick = isReg ? doRegister : doLogin;
   document.getElementById('auth-error').textContent = '';
+  // Điền danh sách tên vào dropdown
+  if(isReg){
+    const sel = document.getElementById('auth-name');
+    sel.innerHTML = '<option value="">-- Chọn tên của bạn --</option>' +
+      persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
+  }
 }
 
 function toggleAuthPass(){
@@ -978,20 +992,32 @@ function toggleAuthPass(){
   else { inp.type='password'; eye.textContent='👁'; }
 }
 
+function nameToRole(name){
+  if(name==='Dũng') return 'dung';
+  if(name==='Hiền') return 'hien';
+  if(name==='Trang') return 'trang';
+  return 'other';
+}
+
 async function doRegister(){
   const email   = document.getElementById('auth-email').value.trim();
   const pass    = document.getElementById('auth-pass').value;
   const confirm = document.getElementById('auth-pass-confirm').value;
+  const name    = document.getElementById('auth-name').value;
   const errEl   = document.getElementById('auth-error');
   const btn     = document.getElementById('auth-btn');
   errEl.style.color = 'var(--red)'; errEl.textContent = '';
+  if(!name){ errEl.textContent='Vui lòng chọn tên của bạn'; return; }
   if(!email||!pass){ errEl.textContent='Vui lòng nhập email và mật khẩu'; return; }
   if(pass.length < 6){ errEl.textContent='Mật khẩu tối thiểu 6 ký tự'; return; }
   if(pass !== confirm){ errEl.textContent='Mật khẩu nhập lại không khớp'; return; }
   btn.disabled = true; btn.textContent = '⏳ Đang đăng ký...';
   try {
-    await firebase.auth().createUserWithEmailAndPassword(email, pass);
-    // onAuthStateChanged sẽ xử lý tiếp → hiện màn chọn vai trò
+    const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
+    const role = nameToRole(name);
+    // Lưu tên + role vào Firebase theo UID
+    await db.ref('duyetchi/userRoles/'+cred.user.uid).set({ role, name });
+    // onAuthStateChanged sẽ setRole tiếp
   } catch(e) {
     let msg = 'Đăng ký thất bại';
     if(e.code==='auth/email-already-in-use') msg='Email này đã được đăng ký';
@@ -1039,37 +1065,43 @@ async function doForgotPass(){
 
 async function pickRole(role){
   if(!currentUser) return;
-  await db.ref('duyetchi/userRoles/'+currentUser.uid).set(role);
+  const name = ROLES[role]?.label || '';
+  currentUserName = name;
+  await db.ref('duyetchi/userRoles/'+currentUser.uid).set({ role, name });
   document.getElementById('role-pick-screen').style.display='none';
   setRole(role);
 }
+
+let currentUserName = ''; // tên người dùng theo danh sách persons
 
 function initAuth(){
   firebase.auth().onAuthStateChanged(async user=>{
     if(user){
       currentUser = user;
-      // Lấy role từ Firebase
       const snap = await db.ref('duyetchi/userRoles/'+user.uid).get();
       if(snap.exists()){
+        const val = snap.val();
+        // Hỗ trợ cả cấu trúc cũ (string) và mới ({ role, name })
+        const role = typeof val === 'string' ? val : val.role;
+        currentUserName = typeof val === 'object' && val.name ? val.name : '';
         document.getElementById('role-screen').style.display='none';
         document.getElementById('role-pick-screen').style.display='none';
-        setRole(snap.val());
+        setRole(role);
       } else {
-        // Lần đầu đăng nhập — chọn vai trò
+        // Chưa có role → hiện màn chọn vai trò (fallback)
         document.getElementById('role-screen').style.display='none';
         document.getElementById('role-pick-screen').style.display='flex';
       }
     } else {
       currentUser = null;
       currentRole = '';
+      currentUserName = '';
       document.getElementById('role-screen').style.display='flex';
       document.getElementById('role-pick-screen').style.display='none';
-      // Reset auth form
       const btn = document.getElementById('auth-btn');
       if(btn){ btn.disabled=false; btn.textContent='Đăng nhập'; }
     }
   });
-  // Enter để đăng nhập
   document.getElementById('auth-pass').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
   document.getElementById('auth-email').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('auth-pass').focus(); });
 }
