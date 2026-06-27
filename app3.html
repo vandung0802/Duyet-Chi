@@ -1151,6 +1151,11 @@ function pushToFirebase(){
 }
 
 function initFirebaseSync(){
+  db.ref('.info/connected').on('value', snap=>{
+    const ok = snap.val() === true;
+    fbConnected = ok;
+    updateFbBadge(ok);
+  });
   const ref = db.ref('duyetchi');
   ref.on('value', (snapshot)=>{
     fbConnected = true; updateFbBadge(true);
@@ -1165,7 +1170,6 @@ function initFirebaseSync(){
       if(document.getElementById('page-settings').style.display!=='none') renderSettings();
       if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
       pushToFirebase();
-      setTimeout(()=>{ db.ref('duyetchi/proposals').set(null); db.ref('duyetchi/persons').set(null); db.ref('duyetchi/sites').set(null); db.ref('duyetchi/sheetUrl').set(null); db.ref('duyetchi/updatedAt').set(null); }, 2000);
       return;
     }
     if(data && (data.meta || data.proposals)){
