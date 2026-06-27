@@ -715,7 +715,7 @@ const firebaseConfig = {
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
 
-const APP_VERSION = '20260627-v14x';
+const APP_VERSION = '20260627-v14y';
 (function(){
   const KEY = 'app_ver_v14_' + APP_VERSION;
   if(!localStorage.getItem(KEY)){
@@ -1848,9 +1848,9 @@ function imgActionDelete(){
 // ══════════════════════════════════════════
 // IMAGE GALLERY / VIEWER
 // ══════════════════════════════════════════
-let modalImgList=[], modalImgIdx=0;
+let modalImgList=[], modalImgIdx=0, modalDeleteFn=null;
 function viewImg(src){
-  modalImgList=[src]; modalImgIdx=0;
+  modalImgList=[src]; modalImgIdx=0; modalDeleteFn=null;
   _openImgModal();
 }
 function openImg(id,type,idx){
@@ -1865,6 +1865,7 @@ function openImg(id,type,idx){
   }
   if(!imgs.length) return;
   modalImgList=imgs; modalImgIdx=Math.min(idx||0,imgs.length-1);
+  modalDeleteFn=type==='img'?(()=>{ removeZaloImage(id,modalImgIdx); closeImageModal(); }):null;
   _openImgModal();
 }
 function _openImgModal(){
@@ -1877,7 +1878,7 @@ function _openImgModal(){
   if(prev) prev.style.display=modalImgList.length>1?'flex':'none';
   if(next) next.style.display=modalImgList.length>1?'flex':'none';
   m.classList.add('open');
-  attachLongPress(mi, ()=>modalImgList[modalImgIdx], null);
+  attachLongPress(mi, ()=>modalImgList[modalImgIdx], modalDeleteFn?()=>modalDeleteFn:null);
 }
 function navModalImg(e,dir){
   e.stopPropagation();
