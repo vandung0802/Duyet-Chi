@@ -643,16 +643,14 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <button onclick="doUpdateRole()" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">Cập nhật</button>
         </div>
       </details>
-      <details style="margin-bottom:6px">
-        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Đổi mật khẩu</summary>
-        <div style="margin-top:10px">
-          <input type="password" id="chpw-old" class="form-input" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px;font-size:14px">
-          <input type="password" id="chpw-new" class="form-input" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" style="margin-bottom:8px;font-size:14px">
-          <input type="password" id="chpw-confirm" class="form-input" placeholder="Nhập lại mật khẩu mới" style="margin-bottom:8px;font-size:14px">
-          <div id="chpw-msg" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
-          <button onclick="doChangePassword()" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">Đổi mật khẩu</button>
-        </div>
-      </details>
+      <div style="border-top:1px solid var(--gray-border);padding-top:12px;margin-top:4px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔑 Đổi mật khẩu</div>
+        <input type="password" id="chpw-old" class="form-input" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px;font-size:14px">
+        <input type="password" id="chpw-new" class="form-input" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" style="margin-bottom:8px;font-size:14px">
+        <input type="password" id="chpw-confirm" class="form-input" placeholder="Nhập lại mật khẩu mới" style="margin-bottom:8px;font-size:14px">
+        <div id="chpw-msg" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
+        <button onclick="doChangePassword()" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">Đổi mật khẩu</button>
+      </div>
     </div>
   </div>
 
