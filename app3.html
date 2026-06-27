@@ -708,6 +708,7 @@ let currentUser = null;   // Firebase Auth user object
 let currentRole = '';     // 'dung' | 'hien' | 'trang' | 'other'
 let currentUserName = ''; // Tên hiển thị (vd: "Trang")
 let currentUserEmail = '';
+let isSigningUp = false;  // Flag tránh race condition khi đăng ký
 
 const TWO_DAYS_MS = 2 * 24 * 60 * 60 * 1000;
 
@@ -738,6 +739,9 @@ populateRegSelect();
 // Lắng nghe trạng thái đăng nhập
 auth.onAuthStateChanged(async user => {
   if(user){
+    // Đang trong quá trình đăng ký — chờ doSignUp ghi profile xong
+    if(isSigningUp) return;
+
     // Kiểm tra tự động đăng xuất sau 2 ngày
     const lastActive = parseInt(localStorage.getItem('dc_last_active')||'0');
     if(lastActive && Date.now() - lastActive > TWO_DAYS_MS){
@@ -881,24 +885,34 @@ async function doSignUp(){
 
   try {
     errEl.textContent = '⏳ Đang đăng ký...';
+    isSigningUp = true; // Chặn onAuthStateChanged xử lý sớm
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     const uid = cred.user.uid;
     const role = getRoleForName(name);
     const device = navigator.userAgent.substring(0,80);
 
-    // Ghi profile
+    // Ghi profile trước khi bỏ flag
     await db.ref('duyetchi/user-profiles/' + uid).set({
       name, role, email, registeredAt: Date.now(), device
     });
-    // Ghi name-to-uid index
     await db.ref('duyetchi/name-to-uid/' + nameKey).set(uid);
 
     localStorage.setItem('dc_last_active', Date.now().toString());
 
-    // Notify Dũng có người đăng ký mới
+    // Profile đã ghi xong — tự khởi động app
+    isSigningUp = false;
+    currentUser = cred.user;
+    currentUserName = name;
+    currentRole = role;
+    currentUserEmail = email;
+    writeLoginHistory(uid, name);
+    showApp();
+    initPresence(uid, name, role);
+    initFirebaseSync();
     sendPushNotif('🆕 Người dùng mới đăng ký', `${name} vừa đăng ký tài khoản`, ['dung']);
 
   } catch(e){
+    isSigningUp = false;
     document.getElementById('su-error').textContent = translateAuthError(e.code);
   }
 }
