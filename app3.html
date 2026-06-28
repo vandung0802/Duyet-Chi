@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="theme-color" content="#1a56db">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -46,8 +46,8 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .stat-box.active{border-color:var(--blue);background:var(--blue-light)}
 .stat-row{display:flex;align-items:baseline;justify-content:center;gap:3px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
 .stat-val{font-size:13px;font-weight:800;line-height:1.1;white-space:nowrap;flex-shrink:0}
-.stat-lbl{font-size:8px;color:var(--text-sub);font-weight:600;white-space:nowrap}
-.stat-amt{font-size:7px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-lbl{font-size:8px;color:var(--text);font-weight:700;white-space:nowrap}
+.stat-amt{font-size:7px;color:#374151;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Badge */
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
@@ -82,7 +82,8 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .proposal-img{width:100%;max-height:160px;object-fit:cover;border-top:1px solid var(--gray-border);cursor:pointer;display:block}
 .proof-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:4px;padding:6px;border-top:1px solid var(--gray-border);background:#fafafa}
 .proof-thumb{position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;border:1px solid var(--gray-border)}
-.proof-thumb img{width:100%;height:100%;object-fit:cover;cursor:pointer;display:block;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.proof-thumb img{width:100%;height:100%;object-fit:cover;cursor:pointer;display:block;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;draggable:false}
+.proof-thumb{-webkit-user-select:none;user-select:none}
 .proposal-note{font-size:14px;font-weight:600;color:var(--text);margin-top:5px;background:var(--gray-light);padding:5px 8px;border-radius:6px;line-height:1.5;white-space:pre-wrap;word-break:break-word;overflow-wrap:break-word}
 .proposal-timeline{font-size:9.5px;color:var(--text-sub);padding:4px 10px;background:#fafafa;border-top:1px solid var(--gray-border);font-weight:600}
 .proposal-timeline-inline{font-size:9.5px;color:var(--text-sub);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
@@ -103,7 +104,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .approve-row{display:flex;gap:3px;padding:5px 6px;border-top:1px solid var(--gray-border);background:#f9fafb;align-items:stretch}
 .approve-row .approve-box{flex:1 1 0%;min-width:0}
 .ab-del-mini{flex:0 0 auto;width:20px;min-width:20px;max-width:20px;padding:0;background:#fff;border:1.5px solid var(--gray-border);border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-sub);box-sizing:border-box}
-.approve-box{border:1.5px solid var(--gray-border);border-radius:7px;padding:3px;display:flex;align-items:center;justify-content:center;background:#fff;min-height:30px}
+.approve-box{border:1.5px solid var(--gray-border);border-radius:7px;padding:2px;display:flex;align-items:center;justify-content:center;background:#fff;min-height:22px}
 .approve-box.done{border-color:var(--red);background:#fff0f0}
 .approve-avatar{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
 .av-d{background:var(--blue)}
@@ -111,7 +112,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .approve-box.done .approve-avatar{background:var(--red)!important}
 .ab-flat{display:flex;align-items:center;gap:4px;width:100%;justify-content:center}
 .ab-flat-locked{color:#d1d5db;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;width:100%}
-.ab-btn{font-size:9.5px;padding:6px 1px;border-radius:5px;border:none;cursor:pointer;font-weight:800;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1px;white-space:nowrap;overflow:hidden}
+.ab-btn{font-size:9.5px;padding:4px 1px;border-radius:5px;border:none;cursor:pointer;font-weight:800;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1px;white-space:nowrap;overflow:hidden}
 .ab-prev-info{font-size:7.2px;font-weight:600;opacity:.85;white-space:normal;line-height:1.15;word-break:break-word}
 .ab-btn-tight{font-size:8px;letter-spacing:-0.2px;white-space:normal;line-height:1.15;word-break:break-word;overflow:visible}
 .ab-btn-approve{background:var(--blue);color:#fff}
@@ -443,6 +444,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div style="font-size:10px;opacity:.8;margin-top:1px" id="header-date">Thứ Tư, 17/06/2026</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
+    <button onclick="location.reload(true)" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:32px;height:32px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Tải lại">🔄</button>
     <div style="position:relative;display:inline-flex">
       <button id="notif-bell" onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative" title="Thông báo">🔔</button>
       <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
@@ -850,7 +852,7 @@ function attachLongPress(el, getSrc, getDeleteFn){
   // Nếu vừa kích hoạt menu nhấn giữ, chặn sự kiện click/touchend lan ra ngoài
   // để không trigger các onclick khác trên phần tử cha (ví dụ closeImgModal, openImg).
   const stopIfFired = (e)=>{ if(fired){ e.preventDefault(); e.stopPropagation(); } };
-  el.addEventListener('touchstart', start, {passive:true});
+  el.addEventListener('touchstart', (e)=>{ e.preventDefault(); start(e); }, {passive:false});
   el.addEventListener('touchmove', move, {passive:true});
   el.addEventListener('touchend', (e)=>{ cancel(); stopIfFired(e); });
   el.addEventListener('touchcancel', cancel);
@@ -859,7 +861,7 @@ function attachLongPress(el, getSrc, getDeleteFn){
   el.addEventListener('mouseup', (e)=>{ cancel(); stopIfFired(e); });
   el.addEventListener('mouseleave', cancel);
   el.addEventListener('click', (e)=>{ if(fired){ e.preventDefault(); e.stopPropagation(); } }, true);
-  el.addEventListener('contextmenu', (e)=>{ e.preventDefault(); }); // chặn menu chuột phải mặc định trên máy tính
+  el.addEventListener('contextmenu', (e)=>{ e.preventDefault(); e.stopPropagation(); });
 }
 
 function showImgActionMenu(src, deleteFn){
@@ -1017,9 +1019,10 @@ function toggleAuthPass(){
 }
 
 function nameToRole(name){
-  if(name==='Dũng') return 'dung';
-  if(name==='Hiền') return 'hien';
-  if(name==='Trang') return 'trang';
+  const n=(name||'').normalize('NFC').trim();
+  if(n==='Dũng') return 'dung';
+  if(n==='Hiền') return 'hien';
+  if(n==='Trang') return 'trang';
   return 'other';
 }
 
@@ -1096,8 +1099,15 @@ function initAuth(){
       currentUser = user;
       const snap = await db.ref('duyetchi/userRoles/'+user.uid).get();
       const role_val = snap.exists() ? snap.val() : null;
-      const role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
+      let role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
       currentUserName = (role_val && typeof role_val === 'object' && role_val.name) ? role_val.name : '';
+      // Fallback: nếu không có role trong DB, map theo email
+      if(!role || role==='other'){
+        const em = (user.email||'').toLowerCase();
+        if(em==='vandung0802@gmail.com') role='dung';
+        else if(em==='hiensbgt@gmail.com') role='hien';
+        else if(em.includes('trang')) role='trang';
+      }
       document.getElementById('role-screen').style.display='none';
       if(role){
         setRole(role);
@@ -1140,8 +1150,7 @@ function checkNotifBanner() {
 function setRole(role){
   currentRole = role;
   const r = ROLES[role]||ROLES.other;
-  const emailLabel = currentUser ? `<span style="font-size:9px;opacity:.75;margin-left:2px">(${currentUser.email})</span>` : '';
-  document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}${emailLabel}`;
+  document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}`;
   document.getElementById('role-screen').style.display='none';
   // Đăng ký FCM nếu đã có quyền
   if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
@@ -1477,7 +1486,7 @@ function fmtAmountInput(el){
   const diff=formatted.length-oldLen;
   try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
 }
-function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+'&nbsp;đ':'—'}
+function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ':'—'}
 // Chuyển đổi dữ liệu cũ (đơn vị triệu) sang đồng — chỉ chạy 1 lần
 function migrateAmountsToVND(){
   let changed=false;
@@ -1653,7 +1662,7 @@ function closeNotifAndGo(id){
 function matchFilter(p, f){
   switch(f){
     case 'all': return true;
-    case 'pending': return p.status==='pending';
+    case 'pending': return (p.status==='pending')||(p.status==='approved'&&!(!!p.approvedD&&!!p.approvedH));
     case 'd_only': return !!p.approvedD && !p.approvedH && p.status!=='rejected';
     case 'h_only': return !!p.approvedH && !p.approvedD && p.status!=='rejected';
     case 'approved': return !!p.approvedD && !!p.approvedH && p.status!=='rejected'&&p.status!=='transferred';
@@ -1673,7 +1682,7 @@ function renderStats(){
     const elVal = document.getElementById('st-'+key);
     const elAmt = document.getElementById('st-'+key+'-amt');
     if(elVal) elVal.textContent = items.length;
-    if(elAmt) elAmt.textContent = items.length ? fmtVND(sum) : '—';
+    if(elAmt) elAmt.innerHTML = items.length ? fmtVND(sum) : '—';
   });
 }
 
@@ -1911,10 +1920,12 @@ function renderBtnReject(p){
     return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><div class="ab-done-btn" style="color:var(--red)">${inner}</div></div>`;
   }
 
+  if(canRejectD && canRejectH)
+    return `<div class="approve-box ab-done-box" style="border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D, H</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
   if(canRejectD)
-    return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${p.id}','D')"><span style="color:var(--red)">D</span> ✕ Từ chối</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
   if(canRejectH)
-    return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${p.id}','H')"><span style="color:#7c3aed">H</span> ✕ Từ chối</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">—</div></div>`;
 }
 function renderBtnTransfer(p){
