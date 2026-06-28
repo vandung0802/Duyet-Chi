@@ -3086,7 +3086,7 @@ function renderExcelTable(containerId, items, kind){
       <td style="text-align:right;font-size:10px;line-height:1.3;vertical-align:middle">${amtLabel}</td>
       <td style="font-size:9px;color:var(--text-sub);white-space:normal;word-break:normal;vertical-align:middle">${p.person||'—'}</td>
       <td style="word-break:normal;font-size:9px;color:var(--text-sub);vertical-align:middle">${(p.site||'—').replace('CT ','')}</td>
-      ${kind==='pending'?`<td style="text-align:right;vertical-align:middle;padding:4px 2px">${dCell}</td><td style="text-align:right;vertical-align:middle;padding:4px 2px">${hCell}</td><td style="text-align:center;vertical-align:middle;padding:4px 2px;white-space:nowrap">${prCell}</td>`:''}
+      ${kind==='pending'?`<td style="text-align:right;vertical-align:middle;padding:4px 2px">${dCell}</td><td style="text-align:right;vertical-align:middle;padding:4px 2px">${hCell}</td><td style="text-align:center;vertical-align:middle;padding:4px 2px">${prCell}</td>`:''}
       <td style="font-size:9px;text-align:center;color:var(--text-sub);vertical-align:middle">${dateCol}</td>
     </tr>`;
   }).join('');
