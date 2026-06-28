@@ -215,9 +215,12 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 
 /* Excel-like table */
 .excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.excel-table{width:100%;border-collapse:collapse;font-size:11px;border:1.5px solid #b0b8c9;table-layout:fixed}
-.excel-table th{background:var(--blue);color:#fff;padding:6px 4px;text-align:left;font-weight:700;white-space:nowrap;position:sticky;top:0;border-right:1px solid rgba(255,255,255,0.25);overflow:hidden;font-size:10px}
-.excel-table td{padding:5px 4px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;vertical-align:top}
+.excel-table{width:100%;border-collapse:collapse;font-size:11px;min-width:560px;border:1.5px solid #b0b8c9}
+.excel-table th{background:var(--blue);color:#fff;padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;position:sticky;top:0;border-right:1px solid rgba(255,255,255,0.25)}
+.excel-table td{padding:7px 6px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;white-space:nowrap}
+.excel-table-fixed{min-width:unset;table-layout:fixed}
+.excel-table-fixed th{padding:6px 4px;overflow:hidden;font-size:10px}
+.excel-table-fixed td{padding:5px 4px;white-space:normal;vertical-align:middle}
 .excel-table tr:nth-child(even) td{background:#f4f6fa}
 .excel-table tr:hover td{background:#e8f0fe}
 .excel-table .col-amount{text-align:right;font-weight:700;color:var(--blue)}
@@ -3083,7 +3086,7 @@ function renderExcelTable(containerId, items, kind){
   const colsDone    = `<colgroup><col style="width:auto"><col style="width:82px"><col style="width:40px"><col style="width:52px"><col style="width:28px"></colgroup>`;
   el.innerHTML = `
     <div class="excel-table-wrap">
-      <table class="excel-table">
+      <table class="excel-table excel-table-fixed">
         ${kind==='pending'?colsPending:colsDone}
         <thead><tr>
           <th>Tên đề xuất</th><th style="text-align:right">${kind==='done'?'Đã chuyển':'Còn chuyển'}</th><th style="text-align:center">Người</th><th style="text-align:center">CT</th>
