@@ -1473,7 +1473,7 @@ function fmtAmountInput(el){
   const diff=formatted.length-oldLen;
   try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
 }
-function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ':'—'}
+function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+'&nbsp;đ':'—'}
 // Chuyển đổi dữ liệu cũ (đơn vị triệu) sang đồng — chỉ chạy 1 lần
 function migrateAmountsToVND(){
   let changed=false;
@@ -3012,29 +3012,41 @@ function renderReportList(){
     const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmtVND(dAmt):'');
     const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmtVND(hAmt):'');
     const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmtVND(trans):'');
-    const cellBase = 'style="vertical-align:top;white-space:normal;line-height:1.5"';
+    const cellBase = 'style="vertical-align:middle;white-space:normal;line-height:1.5"';
     const prv2 = p.priority||'normal';
     const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
     return `<tr>
-      <td style="vertical-align:top;text-align:center">${sorted.length-i}</td>
-      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;max-width:120px;font-size:10px;font-weight:700">${p.desc}</td>
-      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:10px">${p.person||'—'}</td>
-      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount" style="vertical-align:top">${fmtVND(p.amount)}</td>
-      <td style="vertical-align:top;text-align:center;font-size:14px">${prCell2}</td>
-      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--blue)">${dHist}</td>
-      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:#7c3aed">${hHist}</td>
-      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--yellow)">${tHist}</td>
-      <td style="vertical-align:top"><span class="badge ${st.badge}" style="font-size:8px;padding:1px 5px">${st.icon}</span></td>
-      <td ${cellBase} style="vertical-align:top;white-space:normal;line-height:1.5;font-size:9px;color:var(--red)">${rejStr}</td>
+      <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
+      <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${p.desc}</td>
+      <td ${cellBase} style="font-size:10px">${p.person||'—'}</td>
+      <td ${cellBase} style="font-size:9px">${p.site||'—'}</td>
+      <td class="col-amount" style="vertical-align:middle;white-space:nowrap">${fmtVND(p.amount)}</td>
+      <td style="vertical-align:middle;text-align:center;font-size:14px">${prCell2}</td>
+      <td ${cellBase} style="font-size:9px;color:var(--blue);white-space:nowrap">${dHist}</td>
+      <td ${cellBase} style="font-size:9px;color:#7c3aed;white-space:nowrap">${hHist}</td>
+      <td ${cellBase} style="font-size:9px;color:var(--yellow);white-space:nowrap">${tHist}</td>
+      <td style="vertical-align:middle"><span class="badge ${st.badge}" style="font-size:8px;padding:1px 5px">${st.icon}</span></td>
+      <td ${cellBase} style="font-size:9px;color:var(--red)">${rejStr}</td>
     </tr>`;
   }).join('');
   const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const totalTrans = fp.reduce((a,p)=>a+getTotalTransferred(p),0);
-  el.innerHTML=`<div class="excel-table-wrap"><table class="excel-table">
+  el.innerHTML=`
+  <div id="list-scroll-top" style="overflow-x:auto;height:14px;margin-bottom:1px"><div id="list-scroll-spacer" style="height:1px"></div></div>
+  <div class="excel-table-wrap" id="list-scroll-main"><table class="excel-table">
     <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
   <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtVND(total)}</span><span>Đã chuyển: ${fmtVND(totalTrans)}</span></div>`;
+  // Sync dual scrollbar
+  requestAnimationFrame(()=>{
+    const top=document.getElementById('list-scroll-top');
+    const main=document.getElementById('list-scroll-main');
+    const spacer=document.getElementById('list-scroll-spacer');
+    if(!top||!main||!spacer) return;
+    spacer.style.width=main.scrollWidth+'px';
+    top.addEventListener('scroll',()=>{main.scrollLeft=top.scrollLeft;},{passive:true});
+    main.addEventListener('scroll',()=>{top.scrollLeft=main.scrollLeft;},{passive:true});
+  });
 }
 
 function renderExcelTable(containerId, items, kind){
