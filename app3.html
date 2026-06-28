@@ -3094,7 +3094,7 @@ function renderExcelTable(containerId, items, kind){
   const totalTransferred = kind==='done'
     ? sorted.reduce((a,p)=>a+getTotalTransferred(p),0)
     : sorted.reduce((a,p)=>{ const approved=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0; return a+(approved-getTotalTransferred(p)); },0);
-  const colsPending = `<colgroup><col style="width:auto"><col style="width:76px"><col style="width:34px"><col style="width:34px"><col style="width:68px"><col style="width:68px"><col style="width:40px"><col style="width:22px"></colgroup>`;
+  const colsPending = `<colgroup><col style="width:auto"><col style="width:76px"><col style="width:34px"><col style="width:30px"><col style="width:68px"><col style="width:68px"><col style="width:36px"><col style="width:30px"></colgroup>`;
   const colsDone    = `<colgroup><col style="width:auto"><col style="width:82px"><col style="width:40px"><col style="width:52px"><col style="width:28px"></colgroup>`;
   el.innerHTML = `
     <div class="excel-table-wrap">
