@@ -3147,7 +3147,7 @@ function renderReportSummary(){
   </div>` : ''}`;
 
   // Hàm tạo bảng nhóm
-  const makeTable = (title, color, bg, list, showRej) => {
+  const makeTable = (title, color, bg, list, showRej, amtFn) => {
     if(!list.length) return '';
     const rows = list.map(p=>{
       const trans = getTotalTransferred(p);
@@ -3179,9 +3179,11 @@ function renderReportSummary(){
         ${showRej?`<td class="col-rej">${rejStr||'—'}</td>`:''}
       </tr>`;
     }).join('');
-    const groupTotal = showRej
-      ? list.reduce((a,p)=>a+(parseFloat(p.amount)||0),0)
-      : list.reduce((a,p)=>a+getTotalTransferred(p),0);
+    const groupTotal = amtFn
+      ? list.reduce((a,p)=>a+(amtFn(p)||0),0)
+      : showRej
+        ? list.reduce((a,p)=>a+(parseFloat(p.amount)||0),0)
+        : list.reduce((a,p)=>a+getTotalTransferred(p),0);
     return `
     <div style="padding:0 12px 12px">
       <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtVND(groupTotal)}</div>
@@ -3195,9 +3197,9 @@ function renderReportSummary(){
   };
 
   el.innerHTML = statCards
-    + makeTable('💸 Đã chuyển tiền', '#16a34a', '#f0fdf4', hasTrans, false)
-    + makeTable('✅ Đã duyệt · chờ chuyển', '#d97706', '#fffbeb', appd, false)
-    + makeTable('⏳ Chờ duyệt', '#9333ea', '#fdf4ff', pend, false)
+    + makeTable('💸 Đã chuyển tiền', '#16a34a', '#f0fdf4', hasTrans, false, p=>getTotalTransferred(p))
+    + makeTable('✅ Đã duyệt · chờ chuyển', '#d97706', '#fffbeb', appd, false, p=>(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p))
+    + makeTable('⏳ Chờ duyệt', '#9333ea', '#fdf4ff', pend, false, p=>parseFloat(p.amount)||0)
     + makeTable('❌ Từ chối', '#dc2626', '#fff1f2', rej, true);
 }
 
