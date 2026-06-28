@@ -1,3 +1,12 @@
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', event => {
+  event.waitUntil(self.clients.claim().then(() => {
+    return self.clients.matchAll({ type: 'window' }).then(all => {
+      all.forEach(c => c.postMessage('SW_RELOAD'));
+    });
+  }));
+});
+
 self.addEventListener('push', function(event) {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch(e) {}
