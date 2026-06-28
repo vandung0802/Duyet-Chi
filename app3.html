@@ -3064,17 +3064,17 @@ function renderExcelTable(containerId, items, kind){
         ? `<span style="font-weight:700;white-space:nowrap">${fmtVND(remaining)}</span><br><span style="font-size:9px;color:var(--red);font-weight:600;white-space:nowrap">⚠ đã ck ${fmtShort(transferred)}</span>`
         : `<span style="white-space:nowrap">${fmtVND(p.amount)}</span>`;
     const prv = p.priority||'normal';
-    const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
+    const prCell = prv==='urgent'?'<span style="color:#b00000;font-weight:800;white-space:nowrap;font-size:8px">🔴 Gấp</span>':prv==='low'?'<span style="color:#1a7a3c;font-size:8px;white-space:nowrap">🟢 Chờ</span>':'🟡';
     const dAmt = parseFloat(p.approvedDAmount)||0;
     const hAmt = parseFloat(p.approvedHAmount)||0;
-    const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700;white-space:nowrap">${fmtShort(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
-    const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;white-space:nowrap">${fmtShort(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
+    const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700;white-space:nowrap;font-size:8px">${fmtVND(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
+    const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;white-space:nowrap;font-size:8px">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     return `<tr>
-      <td style="word-break:break-word;font-weight:600;font-size:10px;line-height:1.3;vertical-align:middle">${p.desc}</td>
+      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${p.desc}</td>
       <td style="text-align:right;font-size:10px;line-height:1.3;vertical-align:middle">${amtLabel}</td>
       <td style="font-size:9px;color:var(--text-sub);word-break:break-word;vertical-align:middle">${p.person||'—'}</td>
       <td style="word-break:break-word;font-size:9px;color:var(--text-sub);vertical-align:middle">${(p.site||'—').replace('CT ','')}</td>
-      ${kind==='pending'?`<td style="text-align:center;font-size:9px;vertical-align:middle">${dCell}</td><td style="text-align:center;font-size:9px;vertical-align:middle">${hCell}</td><td style="text-align:center;font-size:13px;vertical-align:middle">${prCell}</td>`:''}
+      ${kind==='pending'?`<td style="text-align:right;vertical-align:middle;padding:4px 2px">${dCell}</td><td style="text-align:right;vertical-align:middle;padding:4px 2px">${hCell}</td><td style="text-align:center;vertical-align:middle;padding:4px 2px">${prCell}</td>`:''}
       <td style="font-size:9px;text-align:center;color:var(--text-sub);vertical-align:middle">${dateCol}</td>
     </tr>`;
   }).join('');
@@ -3082,7 +3082,7 @@ function renderExcelTable(containerId, items, kind){
   const totalTransferred = kind==='done'
     ? sorted.reduce((a,p)=>a+getTotalTransferred(p),0)
     : sorted.reduce((a,p)=>{ const approved=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0; return a+(approved-getTotalTransferred(p)); },0);
-  const colsPending = `<colgroup><col style="width:auto"><col style="width:82px"><col style="width:36px"><col style="width:44px"><col style="width:40px"><col style="width:40px"><col style="width:22px"><col style="width:26px"></colgroup>`;
+  const colsPending = `<colgroup><col style="width:auto"><col style="width:78px"><col style="width:30px"><col style="width:38px"><col style="width:62px"><col style="width:62px"><col style="width:32px"><col style="width:22px"></colgroup>`;
   const colsDone    = `<colgroup><col style="width:auto"><col style="width:82px"><col style="width:40px"><col style="width:52px"><col style="width:28px"></colgroup>`;
   el.innerHTML = `
     <div class="excel-table-wrap">
