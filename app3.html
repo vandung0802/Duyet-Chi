@@ -215,9 +215,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 
 /* Excel-like table */
 .excel-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.excel-table{width:100%;border-collapse:collapse;font-size:11px;min-width:560px;border:1.5px solid #b0b8c9}
-.excel-table th{background:var(--blue);color:#fff;padding:8px 6px;text-align:left;font-weight:700;white-space:nowrap;position:sticky;top:0;border-right:1px solid rgba(255,255,255,0.25)}
-.excel-table td{padding:7px 6px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;white-space:nowrap}
+.excel-table{width:100%;border-collapse:collapse;font-size:11px;border:1.5px solid #b0b8c9;table-layout:fixed}
+.excel-table th{background:var(--blue);color:#fff;padding:6px 4px;text-align:left;font-weight:700;white-space:nowrap;position:sticky;top:0;border-right:1px solid rgba(255,255,255,0.25);overflow:hidden;font-size:10px}
+.excel-table td{padding:5px 4px;border-bottom:1px solid #d0d7e3;border-right:1px solid #e2e8f0;vertical-align:top}
 .excel-table tr:nth-child(even) td{background:#f4f6fa}
 .excel-table tr:hover td{background:#e8f0fe}
 .excel-table .col-amount{text-align:right;font-weight:700;color:var(--blue)}
@@ -3052,9 +3052,8 @@ function renderExcelTable(containerId, items, kind){
     const transferred = getTotalTransferred(p);
     const remaining = (getOfficialApprovedAmount(p)||parseFloat(p.amount)||0) - transferred;
     const lastTs = getLastTransferTs(p);
-    const dateCol = kind==='done'
-      ? (lastTs ? fmtFull(lastTs) : '—')
-      : new Date(p.ts).toLocaleDateString('vi-VN');
+    const d = kind==='done' ? new Date(lastTs||0) : new Date(p.ts);
+    const dateCol = lastTs||p.ts ? `${d.getDate()}/${d.getMonth()+1}` : '—';
     const amtLabel = kind==='done'
       ? `<span style="color:var(--yellow);font-weight:700">${fmtVND(transferred)}</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub)">còn ${fmtVND(remaining)}</span>`:''}`
       : transferred>0.001
@@ -3067,25 +3066,28 @@ function renderExcelTable(containerId, items, kind){
     const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700">${fmtVND(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
     const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">Chưa</span>') : '';
     return `<tr>
-      <td style="white-space:normal;word-break:break-word;font-weight:600">${p.desc}</td>
-      <td class="col-amount">${amtLabel}</td>
-      <td style="white-space:nowrap;font-size:10px">${p.person||'—'}</td>
-      <td style="white-space:normal;word-break:break-word;font-size:10px">${(p.site||'—').replace('CT ','')}</td>
-      ${kind==='pending'?`<td style="text-align:center;font-size:10px;white-space:normal">${dCell}</td><td style="text-align:center;font-size:10px;white-space:normal">${hCell}</td><td style="text-align:center">${prCell}</td>`:''}
-      <td style="font-size:10px;white-space:nowrap">${dateCol}</td>
+      <td style="word-break:break-word;font-weight:600;font-size:10px;line-height:1.3">${p.desc}</td>
+      <td class="col-amount" style="text-align:right;font-size:10px;line-height:1.3">${amtLabel}</td>
+      <td style="font-size:9px;color:var(--text-sub);word-break:break-word">${p.person||'—'}</td>
+      <td style="word-break:break-word;font-size:9px;color:var(--text-sub)">${(p.site||'—').replace('CT ','')}</td>
+      ${kind==='pending'?`<td style="text-align:center;font-size:9px">${dCell}</td><td style="text-align:center;font-size:9px">${hCell}</td><td style="text-align:center;font-size:11px">${prCell}</td>`:''}
+      <td style="font-size:9px;text-align:center;color:var(--text-sub)">${dateCol}</td>
     </tr>`;
   }).join('');
 
   const totalTransferred = kind==='done'
     ? sorted.reduce((a,p)=>a+getTotalTransferred(p),0)
     : sorted.reduce((a,p)=>{ const approved=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0; return a+(approved-getTotalTransferred(p)); },0);
+  const colsPending = `<colgroup><col style="width:auto"><col style="width:70px"><col style="width:38px"><col style="width:46px"><col style="width:46px"><col style="width:46px"><col style="width:22px"><col style="width:26px"></colgroup>`;
+  const colsDone    = `<colgroup><col style="width:auto"><col style="width:76px"><col style="width:42px"><col style="width:52px"><col style="width:30px"></colgroup>`;
   el.innerHTML = `
     <div class="excel-table-wrap">
       <table class="excel-table">
+        ${kind==='pending'?colsPending:colsDone}
         <thead><tr>
-          <th>Tên đề xuất</th><th>${kind==='done'?'Đã chuyển':'Còn chuyển'}</th><th>Người</th><th>CT</th>
-          ${kind==='pending'?'<th>D duyệt</th><th>H duyệt</th><th>Mức</th>':''}
-          <th>${kind==='done'?'Ngày chuyển':'Ngày tạo'}</th>
+          <th>Tên đề xuất</th><th style="text-align:right">${kind==='done'?'Đã chuyển':'Còn chuyển'}</th><th>Người</th><th>CT</th>
+          ${kind==='pending'?'<th style="text-align:center">D</th><th style="text-align:center">H</th><th style="text-align:center">Mức</th>':''}
+          <th style="text-align:center">${kind==='done'?'Ngày CK':'Ngày'}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
