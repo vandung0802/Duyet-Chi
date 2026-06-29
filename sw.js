@@ -45,7 +45,10 @@ self.addEventListener('notificationclick', function(event) {
 self.addEventListener('message', function(event) {
   if (event.data === 'CLEAR_BADGE') {
     if (navigator.clearAppBadge) navigator.clearAppBadge();
+    // Đóng hết notification đang hiện
+    self.registration.getNotifications().then(notifs => notifs.forEach(n => n.close()));
   }
+  if (event.data === 'SW_RELOAD') return; // handled in app
   if (event.data && event.data.type === 'SET_BADGE') {
     const n = event.data.count || 0;
     if (n > 0) { if (navigator.setAppBadge) navigator.setAppBadge(n); }
