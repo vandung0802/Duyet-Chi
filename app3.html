@@ -805,7 +805,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v20';
+const APP_VERSION = '20260630-v21';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2325,8 +2325,8 @@ function remindApprove(id){
   if(!canRemind(p)){ showToast('Phiếu đã được D và H duyệt — không cần giục'); return; }
   p.remindCount = (p.remindCount||1) + 1;
   p.lastRemindAt = Date.now();
-  // Giữ nguyên ghi chú cũ, cập nhật đuôi "{người đề xuất}: Đề xuất lại lần N"
-  const who = p.person || getCurrentUserName() || '';
+  // Giữ nguyên ghi chú cũ, cập nhật đuôi "{người đang bấm giục}: Đề xuất lại lần N"
+  const who = getCurrentUserName() || p.person || '';
   const base = (p.note||'').replace(/\s*\(?[^()]*?Đề xuất lại lần \d+\)?\s*$/,'').trim();
   const tag = (who ? who + ': ' : '') + 'Đề xuất lại lần ' + p.remindCount;
   p.note = base ? (base + ' (' + tag + ')') : tag;
