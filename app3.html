@@ -805,7 +805,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v22';
+const APP_VERSION = '20260630-v23';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2312,6 +2312,16 @@ function canRemind(p){
   const hDone = (parseFloat(p.approvedHAmount)||0) > 0;
   return !(dDone && hDone);
 }
+// Nhãn cho báo cáo: "{tên người bấm}: đã đề xuất lần N" (chỉ phiếu bị giục & chưa duyệt xong)
+function remindReportLabel(p){
+  if(!((p.remindCount||0)>1 && canRemind(p))) return '';
+  let who = p.remindBy || '';
+  if(!who && p.note){
+    const m = p.note.match(/([^():]+?):\s*Đề xuất lại lần \d+\)?\s*$/);
+    if(m) who = m[1].trim();
+  }
+  return (who ? who + ': ' : '') + 'đã đề xuất lần ' + p.remindCount;
+}
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
   // Nút trắng bình thường như ✏️/🗑; 3 nút 🔁/✏️/🗑 chia đều bằng nhau (flex:0.6). Số lần đã có ở ghi chú + badge.
@@ -2327,6 +2337,7 @@ function remindApprove(id){
   p.lastRemindAt = Date.now();
   // Giữ nguyên ghi chú cũ, cập nhật đuôi "{người đang bấm giục}: Đề xuất lại lần N"
   const who = getCurrentUserName() || p.person || '';
+  p.remindBy = who; // lưu tên người bấm giục gần nhất để báo cáo hiển thị
   const base = (p.note||'').replace(/\s*\(?[^()]*?Đề xuất lại lần \d+\)?\s*$/,'').trim();
   const tag = (who ? who + ': ' : '') + 'Đề xuất lại lần ' + p.remindCount;
   p.note = base ? (base + ' (' + tag + ')') : tag;
@@ -3516,7 +3527,7 @@ function renderReportList(){
     const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
-      <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${p.desc}${((p.remindCount||0)>1 && canRemind(p))?` <span style="display:inline-block;font-size:8px;font-weight:700;color:var(--blue-dark);background:var(--blue-light);padding:0 4px;border-radius:7px;white-space:nowrap">🔔 lần ${p.remindCount}</span>`:''}</td>
+      <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}</td>
       <td ${cellBase} style="font-size:10px">${p.person||'—'}</td>
       <td ${cellBase} style="font-size:9px">${p.site||'—'}</td>
       <td class="col-amount" style="vertical-align:middle;white-space:nowrap">${fmtVND(p.amount)}</td>
@@ -3584,7 +3595,7 @@ function renderExcelTable(containerId, items, kind){
     const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;font-size:10px;word-break:normal">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
-      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${p.desc}${((p.remindCount||0)>1 && canRemind(p))?` <span style="display:inline-block;font-size:8px;font-weight:700;color:var(--blue-dark);background:var(--blue-light);padding:0 4px;border-radius:7px;white-space:nowrap">🔔 lần ${p.remindCount}</span>`:''}</td>
+      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}</td>
       <td style="text-align:right;font-size:10px;line-height:1.3;vertical-align:middle">${amtLabel}</td>
       <td style="font-size:9px;color:var(--text-sub);white-space:normal;word-break:normal;vertical-align:middle">${p.person||'—'}</td>
       <td style="word-break:normal;font-size:9px;color:var(--text-sub);vertical-align:middle">${(p.site||'—').replace('CT ','')}</td>
@@ -3696,7 +3707,7 @@ function renderReportSummary(){
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
       return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
         <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap;width:18px">${stt}</td>
-        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}${((p.remindCount||0)>1 && canRemind(p))?` <span style="display:inline-block;font-size:9px;font-weight:700;color:var(--blue-dark);background:var(--blue-light);padding:0 5px;border-radius:8px;white-space:nowrap">🔔 lần ${p.remindCount}</span>`:''}</td>
+        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}</td>
         <td class="col-person">${p.person||'—'}</td>
         <td class="col-site" style="color:#64748b">${(p.site||'').replace('CT ','')}</td>
         <td class="col-pri">${prCell}</td>
