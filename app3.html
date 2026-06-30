@@ -2314,9 +2314,8 @@ function canRemind(p){
 }
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
-  const n = p.remindCount||0;
-  const sub = n>1 ? `<span style="font-size:9px;font-weight:800;line-height:1;color:#fff">lần ${n}</span>` : '';
-  return `<div class="approve-box" style="flex:0.62 1 0%;border-color:var(--blue);background:var(--blue)"><button class="ab-btn ab-btn-tight" style="background:var(--blue);color:#fff" onclick="remindApprove('${p.id}')" title="Đề xuất duyệt lại"><span style="font-size:15px;line-height:1">🔁</span>${sub}</button></div>`;
+  // Chỉ hiện biểu tượng 🔁 cho gọn — số lần đã có ở ghi chú và badge "Đã giục duyệt"
+  return `<div class="approve-box" style="flex:0.62 1 0%;border-color:var(--blue);background:var(--blue)"><button class="ab-btn ab-btn-tight" style="background:var(--blue);color:#fff" onclick="remindApprove('${p.id}')" title="Đề xuất duyệt lại"><span style="font-size:15px;line-height:1">🔁</span></button></div>`;
 }
 // Bấm "Đề xuất lại": tăng số lần (gốc tính là lần 1 → bắt đầu từ 2), cập nhật đuôi ghi chú,
 // đánh dấu + đẩy phiếu lên đầu, và gửi push tới D, H (chặn lặp 600 giây/phiếu).
