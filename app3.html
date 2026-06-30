@@ -376,6 +376,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <textarea class="form-input" id="edit-note" rows="2"></textarea>
     </div>
     <div class="form-group">
+      <label class="form-label">💬 Ý kiến người duyệt</label>
+      <div style="font-size:11px;color:var(--text-sub);margin:-2px 0 6px">Mỗi người duyệt tự ghi ý kiến của mình (người khác chỉ xem).</div>
+      <div style="margin-bottom:8px">
+        <div style="font-size:12px;font-weight:700;color:var(--blue-dark);margin-bottom:3px">Ý kiến Dũng (D)</div>
+        <textarea class="form-input" id="edit-opinion-d" rows="2" placeholder="Ý kiến của Dũng…"></textarea>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:3px">Ý kiến Hiền (H)</div>
+        <textarea class="form-input" id="edit-opinion-h" rows="2" placeholder="Ý kiến của Hiền…"></textarea>
+      </div>
+    </div>
+    <div class="form-group">
       <label class="form-label">Ảnh tin nhắn Zalo</label>
       <div id="edit-img-preview-wrap" class="img-preview-grid" style="display:none"></div>
       <label class="upload-zone" for="edit-file-input" id="edit-paste-zone" tabindex="0" style="margin-top:6px">
@@ -805,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v23';
+const APP_VERSION = '20260630-v24';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2060,7 +2072,7 @@ function attachThumbLongPress(container){
 
 const _cardCache = new Map();
 function _cardHash(p){
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+(p.approvedDAmount||0)+'|'+(p.approvedHAmount||0)+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'');
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+(p.approvedDAmount||0)+'|'+(p.approvedHAmount||0)+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'');
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -2143,6 +2155,8 @@ function _buildCard(p){
       <img src="${src}" loading="lazy" decoding="async" onclick="openImg('${p.id}','proof',${idx})" alt="Chứng từ ${idx+1}">
     </div>`).join('')}</div>` : '';
   const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${p.note}</div>` : '';
+  const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
+  const opinionHtml = (_opD||_opH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_opD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${_opD}</div>`:''}${_opH?`<div${_opD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${_opH}</div>`:''}</div>` : '';
 
   return `<div class="proposal status-${p.status||'pending'}" id="card-${p.id}">
     <div class="proposal-top">
@@ -2163,6 +2177,7 @@ function _buildCard(p){
         <div class="proposal-badge-area">${badgeHtml}</div>
       </div>
       ${noteHtml}
+      ${opinionHtml}
     </div>
     ${imgHtml}
     <div class="approve-row">
@@ -2172,8 +2187,8 @@ function _buildCard(p){
       ${renderBtnTransfer(p)}
       ${renderBtnShare(p)}
       ${renderBtnRemind(p)}
-      ${(currentRole==='dung'||currentRole==='trang'||p.person===getCurrentUserName())
-        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất">✏️</button>`
+      ${(currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||p.person===getCurrentUserName())
+        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất / ghi ý kiến">✏️</button>`
         : ''}
       <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="del('${p.id}')" title="Xóa đề xuất">🗑</button>
     </div>
@@ -2321,6 +2336,12 @@ function remindReportLabel(p){
     if(m) who = m[1].trim();
   }
   return (who ? who + ': ' : '') + 'đã đề xuất lần ' + p.remindCount;
+}
+// Ý kiến người duyệt cho báo cáo: "💬 D: ... / 💬 H: ..."
+function opinionReportHtml(p){
+  const opD=(p.opinionD||'').trim(), opH=(p.opinionH||'').trim();
+  if(!opD&&!opH) return '';
+  return `<div style="font-style:italic;font-weight:600;font-size:0.92em;margin-top:1px">${opD?`<div style="color:var(--blue-dark)">💬 D: ${opD}</div>`:''}${opH?`<div style="color:#7c3aed">💬 H: ${opH}</div>`:''}</div>`;
 }
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
@@ -2649,7 +2670,7 @@ let editingImages = []; // ảnh đang chỉnh sửa tạm thời trong modal S�
 function openEditProposal(id){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
-  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='trang'){ showToast('🔒 Chỉ D hoặc T mới sửa được phiếu đã duyệt'); return; }
+  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); return; }
   editingProposalId = id;
 
   // Đổ danh sách người đề xuất / công trường vào 2 ô select (giống màn Thêm mới)
@@ -2663,6 +2684,13 @@ function openEditProposal(id){
   document.getElementById('edit-desc').value = p.desc||'';
   document.getElementById('edit-amount').value = p.amount ? Number(p.amount).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
   document.getElementById('edit-note').value = p.note||'';
+  // Ý kiến người duyệt — mỗi người chỉ sửa ô của mình, người khác chỉ xem
+  const opDel = document.getElementById('edit-opinion-d');
+  const opHel = document.getElementById('edit-opinion-h');
+  opDel.value = p.opinionD||''; opHel.value = p.opinionH||'';
+  const dEditable = currentRole==='dung', hEditable = currentRole==='hien';
+  opDel.readOnly = !dEditable; opDel.style.background = dEditable ? '' : '#f1f5f9';
+  opHel.readOnly = !hEditable; opHel.style.background = hEditable ? '' : '#f1f5f9';
   const epv = p.priority||'normal';
   document.querySelectorAll('input[name="edit-priority"]').forEach(r=>{ r.checked = r.value===epv; });
 
@@ -2780,7 +2808,7 @@ function removeEditImage(idx){
 function saveEditProposal(){
   const p = proposals.find(x=>x.id===editingProposalId);
   if(!p){ closeEditModal(); return; }
-  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='trang'){ showToast('🔒 Chỉ D hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
+  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
 
   const person = document.getElementById('edit-person').value;
   const site = document.getElementById('edit-site').value;
@@ -2798,6 +2826,9 @@ function saveEditProposal(){
   p.amount = amountRaw;
   p.amountUnit = 'dong';
   p.note = note;
+  // Lưu ý kiến: chỉ ghi đè ô mà vai trò hiện tại được sửa (ô kia readonly nên giữ nguyên giá trị cũ)
+  p.opinionD = document.getElementById('edit-opinion-d').value.trim();
+  p.opinionH = document.getElementById('edit-opinion-h').value.trim();
   p.priority = (document.querySelector('input[name="edit-priority"]:checked')||{value:'normal'}).value;
   p.imgImages = editingImages.slice();
   p.imgB64 = editingImages[0] || null; // giữ tương thích phiếu cũ
@@ -3527,7 +3558,7 @@ function renderReportList(){
     const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
-      <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}</td>
+      <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
       <td ${cellBase} style="font-size:10px">${p.person||'—'}</td>
       <td ${cellBase} style="font-size:9px">${p.site||'—'}</td>
       <td class="col-amount" style="vertical-align:middle;white-space:nowrap">${fmtVND(p.amount)}</td>
@@ -3595,7 +3626,7 @@ function renderExcelTable(containerId, items, kind){
     const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;font-size:10px;word-break:normal">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
-      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}</td>
+      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
       <td style="text-align:right;font-size:10px;line-height:1.3;vertical-align:middle">${amtLabel}</td>
       <td style="font-size:9px;color:var(--text-sub);white-space:normal;word-break:normal;vertical-align:middle">${p.person||'—'}</td>
       <td style="word-break:normal;font-size:9px;color:var(--text-sub);vertical-align:middle">${(p.site||'—').replace('CT ','')}</td>
@@ -3707,7 +3738,7 @@ function renderReportSummary(){
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
       return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
         <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap;width:18px">${stt}</td>
-        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}</td>
+        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
         <td class="col-person">${p.person||'—'}</td>
         <td class="col-site" style="color:#64748b">${(p.site||'').replace('CT ','')}</td>
         <td class="col-pri">${prCell}</td>
