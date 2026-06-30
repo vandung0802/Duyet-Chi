@@ -805,7 +805,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v19';
+const APP_VERSION = '20260630-v20';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2130,7 +2130,7 @@ function _buildCard(p){
   }
   // Đánh dấu phiếu đã bị giục duyệt (chưa duyệt xong) — hiện số lần + thời điểm giục gần nhất
   if((p.remindCount||0) > 1 && canRemind(p)){
-    badgeHtml += `<div style="margin-top:4px;text-align:right"><span class="badge" style="background:var(--blue-light);color:var(--blue-dark)">🔔 Đã giục duyệt ${p.remindCount} lần</span>${p.lastRemindAt?`<div class="badge-history" style="color:var(--blue-dark)">${fmtFull(p.lastRemindAt)}</div>`:''}</div>`;
+    badgeHtml += `<div style="margin-top:4px;text-align:right"><span class="badge" style="background:var(--blue-light);color:var(--blue-dark)">🔔 Đã giục ${p.remindCount} lần</span>${p.lastRemindAt?`<div class="badge-history" style="color:var(--blue-dark)">${fmtFull(p.lastRemindAt)}</div>`:''}</div>`;
   }
   const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
   const imgHtml = imgImages.length ? `<div class="proof-grid">${imgImages.map((src,idx)=>`
