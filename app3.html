@@ -2020,6 +2020,8 @@ function renderProposals(){
   const q = (document.getElementById('search-input')?.value||'').trim().toLowerCase();
   let items = proposals.filter(p=>matchFilter(p,filter));
   if(q) items = items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q)||(p.site||'').toLowerCase().includes(q));
+  // Phiếu vừa được giục duyệt (lastRemindAt mới) nổi lên đầu cho mọi người thấy
+  items.sort((a,b)=> Math.max(b.ts||0, b.lastRemindAt||0) - Math.max(a.ts||0, a.lastRemindAt||0));
   if(!items.length){
     list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có đề xuất nào<br><small>Nhấn ➕ để thêm mới</small></div>';
     return;
@@ -2058,7 +2060,7 @@ function attachThumbLongPress(container){
 
 const _cardCache = new Map();
 function _cardHash(p){
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+(p.approvedDAmount||0)+'|'+(p.approvedHAmount||0)+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0);
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+(p.approvedDAmount||0)+'|'+(p.approvedHAmount||0)+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'');
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -2126,6 +2128,10 @@ function _buildCard(p){
       ${tRow}
     </div>`;
   }
+  // Đánh dấu phiếu đã bị giục duyệt (chưa duyệt xong) — hiện số lần + thời điểm giục gần nhất
+  if((p.remindCount||0) > 1 && canRemind(p)){
+    badgeHtml += `<div style="margin-top:4px;text-align:right"><span class="badge" style="background:var(--blue-light);color:var(--blue-dark)">🔔 Đã giục duyệt ${p.remindCount} lần</span>${p.lastRemindAt?`<div class="badge-history" style="color:var(--blue-dark)">${fmtFull(p.lastRemindAt)}</div>`:''}</div>`;
+  }
   const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
   const imgHtml = imgImages.length ? `<div class="proof-grid">${imgImages.map((src,idx)=>`
     <div class="proof-thumb" data-pid="${p.id}" data-kind="img" data-idx="${idx}">
@@ -2165,6 +2171,7 @@ function _buildCard(p){
       ${renderBtnReject(p)}
       ${renderBtnTransfer(p)}
       ${renderBtnShare(p)}
+      ${renderBtnRemind(p)}
       ${(currentRole==='dung'||currentRole==='trang'||p.person===getCurrentUserName())
         ? `<button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất">✏️</button>`
         : ''}
@@ -2256,11 +2263,11 @@ function renderBtnReject(p){
   }
 
   if(canRejectD && canRejectH)
-    return `<div class="approve-box ab-done-box" style="border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D, H</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D, H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   if(canRejectD)
-    return `<div class="approve-box ab-done-box" style="border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   if(canRejectH)
-    return `<div class="approve-box ab-done-box" style="border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">—</div></div>`;
 }
 function renderBtnTransfer(p){
@@ -2295,6 +2302,45 @@ function renderBtnShare(p){
   if(hasProof) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)"><button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${p.id}')">📤 ${proofImages.length} ảnh</button></div>`;
   if(canUpload) return `<div class="approve-box"><button class="ab-btn ab-btn-tight" style="background:var(--blue-light);color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${p.id}')">📎 Upload</button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">${done?'⏳ Chờ T':'🔒'}</div></div>`;
+}
+
+// ── NÚT ĐỀ XUẤT DUYỆT LẠI (🔁) ──
+// Chỉ hiện khi phiếu CHƯA duyệt xong (chưa đủ cả D và H duyệt) và chưa từ chối / chưa chuyển.
+function canRemind(p){
+  if(p.status==='rejected' || p.status==='transferred') return false;
+  const dDone = (parseFloat(p.approvedDAmount)||0) > 0;
+  const hDone = (parseFloat(p.approvedHAmount)||0) > 0;
+  return !(dDone && hDone);
+}
+function renderBtnRemind(p){
+  if(!canRemind(p)) return '';
+  const n = p.remindCount||0;
+  const sub = n>1 ? `<span style="font-size:9px;font-weight:800;line-height:1;color:#fff">lần ${n}</span>` : '';
+  return `<div class="approve-box" style="flex:0.62 1 0%;border-color:var(--blue);background:var(--blue)"><button class="ab-btn ab-btn-tight" style="background:var(--blue);color:#fff" onclick="remindApprove('${p.id}')" title="Đề xuất duyệt lại"><span style="font-size:15px;line-height:1">🔁</span>${sub}</button></div>`;
+}
+// Bấm "Đề xuất lại": tăng số lần (gốc tính là lần 1 → bắt đầu từ 2), cập nhật đuôi ghi chú,
+// đánh dấu + đẩy phiếu lên đầu, và gửi push tới D, H (chặn lặp 600 giây/phiếu).
+function remindApprove(id){
+  const p = proposals.find(x=>x.id===id);
+  if(!p) return;
+  if(!canRemind(p)){ showToast('Phiếu đã được D và H duyệt — không cần giục'); return; }
+  p.remindCount = (p.remindCount||1) + 1;
+  p.lastRemindAt = Date.now();
+  // Giữ nguyên ghi chú cũ, chỉ cập nhật đuôi "(Đề xuất lại lần N)"
+  const base = (p.note||'').replace(/\s*\(Đề xuất lại lần \d+\)\s*$/,'').trim();
+  p.note = (base ? base + ' ' : '') + '(Đề xuất lại lần ' + p.remindCount + ')';
+  save();
+  renderAll();
+  const pushKey = 'dc_remind_push_' + id;
+  const lastPush = parseInt(localStorage.getItem(pushKey)||'0');
+  if(Date.now() - lastPush >= 600000){
+    localStorage.setItem(pushKey, String(Date.now()));
+    sendPushNotif('🔁 Xin duyệt lại', `${p.desc} — đề xuất ${fmtFull(p.ts)}, chưa duyệt xong`, ['dung','hien']);
+    showToast('🔁 Đã giục D và H duyệt lại (lần '+p.remindCount+')');
+  } else {
+    const wait = Math.max(1, Math.ceil((600000-(Date.now()-lastPush))/60000));
+    showToast('🔁 Đã ghi giục lần '+p.remindCount+' — chưa gửi lại thông báo (chờ ~'+wait+' phút)');
+  }
 }
 
 // ── LOGIC DUYỆT TỪNG PHẦN / NHIỀU LẦN ──
