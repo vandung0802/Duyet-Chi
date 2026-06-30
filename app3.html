@@ -805,7 +805,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v17';
+const APP_VERSION = '20260630-v18';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2173,9 +2173,9 @@ function _buildCard(p){
       ${renderBtnShare(p)}
       ${renderBtnRemind(p)}
       ${(currentRole==='dung'||currentRole==='trang'||p.person===getCurrentUserName())
-        ? `<button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất">✏️</button>`
+        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất">✏️</button>`
         : ''}
-      <button class="approve-box ab-del-mini" style="flex:0 0 auto !important;width:20px !important;min-width:20px !important;max-width:20px !important;padding:0 !important" onclick="del('${p.id}')" title="Xóa đề xuất">🗑</button>
+      <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="del('${p.id}')" title="Xóa đề xuất">🗑</button>
     </div>
     ${proofHtml}
   </div>`;
@@ -2314,8 +2314,8 @@ function canRemind(p){
 }
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
-  // Chỉ hiện biểu tượng 🔁 cho gọn — số lần đã có ở ghi chú và badge "Đã giục duyệt"
-  return `<div class="approve-box" style="flex:0.62 1 0%;border-color:var(--blue);background:var(--blue)"><button class="ab-btn ab-btn-tight" style="background:var(--blue);color:#fff" onclick="remindApprove('${p.id}')" title="Đề xuất duyệt lại"><span style="font-size:15px;line-height:1">🔁</span></button></div>`;
+  // Nút trắng bình thường như ✏️/🗑; 3 nút 🔁/✏️/🗑 chia đều bằng nhau (flex:0.6). Số lần đã có ở ghi chú + badge.
+  return `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="remindApprove('${p.id}')" title="Đề xuất duyệt lại">🔁</button>`;
 }
 // Bấm "Đề xuất lại": tăng số lần (gốc tính là lần 1 → bắt đầu từ 2), cập nhật đuôi ghi chú,
 // đánh dấu + đẩy phiếu lên đầu, và gửi push tới D, H (chặn lặp 600 giây/phiếu).
