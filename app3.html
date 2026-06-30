@@ -805,7 +805,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v18';
+const APP_VERSION = '20260630-v19';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2325,9 +2325,11 @@ function remindApprove(id){
   if(!canRemind(p)){ showToast('Phiếu đã được D và H duyệt — không cần giục'); return; }
   p.remindCount = (p.remindCount||1) + 1;
   p.lastRemindAt = Date.now();
-  // Giữ nguyên ghi chú cũ, chỉ cập nhật đuôi "(Đề xuất lại lần N)"
-  const base = (p.note||'').replace(/\s*\(Đề xuất lại lần \d+\)\s*$/,'').trim();
-  p.note = (base ? base + ' ' : '') + '(Đề xuất lại lần ' + p.remindCount + ')';
+  // Giữ nguyên ghi chú cũ, cập nhật đuôi "{người đề xuất}: Đề xuất lại lần N"
+  const who = p.person || getCurrentUserName() || '';
+  const base = (p.note||'').replace(/\s*\(?[^()]*?Đề xuất lại lần \d+\)?\s*$/,'').trim();
+  const tag = (who ? who + ': ' : '') + 'Đề xuất lại lần ' + p.remindCount;
+  p.note = base ? (base + ' (' + tag + ')') : tag;
   save();
   renderAll();
   const pushKey = 'dc_remind_push_' + id;
@@ -3630,6 +3632,9 @@ function renderReportSummary(){
   const urgent  = fp.filter(p=>(p.priority||'normal')==='urgent' && p.status!=='transferred' && p.status!=='rejected' && getTotalTransferred(p)<(parseFloat(p.amount)||0));
   const pendAmt = pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const appdAmt = appd.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p),0);
+  // Phiếu bị giục (Đề xuất lại) nhảy lên đầu 2 bảng Chờ duyệt + Đã duyệt·chờ chuyển
+  const _remindSort = (a,b)=> Math.max(b.ts||0, b.lastRemindAt||0) - Math.max(a.ts||0, a.lastRemindAt||0);
+  pend.sort(_remindSort); appd.sort(_remindSort);
 
   // Thẻ thống kê
   const statCards = `
@@ -3691,7 +3696,7 @@ function renderReportSummary(){
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
       return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
         <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap;width:18px">${stt}</td>
-        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}</td>
+        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}${((p.remindCount||0)>1 && canRemind(p))?` <span style="display:inline-block;font-size:9px;font-weight:700;color:var(--blue-dark);background:var(--blue-light);padding:0 5px;border-radius:8px;white-space:nowrap">🔔 lần ${p.remindCount}</span>`:''}</td>
         <td class="col-person">${p.person||'—'}</td>
         <td class="col-site" style="color:#64748b">${(p.site||'').replace('CT ','')}</td>
         <td class="col-pri">${prCell}</td>
