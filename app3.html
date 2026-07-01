@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v28';
+const APP_VERSION = '20260630-v29';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1395,7 +1395,8 @@ function setRole(role){
   currentRole = role;
   _cardCache.clear();
   const r = ROLES[role]||ROLES.other;
-  document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${r.label}`;
+  const badgeName = currentUserName || r.label; // hiện tên người (vd Ngọc) thay vì nhãn vai trò chung "Khác"
+  document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${badgeName}`;
   document.getElementById('role-screen').style.display='none';
   // Đăng ký FCM nếu đã có quyền
   if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
