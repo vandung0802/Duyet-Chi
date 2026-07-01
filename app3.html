@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v24';
+const APP_VERSION = '20260630-v25';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1630,7 +1630,7 @@ function initFirebaseSync(){
 
   // Tách 3 listener riêng: meta + proposals + images
   // → khi duyệt phiếu chỉ proposals thay đổi, KHÔNG tải lại ảnh
-  let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false;
+  let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false, _imagesLoadStarted=false;
   let _metaData={}, _proposalsData={}, _imagesData={};
   let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
   let _loadingImages = new Set(); // đang fetch
@@ -1676,6 +1676,12 @@ function initFirebaseSync(){
     renderAll();
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
     if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
+
+    // Tải ảnh SAU khi đã kết nối + hiện phiếu xong → lúc mở app không bị đống ảnh tranh băng thông (mở nhanh hơn)
+    if(!_imagesLoadStarted){
+      _imagesLoadStarted = true;
+      db.ref('duyetchi/images').once('value', s=>{ _imagesData = s.val()||{}; _imagesLoaded=true; _mergeAndRender(); }, ()=>{ _imagesLoaded=true; });
+    }
   }
 
   db.ref('duyetchi/meta').on('value', snap=>{
@@ -1694,12 +1700,8 @@ function initFirebaseSync(){
     _proposalsLoaded = true;
     _mergeAndRender();
   });
-  // Tải ảnh đầy đủ nhưng không block render ban đầu
-  db.ref('duyetchi/images').once('value', snap=>{
-    _imagesData = snap.val() || {};
-    _imagesLoaded = true;
-    _mergeAndRender();
-  }, ()=>{ _imagesLoaded=true; _mergeAndRender(); });
+  // Ảnh nay tải TRỄ — kích hoạt từ _mergeAndRender sau khi đã hiện phiếu (xem trên),
+  // để lúc mở app ưu tiên kết nối + tải phiếu (nhẹ), không bị đống ảnh (nặng) làm chậm.
 
   // Xử lý dữ liệu cũ (format mảng) — tự migrate lên format mới
   function _handleOldFormat(oldProposals){
