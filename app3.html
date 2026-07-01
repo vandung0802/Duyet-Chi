@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v35';
+const APP_VERSION = '20260630-v36';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2389,9 +2389,9 @@ function remindApprove(id){
 // Số tiền duyệt "chính thức" của 1 phiếu: nếu H đã duyệt (>0) thì lấy số của H,
 // nếu H chưa duyệt thì lấy số của D. Đây là số Trang được phép dùng để tính phần còn lại cần chuyển.
 function getOfficialApprovedAmount(p){
-  const h = parseFloat(p.approvedHAmount)||0;
-  const d = parseFloat(p.approvedDAmount)||0;
-  return h>0 ? h : d;
+  // Số duyệt CHÍNH THỨC = số H duyệt (H là người duyệt cuối cùng, chốt số).
+  // Chưa có H duyệt → 0 (chưa được chuyển, vẫn ở "chờ duyệt").
+  return parseFloat(p.approvedHAmount)||0;
 }
 function getTotalTransferred(p){
   if(!Array.isArray(p.transfers)) return 0;
@@ -3684,11 +3684,14 @@ function renderReportSummary(){
   const tot     = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const transTotal = fp.reduce((a,p)=>a+getTotalTransferred(p),0);
   const hasTrans = fp.filter(p=>getTotalTransferred(p)>0);
-  const appd    = fp.filter(p=>p.status==='approved' && (getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)>0.001);
-  const pend    = fp.filter(p=>p.status==='pending');
+  // Dựa vào số H duyệt (không dựa status đã lưu) để bền với dữ liệu cũ:
+  // - Chờ duyệt = chưa có H duyệt (H chốt cuối chưa ký), chưa từ chối/chưa chuyển xong
+  // - Đã duyệt·chờ chuyển = H đã duyệt, còn phải chuyển
+  const appd    = fp.filter(p=>p.status!=='rejected' && p.status!=='transferred' && (getOfficialApprovedAmount(p)||0)>0 && (getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)>0.001);
+  const pend    = fp.filter(p=>p.status!=='rejected' && p.status!=='transferred' && (getOfficialApprovedAmount(p)||0)<=0);
   const rej     = fp.filter(p=>p.status==='rejected');
   // Số CÒN PHẢI CHUYỂN theo số ĐÃ DUYỆT: đã duyệt thì = số duyệt − đã chuyển; chưa duyệt thì = số đề xuất
-  const _outstanding = p => { const off=getOfficialApprovedAmount(p)||0; return off>0 ? off-getTotalTransferred(p) : (parseFloat(p.amount)||0); };
+  const _outstanding = p => { const off=getOfficialApprovedAmount(p)||0; const base = off>0 ? off : (parseFloat(p.amount)||0); return base - getTotalTransferred(p); };
   const urgent  = fp.filter(p=>(p.priority||'normal')==='urgent' && p.status!=='rejected' && _outstanding(p) > 0.001);
   const pendAmt = pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const appdAmt = appd.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p),0);
@@ -3860,11 +3863,12 @@ function downloadSummaryExcel(){
   const fp = getFilteredProposals();
   if(!fp.length){ showToast('Chưa có đề xuất nào'); return; }
 
+  const _outstanding2 = p => { const off=getOfficialApprovedAmount(p)||0; const base = off>0 ? off : (parseFloat(p.amount)||0); return base - getTotalTransferred(p); };
   const hasTrans = fp.filter(p=>getTotalTransferred(p)>0);
-  const appd     = fp.filter(p=>p.status==='approved' && (getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)>0.001);
-  const pend     = fp.filter(p=>p.status==='pending');
+  const appd     = fp.filter(p=>p.status!=='rejected' && p.status!=='transferred' && (getOfficialApprovedAmount(p)||0)>0 && (getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)>0.001);
+  const pend     = fp.filter(p=>p.status!=='rejected' && p.status!=='transferred' && (getOfficialApprovedAmount(p)||0)<=0);
   const rej      = fp.filter(p=>p.status==='rejected');
-  const urgent   = fp.filter(p=>(p.priority||'normal')==='urgent' && p.status!=='transferred' && p.status!=='rejected' && getTotalTransferred(p)<(parseFloat(p.amount)||0));
+  const urgent   = fp.filter(p=>(p.priority||'normal')==='urgent' && p.status!=='rejected' && _outstanding2(p) > 0.001);
 
   const priLabel = v => v==='urgent'?'Gấp':v==='low'?'Có thể chờ':'Bình thường';
   const esc = s => '"' + String(s||'').replace(/"/g,'""') + '"';
