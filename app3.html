@@ -12,6 +12,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Firebase SDK (compat, dùng được trực tiếp qua thẻ script, không cần build tool) -->
+<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app" crossorigin>
+<link rel="dns-prefetch" href="https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app">
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
@@ -817,7 +820,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v25';
+const APP_VERSION = '20260630-v26';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1850,9 +1853,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('inp-sheet-url').value = sheetUrl;
   updateSheetBadge();
-  // Ẩn màn login ngay nếu có cache role — không chờ Firebase
-  const hasCachedSession = Object.keys(localStorage).some(k => k.startsWith('dc_role_'));
-  if(hasCachedSession) document.getElementById('role-screen').style.display='none';
+  // Khôi phục vai trò từ cache NGAY — không chờ Firebase kết nối, để app sẵn sàng tức thì
+  const cachedRoleKey = Object.keys(localStorage).find(k => k.startsWith('dc_role_'));
+  if(cachedRoleKey){
+    document.getElementById('role-screen').style.display='none';
+    try{
+      const rc = JSON.parse(localStorage.getItem(cachedRoleKey)||'{}');
+      if(rc && rc.role){ currentUserName = rc.name||''; setRole(rc.role); }
+    }catch(e){}
+  }
 
   showPage('home', document.querySelector('.nav-item'));
   renderAll();
