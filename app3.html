@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v39';
+const APP_VERSION = '20260630-v40';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1673,6 +1673,8 @@ function initFirebaseSync(){
     fbInitialLoadDone=true;
     // Firebase rỗng lần đầu → đẩy dữ liệu local lên
     if(wasFirst && !proposals.length && !persons.length) pushToFirebase();
+    // Lần đầu tải xong → đối chiếu Sheet, tự xoá món đã bị xoá bên app (chờ 6s cho ổn định)
+    if(wasFirst) setTimeout(function(){ if(typeof syncReconcileToSheet==='function') syncReconcileToSheet(); }, 6000);
     renderStats();
     renderAll();
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
@@ -3991,6 +3993,18 @@ function syncDeleteToSheet(id){
   setTimeout(()=>s.remove(),3000);
 }
 
+// Đối chiếu: gửi danh sách ID món hiện có → Sheet tự xoá dòng nào không còn trong app (dọn rác đã xoá)
+function syncReconcileToSheet(){
+  if(!sheetUrl) return;
+  const ids = proposals.map(p=>p.id).filter(Boolean);
+  if(!ids.length) return; // an toàn: danh sách rỗng thì không gửi (tránh xoá sạch)
+  const params = new URLSearchParams({ action:'reconcile', ids: ids.join(','), total: String(ids.length) });
+  var s=document.createElement('script');
+  s.src=sheetUrl+'?'+params.toString();
+  document.head.appendChild(s);
+  setTimeout(()=>s.remove(),5000);
+}
+
 function syncEditToSheet(p){
   if(!sheetUrl) return;
   const params = new URLSearchParams({
@@ -4127,6 +4141,13 @@ function doGet(e){
     }
   } else if(act==='delete'){
     if(rowIdx>0) sh.deleteRow(rowIdx);
+  } else if(act==='reconcile'){
+    var keep={}, cnt=0;
+    String(e.parameter.ids||'').split(',').forEach(function(x){ x=x.trim(); if(x){ keep[x]=1; cnt++; } });
+    var total=parseInt(e.parameter.total||'0',10);
+    if(cnt>0 && total>0 && cnt>=total-1){
+      for(var r=v.length-1;r>=1;r--){ var id2=String(v[r][1]); if(id2 && !keep[id2]) sh.deleteRow(r+1); }
+    }
   }
   var lr=sh.getLastRow();
   if(lr>=3){ sh.getRange(2,1,lr-1,sh.getLastColumn()).sort({column:2, ascending:false}); }
