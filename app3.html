@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v40';
+const APP_VERSION = '20260630-v41';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -4099,6 +4099,7 @@ function getMainSheet(ss){
   for(var c=0;c<HEADERS.length;c++){ if(sh.getRange(1,c+1).getValue()!==HEADERS[c]) sh.getRange(1,c+1).setValue(HEADERS[c]); }
   sh.getRange(1,1,1,HEADERS.length).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
   sh.setColumnWidth(4,220);sh.setColumnWidth(9,240);sh.setColumnWidth(10,240);sh.setColumnWidth(17,240);
+  [7,14,15,16,18].forEach(function(cc){ sh.getRange(2,cc,Math.max(1,sh.getMaxRows()-1),1).setNumberFormat('#,##0" đ"'); });
   return sh;
 }
 function num_(x){ var n=parseFloat(String(x).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
@@ -4165,20 +4166,20 @@ function buildReports(ss, sh){
   var chuaChuyen=rows.filter(function(r){ return !isRej(r) && official(r)>0 && (official(r)-trans(r))>0.001; });
   var tuChoi=rows.filter(function(r){ return isRej(r); });
   var choDuyet=rows.filter(function(r){ return !isRej(r) && official(r)<=0 && trans(r)<=0.001; });
-  writeReport_(ss,'Đã chuyển',['STT','Nội dung','Người','Công trường','Đã chuyển (đ)','Còn phải chuyển (đ)','Ngày CN'],'#16a34a',
+  writeReport_(ss,'Đã chuyển',['STT','Nội dung','Người','Công trường','Đã chuyển','Còn phải chuyển','Ngày CN'],'#16a34a',
     daChuyen.map(function(r,i){ return [i+1, r[3], r[4], r[5], trans(r), Math.max(0,official(r)-trans(r)), r[12]]; }));
-  writeReport_(ss,'Chưa chuyển',['STT','Nội dung','Người','Công trường','Số duyệt (đ)','Còn phải chuyển (đ)','Ngày CN'],'#d97706',
+  writeReport_(ss,'Chưa chuyển',['STT','Nội dung','Người','Công trường','Số duyệt','Còn phải chuyển','Ngày CN'],'#d97706',
     chuaChuyen.map(function(r,i){ return [i+1, r[3], r[4], r[5], official(r), official(r)-trans(r), r[12]]; }));
-  writeReport_(ss,'Từ chối',['STT','Nội dung','Người','Công trường','Số tiền ĐX (đ)','Lý do từ chối','Ngày CN'],'#dc2626',
+  writeReport_(ss,'Từ chối',['STT','Nội dung','Người','Công trường','Số tiền ĐX','Lý do từ chối','Ngày CN'],'#dc2626',
     tuChoi.map(function(r,i){ return [i+1, r[3], r[4], r[5], num_(r[6]), r[11], r[12]]; }));
-  writeReport_(ss,'Chờ duyệt',['STT','Nội dung','Người','Công trường','Số tiền ĐX (đ)','Ghi chú','Ngày CN'],'#9333ea',
+  writeReport_(ss,'Chờ duyệt',['STT','Nội dung','Người','Công trường','Số tiền ĐX','Ghi chú','Ngày CN'],'#9333ea',
     choDuyet.map(function(r,i){ return [i+1, r[3], r[4], r[5], num_(r[6]), r[7], r[12]]; }));
 }
 function writeReport_(ss, name, headers, color, rows){
   var s=ss.getSheetByName(name)||ss.insertSheet(name);
   s.clear();
   s.getRange(1,1,1,headers.length).setValues([headers]).setFontWeight('bold').setBackground(color).setFontColor('#fff');
-  if(rows.length){ s.getRange(2,1,rows.length,headers.length).setValues(rows); s.getRange(2,5,rows.length,2).setNumberFormat('#,##0'); }
+  if(rows.length){ s.getRange(2,1,rows.length,headers.length).setValues(rows); s.getRange(2,5,rows.length,2).setNumberFormat('#,##0" đ"'); }
   s.setColumnWidth(2,240); s.setFrozenRows(1);
 }`;
   navigator.clipboard?.writeText(code).then(()=>showToast('✅ Đã copy code! Dán vào Apps Script')).catch(()=>showToast('Lỗi copy'));
