@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v29';
+const APP_VERSION = '20260630-v30';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2120,15 +2120,15 @@ function _buildCard(p){
     const dFull = dAmt>0 && dAmt >= total - 0.0001;
     const hFull = hAmt>0 && hAmt >= total - 0.0001;
     const tFull = transferredAmt>0 && transferredAmt >= approvedAmt - 0.0001;
-    const dLabel = dAmt>0 ? `D đã duyệt ${dFull ? fmtVND(total) : fmtVND(dAmt)+'/'+fmtVND(total)}` : 'D chờ duyệt';
-    const hLabel = hAmt>0 ? `H đã duyệt ${hFull ? fmtVND(total) : fmtVND(hAmt)+'/'+fmtVND(total)}` : 'H chờ duyệt';
+    const dLabel = dAmt>0 ? (dFull ? `D đã duyệt ${fmtVND(total)}` : `D đã duyệt <span style="color:#ff0000;font-weight:900">${fmtVND(dAmt)}/${fmtVND(total)} (một phần)</span>`) : 'D chờ duyệt';
+    const hLabel = hAmt>0 ? (hFull ? `H đã duyệt ${fmtVND(total)}` : `H đã duyệt <span style="color:#ff0000;font-weight:900">${fmtVND(hAmt)}/${fmtVND(total)} (một phần)</span>`) : 'H chờ duyệt';
     const dBadgeClass = dAmt>0 ? 'badge-approved' : 'badge-wait';
     const hBadgeClass = hAmt>0 ? 'badge-approved' : 'badge-wait';
     const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory : [];
     const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory : [];
-    const dHistoryHtml = dHistory.length>=1 ? `<div class="badge-history">${dHistory.map((t,idx)=>
+    const dHistoryHtml = dHistory.length>=1 ? `<div class="badge-history"${!dFull?' style="color:#ff0000"':''}>${dHistory.map((t,idx)=>
       `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
-    const hHistoryHtml = hHistory.length>=1 ? `<div class="badge-history">${hHistory.map((t,idx)=>
+    const hHistoryHtml = hHistory.length>=1 ? `<div class="badge-history"${!hFull?' style="color:#ff0000"':''}>${hHistory.map((t,idx)=>
       `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
     let tRow = '';
     if(transferredAmt>0){
@@ -2215,17 +2215,19 @@ function renderBtnD(p){
     return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
   const canPress = currentRole==='dung' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
-    const clr = amt>0 ? 'var(--green)' : 'var(--yellow)';
-    const bg  = amt>0 ? '#f0fdf4' : '#fffbeb';
-    const lbl = amt>0 ? 'Đã duyệt' : 'Chờ duyệt';
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${clr}">D</span><span class="ab-mid-label" style="color:${clr}">${lbl}</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:${clr};background:${bg}"><button class="ab-done-btn" style="color:${clr};width:100%" onclick="approveBy('${p.id}','approvedD')">${inner}</button></div>`;
+    const done = amt>0;
+    const txtClr = done ? '#dc2626' : 'var(--yellow)';       // đã duyệt: chữ đỏ
+    const boxClr = done ? 'var(--green)' : 'var(--yellow)';  // nền/viền xanh lá
+    const bg  = done ? '#eafff0' : '#fffbeb';
+    const lbl = done ? 'Đã duyệt' : 'Chờ duyệt';
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">D</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${p.id}','approvedD')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:var(--green)">D</span><span class="ab-mid-label" style="color:var(--green)">Đã duyệt</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">D</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
     const canUndo = currentRole==='dung' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><button class="ab-done-btn" onclick="undoApprove('${p.id}','approvedD')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#f0fdf4"><div class="ab-done-btn">${inner}</div></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${p.id}','approvedD')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
 }
@@ -2239,17 +2241,19 @@ function renderBtnH(p){
     return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
   const canPress = currentRole==='hien' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
-    const clr = amt>0 ? '#7c3aed' : 'var(--yellow)';
-    const bg  = amt>0 ? '#f5f3ff' : '#fffbeb';
-    const lbl = amt>0 ? 'Đã duyệt' : 'Chờ duyệt';
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${clr}">H</span><span class="ab-mid-label" style="color:${clr}">${lbl}</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:${clr};background:${bg}"><button class="ab-done-btn" style="width:100%" onclick="approveBy('${p.id}','approvedH')">${inner}</button></div>`;
+    const done = amt>0;
+    const txtClr = done ? '#dc2626' : 'var(--yellow)';       // đã duyệt: chữ đỏ
+    const boxClr = done ? 'var(--green)' : 'var(--yellow)';  // nền/viền xanh lá
+    const bg  = done ? '#eafff0' : '#fffbeb';
+    const lbl = done ? 'Đã duyệt' : 'Chờ duyệt';
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">H</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${p.id}','approvedH')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#7c3aed">Đã duyệt</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">H</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
     const canUndo = currentRole==='hien' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><button class="ab-done-btn" onclick="undoApprove('${p.id}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:#7c3aed;background:#f5f3ff"><div class="ab-done-btn">${inner}</div></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${p.id}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
 }
