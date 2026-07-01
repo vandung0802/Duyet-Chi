@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v38';
+const APP_VERSION = '20260630-v39';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -4072,74 +4072,93 @@ function syncRejectedByToSheet(id, rejectedBy){
 function copyScript(){
   const code=`function onOpen(){SpreadsheetApp.getUi().createMenu('📋 App Duyệt Chi').addItem('🔗 Mở App','openApp').addToUi();}
 function openApp(){var html=HtmlService.createHtmlOutput('<div style="font-family:Arial;padding:20px;text-align:center"><a href="https://vandung0802.github.io/Duyet-Chi" target="_blank" style="background:#1a56db;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold">👉 Mở App Duyệt Chi</a></div>').setWidth(350).setHeight(100);SpreadsheetApp.getUi().showModalDialog(html,'App Duyệt Chi');}
-function doGet(e){
-  const ss=SpreadsheetApp.getActiveSpreadsheet();
-  let sh=ss.getSheetByName('Đề xuất')||ss.insertSheet('Đề xuất');
-  const HEADERS=['ID','Thời gian tạo','Nội dung','Người đề xuất','Công trường','Số tiền ĐX (tr)','Ghi chú','D duyệt - lịch sử','H duyệt - lịch sử','Trạng thái','Lý do từ chối','Ngày cập nhật','D tổng duyệt (tr)','H tổng duyệt (tr)','Tổng đã chuyển (tr)','T chuyển - lịch sử','Số tiền duyệt chính thức (tr)'];
+var HEADERS=['STT','ID','Thời gian tạo','Nội dung','Người đề xuất','Công trường','Số tiền ĐX','Ghi chú','D duyệt - lịch sử','H duyệt - lịch sử','Trạng thái','Lý do từ chối','Ngày cập nhật','D tổng duyệt','H tổng duyệt','Tổng đã chuyển','T chuyển - lịch sử','Số tiền duyệt chính thức'];
+function getMainSheet(ss){
+  var sh=ss.getSheetByName('Tổng hợp đề xuất')||ss.getSheetByName('Đề xuất');
+  if(!sh){ sh=ss.insertSheet('Tổng hợp đề xuất'); }
+  else if(sh.getName()!=='Tổng hợp đề xuất'){ sh.setName('Tổng hợp đề xuất'); }
   if(sh.getLastRow()===0){
     sh.appendRow(HEADERS);
-    sh.getRange(1,1,1,HEADERS.length).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
-    sh.setColumnWidth(3,220);sh.setColumnWidth(8,260);sh.setColumnWidth(9,260);sh.setColumnWidth(16,260);
-  } else {
-    // Cập nhật header nếu chưa đủ cột
-    const curCols=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
-    for(let c=0;c<HEADERS.length;c++){
-      if(!curCols[c]||curCols[c]!==HEADERS[c]){
-        sh.getRange(1,c+1).setValue(HEADERS[c]).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
-      }
-    }
+  } else if(sh.getRange(1,1).getValue()!=='STT'){
+    sh.insertColumnBefore(1); sh.getRange(1,1).setValue('STT');
   }
-  const v=sh.getDataRange().getValues();
-  const targetId=String(e.parameter.id);
-  let rowIdx=-1;
-  for(let i=1;i<v.length;i++){ if(String(v[i][0])===targetId){ rowIdx=i+1; break; } }
-
-  if(e.parameter.action==='add'){
-    sh.appendRow(["'"+e.parameter.id,e.parameter.ts,e.parameter.desc,e.parameter.person,e.parameter.site,e.parameter.amount,e.parameter.note,'','','Chờ duyệt','','','','','','','']);
-  } else if(e.parameter.action==='updateStatus'){
+  for(var c=0;c<HEADERS.length;c++){ if(sh.getRange(1,c+1).getValue()!==HEADERS[c]) sh.getRange(1,c+1).setValue(HEADERS[c]); }
+  sh.getRange(1,1,1,HEADERS.length).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
+  sh.setColumnWidth(4,220);sh.setColumnWidth(9,240);sh.setColumnWidth(10,240);sh.setColumnWidth(17,240);
+  return sh;
+}
+function num_(x){ var n=parseFloat(String(x).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
+function doGet(e){
+  var ss=SpreadsheetApp.getActiveSpreadsheet();
+  var sh=getMainSheet(ss);
+  var v=sh.getDataRange().getValues();
+  var targetId=String(e.parameter.id||'');
+  var rowIdx=-1;
+  for(var i=1;i<v.length;i++){ if(String(v[i][1])===targetId){ rowIdx=i+1; break; } }
+  var now=new Date().toLocaleString('vi-VN');
+  var act=e.parameter.action;
+  if(act==='add'){
+    sh.appendRow(['', "'"+e.parameter.id, e.parameter.ts, e.parameter.desc, e.parameter.person, e.parameter.site, e.parameter.amount, e.parameter.note, '', '', 'Chờ duyệt', '', '', '', '', '', '', '']);
+  } else if(act==='updateStatus'){
+    if(rowIdx>0){ sh.getRange(rowIdx,11).setValue(e.parameter.status); sh.getRange(rowIdx,13).setValue(now); }
+  } else if(act==='updateApproval'){
+    if(rowIdx>0){ sh.getRange(rowIdx, e.parameter.field==='D'?9:10).setValue(e.parameter.time||''); sh.getRange(rowIdx,13).setValue(now); }
+  } else if(act==='updateApprovalAmount'){
     if(rowIdx>0){
-      sh.getRange(rowIdx,10).setValue(e.parameter.status);
-      sh.getRange(rowIdx,12).setValue(new Date().toLocaleString('vi-VN'));
+      if(e.parameter.dHistory!==undefined) sh.getRange(rowIdx,9).setValue(e.parameter.dHistory||'');
+      if(e.parameter.hHistory!==undefined) sh.getRange(rowIdx,10).setValue(e.parameter.hHistory||'');
+      sh.getRange(rowIdx,14).setValue(e.parameter.dAmount||'');
+      sh.getRange(rowIdx,15).setValue(e.parameter.hAmount||'');
+      sh.getRange(rowIdx,18).setValue(e.parameter.officialAmount||'');
+      sh.getRange(rowIdx,13).setValue(now);
     }
-  } else if(e.parameter.action==='updateApproval'){
+  } else if(act==='updateTransfer'){
+    if(rowIdx>0){ sh.getRange(rowIdx,16).setValue(e.parameter.totalTransferred||''); sh.getRange(rowIdx,17).setValue(e.parameter.history||''); sh.getRange(rowIdx,13).setValue(now); }
+  } else if(act==='updateRejectedBy'){
+    if(rowIdx>0){ sh.getRange(rowIdx,12).setValue(e.parameter.rejectedBy||''); sh.getRange(rowIdx,13).setValue(now); }
+  } else if(act==='edit'){
     if(rowIdx>0){
-      const col = e.parameter.field==='D' ? 8 : 9;
-      sh.getRange(rowIdx,col).setValue(e.parameter.time||'');
-      sh.getRange(rowIdx,12).setValue(new Date().toLocaleString('vi-VN'));
+      sh.getRange(rowIdx,4).setValue(e.parameter.desc||'');
+      sh.getRange(rowIdx,5).setValue(e.parameter.person||'');
+      sh.getRange(rowIdx,6).setValue(e.parameter.site||'');
+      sh.getRange(rowIdx,7).setValue(e.parameter.amount||'');
+      sh.getRange(rowIdx,8).setValue(e.parameter.note||'');
+      sh.getRange(rowIdx,13).setValue(now);
     }
-  } else if(e.parameter.action==='updateApprovalAmount'){
-    if(rowIdx>0){
-      if(e.parameter.dHistory!==undefined) sh.getRange(rowIdx,8).setValue(e.parameter.dHistory||'');
-      if(e.parameter.hHistory!==undefined) sh.getRange(rowIdx,9).setValue(e.parameter.hHistory||'');
-      sh.getRange(rowIdx,13).setValue(e.parameter.dAmount||'');
-      sh.getRange(rowIdx,14).setValue(e.parameter.hAmount||'');
-      sh.getRange(rowIdx,17).setValue(e.parameter.officialAmount||'');
-      sh.getRange(rowIdx,12).setValue(new Date().toLocaleString('vi-VN'));
-    }
-  } else if(e.parameter.action==='updateTransfer'){
-    if(rowIdx>0){
-      sh.getRange(rowIdx,15).setValue(e.parameter.totalTransferred||'');
-      sh.getRange(rowIdx,16).setValue(e.parameter.history||'');
-      sh.getRange(rowIdx,12).setValue(new Date().toLocaleString('vi-VN'));
-    }
-  } else if(e.parameter.action==='updateRejectedBy'){
-    if(rowIdx>0){
-      sh.getRange(rowIdx,11).setValue(e.parameter.rejectedBy||'');
-      sh.getRange(rowIdx,12).setValue(new Date().toLocaleString('vi-VN'));
-    }
-  } else if(e.parameter.action==='edit'){
-    if(rowIdx>0){
-      sh.getRange(rowIdx,3).setValue(e.parameter.desc||'');
-      sh.getRange(rowIdx,4).setValue(e.parameter.person||'');
-      sh.getRange(rowIdx,5).setValue(e.parameter.site||'');
-      sh.getRange(rowIdx,6).setValue(e.parameter.amount||'');
-      sh.getRange(rowIdx,7).setValue(e.parameter.note||'');
-      sh.getRange(rowIdx,12).setValue(new Date().toLocaleString('vi-VN'));
-    }
-  } else if(e.parameter.action==='delete'){
+  } else if(act==='delete'){
     if(rowIdx>0) sh.deleteRow(rowIdx);
   }
+  var lr=sh.getLastRow();
+  if(lr>=3){ sh.getRange(2,1,lr-1,sh.getLastColumn()).sort({column:2, ascending:false}); }
+  if(lr>=2){ var stt=[]; for(var k=1;k<=lr-1;k++) stt.push([k]); sh.getRange(2,1,lr-1,1).setValues(stt); }
+  buildReports(ss, sh);
   return ContentService.createTextOutput('ok');
+}
+function buildReports(ss, sh){
+  var data=sh.getDataRange().getValues();
+  var rows=data.slice(1);
+  var official=function(r){ var o=num_(r[17]); if(o>0) return o; var h=num_(r[14]); return h>0?h:num_(r[13]); };
+  var trans=function(r){ return num_(r[15]); };
+  var isRej=function(r){ return String(r[10]).indexOf('Từ chối')>=0; };
+  var daChuyen=rows.filter(function(r){ return trans(r)>0.001; });
+  var chuaChuyen=rows.filter(function(r){ return !isRej(r) && official(r)>0 && (official(r)-trans(r))>0.001; });
+  var tuChoi=rows.filter(function(r){ return isRej(r); });
+  var choDuyet=rows.filter(function(r){ return !isRej(r) && official(r)<=0 && trans(r)<=0.001; });
+  writeReport_(ss,'Đã chuyển',['STT','Nội dung','Người','Công trường','Đã chuyển (đ)','Còn phải chuyển (đ)','Ngày CN'],'#16a34a',
+    daChuyen.map(function(r,i){ return [i+1, r[3], r[4], r[5], trans(r), Math.max(0,official(r)-trans(r)), r[12]]; }));
+  writeReport_(ss,'Chưa chuyển',['STT','Nội dung','Người','Công trường','Số duyệt (đ)','Còn phải chuyển (đ)','Ngày CN'],'#d97706',
+    chuaChuyen.map(function(r,i){ return [i+1, r[3], r[4], r[5], official(r), official(r)-trans(r), r[12]]; }));
+  writeReport_(ss,'Từ chối',['STT','Nội dung','Người','Công trường','Số tiền ĐX (đ)','Lý do từ chối','Ngày CN'],'#dc2626',
+    tuChoi.map(function(r,i){ return [i+1, r[3], r[4], r[5], num_(r[6]), r[11], r[12]]; }));
+  writeReport_(ss,'Chờ duyệt',['STT','Nội dung','Người','Công trường','Số tiền ĐX (đ)','Ghi chú','Ngày CN'],'#9333ea',
+    choDuyet.map(function(r,i){ return [i+1, r[3], r[4], r[5], num_(r[6]), r[7], r[12]]; }));
+}
+function writeReport_(ss, name, headers, color, rows){
+  var s=ss.getSheetByName(name)||ss.insertSheet(name);
+  s.clear();
+  s.getRange(1,1,1,headers.length).setValues([headers]).setFontWeight('bold').setBackground(color).setFontColor('#fff');
+  if(rows.length){ s.getRange(2,1,rows.length,headers.length).setValues(rows); s.getRange(2,5,rows.length,2).setNumberFormat('#,##0'); }
+  s.setColumnWidth(2,240); s.setFrozenRows(1);
 }`;
   navigator.clipboard?.writeText(code).then(()=>showToast('✅ Đã copy code! Dán vào Apps Script')).catch(()=>showToast('Lỗi copy'));
 }
