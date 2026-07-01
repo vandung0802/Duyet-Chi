@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v30';
+const APP_VERSION = '20260630-v31';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2421,7 +2421,8 @@ function approveBy(id, field){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
   pendingApproveField = { id, field };
-  const already = field==='approvedD' ? (parseFloat(p.approvedDAmount)||0) : (parseFloat(p.approvedHAmount)||0);
+  const _histField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
+  const already = (Array.isArray(p[_histField]) ? p[_histField] : []).reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
   const remain = (parseFloat(p.amount)||0) - already;
   document.getElementById('aa-title').textContent = (field==='approvedD' ? 'Dũng duyệt chi' : 'Hiền duyệt chi');
   document.getElementById('aa-sub').textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${already>0?` — Đã duyệt trước: ${fmtVND(already)}`:''}`;
@@ -2459,7 +2460,10 @@ function confirmApproveAmount(){
   const amountField = field==='approvedD' ? 'approvedDAmount' : 'approvedHAmount';
   const historyField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
   const timeField = field;
-  const prevAmt = parseFloat(p[amountField])||0;
+  // Số đã duyệt trước lấy từ LỊCH SỬ duyệt của chính người này (nguồn chuẩn, khớp với hiển thị "Lần N" và hoàn tác).
+  // Tránh báo "vượt quá đề xuất" sai khi số tiền lưu bị lệch với lịch sử (người kia thật ra chưa duyệt).
+  const _prevHist = Array.isArray(p[historyField]) ? p[historyField] : [];
+  const prevAmt = _prevHist.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
   const newTotal = prevAmt + val;
   if(newTotal > p.amount + 1){ showToast(`Tổng đã duyệt (${fmtVND(prevAmt)} + ${fmtVND(val)} = ${fmtVND(newTotal)}) vượt quá đề xuất (${fmtVND(p.amount)})`); return; }
   p[amountField] = newTotal;
