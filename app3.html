@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v34';
+const APP_VERSION = '20260630-v35';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2405,9 +2405,10 @@ function undoTransfer(id){
   if(!confirm('Hoàn tác lần chuyển gần nhất? (ảnh chứng từ vẫn được giữ nguyên)')) return;
   const removed = p.transfers.pop();
   const totalLeft = getTotalTransferred(p);
-  if(totalLeft<=0){
-    p.status='approved';
-  }
+  const officialApproved = getOfficialApprovedAmount(p) || 0;
+  // Sau hoàn tác, nếu chưa chuyển đủ số đã duyệt (hoặc về 0) → không còn "đã chuyển xong"
+  if(totalLeft<=0){ p.status='approved'; }
+  else if(p.status==='transferred' && totalLeft < officialApproved - 0.0001){ p.status='approved'; }
   save();
   syncStatusToSheet(id, p.status);
   syncTransferToSheet(p);
@@ -2566,17 +2567,19 @@ function confirmTransferAmount(){
   p.transferredAt = Date.now(); // mốc thời gian lần chuyển gần nhất, để tương thích hiển thị cũ
 
   const totalAfter = getTotalTransferred(p);
-  const isFullyDone = totalAfter >= (parseFloat(p.amount)||0) - 0.0001; // đủ 100% đề xuất gốc
+  const officialApproved = getOfficialApprovedAmount(p) || 0;
+  // "Xong" = đã chuyển đủ SỐ D/H DUYỆT (không phải số đề xuất gốc)
+  const isFullyDone = officialApproved>0 && totalAfter >= officialApproved - 0.0001;
   if(isFullyDone) p.status='transferred';
-  // Nếu chưa đủ 100%, giữ nguyên status='approved' để D/H vẫn duyệt thêm được
+  // Chưa chuyển đủ số duyệt thì giữ status='approved' để chuyển thêm
 
   save();
   syncStatusToSheet(id, p.status);
   syncTransferToSheet(p);
   renderAll();
   closeTransferAmountModal();
-  const remaining = (parseFloat(p.amount)||0) - totalAfter;
-  showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ toàn bộ đề xuất)':' — còn '+fmt(remaining)+'tr cần duyệt thêm'}`);
+  const remaining = officialApproved - totalAfter;
+  showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ số đã duyệt)':' — còn '+fmt(remaining)+'tr chưa chuyển'}`);
   sendPushNotif('💸 Trang đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien']);
   if(isFullyDone) setTimeout(()=>uploadProof(id),500);
 }
@@ -3684,7 +3687,9 @@ function renderReportSummary(){
   const appd    = fp.filter(p=>p.status==='approved' && (getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)>0.001);
   const pend    = fp.filter(p=>p.status==='pending');
   const rej     = fp.filter(p=>p.status==='rejected');
-  const urgent  = fp.filter(p=>(p.priority||'normal')==='urgent' && p.status!=='transferred' && p.status!=='rejected' && getTotalTransferred(p)<(parseFloat(p.amount)||0));
+  // Số CÒN PHẢI CHUYỂN theo số ĐÃ DUYỆT: đã duyệt thì = số duyệt − đã chuyển; chưa duyệt thì = số đề xuất
+  const _outstanding = p => { const off=getOfficialApprovedAmount(p)||0; return off>0 ? off-getTotalTransferred(p) : (parseFloat(p.amount)||0); };
+  const urgent  = fp.filter(p=>(p.priority||'normal')==='urgent' && p.status!=='rejected' && _outstanding(p) > 0.001);
   const pendAmt = pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const appdAmt = appd.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p),0);
   // Phiếu bị giục (Đề xuất lại) nhảy lên đầu 2 bảng Chờ duyệt + Đã duyệt·chờ chuyển
@@ -3696,7 +3701,7 @@ function renderReportSummary(){
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px">
     <div style="background:#eff6ff;border-radius:10px;padding:8px 6px;text-align:center">
       <div style="font-size:9px;color:#1a56db;font-weight:600">TỔNG ĐỀ XUẤT</div>
-      <div style="font-size:15px;font-weight:800;color:#1a56db;white-space:nowrap">${proposals.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
+      <div style="font-size:15px;font-weight:800;color:#1a56db;white-space:nowrap">${fp.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
       <div style="font-size:9px;color:#1a56db;font-weight:600">${fmtVND(tot)}</div>
     </div>
     <div style="background:#f0fdf4;border-radius:10px;padding:8px 6px;text-align:center">
@@ -3716,11 +3721,11 @@ function renderReportSummary(){
     </div>
   </div>
   ${urgent.length ? `<div style="margin:0 12px 10px;border-radius:10px;overflow:hidden;border:1.5px solid #f5a0a0">
-    <div style="background:#c0392b;padding:6px 10px;font-size:10px;color:#fff;font-weight:700">🔴 VIỆC GẤP CẦN DUYỆT — ${urgent.length} phiếu · ${fmtVND(urgent.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}</div>
+    <div style="background:#c0392b;padding:6px 10px;font-size:10px;color:#fff;font-weight:700">🔴 VIỆC GẤP CHƯA XONG — ${urgent.length} phiếu · ${fmtVND(urgent.reduce((a,p)=>a+_outstanding(p),0))}</div>
     <table style="width:100%;border-collapse:collapse;background:#fff;table-layout:fixed">
       <colgroup><col style="width:auto"><col style="width:56px"><col style="width:auto"><col style="width:120px"></colgroup>
       <tr style="background:#fdecea"><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Nội dung</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Người</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Công trình</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:right;font-weight:800">Số tiền</th></tr>
-      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${p.desc||'—'}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.person||''}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.site||'—'}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${(p.amount||0).toLocaleString('vi-VN',{maximumFractionDigits:0})}&nbsp;đ</td></tr>`).join('')}
+      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${p.desc||'—'}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.person||''}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.site||'—'}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${(_outstanding(p)||0).toLocaleString('vi-VN',{maximumFractionDigits:0})}&nbsp;đ</td></tr>`).join('')}
     </table>
   </div>` : ''}`;
 
