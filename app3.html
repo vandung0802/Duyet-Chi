@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v27';
+const APP_VERSION = '20260630-v28';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1850,15 +1850,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'});
   document.getElementById('inp-sheet-url').value = sheetUrl;
   updateSheetBadge();
-  // Khôi phục vai trò từ cache NGAY — không chờ Firebase kết nối, để app sẵn sàng tức thì
-  const cachedRoleKey = Object.keys(localStorage).find(k => k.startsWith('dc_role_'));
-  if(cachedRoleKey){
-    document.getElementById('role-screen').style.display='none';
-    try{
-      const rc = JSON.parse(localStorage.getItem(cachedRoleKey)||'{}');
-      if(rc && rc.role){ currentUserName = rc.name||''; setRole(rc.role); }
-    }catch(e){}
-  }
+  // Ẩn màn login ngay nếu có cache role — nhưng KHÔNG tự đặt tên/vai trò từ cache,
+  // vì máy có thể từng đăng nhập nhiều tài khoản → dễ hiện nhầm tên người khác.
+  // Để Firebase auth xác nhận đúng danh tính rồi mới setRole (đúng người đang đăng nhập).
+  const hasCachedSession = Object.keys(localStorage).some(k => k.startsWith('dc_role_'));
+  if(hasCachedSession) document.getElementById('role-screen').style.display='none';
 
   showPage('home', document.querySelector('.nav-item'));
   renderAll();
