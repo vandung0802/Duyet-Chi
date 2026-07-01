@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v32';
+const APP_VERSION = '20260630-v33';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2120,8 +2120,8 @@ function _buildCard(p){
     const dFull = dAmt>0 && dAmt >= total - 0.0001;
     const hFull = hAmt>0 && hAmt >= total - 0.0001;
     const tFull = transferredAmt>0 && transferredAmt >= approvedAmt - 0.0001;
-    const dLabel = dAmt>0 ? `D đã duyệt ${dFull ? fmtVND(total) : fmtVND(dAmt)+'/'+fmtVND(total)}` : 'D chờ duyệt';
-    const hLabel = hAmt>0 ? `H đã duyệt ${hFull ? fmtVND(total) : fmtVND(hAmt)+'/'+fmtVND(total)}` : 'H chờ duyệt';
+    const dLabel = dAmt>0 ? (dFull ? `D đã duyệt ${fmtVND(total)}` : `D đã duyệt <span style="color:#ff0000">${fmtVND(dAmt)}/${fmtVND(total)}</span>`) : 'D chờ duyệt';
+    const hLabel = hAmt>0 ? (hFull ? `H đã duyệt ${fmtVND(total)}` : `H đã duyệt <span style="color:#ff0000">${fmtVND(hAmt)}/${fmtVND(total)}</span>`) : 'H chờ duyệt';
     const dBadgeClass = dAmt>0 ? 'badge-approved' : 'badge-wait';
     const hBadgeClass = hAmt>0 ? 'badge-approved' : 'badge-wait';
     const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory : [];
