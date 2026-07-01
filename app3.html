@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v36';
+const APP_VERSION = '20260630-v37';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2389,9 +2389,11 @@ function remindApprove(id){
 // Số tiền duyệt "chính thức" của 1 phiếu: nếu H đã duyệt (>0) thì lấy số của H,
 // nếu H chưa duyệt thì lấy số của D. Đây là số Trang được phép dùng để tính phần còn lại cần chuyển.
 function getOfficialApprovedAmount(p){
-  // Số duyệt CHÍNH THỨC = số H duyệt (H là người duyệt cuối cùng, chốt số).
-  // Chưa có H duyệt → 0 (chưa được chuyển, vẫn ở "chờ duyệt").
-  return parseFloat(p.approvedHAmount)||0;
+  // Số duyệt CHÍNH THỨC để T chuyển: nếu H đã duyệt thì lấy SỐ H (H là người chốt cuối, ưu tiên H hơn D);
+  // nếu H chưa duyệt mà D đã duyệt thì lấy số D (cho phép T chuyển trước khi H duyệt, chỉ cần D).
+  const h = parseFloat(p.approvedHAmount)||0;
+  const d = parseFloat(p.approvedDAmount)||0;
+  return h>0 ? h : d;
 }
 function getTotalTransferred(p){
   if(!Array.isArray(p.transfers)) return 0;
