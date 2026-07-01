@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v37';
+const APP_VERSION = '20260630-v38';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2140,8 +2140,8 @@ function _buildCard(p){
       tRow = `<span class="badge badge-done">💸 ${tLabel}</span>${historyHtml}`;
     }
     badgeHtml = `<div class="badge-stack">
-      <span class="badge ${dBadgeClass}">${dAmt>0?'✅':'⏳'} ${dLabel}</span>${dHistoryHtml}
-      <span class="badge ${hBadgeClass}">${hAmt>0?'✅':'⏳'} ${hLabel}</span>${hHistoryHtml}
+      <span class="badge ${dBadgeClass}"><span>${dAmt>0?'✅':'⏳'} ${dLabel}</span></span>${dHistoryHtml}
+      <span class="badge ${hBadgeClass}"><span>${hAmt>0?'✅':'⏳'} ${hLabel}</span></span>${hHistoryHtml}
       ${tRow}
     </div>`;
   }
