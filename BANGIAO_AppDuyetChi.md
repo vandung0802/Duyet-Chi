@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v53** (`APP_VERSION = '20260702-v53'`, `sw.js VERSION = '20260702-46'`, `version.txt = 20260702-v53`). Ngày 02/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v54** (`APP_VERSION = '20260702-v54'`, `sw.js VERSION = '20260702-47'`, `version.txt = 20260702-v54`). Ngày 02/07/2026.
 
 ---
 
@@ -210,9 +210,14 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 ### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng)
 - **Gốc:** iPhone cắt NGẦM kết nối realtime khi app chạy nền/khóa màn hình; Firebase mất 30–60s+ mới tự nhận ra → mở app thấy số CŨ rất lâu, duyệt máy này máy kia không thấy.
 - **Sửa:** thêm `forceFirebaseResync()` (goOffline→goOnline, throttle 5s) gọi khi: `visibilitychange`→visible, `online`, `pageshow` (bfcache), và watchdog 30s khi mất kết nối. Badge đỏ "Tải lại" chỉ hiện nếu mất kết nối >3s (tránh nhấp nháy lúc bắt tay lại).
-- **Ảnh:** node `duyetchi/images` đổi `once('value')` → `on('value')` — máy khác thêm/xoá ảnh chứng từ là thấy NGAY (sau lần tải đầu Firebase chỉ gửi phần thay đổi, không tốn thêm băng thông).
+- ~~**Ảnh:** node `duyetchi/images` đổi `once('value')` → `on('value')`~~ ⚠️ **ĐÃ GỠ ở v54 — đừng làm lại:** `on()` cả node ảnh khiến MỖI LẦN nối lại mạng (4G/app nền) kéo lại cả kho ảnh hàng chục MB → nghẽn mạng, mọi cập nhật chậm theo (chính là lỗi "hôm nay chậm" user báo ngay sau v53). v54 quay về `once` + cơ chế **imgStamp** (xem H).
 - Các biến `_imagesData/_hasImagesSet/_loadingImages/_imgObserver/_metaData/_proposalsData...` đã đưa RA NGOÀI `initFirebaseSync` (top-level) → `_observeImageCards` hết văng lỗi scope (lỗi tiềm ẩn cũ ở mục F).
 - `undoApprove`, `confirmTransferAmount`, `undoTransfer` giờ cũng vẽ lại thẻ NGAY (`_cardCache.delete` + `renderProposals()`) như lúc duyệt.
+
+### H. Cache local vượt hạn mức làm CHẾT NGẦM đồng bộ + render (v54 — gốc rễ "hôm qua ổn, hôm nay lỗi")
+- **Gốc:** `save()` và `_mergeAndRender` lưu `dc_proposals` KÈM TOÀN BỘ ảnh base64 vào localStorage (hạn mức ~5MB). Khi ảnh chứng từ tích đủ nhiều (52 phiếu đã chuyển), `setItem` văng `QuotaExceededError` **không được bọc try/catch** → chết luôn `pushToFirebase()` phía sau (duyệt xong máy kia không thấy) và chết luôn phần render phía dưới trong merge (nhận dữ liệu mới mà màn hình không đổi). Lỗi phụ thuộc LƯỢNG DỮ LIỆU nên "hôm qua ổn, hôm nay lỗi".
+- **Sửa:** cache local chỉ lưu **phần nhẹ không ảnh** (`_lightProposalsJson()`), bọc try/catch, `pushToFirebase()` luôn chạy kể cả cache lỗi. Ảnh luôn tải từ Firebase khi mở app. Duyệt cũng nhanh hơn (hết stringify hàng chục MB mỗi lần bấm).
+- **Đồng bộ ảnh kiểu nhẹ (imgStamp):** khi 1 máy đổi ảnh của phiếu nào, `pushToFirebase` đóng dấu `p.imgStamp = Date.now()` NGAY TRONG PHIẾU (node phiếu nhẹ, realtime sẵn) — trong pushToFirebase phần soát ảnh chạy TRƯỚC phần soát phiếu để dấu kịp vào `lightFields`. Máy khác thấy `imgStamp` mới hơn `_imagesStamps[id]` → `_refetchImagesFor(id)` tải lại ảnh ĐÚNG phiếu đó qua `.get()`, vá `lastPushedSnapshot.imagesMap` (`_syncSnapshotImages`) để không ghi ngược ảnh lên lại (chống ping-pong).
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
