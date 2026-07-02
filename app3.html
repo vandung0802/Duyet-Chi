@@ -822,7 +822,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v52';
+const APP_VERSION = '20260702-v53';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -864,6 +864,30 @@ document.addEventListener('visibilitychange', function(){ if(document.visibility
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+
+// ── GIỮ KẾT NỐI LUÔN TƯƠI KHI QUAY LẠI APP ──
+// iPhone: khi app chạy nền / khóa màn hình, hệ điều hành cắt NGẦM kết nối realtime.
+// Firebase có thể mất 30–60 giây (có khi lâu hơn) mới tự nhận ra kết nối đã chết
+// → quay lại app thấy số liệu CŨ rất lâu, duyệt ở máy khác không hiện ("cập nhật không kịp thời").
+// Cách chữa: mỗi lần quay lại app thì chủ động "bắt tay lại" (offline→online) →
+// nhận NGAY dữ liệu mới nhất + đẩy NGAY các thay đổi còn chờ trong hàng đợi.
+let _lastResyncAt = 0;
+function forceFirebaseResync(){
+  const now = Date.now();
+  if(now - _lastResyncAt < 5000) return; // chống gọi dồn dập khi các sự kiện bắn liền nhau
+  _lastResyncAt = now;
+  try{ db.goOffline(); }catch(e){}
+  try{ db.goOnline(); }catch(e){}
+}
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible') forceFirebaseResync();
+});
+window.addEventListener('online', forceFirebaseResync); // mạng vừa có lại → nối ngay
+window.addEventListener('pageshow', function(e){ if(e.persisted) forceFirebaseResync(); }); // mở lại từ cache trình duyệt
+// Giám sát: đang mở app mà mất kết nối kéo dài → tự nối lại, không cần bấm "Tải lại"
+setInterval(function(){
+  if(document.visibilityState === 'visible' && !fbConnected) forceFirebaseResync();
+}, 30000);
 
 // (Đã bỏ tự-reload sau 15 phút — thay bằng thanh "Cập nhật phần mềm mới" để người dùng chủ động, không bị gián đoạn)
 const storage = firebase.storage();
@@ -1649,19 +1673,29 @@ function pushToFirebase(){
   });
 }
 
+// Trạng thái đồng bộ + kho ảnh — để Ở NGOÀI initFirebaseSync để các hàm dùng chung
+// (_observeImageCards, _loadImagesForProposal, pushToFirebase) nhìn thấy được.
+// Trước đây khai báo bên trong → _observeImageCards luôn văng lỗi (bị try/catch nuốt), lazy-load ảnh chết ngầm.
+let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false, _imagesLoadStarted=false;
+let _metaData={}, _proposalsData={}, _imagesData={};
+let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
+let _loadingImages = new Set(); // đang fetch
+let _imgObserver = null;
+
 function initFirebaseSync(){
+  let _fbBadgeOffTimer = null;
   db.ref('.info/connected').on('value', snap=>{
-    if(snap.val()===true){ fbConnected=true; updateFbBadge(true); }
-    else { if(fbConnected){ fbConnected=false; updateFbBadge(false); } }
+    if(snap.val()===true){ clearTimeout(_fbBadgeOffTimer); fbConnected=true; updateFbBadge(true); }
+    else {
+      fbConnected=false;
+      // Chờ 3 giây mới hiện badge đỏ — tránh nhấp nháy khi "bắt tay lại" lúc quay lại app (mất kết nối <1s)
+      clearTimeout(_fbBadgeOffTimer);
+      _fbBadgeOffTimer = setTimeout(()=>{ if(!fbConnected) updateFbBadge(false); }, 3000);
+    }
   });
 
   // Tách 3 listener riêng: meta + proposals + images
   // → khi duyệt phiếu chỉ proposals thay đổi, KHÔNG tải lại ảnh
-  let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false, _imagesLoadStarted=false;
-  let _metaData={}, _proposalsData={}, _imagesData={};
-  let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
-  let _loadingImages = new Set(); // đang fetch
-  let _imgObserver = null;
 
   function _mergeAndRender(){
     if(!_metaLoaded || !_proposalsLoaded) return;
@@ -1714,9 +1748,11 @@ function initFirebaseSync(){
     if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
 
     // Tải ảnh SAU khi đã kết nối + hiện phiếu xong → lúc mở app không bị đống ảnh tranh băng thông (mở nhanh hơn)
+    // Dùng on() thay vì once(): máy khác thêm/xoá ảnh chứng từ là bên này thấy NGAY,
+    // không phải đóng mở lại app. (Sau lần tải đầu, Firebase chỉ gửi phần thay đổi — không tốn thêm băng thông.)
     if(!_imagesLoadStarted){
       _imagesLoadStarted = true;
-      db.ref('duyetchi/images').once('value', s=>{ _imagesData = s.val()||{}; _imagesLoaded=true; _mergeAndRender(); }, ()=>{ _imagesLoaded=true; });
+      db.ref('duyetchi/images').on('value', s=>{ _imagesData = s.val()||{}; _imagesLoaded=true; _mergeAndRender(); }, ()=>{ _imagesLoaded=true; });
     }
   }
 
@@ -2481,6 +2517,9 @@ function undoTransfer(id){
   if(totalLeft<=0){ p.status='approved'; }
   else if(p.status==='transferred' && totalLeft < officialApproved - 0.0001){ p.status='approved'; }
   save();
+  // Vẽ lại thẻ NGAY (không chờ debounce)
+  _cardCache.delete(id);
+  renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
   syncTransferToSheet(p);
   renderAll();
@@ -2659,6 +2698,9 @@ function undoApprove(id, field){
     p.status = 'pending';
   }
   save();
+  // Vẽ lại thẻ NGAY (không chờ debounce) — đồng nhất với lúc duyệt, tránh thẻ hiện số cũ một nhịp
+  _cardCache.delete(id);
+  renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
   syncApprovalToSheet(id, field, p[field] || null);
   syncApprovalAmountToSheet(p);
@@ -2728,6 +2770,9 @@ function confirmTransferAmount(){
   // Chưa chuyển đủ số duyệt thì giữ status='approved' để chuyển thêm
 
   save();
+  // Vẽ lại thẻ NGAY (không chờ debounce) — tránh thẻ hiện số cũ một nhịp sau khi chuyển
+  _cardCache.delete(id);
+  renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
   syncTransferToSheet(p);
   renderAll();
