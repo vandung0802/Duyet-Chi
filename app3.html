@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v44';
+const APP_VERSION = '20260630-v45';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1913,8 +1913,8 @@ function getMyPendingItems(){
   const items = [];
   proposals.forEach(p=>{
     if(p.status==='rejected') return;
-    const dAmt = parseFloat(p.approvedDAmount)||0;
-    const hAmt = parseFloat(p.approvedHAmount)||0;
+    const dAmt = approvedAmtOf(p,'D');
+    const hAmt = approvedAmtOf(p,'H');
     const total = parseFloat(p.amount)||0;
     const transferred = getTotalTransferred(p);
     if(currentRole==='dung'){
@@ -2086,7 +2086,7 @@ function attachThumbLongPress(container){
 
 const _cardCache = new Map();
 function _cardHash(p){
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+(p.approvedDAmount||0)+'|'+(p.approvedHAmount||0)+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'');
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'');
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -2102,7 +2102,7 @@ function _buildCard(p){
   // mỗi người 1 dòng badge riêng, để biết ngay tình trạng duyệt từng phần mà không cần mở từng nút.
   let badgeHtml = '';
   if(p.status==='pending'){
-    const dAmt=parseFloat(p.approvedDAmount)||0, hAmt=parseFloat(p.approvedHAmount)||0, total=parseFloat(p.amount)||0;
+    const dAmt=approvedAmtOf(p,'D'), hAmt=approvedAmtOf(p,'H'), total=parseFloat(p.amount)||0;
     const dDone=dAmt>0&&dAmt>=total-0.0001, hDone=hAmt>0&&hAmt>=total-0.0001;
     if(!dDone&&!hDone) badgeHtml=`<span class="badge badge-wait">⏳ ⏳ Chờ duyệt</span>`;
     else if(dDone&&!hDone) badgeHtml=`<div class="badge-stack"><span class="badge badge-approved">✅ D đã duyệt</span><span class="badge badge-wait" style="margin-top:4px">⏳ H chờ duyệt</span></div>`;
@@ -2122,8 +2122,8 @@ function _buildCard(p){
   }
   if(p.status==='approved' || p.status==='transferred'){
     const total = parseFloat(p.amount)||0;
-    const dAmt = parseFloat(p.approvedDAmount)||0;
-    const hAmt = parseFloat(p.approvedHAmount)||0;
+    const dAmt = approvedAmtOf(p,'D');
+    const hAmt = approvedAmtOf(p,'H');
     const approvedAmt = hAmt>0 ? hAmt : dAmt;
     const transferredAmt = getTotalTransferred(p);
     const dFull = dAmt>0 && dAmt >= total - 0.0001;
@@ -2215,7 +2215,7 @@ function renderApproveBox(){ return ''; }
 
 // ── 5 NÚT PHÂN QUYỀN ──
 function renderBtnD(p){
-  const amt = parseFloat(p.approvedDAmount)||0;
+  const amt = approvedAmtOf(p,'D');
   const total = parseFloat(p.amount)||0;
   const full = amt>0 && amt >= total - 0.0001;
   // Khi D từ chối: ẩn ô "D Đã duyệt" — thông tin đã hiện ở badge và nút từ chối
@@ -2241,7 +2241,7 @@ function renderBtnD(p){
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
 }
 function renderBtnH(p){
-  const amt = parseFloat(p.approvedHAmount)||0;
+  const amt = approvedAmtOf(p,'H');
   const total = parseFloat(p.amount)||0;
   const full = amt>0 && amt >= total - 0.0001;
   // Khi H từ chối: ẩn ô "H Đã duyệt"
@@ -2341,8 +2341,8 @@ function renderBtnShare(p){
 // Chỉ hiện khi phiếu CHƯA duyệt xong (chưa đủ cả D và H duyệt) và chưa từ chối / chưa chuyển.
 function canRemind(p){
   if(p.status==='rejected' || p.status==='transferred') return false;
-  const dDone = (parseFloat(p.approvedDAmount)||0) > 0;
-  const hDone = (parseFloat(p.approvedHAmount)||0) > 0;
+  const dDone = approvedAmtOf(p,'D') > 0;
+  const hDone = approvedAmtOf(p,'H') > 0;
   return !(dDone && hDone);
 }
 // Nhãn cho báo cáo: "{tên người bấm}: đã đề xuất lần N" (chỉ phiếu bị giục & chưa duyệt xong)
@@ -2420,11 +2420,19 @@ function normalizeApprovedAmounts(list){
 // ── LOGIC DUYỆT TỪNG PHẦN / NHIỀU LẦN ──
 // Số tiền duyệt "chính thức" của 1 phiếu: nếu H đã duyệt (>0) thì lấy số của H,
 // nếu H chưa duyệt thì lấy số của D. Đây là số Trang được phép dùng để tính phần còn lại cần chuyển.
+// ══ NGUỒN CHUẨN DUY NHẤT ══
+// Số một người (D/H) đã duyệt = TỔNG LỊCH SỬ duyệt của người đó. KHÔNG đọc approvedDAmount/approvedHAmount
+// làm căn cứ nữa — 2 field đó chỉ là bản lưu phụ (tương thích + hiển thị Sheet), dễ lệch với lịch sử khi
+// đồng bộ nhiều máy → gây lỗi "lúc duyệt được lúc không". Dùng lịch sử thì không bao giờ lệch.
+function approvedAmtOf(p, who){
+  const hist = who==='H' ? p.approvedHHistory : p.approvedDHistory;
+  if(Array.isArray(hist)) return hist.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+  return parseFloat(who==='H' ? p.approvedHAmount : p.approvedDAmount)||0; // dữ liệu rất cũ chưa có lịch sử
+}
 function getOfficialApprovedAmount(p){
-  // Số duyệt CHÍNH THỨC để T chuyển: nếu H đã duyệt thì lấy SỐ H (H là người chốt cuối, ưu tiên H hơn D);
-  // nếu H chưa duyệt mà D đã duyệt thì lấy số D (cho phép T chuyển trước khi H duyệt, chỉ cần D).
-  const h = parseFloat(p.approvedHAmount)||0;
-  const d = parseFloat(p.approvedDAmount)||0;
+  // Số duyệt CHÍNH THỨC để T chuyển: ưu tiên số H (người chốt cuối); H chưa duyệt thì lấy số D.
+  const h = approvedAmtOf(p,'H');
+  const d = approvedAmtOf(p,'D');
   return h>0 ? h : d;
 }
 function getTotalTransferred(p){
@@ -3619,8 +3627,8 @@ function renderReportList(){
   if(!fp.length){ el.innerHTML='<div class="excel-table-empty">Không có đề xuất nào phù hợp.</div>'; return; }
   const sorted = fp.slice().sort((a,b)=>Math.max(b.ts||0,b.lastRemindAt||0) - Math.max(a.ts||0,a.lastRemindAt||0));
   const rows = sorted.map((p,i)=>{
-    const dAmt = parseFloat(p.approvedDAmount)||0;
-    const hAmt = parseFloat(p.approvedHAmount)||0;
+    const dAmt = approvedAmtOf(p,'D');
+    const hAmt = approvedAmtOf(p,'H');
     const trans = getTotalTransferred(p);
     const st = STATUS[p.status]||STATUS.pending;
     const dRej = p.rejectedByD; const hRej = p.rejectedByH;
@@ -3698,8 +3706,8 @@ function renderExcelTable(containerId, items, kind){
         : `<span style="white-space:nowrap">${fmtVND(p.amount)}</span>`;
     const prv = p.priority||'normal';
     const prCell = prv==='urgent'?'<span style="color:#b00000;font-weight:800;font-size:9px;line-height:1.2">🔴<br>Gấp</span>':prv==='low'?'<span style="color:#1a7a3c;font-size:9px;line-height:1.2">🟢<br>Chờ</span>':'🟡';
-    const dAmt = parseFloat(p.approvedDAmount)||0;
-    const hAmt = parseFloat(p.approvedHAmount)||0;
+    const dAmt = approvedAmtOf(p,'D');
+    const hAmt = approvedAmtOf(p,'H');
     const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700;font-size:10px;word-break:normal">${fmtVND(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;font-size:10px;word-break:normal">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
@@ -3858,8 +3866,8 @@ function generateReport(){
   if(!proposals.length) return '';
   const fLine = p => {
     const trans = getTotalTransferred(p);
-    const dAmt = parseFloat(p.approvedDAmount)||0;
-    const hAmt = parseFloat(p.approvedHAmount)||0;
+    const dAmt = approvedAmtOf(p,'D');
+    const hAmt = approvedAmtOf(p,'H');
     const dRej = p.rejectedByD; const hRej = p.rejectedByH;
     const legD = !dRej&&!hRej&&p.rejectedBy==='D'; const legH = !dRej&&!hRej&&p.rejectedBy==='H';
     const rejInfo = [(dRej||legD)?(dRej&&dRej.reason?`D từ chối: "${dRej.reason}"`:'D từ chối'):'', (hRej||legH)?(hRej&&hRej.reason?`H từ chối: "${hRej.reason}"`:'H từ chối'):''].filter(Boolean).join(', ');
@@ -4108,7 +4116,7 @@ function syncApprovalAmountToSheet(p){
   const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const params = new URLSearchParams({
     action:'updateApprovalAmount', id:p.id,
-    dAmount: p.approvedDAmount||'', hAmount: p.approvedHAmount||'',
+    dAmount: approvedAmtOf(p,'D')||'', hAmount: approvedAmtOf(p,'H')||'',
     dHistory, hHistory,
     officialAmount: getOfficialApprovedAmount(p)||''
   });
