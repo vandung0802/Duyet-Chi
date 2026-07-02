@@ -274,6 +274,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </head>
 <body id="artifacts-component-root-html">
 
+<!-- THANH CẬP NHẬT PHẦN MỀM MỚI (hiện khi có bản mới, bấm để cập nhật) -->
+<div id="update-banner" onclick="doUpdateNow()" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:#16a34a;color:#fff;text-align:center;padding:13px 12px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.35);letter-spacing:0.2px">🔄 Có phần mềm mới — NHẤN VÀO ĐÂY để cập nhật</div>
+
 <!-- ROLE SCREEN -->
 <!-- FIRST LOGIN MODAL — chọn tên lần đầu -->
 <div id="first-login-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10002;align-items:center;justify-content:center;padding:24px">
@@ -817,29 +820,45 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v46';
+const APP_VERSION = '20260630-v47';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
-// Tự kiểm tra bản mới sau 5 giây, không phụ thuộc SW
-setTimeout(()=>{
-  fetch(location.href, {cache:'no-store', method:'HEAD'}).then(r=>{
-    const v = r.headers.get('etag')||r.headers.get('last-modified')||'';
-    const stored = localStorage.getItem('_page_etag');
-    if(stored && stored !== v){ localStorage.setItem('_page_etag', v); location.reload(true); }
-    else { localStorage.setItem('_page_etag', v); }
-  }).catch(()=>{});
-}, 5000);
+// ── KIỂM TRA BẢN MỚI + NÚT CẬP NHẬT ──
+// Có bản mới trên máy chủ → hiện thanh "Cập nhật phần mềm mới" ở đầu màn hình.
+// Người dùng chỉ bấm 1 lần là cập nhật — không phải đóng/mở app thủ công.
+function checkForUpdate(){
+  fetch('version.txt?_=' + Date.now(), {cache:'no-store'})
+    .then(function(r){ return r.ok ? r.text() : null; })
+    .then(function(txt){
+      if(txt && txt.trim() && txt.trim() !== APP_VERSION){
+        var b = document.getElementById('update-banner');
+        if(b) b.style.display = 'block';
+      }
+    }).catch(function(){});
+}
+function doUpdateNow(){
+  var b = document.getElementById('update-banner');
+  if(b){ b.textContent = '⏳ Đang cập nhật...'; }
+  // Xoá service worker cũ để chắc chắn lấy bản mới, rồi tải lại
+  try{
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.getRegistrations()
+        .then(function(rs){ rs.forEach(function(x){ x.unregister(); }); location.reload(true); })
+        .catch(function(){ location.reload(true); });
+      return;
+    }
+  }catch(e){}
+  location.reload(true);
+}
+setTimeout(checkForUpdate, 4000);                                   // kiểm tra sau khi mở app
+setInterval(checkForUpdate, 3*60*1000);                            // kiểm tra định kỳ mỗi 3 phút
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') checkForUpdate(); }); // mỗi khi quay lại app
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Tự động reload sau 15 phút không dùng → luôn có bản mới nhất
-(function(){
-  let t = setTimeout(()=>location.reload(), 15*60*1000);
-  const reset = ()=>{ clearTimeout(t); t = setTimeout(()=>location.reload(), 15*60*1000); };
-  ['touchstart','click','keydown','scroll'].forEach(e=>document.addEventListener(e, reset, {passive:true}));
-})();
+// (Đã bỏ tự-reload sau 15 phút — thay bằng thanh "Cập nhật phần mềm mới" để người dùng chủ động, không bị gián đoạn)
 const storage = firebase.storage();
 
 // Upload ảnh (dataUrl) lên Firebase Storage, trả về download URL
@@ -1827,12 +1846,11 @@ if ('serviceWorker' in navigator) {
       if (!reg.scope.includes('/Duyet-Chi/')) reg.unregister();
     }
   });
-  // controllerchange là sự kiện đáng tin nhất: kích hoạt ngay khi SW mới take over
-  let swRefreshing = false;
+  // Khi SW mới đã sẵn sàng → KHÔNG reload ngầm (dễ cắt ngang khi đang duyệt).
+  // Thay vào đó hiện thanh "Cập nhật phần mềm mới" để người dùng chủ động bấm.
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (swRefreshing) return;
-    swRefreshing = true;
-    window.location.reload();
+    var b = document.getElementById('update-banner');
+    if (b) b.style.display = 'block';
   });
   navigator.serviceWorker.register('sw.js').then(reg => {
     // Sau khi đăng ký, chủ động kiểm tra update ngay
