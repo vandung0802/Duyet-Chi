@@ -472,7 +472,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 <div class="app-header">
   <div>
-    <h1>Duyệt Chi <span style="font-size:9px;opacity:.6;font-weight:400">v14</span></h1>
+    <h1>Duyệt Chi <span id="ver-label" style="font-size:9px;opacity:.6;font-weight:400"></span></h1>
     <div style="font-size:10px;opacity:.8;margin-top:1px" id="header-date">Thứ Tư, 17/06/2026</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
@@ -820,7 +820,10 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v48';
+const APP_VERSION = '20260630-v49';
+// Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
+const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
+(function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1962,7 +1965,7 @@ function updateNotifBadge(){
   const n = unread.length;
   const badge = document.getElementById('notif-badge');
   if(badge){ badge.textContent = n>99?'99+':n; badge.style.display = n>0?'block':'none'; }
-  document.title = n>0 ? `(${n}) Duyệt Chi v14` : 'Duyệt Chi v14';
+  document.title = n>0 ? `(${n}) Duyệt Chi ${VER_LABEL}` : `Duyệt Chi ${VER_LABEL}`;
   if(navigator.setAppBadge){ n>0 ? navigator.setAppBadge(n) : navigator.clearAppBadge(); }
 }
 
