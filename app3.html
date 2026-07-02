@@ -413,11 +413,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div id="aa-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Duyệt chi</div>
     <div id="aa-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
 
-    <label class="form-label">Số tiền duyệt (đồng)</label>
-    <input class="form-input" id="aa-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this)">
-    <button class="btn-full btn-outline-full" style="margin:0 0 14px" onclick="aaFillFull()">✓ Duyệt toàn bộ số còn lại</button>
+    <div id="aa-input-group">
+      <label class="form-label">Số tiền duyệt (đồng)</label>
+      <input class="form-input" id="aa-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this)">
+      <button class="btn-full btn-outline-full" style="margin:0 0 14px" onclick="aaFillFull()">✓ Duyệt toàn bộ số còn lại</button>
 
-    <button class="btn-full btn-primary-full" onclick="confirmApproveAmount()">Xác nhận duyệt</button>
+      <button class="btn-full btn-primary-full" onclick="confirmApproveAmount()">Xác nhận duyệt</button>
+    </div>
     <button class="btn-full btn-outline-full" id="aa-undo-btn" style="display:none;color:var(--red);border-color:var(--red)" onclick="undoApproveFromModal()">🗑 Bỏ toàn bộ phần đã duyệt</button>
     <button class="btn-full btn-outline-full" onclick="closeApproveAmountModal()">Hủy</button>
   </div>
@@ -820,7 +822,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v49';
+const APP_VERSION = '20260630-v50';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2075,7 +2077,7 @@ function renderProposals(){
   list.innerHTML = items.map(p=>renderCard(p)).join('');
   attachThumbLongPress(list);
   // Lazy load ảnh cho các card vừa render
-  if(typeof _observeImageCards === 'function') _observeImageCards();
+  try{ if(typeof _observeImageCards === 'function') _observeImageCards(); }catch(e){}
 }
 
 // Gắn nhấn giữ cho mọi ảnh thumbnail (.proof-thumb) trong 1 vùng container vừa render.
@@ -2483,14 +2485,28 @@ let pendingApproveField = null;
 function approveBy(id, field){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
+  // Vẽ lại danh sách theo dữ liệu MỚI NHẤT trước khi mở khung — tránh thẻ bị "cũ" (đồng bộ trễ)
+  // khiến mở ra thấy "chờ duyệt" nhưng thực ra đã duyệt đủ rồi.
+  renderProposals();
   pendingApproveField = { id, field };
   const _histField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
   const already = (Array.isArray(p[_histField]) ? p[_histField] : []).reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
   const remain = (parseFloat(p.amount)||0) - already;
-  document.getElementById('aa-title').textContent = (field==='approvedD' ? 'Dũng duyệt chi' : 'Hiền duyệt chi');
-  document.getElementById('aa-sub').textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${already>0?` — Đã duyệt trước: ${fmtVND(already)}`:''}`;
-  document.getElementById('aa-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
-  document.getElementById('aa-undo-btn').style.display = already>0 ? 'block' : 'none';
+  const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+  document.getElementById('aa-title').textContent = who + ' duyệt chi';
+  const sub = document.getElementById('aa-sub');
+  const inputGroup = document.getElementById('aa-input-group');
+  if(remain <= 0.0001 && already > 0){
+    // Người này ĐÃ duyệt đủ rồi → hiện rõ, ẩn ô nhập gây hiểu lầm, chỉ để nút bỏ duyệt + đóng.
+    sub.innerHTML = `Tổng đề xuất: ${fmtVND(p.amount)}<br><span style="color:#16a34a;font-weight:800">✅ ${who} đã duyệt đủ ${fmtVND(already)} rồi — không cần duyệt thêm.</span>`;
+    inputGroup.style.display = 'none';
+    document.getElementById('aa-undo-btn').style.display = 'block';
+  } else {
+    sub.textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${already>0?` — Đã duyệt trước: ${fmtVND(already)}`:''}`;
+    inputGroup.style.display = 'block';
+    document.getElementById('aa-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
+    document.getElementById('aa-undo-btn').style.display = already>0 ? 'block' : 'none';
+  }
   document.getElementById('approve-amount-modal').style.display = 'flex';
   document.getElementById('approve-amount-modal').style.pointerEvents = 'auto';
 }
@@ -2549,12 +2565,19 @@ function confirmApproveAmount(){
     // Số liệu vừa đổi (đồng bộ từ máy khác) trong lúc khung này đang mở, nên số nhập cũ không còn đúng nữa.
     // Thay vì báo lỗi rồi để khung đứng yên với số cũ (bấm lại vẫn lỗi y hệt), tự làm mới khung theo số THẬT hiện tại.
     const remainNow = Math.max(0, (parseFloat(p.amount)||0) - prevAmt);
-    document.getElementById('aa-sub').textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${prevAmt>0?` — Đã duyệt trước: ${fmtVND(prevAmt)}`:''}`;
-    document.getElementById('aa-amount').value = remainNow>0 ? Number(remainNow).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
-    document.getElementById('aa-undo-btn').style.display = prevAmt>0 ? 'block' : 'none';
-    showToast(remainNow>0
-      ? `⚠️ Số liệu vừa được cập nhật — còn được duyệt ${fmtVND(remainNow)}, bấm "Xác nhận duyệt" lại`
-      : `Phiếu này đã được duyệt đủ rồi`);
+    const whoR = field==='approvedD' ? 'Dũng' : 'Hiền';
+    if(remainNow <= 0.0001){
+      // Vừa đồng bộ xong: đã duyệt đủ → ẩn ô nhập, hiện rõ trạng thái để khỏi bấm nhầm nữa.
+      document.getElementById('aa-sub').innerHTML = `Tổng đề xuất: ${fmtVND(p.amount)}<br><span style="color:#16a34a;font-weight:800">✅ ${whoR} đã duyệt đủ ${fmtVND(prevAmt)} rồi — không cần duyệt thêm.</span>`;
+      document.getElementById('aa-input-group').style.display = 'none';
+      document.getElementById('aa-undo-btn').style.display = 'block';
+      showToast('Phiếu này đã được duyệt đủ rồi');
+    } else {
+      document.getElementById('aa-sub').textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${prevAmt>0?` — Đã duyệt trước: ${fmtVND(prevAmt)}`:''}`;
+      document.getElementById('aa-amount').value = Number(remainNow).toLocaleString('vi-VN',{maximumFractionDigits:0});
+      document.getElementById('aa-undo-btn').style.display = prevAmt>0 ? 'block' : 'none';
+      showToast(`⚠️ Số liệu vừa được cập nhật — còn được duyệt ${fmtVND(remainNow)}, bấm "Xác nhận duyệt" lại`);
+    }
     return;
   }
   p[amountField] = newTotal;
