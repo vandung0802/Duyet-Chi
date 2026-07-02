@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v43';
+const APP_VERSION = '20260630-v44';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2474,8 +2474,25 @@ function closeApproveAmountModal(){
 function undoApproveFromModal(){
   if(!pendingApproveField) return;
   const { id, field } = pendingApproveField;
+  const p = proposals.find(x=>x.id===id);
+  if(!p){ closeApproveAmountModal(); return; }
+  const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+  if(!confirm(`Bỏ TOÀN BỘ phần duyệt của ${who} cho phiếu này? Phiếu sẽ về trạng thái chưa duyệt (dùng khi số liệu bị lỗi, để duyệt lại từ đầu).`)) return;
+  const amountField  = field==='approvedD' ? 'approvedDAmount'  : 'approvedHAmount';
+  const historyField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
+  // Reset TRIỆT ĐỂ: xoá cả số đã duyệt lẫn toàn bộ lịch sử của người này
+  p[amountField]  = null;
+  p[historyField] = [];
+  p[field]        = null; // mốc thời gian duyệt
+  // Nếu không còn ai duyệt và chưa chuyển đồng nào → đưa về "chờ duyệt"
+  if(getOfficialApprovedAmount(p) <= 0 && getTotalTransferred(p) <= 0 && p.status !== 'rejected') p.status = 'pending';
   closeApproveAmountModal();
-  undoApprove(id, field);
+  save();
+  syncStatusToSheet(id, p.status);
+  syncApprovalToSheet(id, field, null);
+  syncApprovalAmountToSheet(p);
+  renderAll();
+  showToast(`↩ Đã bỏ toàn bộ phần duyệt của ${who} — giờ có thể duyệt lại từ đầu`);
 }
 function aaFillFull(){
   if(!pendingApproveField) return;
