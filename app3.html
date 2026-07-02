@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v42';
+const APP_VERSION = '20260630-v43';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2500,7 +2500,18 @@ function confirmApproveAmount(){
   const _prevHist = Array.isArray(p[historyField]) ? p[historyField] : [];
   const prevAmt = _prevHist.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
   const newTotal = prevAmt + val;
-  if(newTotal > p.amount + 1){ showToast(`Tổng đã duyệt (${fmtVND(prevAmt)} + ${fmtVND(val)} = ${fmtVND(newTotal)}) vượt quá đề xuất (${fmtVND(p.amount)})`); return; }
+  if(newTotal > p.amount + 1){
+    // Số liệu vừa đổi (đồng bộ từ máy khác) trong lúc khung này đang mở, nên số nhập cũ không còn đúng nữa.
+    // Thay vì báo lỗi rồi để khung đứng yên với số cũ (bấm lại vẫn lỗi y hệt), tự làm mới khung theo số THẬT hiện tại.
+    const remainNow = Math.max(0, (parseFloat(p.amount)||0) - prevAmt);
+    document.getElementById('aa-sub').textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${prevAmt>0?` — Đã duyệt trước: ${fmtVND(prevAmt)}`:''}`;
+    document.getElementById('aa-amount').value = remainNow>0 ? Number(remainNow).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
+    document.getElementById('aa-undo-btn').style.display = prevAmt>0 ? 'block' : 'none';
+    showToast(remainNow>0
+      ? `⚠️ Số liệu vừa được cập nhật — còn được duyệt ${fmtVND(remainNow)}, bấm "Xác nhận duyệt" lại`
+      : `Phiếu này đã được duyệt đủ rồi`);
+    return;
+  }
   p[amountField] = newTotal;
   p[timeField] = Date.now();
   if(!Array.isArray(p[historyField])) p[historyField] = [];
