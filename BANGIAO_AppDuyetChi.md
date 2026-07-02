@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v54** (`APP_VERSION = '20260702-v54'`, `sw.js VERSION = '20260702-47'`, `version.txt = 20260702-v54`). Ngày 02/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v55** (`APP_VERSION = '20260702-v55'`, `sw.js VERSION = '20260702-48'`, `version.txt = 20260702-v55`). Ngày 02/07/2026.
 
 ---
 
@@ -218,6 +218,12 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Gốc:** `save()` và `_mergeAndRender` lưu `dc_proposals` KÈM TOÀN BỘ ảnh base64 vào localStorage (hạn mức ~5MB). Khi ảnh chứng từ tích đủ nhiều (52 phiếu đã chuyển), `setItem` văng `QuotaExceededError` **không được bọc try/catch** → chết luôn `pushToFirebase()` phía sau (duyệt xong máy kia không thấy) và chết luôn phần render phía dưới trong merge (nhận dữ liệu mới mà màn hình không đổi). Lỗi phụ thuộc LƯỢNG DỮ LIỆU nên "hôm qua ổn, hôm nay lỗi".
 - **Sửa:** cache local chỉ lưu **phần nhẹ không ảnh** (`_lightProposalsJson()`), bọc try/catch, `pushToFirebase()` luôn chạy kể cả cache lỗi. Ảnh luôn tải từ Firebase khi mở app. Duyệt cũng nhanh hơn (hết stringify hàng chục MB mỗi lần bấm).
 - **Đồng bộ ảnh kiểu nhẹ (imgStamp):** khi 1 máy đổi ảnh của phiếu nào, `pushToFirebase` đóng dấu `p.imgStamp = Date.now()` NGAY TRONG PHIẾU (node phiếu nhẹ, realtime sẵn) — trong pushToFirebase phần soát ảnh chạy TRƯỚC phần soát phiếu để dấu kịp vào `lightFields`. Máy khác thấy `imgStamp` mới hơn `_imagesStamps[id]` → `_refetchImagesFor(id)` tải lại ảnh ĐÚNG phiếu đó qua `.get()`, vá `lastPushedSnapshot.imagesMap` (`_syncSnapshotImages`) để không ghi ngược ảnh lên lại (chống ping-pong).
+
+### I. Chống quá tải dài hạn (v55 — user hỏi "2000 ảnh, 4000 phiếu thì sao?")
+- **Đã làm (bước 1):** ảnh MỚI sau khi lưu được NGẦM đưa lên **Firebase Storage** (`_offloadQueue` + `_offloadImagesToStorage`, kích hoạt từ pushToFirebase chỗ soát ảnh), database chỉ giữ **URL**. Upload lỗi → giữ base64 như cũ, không bao giờ chặn nghiệp vụ. Storage rules hiện **cho ghi không cần đăng nhập** (preview upload được) — cân nhắc siết lại sau.
+- **Đã làm (bước 3):** danh sách chỉ vẽ `_renderLimit = 150` phiếu mới nhất + nút "Xem thêm"; `setFilter` reset về 150. Tìm kiếm/thống kê/báo cáo vẫn tính trên TOÀN BỘ.
+- **CHƯA làm (bước 2):** migrate ảnh CŨ (base64 trong `duyetchi/images`) lên Storage — chạy 1 lần từ 1 máy đã đăng nhập, làm lúc ít người dùng, sau khi v55 chạy êm 1-2 ngày. Cách: duyệt từng phiếu có ảnh base64 → upload → thay URL → save. Lưu ý hiển thị/copy ảnh đã hỗ trợ URL sẵn (`imageUrlToBlob` ~1017 có fallback CORS).
+- **CHƯA làm (bước 4):** khi phiếu > ~1500 → node `duyetchi/archive` cho phiếu đã chuyển xong >3 tháng, app không lắng nghe mặc định; Báo cáo có nút tải dữ liệu cũ. Google Sheets vẫn giữ 100% lịch sử.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
