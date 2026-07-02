@@ -822,7 +822,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v50';
+const APP_VERSION = '20260630-v51';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2532,6 +2532,8 @@ function undoApproveFromModal(){
   if(getOfficialApprovedAmount(p) <= 0 && getTotalTransferred(p) <= 0 && p.status !== 'rejected') p.status = 'pending';
   closeApproveAmountModal();
   save();
+  _cardCache.delete(id);
+  renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
   syncApprovalToSheet(id, field, null);
   syncApprovalAmountToSheet(p);
@@ -2587,6 +2589,10 @@ function confirmApproveAmount(){
   if(getOfficialApprovedAmount(p) > 0) p.status = 'approved';
 
   save();
+  // Vẽ lại NGAY thẻ vừa duyệt (không chờ debounce) → tránh thẻ còn hiện "Chờ duyệt"
+  // ngay sau khi bấm, khiến người dùng tưởng chưa duyệt và bấm lại.
+  _cardCache.delete(id);
+  renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
   syncApprovalToSheet(id, field, p[timeField]);
   syncApprovalAmountToSheet(p);
