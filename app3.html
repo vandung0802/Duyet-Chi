@@ -822,7 +822,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260702-v54';
+const APP_VERSION = '20260702-v55';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1641,6 +1641,7 @@ function pushToFirebase(){
       // → máy khác thấy dấu mới là tải lại ảnh ĐÚNG PHIẾU ĐÓ, không phải kéo cả kho ảnh (nặng hàng chục MB).
       p.imgStamp = Date.now();
       _imagesStamps[p.id] = p.imgStamp; // máy mình đang giữ bản ảnh mới nhất, khỏi tự tải lại
+      _offloadQueue.add(p.id); // ảnh mới/đổi → lát nữa ngầm đưa phần base64 lên Kho ảnh (nếu có)
       // Cập nhật cache local ngay để lazy loader biết ảnh đã có
       if(typeof _imagesData !== 'undefined') _imagesData[p.id] = {imgImages, proofImages};
       if(typeof _hasImagesSet !== 'undefined') _hasImagesSet.add(p.id);
@@ -1676,6 +1677,9 @@ function pushToFirebase(){
     }
   });
 
+  // Có ảnh mới/đổi → hẹn đưa phần base64 lên Kho ảnh (chạy ngầm, không chặn gì)
+  if(_offloadQueue.size) setTimeout(_processOffloadQueue, 300);
+
   if(!hasChange) return; // không có gì đổi thì không gọi Firebase, tiết kiệm tối đa
 
   db.ref().update(updates).then(()=>{
@@ -1696,6 +1700,52 @@ let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
 let _loadingImages = new Set(); // đang fetch
 let _imgObserver = null;
 const _imagesStamps = {}; // dấu imgStamp của bản ảnh đang giữ, theo id phiếu — so với p.imgStamp để biết ảnh phiếu nào cần tải lại
+
+// ── KHO ẢNH (Firebase Storage) — chống quá tải khi ảnh nhiều lên ──
+// Ảnh base64 lưu thẳng trong database sẽ giết app khi tích đủ nhiều (mỗi lần mở app tải cả kho ảnh).
+// Giải pháp: sau khi lưu phiếu, NGẦM đưa ảnh base64 mới lên Kho ảnh rồi thay bằng đường link (nhẹ ~100 byte).
+// An toàn tuyệt đối: upload lỗi (chưa mở quyền Storage / mất mạng) thì giữ nguyên base64 như cũ — không bao giờ chặn nghiệp vụ.
+const _offloadQueue = new Set(); // id phiếu vừa có ảnh mới/đổi, chờ đưa lên Kho ảnh
+let _offloadBusy = false;
+async function _processOffloadQueue(){
+  if(_offloadBusy) return;
+  _offloadBusy = true;
+  try{
+    while(_offloadQueue.size){
+      const pid = _offloadQueue.values().next().value;
+      _offloadQueue.delete(pid);
+      await _offloadImagesToStorage(pid); // tuần tự từng phiếu, tránh nghẽn băng thông
+    }
+  } finally { _offloadBusy = false; }
+}
+async function _offloadImagesToStorage(pid){
+  let changed = false;
+  for(const kind of ['imgImages','proofImages']){
+    const p = proposals.find(x=>x.id===pid);
+    if(!p) return;
+    const srcs = (Array.isArray(p[kind]) ? p[kind] : []).filter(s=>typeof s==='string' && s.startsWith('data:'));
+    for(const src of srcs){
+      let url;
+      try{
+        url = await uploadToStorage(src, 'duyetchi/'+pid+'/'+kind+'-'+Date.now()+'-'+Math.floor(Math.random()*1e6));
+      }catch(e){
+        console.warn('Kho ảnh chưa nhận được (giữ ảnh trong database như cũ):', e.message);
+        continue;
+      }
+      // Phiếu có thể đã bị đồng bộ/vẽ lại trong lúc upload → tìm lại theo nội dung ảnh
+      const p2 = proposals.find(x=>x.id===pid);
+      if(!p2) return;
+      const arr2 = Array.isArray(p2[kind]) ? p2[kind] : [];
+      const idx2 = arr2.indexOf(src);
+      if(idx2 >= 0){ arr2[idx2] = url; changed = true; }
+    }
+  }
+  if(changed){
+    save(); // đẩy bản ảnh-là-link lên — máy khác cũng nhẹ theo
+    _cardCache.delete(pid);
+    renderAll();
+  }
+}
 
 function initFirebaseSync(){
   let _fbBadgeOffTimer = null;
@@ -2162,11 +2212,15 @@ function renderStats(){
 // ── PROPOSALS ──
 function setFilter(f,el){
   filter=f;
+  _renderLimit = 150; // đổi bộ lọc thì quay về 150 phiếu đầu (nhẹ máy)
   document.querySelectorAll('.stat-box').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderProposals();
 }
 
+// Chỉ vẽ tối đa N phiếu mới nhất mỗi lần — khi phiếu lên tới hàng nghìn, vẽ hết một lúc sẽ đơ máy.
+// Tìm kiếm / thống kê / báo cáo vẫn tính trên TOÀN BỘ phiếu, không sót gì; bấm "Xem thêm" để vẽ tiếp.
+let _renderLimit = 150;
 function renderProposals(){
   const list = document.getElementById('proposal-list');
   const q = (document.getElementById('search-input')?.value||'').trim().toLowerCase();
@@ -2178,7 +2232,11 @@ function renderProposals(){
     list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có đề xuất nào<br><small>Nhấn ➕ để thêm mới</small></div>';
     return;
   }
-  list.innerHTML = items.map(p=>renderCard(p)).join('');
+  const hidden = items.length - _renderLimit;
+  const moreBtn = hidden > 0
+    ? `<div style="text-align:center;padding:14px 0 6px"><button onclick="_renderLimit+=150;renderProposals()" style="background:var(--blue);color:#fff;border:none;border-radius:12px;padding:11px 22px;font-weight:700;font-size:14px;cursor:pointer">⬇️ Xem thêm ${hidden.toLocaleString('vi-VN')} phiếu cũ hơn</button></div>`
+    : '';
+  list.innerHTML = items.slice(0, _renderLimit).map(p=>renderCard(p)).join('') + moreBtn;
   attachThumbLongPress(list);
   // Lazy load ảnh cho các card vừa render
   try{ if(typeof _observeImageCards === 'function') _observeImageCards(); }catch(e){}
