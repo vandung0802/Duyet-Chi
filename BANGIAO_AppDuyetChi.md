@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v52** (`APP_VERSION = '20260630-v52'`, `sw.js VERSION = '20260630-45'`, `version.txt = 20260630-v52`). Ngày 02/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v53** (`APP_VERSION = '20260702-v53'`, `sw.js VERSION = '20260702-46'`, `version.txt = 20260702-v53`). Ngày 02/07/2026.
 
 ---
 
@@ -206,6 +206,13 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - Apps Script mới: STT + mới nhất lên đầu, đổi tên sheet "Tổng hợp đề xuất", thêm 4 sheet báo cáo tự dựng.
 - Tự đối chiếu, xoá dòng phiếu đã bị xoá bên app (dọn rác).
 - Định dạng tiền phân cách nghìn + " đ" cho sheet chính + 4 sheet báo cáo.
+
+### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng)
+- **Gốc:** iPhone cắt NGẦM kết nối realtime khi app chạy nền/khóa màn hình; Firebase mất 30–60s+ mới tự nhận ra → mở app thấy số CŨ rất lâu, duyệt máy này máy kia không thấy.
+- **Sửa:** thêm `forceFirebaseResync()` (goOffline→goOnline, throttle 5s) gọi khi: `visibilitychange`→visible, `online`, `pageshow` (bfcache), và watchdog 30s khi mất kết nối. Badge đỏ "Tải lại" chỉ hiện nếu mất kết nối >3s (tránh nhấp nháy lúc bắt tay lại).
+- **Ảnh:** node `duyetchi/images` đổi `once('value')` → `on('value')` — máy khác thêm/xoá ảnh chứng từ là thấy NGAY (sau lần tải đầu Firebase chỉ gửi phần thay đổi, không tốn thêm băng thông).
+- Các biến `_imagesData/_hasImagesSet/_loadingImages/_imgObserver/_metaData/_proposalsData...` đã đưa RA NGOÀI `initFirebaseSync` (top-level) → `_observeImageCards` hết văng lỗi scope (lỗi tiềm ẩn cũ ở mục F).
+- `undoApprove`, `confirmTransferAmount`, `undoTransfer` giờ cũng vẽ lại thẻ NGAY (`_cardCache.delete` + `renderProposals()`) như lúc duyệt.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
