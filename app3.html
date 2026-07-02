@@ -822,7 +822,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260702-v53';
+const APP_VERSION = '20260702-v54';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1583,12 +1583,21 @@ const STATUS = {
   rejected:    {label:'Từ chối',    badge:'badge-reject',   icon:'❌'},
 };
 
+// Cache cục bộ CHỈ giữ phần thông tin nhẹ, KHÔNG kèm ảnh base64.
+// Lý do sống còn: ảnh chứng từ ngày càng nhiều → lưu cả ảnh vừa CHẬM (đơ máy mỗi lần duyệt)
+// vừa vượt hạn mức localStorage (~5MB) → văng lỗi NGẦM giữa chừng, giết luôn bước đẩy Firebase
+// phía sau → "duyệt rồi mà máy kia không thấy / cập nhật không kịp thời". Ảnh luôn tải từ Firebase.
+function _lightProposalsJson(){
+  return JSON.stringify(proposals.map(p=>{ const {imgImages, imgB64, proofImages, proofB64, ...lf} = p; return lf; }));
+}
 function save(){
-  // Lưu cache cục bộ phòng khi mất mạng
-  localStorage.setItem('dc_proposals', JSON.stringify(proposals));
-  localStorage.setItem('dc_persons',   JSON.stringify(persons));
-  localStorage.setItem('dc_sites',     JSON.stringify(sites));
-  // Đẩy lên Firebase để đồng bộ mọi thiết bị
+  // Lưu cache cục bộ phòng khi mất mạng (chỉ phần nhẹ, không ảnh)
+  try{
+    localStorage.setItem('dc_proposals', _lightProposalsJson());
+    localStorage.setItem('dc_persons',   JSON.stringify(persons));
+    localStorage.setItem('dc_sites',     JSON.stringify(sites));
+  }catch(e){ console.warn('Không lưu được cache local (bỏ qua):', e.message); }
+  // Đẩy lên Firebase để đồng bộ mọi thiết bị — PHẢI luôn chạy kể cả khi cache lỗi
   pushToFirebase();
 }
 
@@ -1615,8 +1624,38 @@ function pushToFirebase(){
     hasChange = true;
   }
 
-  // 2) Từng phiếu đề xuất — tách riêng từng node theo id, KHÔNG kèm ảnh,
+  // 2) Ảnh — tách hẳn node riêng theo từng phiếu, CHỈ ghi khi nội dung ảnh thực sự đổi
+  //    (thêm/xóa/thay ảnh). Soát ảnh TRƯỚC phiếu để kịp đóng dấu imgStamp vào phiếu (xem dưới).
+  const prevImagesMap = (lastPushedSnapshot && lastPushedSnapshot.imagesMap) || {};
+  const nowImagesMap = {};
+  proposals.forEach(p=>{
+    const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64?[p.imgB64]:[]);
+    const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64?[p.proofB64]:[]);
+    if(!imgImages.length && !proofImages.length) return; // không có ảnh thì khỏi tốn node
+    const imgJson = JSON.stringify({imgImages, proofImages});
+    nowImagesMap[p.id] = imgJson;
+    if(prevImagesMap[p.id] !== imgJson){
+      updates['duyetchi/images/'+p.id] = {imgImages, proofImages};
+      hasChange = true;
+      // Đóng dấu "ảnh phiếu này vừa đổi" NGAY TRONG PHIẾU (node phiếu rất nhẹ, đồng bộ realtime)
+      // → máy khác thấy dấu mới là tải lại ảnh ĐÚNG PHIẾU ĐÓ, không phải kéo cả kho ảnh (nặng hàng chục MB).
+      p.imgStamp = Date.now();
+      _imagesStamps[p.id] = p.imgStamp; // máy mình đang giữ bản ảnh mới nhất, khỏi tự tải lại
+      // Cập nhật cache local ngay để lazy loader biết ảnh đã có
+      if(typeof _imagesData !== 'undefined') _imagesData[p.id] = {imgImages, proofImages};
+      if(typeof _hasImagesSet !== 'undefined') _hasImagesSet.add(p.id);
+    }
+  });
+  Object.keys(prevImagesMap).forEach(id=>{
+    if(!nowImagesMap[id]){
+      updates['duyetchi/images/'+id] = null;
+      hasChange = true;
+    }
+  });
+
+  // 3) Từng phiếu đề xuất — tách riêng từng node theo id, KHÔNG kèm ảnh,
   //    để 1 lần duyệt/sửa nhỏ chỉ ghi đúng phiếu đó, không kéo theo toàn bộ danh sách.
+  //    (imgStamp vừa đóng dấu ở trên sẽ tự nằm trong lightFields.)
   const prevProposalsMap = (lastPushedSnapshot && lastPushedSnapshot.proposalsMap) || {};
   const nowProposalsMap = {};
   proposals.forEach(p=>{
@@ -1633,31 +1672,6 @@ function pushToFirebase(){
   Object.keys(prevProposalsMap).forEach(id=>{
     if(!nowProposalsMap[id]){
       updates['duyetchi/proposals/'+id] = null;
-      hasChange = true;
-    }
-  });
-
-  // 3) Ảnh — tách hẳn node riêng theo từng phiếu, CHỈ ghi khi nội dung ảnh thực sự đổi
-  //    (thêm/xóa/thay ảnh), không bị ghi lại mỗi khi phiếu đó được duyệt/sửa thông tin khác.
-  const prevImagesMap = (lastPushedSnapshot && lastPushedSnapshot.imagesMap) || {};
-  const nowImagesMap = {};
-  proposals.forEach(p=>{
-    const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64?[p.imgB64]:[]);
-    const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64?[p.proofB64]:[]);
-    if(!imgImages.length && !proofImages.length) return; // không có ảnh thì khỏi tốn node
-    const imgJson = JSON.stringify({imgImages, proofImages});
-    nowImagesMap[p.id] = imgJson;
-    if(prevImagesMap[p.id] !== imgJson){
-      updates['duyetchi/images/'+p.id] = {imgImages, proofImages};
-      hasChange = true;
-      // Cập nhật cache local ngay để lazy loader biết ảnh đã có
-      if(typeof _imagesData !== 'undefined') _imagesData[p.id] = {imgImages, proofImages};
-      if(typeof _hasImagesSet !== 'undefined') _hasImagesSet.add(p.id);
-    }
-  });
-  Object.keys(prevImagesMap).forEach(id=>{
-    if(!nowImagesMap[id]){
-      updates['duyetchi/images/'+id] = null;
       hasChange = true;
     }
   });
@@ -1681,6 +1695,7 @@ let _metaData={}, _proposalsData={}, _imagesData={};
 let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
 let _loadingImages = new Set(); // đang fetch
 let _imgObserver = null;
+const _imagesStamps = {}; // dấu imgStamp của bản ảnh đang giữ, theo id phiếu — so với p.imgStamp để biết ảnh phiếu nào cần tải lại
 
 function initFirebaseSync(){
   let _fbBadgeOffTimer = null;
@@ -1715,9 +1730,14 @@ function initFirebaseSync(){
       return {...p, imgImages: imgs.imgImages||[], proofImages: imgs.proofImages||[]};
     }).sort((a,b)=>b.ts-a.ts);
 
-    localStorage.setItem('dc_proposals', JSON.stringify(proposals));
-    localStorage.setItem('dc_persons',   JSON.stringify(persons));
-    localStorage.setItem('dc_sites',     JSON.stringify(sites));
+    // Cache CHỈ phần nhẹ (không ảnh) + bọc try/catch: trước đây lưu cả ảnh base64 → khi ảnh nhiều lên
+    // thì vượt hạn mức localStorage, văng lỗi NGẦM ngay tại đây làm CHẾT cả phần render phía dưới
+    // → nhận được dữ liệu mới từ máy khác mà màn hình KHÔNG cập nhật ("cập nhật không kịp thời").
+    try{
+      localStorage.setItem('dc_proposals', _lightProposalsJson());
+      localStorage.setItem('dc_persons',   JSON.stringify(persons));
+      localStorage.setItem('dc_sites',     JSON.stringify(sites));
+    }catch(e){ console.warn('Không lưu được cache local (bỏ qua):', e.message); }
 
     const proposalsMap={}, imagesMap={};
     proposals.forEach(p=>{
@@ -1735,7 +1755,7 @@ function initFirebaseSync(){
     // lastPushedSnapshot ở trên chụp bản CHƯA sửa, nên pushToFirebase() sẽ phát hiện khác biệt và đẩy bản đã sửa lên.
     const _fixedIds = normalizeApprovedAmounts(proposals);
     if(_fixedIds.length){
-      localStorage.setItem('dc_proposals', JSON.stringify(proposals));
+      try{ localStorage.setItem('dc_proposals', _lightProposalsJson()); }catch(e){}
       pushToFirebase();
     }
     // Firebase rỗng lần đầu → đẩy dữ liệu local lên
@@ -1748,11 +1768,23 @@ function initFirebaseSync(){
     if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
 
     // Tải ảnh SAU khi đã kết nối + hiện phiếu xong → lúc mở app không bị đống ảnh tranh băng thông (mở nhanh hơn)
-    // Dùng on() thay vì once(): máy khác thêm/xoá ảnh chứng từ là bên này thấy NGAY,
-    // không phải đóng mở lại app. (Sau lần tải đầu, Firebase chỉ gửi phần thay đổi — không tốn thêm băng thông.)
+    // ⚠️ CHỈ tải 1 lần (once) — TUYỆT ĐỐI không on() cả node ảnh: mỗi lần mạng nối lại sẽ kéo
+    // cả kho ảnh hàng chục MB qua 4G → nghẽn mạng, mọi cập nhật khác chậm theo (lỗi v53 đã gỡ).
+    // Ảnh đổi sau đó được đồng bộ NHẸ qua dấu imgStamp trong từng phiếu (xem _refetchImagesFor).
     if(!_imagesLoadStarted){
       _imagesLoadStarted = true;
-      db.ref('duyetchi/images').on('value', s=>{ _imagesData = s.val()||{}; _imagesLoaded=true; _mergeAndRender(); }, ()=>{ _imagesLoaded=true; });
+      db.ref('duyetchi/images').once('value', s=>{
+        _imagesData = s.val()||{};
+        // Vừa tải trọn kho ảnh → ghi nhận dấu hiện tại của mọi phiếu, khỏi tải lại lần nữa
+        proposals.forEach(p=>{ if(p.imgStamp) _imagesStamps[p.id] = p.imgStamp; });
+        _imagesLoaded=true; _mergeAndRender();
+      }, ()=>{ _imagesLoaded=true; });
+    }
+    // Ảnh phiếu nào có dấu imgStamp mới hơn bản đang giữ (máy khác vừa thêm/xóa ảnh) → tải lại ĐÚNG phiếu đó
+    if(_imagesLoaded){
+      proposals.forEach(p=>{
+        if(p.imgStamp && p.imgStamp > (_imagesStamps[p.id]||0)) _refetchImagesFor(p.id, p.imgStamp);
+      });
     }
   }
 
@@ -1829,6 +1861,7 @@ async function _loadImagesForProposal(id){
     const snap = await db.ref('duyetchi/images/'+id).get();
     if(snap.exists()){
       _imagesData[id] = snap.val();
+      _syncSnapshotImages(id, _imagesData[id]);
       const idx = proposals.findIndex(p=>p.id===id);
       if(idx>=0){
         const imgs = _imagesData[id];
@@ -1841,6 +1874,41 @@ async function _loadImagesForProposal(id){
     }
   } catch(e){}
   _loadingImages.delete(id);
+}
+
+// Ghi nhận vào "bản đã đẩy" rằng ảnh phiếu này mình vừa NHẬN về (không phải mình đổi)
+// → pushToFirebase sau đó không tưởng nhầm là thay đổi mới rồi ghi ngược cả đống ảnh lên lại.
+function _syncSnapshotImages(id, val){
+  if(!lastPushedSnapshot || !lastPushedSnapshot.imagesMap) return;
+  const imgImages = (val && val.imgImages) || [], proofImages = (val && val.proofImages) || [];
+  if(imgImages.length || proofImages.length) lastPushedSnapshot.imagesMap[id] = JSON.stringify({imgImages, proofImages});
+  else delete lastPushedSnapshot.imagesMap[id];
+}
+
+// Tải lại ảnh của ĐÚNG 1 phiếu khi máy khác vừa thêm/xóa ảnh (phát hiện qua dấu imgStamp trong phiếu).
+// Nhẹ hơn rất nhiều so với lắng nghe cả kho ảnh — chỉ tốn đúng dung lượng ảnh của phiếu đó.
+function _refetchImagesFor(id, stamp){
+  if(_loadingImages.has(id)) return;
+  _imagesStamps[id] = stamp; // đánh dấu TRƯỚC để không gọi lặp khi merge chạy nhiều lần liên tiếp
+  _loadingImages.add(id);
+  db.ref('duyetchi/images/'+id).get().then(snap=>{
+    _loadingImages.delete(id);
+    const val = snap.exists() ? snap.val() : {};
+    _imagesData[id] = val;
+    _syncSnapshotImages(id, val);
+    const idx = proposals.findIndex(p=>p.id===id);
+    if(idx>=0){
+      proposals[idx].imgImages = val.imgImages||[];
+      proposals[idx].proofImages = val.proofImages||[];
+      _cardCache.delete(id);
+      const cardEl = document.getElementById('card-'+id);
+      if(cardEl){
+        cardEl.outerHTML = renderCard(proposals[idx]);
+        const newEl = document.getElementById('card-'+id);
+        if(newEl) attachThumbLongPress(newEl); // gắn lại nhấn-giữ cho ảnh trong ĐÚNG thẻ vừa thay
+      }
+    }
+  }).catch(()=>{ _loadingImages.delete(id); });
 }
 
 function updateFbBadge(ok){
