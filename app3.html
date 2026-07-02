@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v45';
+const APP_VERSION = '20260630-v46';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -2630,7 +2630,16 @@ function confirmTransferAmount(){
   if(!val || val<=0){ showToast('Vui lòng nhập số tiền hợp lệ'); return; }
   const approvedAmt = getOfficialApprovedAmount(p);
   const transferred = getTotalTransferred(p);
-  if(val > approvedAmt - transferred + 1){ showToast(`Không thể chuyển vượt quá số đã duyệt còn lại (${fmtVND(approvedAmt-transferred)})`); return; }
+  if(val > approvedAmt - transferred + 1){
+    // Số liệu vừa đổi (đồng bộ máy khác) trong lúc khung đang mở → tự làm mới theo số THẬT, tránh bấm lại vẫn lỗi.
+    const remainNow = Math.max(0, approvedAmt - transferred);
+    document.getElementById('ta-sub').textContent = `Đã duyệt: ${fmtVND(approvedAmt)} — Đã chuyển: ${fmtVND(transferred)} — Còn lại: ${fmtVND(remainNow)}`;
+    document.getElementById('ta-amount').value = remainNow>0 ? Number(remainNow).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
+    showToast(remainNow>0
+      ? `⚠️ Số liệu vừa cập nhật — còn được chuyển ${fmtVND(remainNow)}, bấm "Xác nhận chuyển" lại`
+      : `Phiếu này đã chuyển đủ rồi`);
+    return;
+  }
 
   if(!Array.isArray(p.transfers)) p.transfers = [];
   p.transfers.push({ amount: val, ts: Date.now() });
