@@ -683,6 +683,12 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:6px">⚠️ Chỉ dành cho Admin (D)</div>
         <button onclick="adminResetAllRoles()" style="width:100%;padding:8px;font-size:13px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">🗑 Xóa toàn bộ dữ liệu đăng nhập (userRoles)</button>
       </div>
+      <div id="admin-migrate-section" style="display:none;margin-bottom:12px;padding:10px;background:#eff6ff;border-radius:8px">
+        <div style="font-size:12px;color:var(--blue);font-weight:700;margin-bottom:6px">🖼 Chuyển ảnh cũ lên Kho ảnh (chỉ D — chạy 1 lần)</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Ảnh của các phiếu cũ vẫn nằm trong database làm app nặng. Nút này chuyển tuần tự từng phiếu lên Kho ảnh (database chỉ giữ link). Có thể Dừng rồi chạy tiếp sau. Nên chạy lúc ít người dùng.</div>
+        <div id="mig-img-status" style="font-size:12px;color:var(--text);margin-bottom:8px;min-height:16px"></div>
+        <button id="mig-img-btn" onclick="toggleMigrateOldImages()" style="width:100%;padding:8px;font-size:13px;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">▶ Bắt đầu chuyển</button>
+      </div>
       <details style="margin-bottom:10px">
         <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Cập nhật tên &amp; vai trò</summary>
         <div style="margin-top:10px">
@@ -822,7 +828,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260702-v55';
+const APP_VERSION = '20260702-v56';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1745,6 +1751,78 @@ async function _offloadImagesToStorage(pid){
     _cardCache.delete(pid);
     renderAll();
   }
+}
+
+// ── CHUYỂN ẢNH CŨ LÊN KHO ẢNH (bước 2 chống quá tải — chạy 1 lần, thủ công, chỉ D) ──
+// Ảnh của các phiếu TRƯỚC v55 vẫn nằm dạng base64 trong database (nặng, mỗi máy mở app phải tải hết).
+// Nút trong tab Cài đặt duyệt TUẦN TỰ từng phiếu: lấy bản ảnh mới nhất từ server → đưa base64 lên
+// Kho ảnh → thay bằng link → lưu; xong phiếu này mới sang phiếu kế (không nghẽn mạng).
+// Có thể Dừng giữa chừng, bấm lại sẽ chạy tiếp phần còn lại (phiếu đã là link thì tự bỏ qua).
+let _migRunning = false, _migStopFlag = false;
+
+function _migB64Ids(){
+  return proposals.filter(p=>
+    [...(p.imgImages||[]), ...(p.proofImages||[])].some(s=>typeof s==='string' && s.startsWith('data:'))
+  ).map(p=>p.id);
+}
+function _migSetStatus(html){
+  const el = document.getElementById('mig-img-status');
+  if(el) el.innerHTML = html;
+}
+async function toggleMigrateOldImages(){
+  if(currentRole!=='dung'){ showToast('Chỉ D mới làm được'); return; }
+  if(_migRunning){
+    _migStopFlag = true;
+    _migSetStatus('⏸ Sẽ dừng sau khi xong phiếu đang chuyển…');
+    return;
+  }
+  if(!_imagesLoaded){ showToast('⏳ Kho ảnh đang tải, chờ một lát rồi bấm lại'); return; }
+  const ids = _migB64Ids();
+  if(!ids.length){ _migSetStatus('✅ Đã chuyển hết — database chỉ còn link ảnh.'); showToast('✅ Không còn ảnh nào cần chuyển'); return; }
+  if(!confirm('Chuyển ảnh của '+ids.length+' phiếu từ database lên Kho ảnh?\n\nChạy tuần tự từng phiếu, có thể bấm "Dừng lại" bất cứ lúc nào rồi chạy tiếp sau. Nên chạy lúc ít người dùng.')) return;
+  _migRunning = true; _migStopFlag = false;
+  const btn = document.getElementById('mig-img-btn');
+  if(btn){ btn.textContent = '⏸ Dừng lại'; btn.style.background = 'var(--red)'; }
+  let done = 0, moved = 0, failed = 0;
+  for(const pid of ids){
+    if(_migStopFlag) break;
+    _migSetStatus('🔄 Đang chuyển phiếu <b>'+(done+1)+'/'+ids.length+'</b>… (xong '+moved+(failed?', lỗi '+failed:'')+')');
+    try{
+      // Lấy bản ảnh MỚI NHẤT của phiếu từ server — tránh ghi đè thay đổi máy khác vừa làm trong lúc chạy
+      const snap = await db.ref('duyetchi/images/'+pid).get();
+      if(snap.exists()){
+        const val = snap.val();
+        const idx = proposals.findIndex(p=>p.id===pid);
+        if(idx>=0){
+          proposals[idx].imgImages   = val.imgImages   || [];
+          proposals[idx].proofImages = val.proofImages || [];
+        }
+        _imagesData[pid] = val;
+        _syncSnapshotImages(pid, val);
+      }
+      // Nhờ đúng bộ máy offload sẵn có xử lý phiếu này (upload từng ảnh → thay link → save)
+      while(_offloadBusy) await new Promise(r=>setTimeout(r, 200));
+      _offloadQueue.add(pid);
+      await _processOffloadQueue();
+      // Nếu queue đang được luồng nền xử lý thì chờ nó xong hẳn phiếu này rồi mới đi tiếp
+      while(_offloadBusy || _offloadQueue.has(pid)) await new Promise(r=>setTimeout(r, 200));
+      const p2 = proposals.find(p=>p.id===pid);
+      const still = p2 && [...(p2.imgImages||[]), ...(p2.proofImages||[])].some(s=>typeof s==='string' && s.startsWith('data:'));
+      if(still) failed++; else moved++;
+    }catch(e){
+      console.warn('Chuyển ảnh phiếu '+pid+' lỗi:', e.message);
+      failed++;
+    }
+    done++;
+  }
+  const stopped = _migStopFlag;
+  _migRunning = false; _migStopFlag = false;
+  if(btn){ btn.textContent = '▶ Bắt đầu chuyển'; btn.style.background = 'var(--blue)'; }
+  const remain = _migB64Ids().length;
+  if(!remain) _migSetStatus('✅ Hoàn tất! Đã chuyển '+moved+' phiếu — database chỉ còn link ảnh.');
+  else if(stopped) _migSetStatus('⏸ Đã dừng theo yêu cầu. Chuyển được '+moved+' phiếu, còn <b>'+remain+'</b> phiếu — bấm nút để chạy tiếp.');
+  else _migSetStatus('⚠️ Chuyển được '+moved+' phiếu, '+failed+' phiếu chưa được (mạng/Kho ảnh trục trặc). Còn <b>'+remain+'</b> phiếu — bấm nút để thử lại.');
+  showToast(remain ? ('Đã chuyển '+moved+' phiếu, còn '+remain+' phiếu') : '✅ Đã chuyển toàn bộ ảnh cũ lên Kho ảnh');
 }
 
 function initFirebaseSync(){
@@ -3703,6 +3781,15 @@ function renderSettings(){
   // Hiện nút admin reset chỉ cho D
   const adminSec = document.getElementById('admin-reset-section');
   if(adminSec) adminSec.style.display = currentRole==='dung' ? 'block' : 'none';
+  // Mục chuyển ảnh cũ lên Kho ảnh — chỉ D thấy; hiện số phiếu còn ảnh trong database
+  const migSec = document.getElementById('admin-migrate-section');
+  if(migSec){
+    migSec.style.display = currentRole==='dung' ? 'block' : 'none';
+    if(currentRole==='dung' && !_migRunning){
+      if(!_imagesLoaded) _migSetStatus('⏳ Kho ảnh đang tải — mở lại mục này sau ít phút.');
+      else { const n=_migB64Ids().length; _migSetStatus(n ? ('📦 Còn <b>'+n+'</b> phiếu đang lưu ảnh trong database.') : '✅ Đã chuyển hết — database chỉ còn link ảnh.'); }
+    }
+  }
   updateNotifSettingsStatus();
   const pl=document.getElementById('person-list');
   pl.innerHTML=persons.length
