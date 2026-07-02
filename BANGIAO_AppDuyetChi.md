@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v55** (`APP_VERSION = '20260702-v55'`, `sw.js VERSION = '20260702-48'`, `version.txt = 20260702-v55`). Ngày 02/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v56** (`APP_VERSION = '20260702-v56'`, `sw.js VERSION = '20260702-49'`, `version.txt = 20260702-v56`). Ngày 02/07/2026.
 
 ---
 
@@ -222,7 +222,7 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 ### I. Chống quá tải dài hạn (v55 — user hỏi "2000 ảnh, 4000 phiếu thì sao?")
 - **Đã làm (bước 1):** ảnh MỚI sau khi lưu được NGẦM đưa lên **Firebase Storage** (`_offloadQueue` + `_offloadImagesToStorage`, kích hoạt từ pushToFirebase chỗ soát ảnh), database chỉ giữ **URL**. Upload lỗi → giữ base64 như cũ, không bao giờ chặn nghiệp vụ. Storage rules hiện **cho ghi không cần đăng nhập** (preview upload được) — cân nhắc siết lại sau.
 - **Đã làm (bước 3):** danh sách chỉ vẽ `_renderLimit = 150` phiếu mới nhất + nút "Xem thêm"; `setFilter` reset về 150. Tìm kiếm/thống kê/báo cáo vẫn tính trên TOÀN BỘ.
-- **CHƯA làm (bước 2):** migrate ảnh CŨ (base64 trong `duyetchi/images`) lên Storage — chạy 1 lần từ 1 máy đã đăng nhập, làm lúc ít người dùng, sau khi v55 chạy êm 1-2 ngày. Cách: duyệt từng phiếu có ảnh base64 → upload → thay URL → save. Lưu ý hiển thị/copy ảnh đã hỗ trợ URL sẵn (`imageUrlToBlob` ~1017 có fallback CORS).
+- **Đã làm (bước 2 — v56):** nút **"Chuyển ảnh cũ lên Kho ảnh"** trong tab Cài đặt (`admin-migrate-section`, chỉ role dung thấy; `toggleMigrateOldImages`). Chạy tuần tự từng phiếu: `.get()` bản ảnh mới nhất từ server → dùng lại bộ máy `_offloadQueue` để upload + thay URL → save; Dừng/chạy tiếp được, phiếu lỗi giữ nguyên base64. **User phải TỰ BẤM nút mới chạy** — code lên rồi nhưng migrate thật là do user quyết. (Code gốc do phiên nền viết, phiên đó bị kẹt chờ permission → đã kế thừa, rà soát, kiểm thử, deploy từ phiên chính. Nhánh `claude/practical-curie-50999f` không cần dùng nữa.)
 - **CHƯA làm (bước 4):** khi phiếu > ~1500 → node `duyetchi/archive` cho phiếu đã chuyển xong >3 tháng, app không lắng nghe mặc định; Báo cáo có nút tải dữ liệu cũ. Google Sheets vẫn giữ 100% lịch sử.
 
 ### F. Khác
