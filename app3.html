@@ -820,7 +820,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v47';
+const APP_VERSION = '20260630-v48';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -839,17 +839,19 @@ function checkForUpdate(){
 }
 function doUpdateNow(){
   var b = document.getElementById('update-banner');
-  if(b){ b.textContent = '⏳ Đang cập nhật...'; }
-  // Xoá service worker cũ để chắc chắn lấy bản mới, rồi tải lại
+  if(b){ b.textContent = '⏳ Đang cập nhật...'; b.onclick = null; }
+  // Tải lại kèm tham số phá cache → BẮT BUỘC lấy HTML mới từ máy chủ,
+  // vượt qua cache trình duyệt (max-age) và cache app trên iPhone.
+  var fresh = location.origin + location.pathname + '?u=' + Date.now();
+  function go(){ location.replace(fresh); }
+  // Xoá luôn cache cũ + service worker cũ cho chắc, rồi mới tải lại
   try{
-    if('serviceWorker' in navigator){
-      navigator.serviceWorker.getRegistrations()
-        .then(function(rs){ rs.forEach(function(x){ x.unregister(); }); location.reload(true); })
-        .catch(function(){ location.reload(true); });
-      return;
-    }
+    var jobs = [];
+    if(window.caches && caches.keys){ jobs.push(caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })); }
+    if('serviceWorker' in navigator){ jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(x){ return x.unregister(); })); })); }
+    if(jobs.length){ Promise.all(jobs).then(go).catch(go); return; }
   }catch(e){}
-  location.reload(true);
+  go();
 }
 setTimeout(checkForUpdate, 4000);                                   // kiểm tra sau khi mở app
 setInterval(checkForUpdate, 3*60*1000);                            // kiểm tra định kỳ mỗi 3 phút
@@ -1846,12 +1848,9 @@ if ('serviceWorker' in navigator) {
       if (!reg.scope.includes('/Duyet-Chi/')) reg.unregister();
     }
   });
-  // Khi SW mới đã sẵn sàng → KHÔNG reload ngầm (dễ cắt ngang khi đang duyệt).
-  // Thay vào đó hiện thanh "Cập nhật phần mềm mới" để người dùng chủ động bấm.
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    var b = document.getElementById('update-banner');
-    if (b) b.style.display = 'block';
-  });
+  // KHÔNG bám theo 'controllerchange' để hiện banner: sự kiện này kích hoạt mỗi lần
+  // SW mới claim trang (kể cả khi bản đã khớp) → gây banner giả + vòng lặp bấm hoài không tắt.
+  // Việc phát hiện bản mới CHỈ dựa vào checkForUpdate() (so version.txt vs APP_VERSION).
   navigator.serviceWorker.register('sw.js').then(reg => {
     // Sau khi đăng ký, chủ động kiểm tra update ngay
     reg.update();
