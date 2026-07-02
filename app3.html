@@ -817,7 +817,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v41';
+const APP_VERSION = '20260630-v42';
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -1671,6 +1671,13 @@ function initFirebaseSync(){
     migrateAmountsToVND();
     const wasFirst = !fbInitialLoadDone;
     fbInitialLoadDone=true;
+    // Tự sửa số đã duyệt (D/H) bị lệch với lịch sử duyệt — lỗi dữ liệu cũ gây kẹt "duyệt mà báo đã duyệt đủ".
+    // lastPushedSnapshot ở trên chụp bản CHƯA sửa, nên pushToFirebase() sẽ phát hiện khác biệt và đẩy bản đã sửa lên.
+    const _fixedIds = normalizeApprovedAmounts(proposals);
+    if(_fixedIds.length){
+      localStorage.setItem('dc_proposals', JSON.stringify(proposals));
+      pushToFirebase();
+    }
     // Firebase rỗng lần đầu → đẩy dữ liệu local lên
     if(wasFirst && !proposals.length && !persons.length) pushToFirebase();
     // Lần đầu tải xong → đối chiếu Sheet, tự xoá món đã bị xoá bên app (chờ 6s cho ổn định)
@@ -2385,6 +2392,29 @@ function remindApprove(id){
     const wait = Math.max(1, Math.ceil((600000-(Date.now()-lastPush))/60000));
     showToast('🔁 Đã ghi giục lần '+p.remindCount+' — chưa gửi lại thông báo (chờ ~'+wait+' phút)');
   }
+}
+
+// ── TỰ SỬA DỮ LIỆU LỆCH ──
+// Trường approvedDAmount/approvedHAmount PHẢI luôn khớp tổng approvedDHistory/approvedHHistory
+// (lịch sử là nguồn chuẩn — ghi từng lần bấm duyệt). Nếu lệch (do dữ liệu cũ từ các bản trước),
+// nút vẫn cho bấm duyệt tiếp nhưng modal lại báo "đã duyệt đủ" → kẹt không duyệt được.
+// Hàm này chạy mỗi khi tải dữ liệu, tự sửa field cho khớp lịch sử. Trả về danh sách id đã sửa.
+function normalizeApprovedAmounts(list){
+  const changedIds = [];
+  (list||[]).forEach(p=>{
+    let did = false;
+    ['D','H'].forEach(who=>{
+      const histField = who==='D' ? 'approvedDHistory' : 'approvedHHistory';
+      const amtField  = who==='D' ? 'approvedDAmount'  : 'approvedHAmount';
+      const hist = Array.isArray(p[histField]) ? p[histField] : null;
+      if(!hist) return; // chưa từng có lịch sử (dữ liệu rất cũ) — không đủ căn cứ để sửa, giữ nguyên field
+      const sum = hist.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
+      const cur = parseFloat(p[amtField])||0;
+      if(Math.abs(sum-cur) > 0.5){ p[amtField] = sum>0 ? sum : null; did = true; }
+    });
+    if(did) changedIds.push(p.id);
+  });
+  return changedIds;
 }
 
 // ── LOGIC DUYỆT TỪNG PHẦN / NHIỀU LẦN ──
