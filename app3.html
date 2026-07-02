@@ -822,7 +822,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260630-v51';
+const APP_VERSION = '20260630-v52';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2428,10 +2428,17 @@ function normalizeApprovedAmounts(list){
     ['D','H'].forEach(who=>{
       const histField = who==='D' ? 'approvedDHistory' : 'approvedHHistory';
       const amtField  = who==='D' ? 'approvedDAmount'  : 'approvedHAmount';
+      const timeField = who==='D' ? 'approvedD'        : 'approvedH';
       const hist = Array.isArray(p[histField]) ? p[histField] : null;
-      if(!hist) return; // chưa từng có lịch sử (dữ liệu rất cũ) — không đủ căn cứ để sửa, giữ nguyên field
-      const sum = hist.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
       const cur = parseFloat(p[amtField])||0;
+      if(!hist){
+        // Dữ liệu cũ chỉ có field, CHƯA có lịch sử → tạo 1 lần duyệt từ field
+        // để mọi chỗ (bỏ duyệt, khung duyệt, thẻ) dùng chung nguồn lịch sử, hết cảnh
+        // "thẻ báo đã duyệt nhưng bấm bỏ lại nói không có lần duyệt nào".
+        if(cur > 0){ p[histField] = [{ amount: cur, ts: p[timeField] || p.ts || Date.now() }]; did = true; }
+        return;
+      }
+      const sum = hist.reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
       if(Math.abs(sum-cur) > 0.5){ p[amtField] = sum>0 ? sum : null; did = true; }
     });
     if(did) changedIds.push(p.id);
@@ -2613,7 +2620,26 @@ function undoApprove(id, field){
   const amountField = field==='approvedD' ? 'approvedDAmount' : 'approvedHAmount';
   const historyField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
   const hist = Array.isArray(p[historyField]) ? p[historyField] : [];
-  if(hist.length === 0){ showToast('Không có lần duyệt nào để bỏ'); return; }
+  const fieldAmt = parseFloat(p[amountField])||0;
+  if(hist.length === 0){
+    // Dữ liệu cũ chỉ có field (chưa kịp backfill lịch sử) → vẫn cho bỏ duyệt: xoá sạch field.
+    if(fieldAmt > 0){
+      const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+      if(!confirm(`Bỏ toàn bộ phần duyệt của ${who} (${fmtVND(fieldAmt)})?`)) return;
+      p[amountField] = null; p[historyField] = []; p[field] = null;
+      if(getOfficialApprovedAmount(p) <= 0 && getTotalTransferred(p) <= 0 && p.status !== 'rejected') p.status = 'pending';
+      save();
+      _cardCache.delete(id);
+      renderProposals(); renderStats(); updateNotifBadge();
+      syncStatusToSheet(id, p.status);
+      syncApprovalToSheet(id, field, null);
+      syncApprovalAmountToSheet(p);
+      renderAll();
+      showToast(`↩ Đã bỏ phần duyệt của ${who}`);
+      return;
+    }
+    showToast('Không có lần duyệt nào để bỏ'); return;
+  }
 
   const lastEntry = hist[hist.length - 1];
   const lastAmt = lastEntry ? lastEntry.amount : 0;
