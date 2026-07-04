@@ -225,6 +225,22 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Đã làm (bước 2 — v56):** nút **"Chuyển ảnh cũ lên Kho ảnh"** trong tab Cài đặt (`admin-migrate-section`, chỉ role dung thấy; `toggleMigrateOldImages`). Chạy tuần tự từng phiếu: `.get()` bản ảnh mới nhất từ server → dùng lại bộ máy `_offloadQueue` để upload + thay URL → save; Dừng/chạy tiếp được, phiếu lỗi giữ nguyên base64. **User phải TỰ BẤM nút mới chạy** — code lên rồi nhưng migrate thật là do user quyết. (Code gốc do phiên nền viết, phiên đó bị kẹt chờ permission → đã kế thừa, rà soát, kiểm thử, deploy từ phiên chính. Nhánh `claude/practical-curie-50999f` không cần dùng nữa.)
 - **CHƯA làm (bước 4):** khi phiếu > ~1500 → node `duyetchi/archive` cho phiếu đã chuyển xong >3 tháng, app không lắng nghe mặc định; Báo cáo có nút tải dữ liệu cũ. Google Sheets vẫn giữ 100% lịch sử.
 
+### J. 🔴 CORS trên Firebase Storage bucket — BẮT BUỘC phải có, không phải lỗi code (phát hiện 04/07/2026)
+- **Triệu chứng:** sau khi ảnh chuyển sang lưu ở Kho ảnh (Storage) — cả ảnh mới tự động (v55) lẫn ảnh cũ migrate (v56) — nút **"Sao chép ảnh"** (nhấn giữ ảnh) không hoạt động. Ảnh vẫn HIỆN bình thường (vì `<img src>` không cần CORS), nhưng COPY/tải-bằng-canvas cần đọc byte ảnh qua JS (`fetch`/canvas) — việc này bị trình duyệt CHẶN nếu bucket chưa khai báo CORS cho phép domain app đọc.
+- **Đây KHÔNG phải lỗi trong `app3.html`** — code `dataUrlToBlob`/`imgActionCopy` (~dòng 1013-1092) vốn đã đúng, đủ fallback. Gốc là **cấu hình bucket GCS thiếu CORS**, nằm NGOÀI code, không thấy được khi đọc app3.html.
+- **Đã sửa (không cần đổi code/version):** chạy `gsutil cors set` cho bucket `gs://duyetchi-pva379.firebasestorage.app`, cho phép GET từ origin `https://vandung0802.github.io`. Máy tính này đã có sẵn Google Cloud SDK đăng nhập đúng tài khoản `vandung0802@gmail.com` — nhưng gọi `gcloud`/`gsutil` trực tiếp bị lỗi "Python not found" (do Windows App Execution Alias chặn `python`), **phải set biến môi trường trước**:
+  ```bash
+  export CLOUDSDK_PYTHON="/c/Users/Vo Van Dung/AppData/Local/Google/Cloud SDK/google-cloud-sdk/platform/bundledpython/python.exe"
+  gsutil cors get gs://duyetchi-pva379.firebasestorage.app   # xem cấu hình hiện tại
+  gsutil cors set cors.json gs://duyetchi-pva379.firebasestorage.app   # áp dụng
+  ```
+  Nội dung `cors.json` đang áp dụng:
+  ```json
+  [{"origin": ["https://vandung0802.github.io"], "method": ["GET"], "responseHeader": ["Content-Type"], "maxAgeSeconds": 3600}]
+  ```
+- **Nếu sau này đổi domain** (ví dụ chuyển sang domain riêng, hoặc dùng thêm `vandung0802.github.io` repo kia cho app3) → phải thêm origin đó vào `cors.json` rồi `gsutil cors set` lại, nếu không COPY ẢNH sẽ lại hỏng dù code không đổi gì.
+- Đã kiểm chứng bằng preview: trước khi set CORS, `fetch(url,{mode:'cors'})` báo "Failed to fetch" nhưng `fetch(url,{mode:'no-cors'})` trả `type:'opaque'` (chứng minh mạng thông, chỉ là CORS chặn đọc) — sau khi set CORS thì `dataUrlToBlob` (hàm copy dùng) đọc được blob bình thường.
+
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
 - Hiển thị tiền: "đ" không rớt dòng riêng (nbsp + word-break:normal).
