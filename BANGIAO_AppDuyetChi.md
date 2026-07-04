@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v63** (`APP_VERSION = '20260704-v63'`, `sw.js VERSION = '20260704-56'`, `version.txt = 20260704-v63`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v64** (`APP_VERSION = '20260704-v64'`, `sw.js VERSION = '20260704-57'`, `version.txt = 20260704-v64`). Ngày 04/07/2026.
 
 ---
 
@@ -294,7 +294,14 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Sửa** trong `_buildCard` (~2415, khối `if(p.status==='approved' || p.status==='transferred')`): thêm biến `isClosed = p.status==='transferred'`. Khi `isClosed`, `dFull`/`hFull` chỉ cần `amt>0` (không so với `total` = đề xuất gốc nữa) → hết đỏ; bên nào KHÔNG duyệt gì (amt=0) hiện **"D/H không cần duyệt"** (icon ➖ trung tính) thay vì **"chờ duyệt"** (⏳, ngụ ý còn phải làm gì đó).
 - **CHỈ áp dụng khi `status==='transferred'`** (đã đóng hẳn) — phiếu còn `status==='approved'` (D/H duyệt 1 phần nhưng T CHƯA chuyển xong) **giữ nguyên hành vi cũ** (vẫn hiện đỏ + "chờ duyệt"), vì tiền chưa chuyển thì vẫn còn khả năng duyệt thêm/chuyển thêm, không được coi là xong.
 - Đã kiểm chứng qua preview 3 kịch bản: (1) chỉ D duyệt 1 phần + đã chuyển → hết đỏ, H hiện "không cần duyệt"; (2) chỉ H duyệt 1 phần + đã chuyển → hết đỏ, D hiện "không cần duyệt"; (3) cả D và H duyệt đủ 100% + đã chuyển → không đổi gì (vẫn đúng như cũ). Phiếu `status==='approved'` (chưa chuyển xong) vẫn hiện đỏ + chờ duyệt như trước — không bị ảnh hưởng.
-- ⚠️ **Chưa sửa (phát hiện phụ, ngoài phạm vi user yêu cầu lần này):** nút hành động của `renderBtnD`/`renderBtnH` (~2518/2544) vẫn cho phép bấm "Duyệt" dù phiếu đã `status==='transferred'` đóng hẳn qua 1 mình D hoặc H (canPress không loại trừ status='transferred'). Bấm thêm không phá được số chính thức (do `getOfficialApprovedAmount` ưu tiên H không so độ lớn), nhưng tạo thêm 1 dòng lịch sử duyệt thừa/gây rối. Nếu user muốn khoá hẳn nút này khi đã đóng, cần hỏi rõ trước khi sửa (đây là quyết định nghiệp vụ, không tự ý đổi).
+- ⚠️ **Chưa sửa (phát hiện phụ, ngoài phạm vi user yêu cầu lần này):** nút hành động của `renderBtnD`/`renderBtnH` (~2518/2544) vẫn cho phép bấm "Duyệt" dù phiếu đã `status==='transferred'` đóng hẳn qua 1 mình D hoặc H (canPress không loại trừ status='transferred'). Bấm thêm không phá được số chính thức (do `getOfficialApprovedAmount` ưu tiên H không so độ lớn), nhưng tạo thêm 1 dòng lịch sử duyệt thừa/gây rối. Nếu user muốn khoá hẳn nút này khi đã đóng, cần hỏi rõ trước khi sửa (đây là quyết định nghiệp vụ, không tự ý đổi). — User đã xác nhận (04/07/2026): **để nguyên, không sửa.**
+
+### R. Zoom ảnh trong modal xem to — pinch + double-tap + kéo (v64, 04/07/2026)
+- **Lý do:** nhiều ảnh chứng từ chữ nhỏ, xem vừa khung (fit-to-screen) trên điện thoại không đọc được. Toàn app khoá pinch-zoom trang (`<meta viewport ... maximum-scale=1.0>`) nên phải tự làm zoom RIÊNG cho ảnh trong modal bằng CSS `transform` — không gỡ `maximum-scale` (sẽ zoom được cả UI nút bấm/chữ toàn app, phá layout).
+- **Vị trí code:** hàm `_initModalZoomGestures()` + `_applyZoomTransform()` + `resetModalZoom()` (~dòng 987, ngay sau `attachLongPress`). Gắn listener touchstart/touchmove/touchend RIÊNG lên `#imgModalSrc`, chạy **song song** với `attachLongPress` đã gắn sẵn (copy/tải/xóa) — không sửa/thay listener cũ, 2 bộ listener không giẫm chân nhau (đã kiểm chứng: long-press vẫn mở menu copy bình thường khi chưa zoom).
+- **Cử chỉ hỗ trợ:** pinch 2 ngón (thu/phóng, giới hạn 1×–4×), nhấn đúp (double-tap) bật/tắt nhanh 2.5×, kéo 1 ngón để pan khi đang zoom (>1×). Tự về lại 1× khi: pinch thu về gần 1 (≤1.02), lướt sang ảnh khác (`showModalImg` gọi `resetModalZoom()`), hoặc đóng modal (`closeImgModal` gọi `resetModalZoom()`).
+- CSS `#imgModalSrc{touch-action:none}` để trình duyệt không tự cuộn/giật đè lên lúc đang pinch/kéo bằng JS.
+- Đã kiểm chứng đầy đủ qua preview bằng `TouchEvent`/`Touch` giả lập thật (không chỉ gọi hàm suông): pinch giãn 2× → scale đúng 2.5; pinch thu lại → tự reset về 1; double-tap → 2.5 rồi double-tap lại → về 1; kéo khi đã zoom → toạ độ dịch chuyển đúng chính xác pixel; lướt ảnh khác / đóng modal → tự reset; long-press-copy vẫn mở menu bình thường khi chưa zoom (không bị phá).
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
