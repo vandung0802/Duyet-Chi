@@ -840,7 +840,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260704-v61';
+const APP_VERSION = '20260704-v62';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2418,13 +2418,22 @@ function _buildCard(p){
     const hAmt = approvedAmtOf(p,'H');
     const approvedAmt = hAmt>0 ? hAmt : dAmt;
     const transferredAmt = getTotalTransferred(p);
-    const dFull = dAmt>0 && dAmt >= total - 0.0001;
-    const hFull = hAmt>0 && hAmt >= total - 0.0001;
+    // Đã CHUYỂN ĐỦ số duyệt chính thức (status='transferred') → việc duyệt xem như XONG HẲN, không
+    // còn so với tổng đề xuất gốc nữa. Trước đây dù đã chuyển xong, thẻ vẫn hiện đỏ "6tr/10tr" và
+    // "H chờ duyệt" (do D/H duyệt ít hơn đề xuất gốc) → gây hiểu nhầm "chưa xong", trong khi thực ra
+    // phần chưa duyệt coi như không chi, không phải đang treo chờ ai duyệt thêm nữa.
+    const isClosed = p.status==='transferred';
+    const dFull = isClosed ? dAmt>0 : (dAmt>0 && dAmt >= total - 0.0001);
+    const hFull = isClosed ? hAmt>0 : (hAmt>0 && hAmt >= total - 0.0001);
     const tFull = transferredAmt>0 && transferredAmt >= approvedAmt - 0.0001;
-    const dLabel = dAmt>0 ? (dFull ? `D đã duyệt ${fmtVND(total)}` : `D đã duyệt <span style="color:#ff0000">${fmtVND(dAmt)}/${fmtVND(total)}</span>`) : 'D chờ duyệt';
-    const hLabel = hAmt>0 ? (hFull ? `H đã duyệt ${fmtVND(total)}` : `H đã duyệt <span style="color:#ff0000">${fmtVND(hAmt)}/${fmtVND(total)}</span>`) : 'H chờ duyệt';
-    const dBadgeClass = dAmt>0 ? 'badge-approved' : 'badge-wait';
-    const hBadgeClass = hAmt>0 ? 'badge-approved' : 'badge-wait';
+    const dLabel = dAmt>0
+      ? (dFull ? `D đã duyệt ${fmtVND(isClosed?dAmt:total)}` : `D đã duyệt <span style="color:#ff0000">${fmtVND(dAmt)}/${fmtVND(total)}</span>`)
+      : (isClosed ? 'D không cần duyệt' : 'D chờ duyệt');
+    const hLabel = hAmt>0
+      ? (hFull ? `H đã duyệt ${fmtVND(isClosed?hAmt:total)}` : `H đã duyệt <span style="color:#ff0000">${fmtVND(hAmt)}/${fmtVND(total)}</span>`)
+      : (isClosed ? 'H không cần duyệt' : 'H chờ duyệt');
+    const dBadgeClass = dAmt>0 ? 'badge-approved' : (isClosed ? 'badge-done' : 'badge-wait');
+    const hBadgeClass = hAmt>0 ? 'badge-approved' : (isClosed ? 'badge-done' : 'badge-wait');
     const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory : [];
     const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory : [];
     const dHistoryHtml = dHistory.length>=1 ? `<div class="badge-history"${!dFull?' style="color:#ff0000"':''}>${dHistory.map((t,idx)=>
@@ -2441,8 +2450,8 @@ function _buildCard(p){
       tRow = `<span class="badge badge-done">💸 ${tLabel}</span>${historyHtml}`;
     }
     badgeHtml = `<div class="badge-stack">
-      <span class="badge ${dBadgeClass}"><span>${dAmt>0?'✅':'⏳'} ${dLabel}</span></span>${dHistoryHtml}
-      <span class="badge ${hBadgeClass}"><span>${hAmt>0?'✅':'⏳'} ${hLabel}</span></span>${hHistoryHtml}
+      <span class="badge ${dBadgeClass}"><span>${dAmt>0?'✅':(isClosed?'➖':'⏳')} ${dLabel}</span></span>${dHistoryHtml}
+      <span class="badge ${hBadgeClass}"><span>${hAmt>0?'✅':(isClosed?'➖':'⏳')} ${hLabel}</span></span>${hHistoryHtml}
       ${tRow}
     </div>`;
   }
