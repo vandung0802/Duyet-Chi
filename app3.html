@@ -843,7 +843,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260704-v64';
+const APP_VERSION = '20260704-v65';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1069,14 +1069,15 @@ function hideImgActionMenu(){
   imgActionContext = null;
 }
 
-// Nén ảnh: resize về tối đa 1200px, chất lượng JPEG 72% → giảm ~80% dung lượng
+// Nén ảnh: resize về tối đa 1000px (đủ rõ khi zoom 4x trong modal, tăng dung lượng không đáng kể —
+// đã đo thực tế: 600px≈34KB/~0.3s, 1000px≈80KB/~0.3s, chênh lệch tải/nén không cảm nhận được)
 function compressImage(file){
   return new Promise(resolve=>{
     const r = new FileReader();
     r.onload = e=>{
       const img = new Image();
       img.onload = ()=>{
-        const MAX = 600;
+        const MAX = 1000;
         let w = img.naturalWidth, h = img.naturalHeight;
         if(w > MAX || h > MAX){
           if(w > h){ h = Math.round(h * MAX / w); w = MAX; }
