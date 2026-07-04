@@ -828,7 +828,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260702-v56';
+const APP_VERSION = '20260704-v57';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1048,12 +1048,18 @@ async function imgActionCopy(){
   const src = imgActionContext.src;
   hideImgActionMenu();
   try{
-    const blob = await dataUrlToBlob(src);
-    let copyBlob = blob;
-    // ClipboardItem chỉ nhận PNG hoặc JPEG
-    if(!['image/png','image/jpeg'].includes(blob.type)) copyBlob = await convertBlobToPng(blob);
     if(navigator.clipboard && window.ClipboardItem){
-      await navigator.clipboard.write([new ClipboardItem({[copyBlob.type]: copyBlob})]);
+      // Safari (iPhone) CHỈ chấp nhận clipboard.write() nếu gọi NGAY trong lúc bấm —
+      // nếu trước đó có chờ tải ảnh qua mạng (await) thì Safari coi như "không phải người dùng
+      // vừa bấm" và từ chối ghi, dù ảnh tải về hoàn toàn thành công (đây là lý do ảnh Zalo cũ
+      // base64 copy được ngay, còn ảnh mới ở Kho ảnh — phải tải qua mạng — thì không).
+      // Cách chuẩn: gọi write() NGAY với một Promise chưa xong, trình duyệt tự đợi Promise đó
+      // chạy xong ở ngầm, còn lệnh ghi thì đã tính là "trong lúc bấm" rồi.
+      const pngPromise = (async ()=>{
+        const blob = await dataUrlToBlob(src);
+        return blob.type === 'image/png' ? blob : await convertBlobToPng(blob);
+      })();
+      await navigator.clipboard.write([new ClipboardItem({'image/png': pngPromise})]);
       showToast('📋 Đã sao chép ảnh — có thể Ctrl+V / Paste ngay');
       return;
     }
