@@ -828,7 +828,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260704-v57';
+const APP_VERSION = '20260704-v58';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1130,20 +1130,32 @@ async function imgActionShare(){
   hideImgActionMenu();
   if(!navigator.share){ _sharing=false; showToast('❌ Trình duyệt không hỗ trợ chia sẻ'); return; }
   try {
-    // Nếu là data URL thì chuyển sang blob để chia sẻ file
-    if(src.startsWith('data:')){
-      const res = await fetch(src);
-      const blob = await res.blob();
-      const file = new File([blob], 'anh.jpg', {type: blob.type||'image/jpeg'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        await navigator.share({files:[file], title:'Ảnh Duyệt Chi'});
-        return;
-      }
+    // Luôn lấy ẢNH THẬT (dùng chung dataUrlToBlob — xử lý cả base64 lẫn ảnh ở Kho ảnh) để
+    // chia sẻ đúng FILE ảnh. Trước đây ảnh ở Kho ảnh (https://…) bị rơi vào nhánh chia sẻ LINK
+    // (Zalo/Messenger nhận link không hiện ảnh, người nhận phải bấm mở — sai mục đích).
+    const blob = await dataUrlToBlob(src);
+    const file = new File([blob], 'anh-duyet-chi.jpg', {type: blob.type||'image/jpeg'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:'Ảnh Duyệt Chi'});
+      return;
     }
-    // Firebase URL hoặc không share được file → share link
+    // Máy không hỗ trợ chia sẻ FILE (hiếm) → đành chia sẻ link
     await navigator.share({url: src.startsWith('data:') ? location.href : src, title:'Ảnh Duyệt Chi'});
   } catch(e){
-    if(e.name!=='AbortError') showToast('❌ Không chia sẻ được: '+e.message);
+    if(e.name==='AbortError'){ /* người dùng tự đóng bảng chia sẻ — im lặng */ }
+    else {
+      // Chia sẻ file thất bại (VD Safari từ chối do tải ảnh qua mạng mất thời gian) →
+      // tải ảnh về máy để người dùng tự chia sẻ từ Thư viện ảnh, còn hơn báo lỗi suông.
+      try{
+        const blob2 = await dataUrlToBlob(src);
+        const blobUrl = URL.createObjectURL(blob2);
+        const a = document.createElement('a');
+        a.href = blobUrl; a.download = 'duyet-chi-'+Date.now()+'.jpg';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(()=>URL.revokeObjectURL(blobUrl), 3000);
+        showToast('📥 Không chia sẻ trực tiếp được — đã tải ảnh về, mở từ Thư viện ảnh để chia sẻ');
+      }catch(_){ showToast('❌ Không chia sẻ được: '+e.message); }
+    }
   } finally {
     _sharing = false;
   }
