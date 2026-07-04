@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v58** (`APP_VERSION = '20260704-v58'`, `sw.js VERSION = '20260704-51'`, `version.txt = 20260704-v58`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v59** (`APP_VERSION = '20260704-v59'`, `sw.js VERSION = '20260704-52'`, `version.txt = 20260704-v59`). Ngày 04/07/2026.
 
 ---
 
@@ -251,6 +251,12 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Triệu chứng:** `imgActionShare()` (~1126) cũ CHỈ đóng gói thành File để chia sẻ khi ảnh là base64 (`src.startsWith('data:')`); ảnh ở Kho ảnh (`https://…`, tức MỌI ảnh từ v55 trở đi) rơi thẳng xuống nhánh `navigator.share({url: src})` — chia sẻ đường link, Zalo/Messenger nhận link không hiện ảnh trực tiếp.
 - **Sửa:** dùng chung `dataUrlToBlob(src)` (đã kiểm chứng đọc đúng cả base64 lẫn URL Kho ảnh — xem mục J/K) để LUÔN lấy ảnh thật rồi đóng gói File, chỉ rơi về chia sẻ link nếu máy thật sự không hỗ trợ `canShare({files})`. Thêm fallback: chia sẻ file thất bại (không phải do user tự hủy) → tự tải ảnh về máy thay vì báo lỗi suông.
 - **Giới hạn khi test:** `navigator.share`/`navigator.canShare` không tồn tại trong Chromium headless dùng để preview (Web Share API cần trình duyệt mobile/PWA thật) → chỉ kiểm chứng được phần lấy blob + đóng gói File đúng (ảnh PNG thật, đúng size/type), KHÔNG kiểm chứng được bảng chia sẻ thật của iOS. Cần user tự test trên iPhone.
+
+### M. Bảng Báo cáo đổi đơn vị tiền sang TRIỆU cho kế toán dễ đọc (v59, 04/07/2026)
+- **Yêu cầu user:** các bảng trong tab Báo cáo hiện đồng đầy đủ ("5.500.000 đ") khó đọc cho kế toán → đổi sang "5.5 tr". **CHỈ đổi trong bảng tổng hợp**, các chỗ khác (thẻ phiếu, khung duyệt/chuyển, toast, push notif, xuất CSV/text, đồng bộ Google Sheet) **giữ nguyên** `fmtVND` (đồng đầy đủ) — không được ảnh hưởng chức năng khác.
+- **Đã làm:** thêm hàm dùng chung `fmtTr(n)` (~3865, ngay trước `_renderReportTab`) — dưới 1 triệu vẫn hiện nguyên `fmtVND` (tránh "0.5 tr" khó đọc), từ 1 triệu trở lên hiện `"X.XX tr"` (tối đa 2 chữ số thập phân), dùng nbsp giữa số và "tr" để không rớt dòng riêng (giống nguyên tắc `fmtVND`). Áp dụng thay `fmtVND` → `fmtTr` trong ĐÚNG 4 hàm dựng bảng ở tab Báo cáo: `renderReportSummary` (~4123, thẻ thống kê + bảng Việc gấp + `makeTable` cho Chờ duyệt/Đã duyệt·chờ chuyển/Đã chuyển/Từ chối), `renderExcelTable` (~4052, tab Đã chuyển/Chưa chuyển — xóa hàm `fmtShort` cục bộ trùng lặp, dùng `fmtTr` thống nhất), `renderReportRejected` (~3943, tab Từ chối), `renderReportList` (~3983, tab Danh sách).
+- **KHÔNG đổi** (cố ý, đúng yêu cầu "giữ nguyên chỗ khác"): `generateReport`/`copyReport` (văn bản copy dán Zalo, ~4225-4260), phần xuất CSV/Excel (`addSection` ~4340), đồng bộ Google Sheet (`syncApprovalToSheet` và các hàm sync khác) — Sheet có định dạng tiền riêng (`#,##0" đ"`) trong `copyScript()`, không liên quan tới thay đổi này.
+- Đã kiểm chứng qua preview: `fmtTr(5500000)`→"5.5 tr", `fmtTr(65000000)`→"65 tr", `fmtTr(500000)`→"500.000 đ" (dưới 1tr), `fmtTr(0)`→"—"; `fmtVND` không đổi; cả 4 tab báo cáo render đúng với dữ liệu giả, không còn số đồng đầy đủ lọt vào bảng tổng hợp.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
