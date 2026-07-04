@@ -238,7 +238,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .report-table .col-rej{width:80px;font-size:9px;color:var(--red);white-space:normal;word-break:break-word}
 /* Bảng riêng cho tab Tóm tắt (Chờ duyệt/Đã duyệt·chờ chuyển/Đã chuyển/Từ chối) — KHÔNG ảnh hưởng
    bảng tab Từ chối độc lập (renderReportRejected) vì đó chỉ dùng class .report-table gốc. */
-.report-table-summary .col-desc{width:130px;text-align:center}
+/* Nội dung: KHÔNG căn giữa chữ theo chiều ngang (giữ đọc tự nhiên căn trái), chỉ căn giữa
+   theo CHIỀU DỌC trong hàng (vertical-align:middle) — vì hàng có thể cao hơn do nội dung dài. */
+.report-table-summary .col-desc{width:130px;text-align:left;vertical-align:middle}
 .report-table-summary .col-person{text-align:center}
 .report-table-summary .col-site{text-align:center}
 .report-table-summary .col-amt{width:56px;text-align:center}
@@ -840,7 +842,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260704-v62';
+const APP_VERSION = '20260704-v63';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
