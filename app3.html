@@ -183,6 +183,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .img-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;align-items:center;justify-content:center}
 .img-modal.open{display:flex}
 .img-modal img{max-width:95vw;max-height:90vh;object-fit:contain;border-radius:8px}
+#imgModalSrc{touch-action:none} /* tự xử lý pinch/kéo bằng JS (zoom ảnh chữ nhỏ) — chặn trình duyệt tự cuộn/zoom trang đè lên */
 .img-modal-close{position:absolute;top:14px;right:16px;color:#fff;font-size:26px;cursor:pointer}
 .img-modal-hint{position:absolute;bottom:50px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,0.6);font-size:11px;white-space:nowrap}
 
@@ -462,7 +463,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <img id="imgModalSrc" src="" alt="">
   <button class="img-modal-nav img-modal-next" onclick="navModalImg(event,1)" id="imgModalNext">›</button>
   <div class="img-modal-counter" id="imgModalCounter"></div>
-  <div class="img-modal-hint" id="imgModalHint">Nhấn giữ ảnh để copy / tải về / xóa</div>
+  <div class="img-modal-hint" id="imgModalHint">🔍 Chụm/nhấn đúp để zoom · Nhấn giữ để copy / tải về / xóa</div>
 </div>
 
 <!-- Menu nổi dùng chung: copy / tải về / xóa, hiện khi nhấn giữ vào bất kỳ ảnh nào trong app -->
@@ -842,7 +843,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260704-v63';
+const APP_VERSION = '20260704-v64';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -982,6 +983,77 @@ function attachLongPress(el, getSrc, getDeleteFn){
   el.addEventListener('mouseleave', cancel);
   el.addEventListener('click', (e)=>{ if(fired){ e.preventDefault(); e.stopPropagation(); } }, true);
   el.addEventListener('contextmenu', (e)=>{ e.preventDefault(); e.stopPropagation(); });
+}
+
+// ══════════════════════════════════════════
+// ── ZOOM ẢNH TRONG MODAL XEM TO (pinch 2 ngón + double-tap + kéo khi đã zoom) ──
+// Nhiều ảnh chứng từ chữ nhỏ, xem vừa khung không đọc được. Toàn app khoá pinch-zoom trang
+// (viewport maximum-scale=1) nên phải tự làm zoom riêng cho ảnh trong modal bằng transform CSS.
+// Chạy SONG SONG với attachLongPress đã gắn sẵn trên #imgModalSrc (copy/xóa khi CHƯA zoom) —
+// không đụng/thay listener cũ, chỉ thêm listener mới, 2 bên không giẫm chân nhau.
+// ══════════════════════════════════════════
+let _zoomScale = 1, _zoomX = 0, _zoomY = 0;
+let _zoomPinchStartDist = 0, _zoomPinchStartScale = 1;
+let _zoomPanning = false, _zoomPanStartX = 0, _zoomPanStartY = 0, _zoomStartX = 0, _zoomStartY = 0;
+let _zoomLastTapAt = 0;
+const ZOOM_MAX = 4, ZOOM_DOUBLE_TAP = 2.5;
+
+function _applyZoomTransform(smooth){
+  const img = document.getElementById('imgModalSrc');
+  if(!img) return;
+  img.style.transition = smooth ? 'transform 0.2s ease-out' : 'none';
+  img.style.transform = _zoomScale===1 ? '' : `translate(${_zoomX}px,${_zoomY}px) scale(${_zoomScale})`;
+}
+function resetModalZoom(){
+  _zoomScale = 1; _zoomX = 0; _zoomY = 0; _zoomPanning = false;
+  _applyZoomTransform(false);
+}
+function _touchDist(a,b){ return Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY); }
+
+function _initModalZoomGestures(){
+  const img = document.getElementById('imgModalSrc');
+  if(!img || img.dataset._zoomBound) return; // chỉ gắn 1 lần
+  img.dataset._zoomBound = '1';
+  img.addEventListener('touchstart', e=>{
+    if(e.touches.length===2){
+      _zoomPinchStartDist = _touchDist(e.touches[0], e.touches[1]);
+      _zoomPinchStartScale = _zoomScale;
+      _zoomPanning = false;
+    } else if(e.touches.length===1 && _zoomScale>1){
+      _zoomPanning = true;
+      _zoomPanStartX = e.touches[0].clientX; _zoomPanStartY = e.touches[0].clientY;
+      _zoomStartX = _zoomX; _zoomStartY = _zoomY;
+    }
+  }, {passive:true});
+  img.addEventListener('touchmove', e=>{
+    if(e.touches.length===2 && _zoomPinchStartDist>0){
+      e.preventDefault();
+      const d = _touchDist(e.touches[0], e.touches[1]);
+      _zoomScale = Math.min(ZOOM_MAX, Math.max(1, _zoomPinchStartScale * (d/_zoomPinchStartDist)));
+      _applyZoomTransform(false);
+    } else if(_zoomPanning && e.touches.length===1){
+      e.preventDefault();
+      _zoomX = _zoomStartX + (e.touches[0].clientX - _zoomPanStartX);
+      _zoomY = _zoomStartY + (e.touches[0].clientY - _zoomPanStartY);
+      _applyZoomTransform(false);
+    }
+  }, {passive:false});
+  img.addEventListener('touchend', e=>{
+    if(e.touches.length===0){
+      _zoomPinchStartDist = 0; _zoomPanning = false;
+      if(_zoomScale <= 1.02) resetModalZoom();
+      // Double-tap (nhấn nhanh 2 lần, không kéo/pinch) → bật/tắt zoom nhanh
+      const now = Date.now();
+      if(now - _zoomLastTapAt < 300){
+        _zoomLastTapAt = 0;
+        _zoomScale = _zoomScale > 1 ? 1 : ZOOM_DOUBLE_TAP;
+        _zoomX = 0; _zoomY = 0;
+        _applyZoomTransform(true);
+      } else {
+        _zoomLastTapAt = now;
+      }
+    }
+  });
 }
 
 function showImgActionMenu(src, deleteFn){
@@ -3394,6 +3466,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         }
       })
     );
+    _initModalZoomGestures();
   }
   const pasteZone = document.getElementById('paste-zone');
   if(!pasteZone) return;
@@ -3480,6 +3553,7 @@ function openImg(id, type, idx){
 
 function showModalImg(){
   document.getElementById('imgModalSrc').src = modalImages[modalIdx];
+  resetModalZoom(); // đổi ảnh (mở mới / lướt ‹ ›) → về zoom gốc, tránh ảnh sau bị phóng to nhầm theo ảnh trước
   const multi = modalImages.length > 1;
   document.getElementById('imgModalPrev').style.display = multi ? 'flex' : 'none';
   document.getElementById('imgModalNext').style.display = multi ? 'flex' : 'none';
@@ -3553,12 +3627,13 @@ async function downloadImageDataUrl(dataUrl, filename){
 function closeImgModal(event){
   if(event && event.target.tagName==='IMG') return;
   document.getElementById('imgModal').classList.remove('open');
+  resetModalZoom();
   // Restore nav/counter/hint về trạng thái mặc định
   const hint = document.getElementById('imgModalHint');
   const counter = document.getElementById('imgModalCounter');
   const prev = document.getElementById('imgModalPrev');
   const next = document.getElementById('imgModalNext');
-  if(hint) hint.textContent = 'Nhấn giữ ảnh để copy / tải về / xóa';
+  if(hint) hint.textContent = '🔍 Chụm/nhấn đúp để zoom · Nhấn giữ để copy / tải về / xóa';
   if(counter) counter.style.display='';
   if(prev) prev.style.display='';
   if(next) next.style.display='';
