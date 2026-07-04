@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v57** (`APP_VERSION = '20260704-v57'`, `sw.js VERSION = '20260704-50'`, `version.txt = 20260704-v57`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v58** (`APP_VERSION = '20260704-v58'`, `sw.js VERSION = '20260704-51'`, `version.txt = 20260704-v58`). Ngày 04/07/2026.
 
 ---
 
@@ -246,6 +246,11 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Sửa (v57):** gọi `navigator.clipboard.write()` NGAY LẬP TỨC với một `ClipboardItem` chứa **Promise CHƯA xong** thay vì đợi Blob thật xong mới gọi — đây là cách chuẩn WebKit khuyến nghị để giữ "tính hợp lệ trong lúc bấm" trong khi việc tải ảnh vẫn chạy ngầm bên trong Promise đó.
 - **Giới hạn khi kiểm thử:** preview chạy Chromium (không phải WebKit/Safari), và trình duyệt tự động hoá luôn từ chối quyền clipboard-write (`Write permission denied`) bất kể code đúng hay sai — đây là giới hạn của môi trường test, không phải lỗi thật. Đã kiểm chứng tách bạch được: **phần tải ảnh + chuyển PNG chạy đúng** (dùng ảnh PNG 1×1 thật để test, không phải chuỗi giả) khi CORS được cấp — chỉ riêng bước gọi `clipboard.write()` không xác minh được 100% qua preview, cần user tự test trên iPhone thật.
 - ⚠️ Nếu user báo còn lỗi copy nữa: hỏi rõ **hiện tượng cụ thể** (không có gì xảy ra? có xin quyền rồi từ chối? tự động tải ảnh về? hiện popup "chuột phải để copy"?) — mỗi hiện tượng chỉ ra nguyên nhân khác nhau, đừng đoán mò lặp lại.
+
+### L. Nút "Chia sẻ ảnh" chia sẻ NHẦM đường link thay vì file ảnh (v58, 04/07/2026)
+- **Triệu chứng:** `imgActionShare()` (~1126) cũ CHỈ đóng gói thành File để chia sẻ khi ảnh là base64 (`src.startsWith('data:')`); ảnh ở Kho ảnh (`https://…`, tức MỌI ảnh từ v55 trở đi) rơi thẳng xuống nhánh `navigator.share({url: src})` — chia sẻ đường link, Zalo/Messenger nhận link không hiện ảnh trực tiếp.
+- **Sửa:** dùng chung `dataUrlToBlob(src)` (đã kiểm chứng đọc đúng cả base64 lẫn URL Kho ảnh — xem mục J/K) để LUÔN lấy ảnh thật rồi đóng gói File, chỉ rơi về chia sẻ link nếu máy thật sự không hỗ trợ `canShare({files})`. Thêm fallback: chia sẻ file thất bại (không phải do user tự hủy) → tự tải ảnh về máy thay vì báo lỗi suông.
+- **Giới hạn khi test:** `navigator.share`/`navigator.canShare` không tồn tại trong Chromium headless dùng để preview (Web Share API cần trình duyệt mobile/PWA thật) → chỉ kiểm chứng được phần lấy blob + đóng gói File đúng (ảnh PNG thật, đúng size/type), KHÔNG kiểm chứng được bảng chia sẻ thật của iOS. Cần user tự test trên iPhone.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
