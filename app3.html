@@ -828,7 +828,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260704-v58';
+const APP_VERSION = '20260704-v59';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3858,6 +3858,18 @@ function setReportTab(tab, btn){
   _renderReportTab(tab);
 }
 
+// Hiển thị tiền RÚT GỌN theo triệu (VD "5.5 tr") — kế toán quen đọc số triệu, số đồng đầy đủ
+// dài dòng khó đọc trong bảng hẹp. CHỈ dùng trong các bảng ở tab Báo cáo (renderReportSummary/
+// renderExcelTable/renderReportRejected/renderReportList) — mọi nơi khác (thẻ phiếu, khung duyệt/
+// chuyển, Google Sheet...) GIỮ NGUYÊN fmtVND (đơn vị đồng đầy đủ), không đụng vào.
+function fmtTr(n){
+  n = parseFloat(n)||0;
+  if(!n) return '—';
+  const m = n/1000000;
+  if(m < 1) return fmtVND(n); // dưới 1 triệu vẫn hiện nguyên số đồng cho rõ, tránh "0.5 tr" khó đọc
+  return (Math.round(m*100)/100) + ' tr'; // nbsp để "tr" không rớt dòng riêng trong bảng hẹp
+}
+
 function _renderReportTab(tab){
   if(tab==='summary') renderReportSummary();
   else if(tab==='list') requestAnimationFrame(renderReportList);
@@ -3963,13 +3975,13 @@ function renderReportRejected(){
       <td class="col-person">${p.person||'—'}</td>
       <td class="col-site" style="color:#64748b">${(p.site||'—').replace('CT ','')}</td>
       <td class="col-pri">${prCell}</td>
-      <td class="col-amt" style="color:var(--red)">${fmtVND(p.amount)}</td>
+      <td class="col-amt" style="color:var(--red)">${fmtTr(p.amount)}</td>
       <td class="col-rej">${rejNote||'—'}</td>
     </tr>`;
   }).join('');
   const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   el.innerHTML=`<div style="padding:0 12px 12px">
-    <div style="font-size:11px;font-weight:700;color:#dc2626;background:#fff1f2;padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid #dc2626">❌ Từ chối — ${fp.length} phiếu · ${fmtVND(total)}</div>
+    <div style="font-size:11px;font-weight:700;color:#dc2626;background:#fff1f2;padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid #dc2626">❌ Từ chối — ${fp.length} phiếu · ${fmtTr(total)}</div>
     <div style="border-radius:0 0 8px 8px;overflow:hidden">
       <table class="report-table">
         <thead><tr><th style="text-align:center;width:18px">#</th><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">Số tiền</th><th class="col-rej">Lý do từ chối</th></tr></thead>
@@ -3996,9 +4008,9 @@ function renderReportList(){
     const rejD = (dRej||legD)?(dRej&&dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'';
     const rejH = (hRej||legH)?(hRej&&hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):'';
     const rejStr = [rejD,rejH].filter(Boolean).join('<br>');
-    const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmtVND(dAmt):'');
-    const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmtVND(hAmt):'');
-    const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmtVND(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmtVND(trans):'');
+    const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmtTr(dAmt):'');
+    const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmtTr(hAmt):'');
+    const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmtTr(trans):'');
     const cellBase = 'style="vertical-align:middle;white-space:normal;line-height:1.5"';
     const prv2 = p.priority||'normal';
     const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
@@ -4007,7 +4019,7 @@ function renderReportList(){
       <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
       <td ${cellBase} style="font-size:10px">${p.person||'—'}</td>
       <td ${cellBase} style="font-size:9px">${p.site||'—'}</td>
-      <td class="col-amount" style="vertical-align:middle;white-space:nowrap">${fmtVND(p.amount)}</td>
+      <td class="col-amount" style="vertical-align:middle;white-space:nowrap">${fmtTr(p.amount)}</td>
       <td style="vertical-align:middle;text-align:center;font-size:14px">${prCell2}</td>
       <td ${cellBase} style="font-size:9px;color:var(--blue);white-space:nowrap">${dHist}</td>
       <td ${cellBase} style="font-size:9px;color:#7c3aed;white-space:nowrap">${hHist}</td>
@@ -4023,7 +4035,7 @@ function renderReportList(){
   <div class="excel-table-wrap" id="list-scroll-main"><table class="excel-table">
     <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtVND(total)}</span><span>Đã chuyển: ${fmtVND(totalTrans)}</span></div>`;
+  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtTr(total)}</span><span>Đã chuyển: ${fmtTr(totalTrans)}</span></div>`;
   // Sync dual scrollbar
   requestAnimationFrame(()=>{
     const top=document.getElementById('list-scroll-top');
@@ -4051,7 +4063,6 @@ function renderExcelTable(containerId, items, kind){
   };
   const sorted = items.slice().sort((a,b)=> (kind==='done' ? getLastTransferTs(b)-getLastTransferTs(a) : (Math.max(b.ts||0,b.lastRemindAt||0) - Math.max(a.ts||0,a.lastRemindAt||0))));
 
-  const fmtShort = n => { if(!n) return '—'; const m=n/1000000; return m>=1?(m%1===0?m+'tr':(Math.round(m*100)/100)+'tr') : fmtVND(n); };
   const rows = sorted.map((p,i)=>{
     const stt = sorted.length - i;
     const transferred = getTotalTransferred(p);
@@ -4060,16 +4071,16 @@ function renderExcelTable(containerId, items, kind){
     const d = kind==='done' ? new Date(lastTs||0) : new Date(p.ts);
     const dateCol = lastTs||p.ts ? `${d.getDate()}/${d.getMonth()+1}` : '—';
     const amtLabel = kind==='done'
-      ? `<span style="color:var(--yellow);font-weight:700;white-space:nowrap">${fmtVND(transferred)}</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub);white-space:nowrap">còn ${fmtVND(remaining)}</span>`:''}`
+      ? `<span style="color:var(--yellow);font-weight:700;white-space:nowrap">${fmtTr(transferred)}</span>${remaining>0.001?`<br><span style="font-size:9px;color:var(--text-sub);white-space:nowrap">còn ${fmtTr(remaining)}</span>`:''}`
       : transferred>0.001
-        ? `<span style="font-weight:700;white-space:nowrap">${fmtVND(remaining)}</span><br><span style="font-size:9px;color:var(--red);font-weight:600;white-space:nowrap">⚠ đã ck ${fmtShort(transferred)}</span>`
-        : `<span style="white-space:nowrap">${fmtVND(p.amount)}</span>`;
+        ? `<span style="font-weight:700;white-space:nowrap">${fmtTr(remaining)}</span><br><span style="font-size:9px;color:var(--red);font-weight:600;white-space:nowrap">⚠ đã ck ${fmtTr(transferred)}</span>`
+        : `<span style="white-space:nowrap">${fmtTr(p.amount)}</span>`;
     const prv = p.priority||'normal';
     const prCell = prv==='urgent'?'<span style="color:#b00000;font-weight:800;font-size:9px;line-height:1.2">🔴<br>Gấp</span>':prv==='low'?'<span style="color:#1a7a3c;font-size:9px;line-height:1.2">🟢<br>Chờ</span>':'🟡';
     const dAmt = approvedAmtOf(p,'D');
     const hAmt = approvedAmtOf(p,'H');
-    const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700;font-size:10px;word-break:normal">${fmtVND(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
-    const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;font-size:10px;word-break:normal">${fmtVND(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
+    const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700;font-size:10px;word-break:normal">${fmtTr(dAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
+    const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;font-size:10px;word-break:normal">${fmtTr(hAmt)} ✓</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
       <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
@@ -4100,7 +4111,7 @@ function renderExcelTable(containerId, items, kind){
     </div>
     <div class="excel-table-footer">
       <span>Tổng cộng: ${sorted.length} khoản</span>
-      <span>${fmtVND(totalTransferred)}</span>
+      <span>${fmtTr(totalTransferred)}</span>
     </div>`;
   attachReportDoubleTap(el);
 }
@@ -4135,30 +4146,30 @@ function renderReportSummary(){
     <div style="background:#eff6ff;border-radius:10px;padding:8px 6px;text-align:center">
       <div style="font-size:9px;color:#1a56db;font-weight:600">TỔNG ĐỀ XUẤT</div>
       <div style="font-size:15px;font-weight:800;color:#1a56db;white-space:nowrap">${fp.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#1a56db;font-weight:600">${fmtVND(tot)}</div>
+      <div style="font-size:9px;color:#1a56db;font-weight:600">${fmtTr(tot)}</div>
     </div>
     <div style="background:#f0fdf4;border-radius:10px;padding:8px 6px;text-align:center">
       <div style="font-size:9px;color:#16a34a;font-weight:600">ĐÃ CHUYỂN</div>
       <div style="font-size:15px;font-weight:800;color:#16a34a;white-space:nowrap">${hasTrans.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#16a34a;font-weight:600">${fmtVND(transTotal)}</div>
+      <div style="font-size:9px;color:#16a34a;font-weight:600">${fmtTr(transTotal)}</div>
     </div>
     <div style="background:#fffbeb;border-radius:10px;padding:8px 6px;text-align:center">
       <div style="font-size:9px;color:#d97706;font-weight:600">DT·CHỜ CK</div>
       <div style="font-size:15px;font-weight:800;color:#d97706;white-space:nowrap">${appd.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#d97706;font-weight:600">${fmtVND(appdAmt)}</div>
+      <div style="font-size:9px;color:#d97706;font-weight:600">${fmtTr(appdAmt)}</div>
     </div>
     <div style="background:#fdf4ff;border-radius:10px;padding:8px 6px;text-align:center">
       <div style="font-size:9px;color:#9333ea;font-weight:600">CHỜ DUYỆT</div>
       <div style="font-size:15px;font-weight:800;color:#9333ea;white-space:nowrap">${pend.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#9333ea;font-weight:600">${fmtVND(pendAmt)}</div>
+      <div style="font-size:9px;color:#9333ea;font-weight:600">${fmtTr(pendAmt)}</div>
     </div>
   </div>
   ${urgent.length ? `<div style="margin:0 12px 10px;border-radius:10px;overflow:hidden;border:1.5px solid #f5a0a0">
-    <div style="background:#c0392b;padding:6px 10px;font-size:10px;color:#fff;font-weight:700">🔴 VIỆC GẤP CHƯA XONG — ${urgent.length} phiếu · ${fmtVND(urgent.reduce((a,p)=>a+_outstanding(p),0))}</div>
+    <div style="background:#c0392b;padding:6px 10px;font-size:10px;color:#fff;font-weight:700">🔴 VIỆC GẤP CHƯA XONG — ${urgent.length} phiếu · ${fmtTr(urgent.reduce((a,p)=>a+_outstanding(p),0))}</div>
     <table style="width:100%;border-collapse:collapse;background:#fff;table-layout:fixed">
       <colgroup><col style="width:auto"><col style="width:56px"><col style="width:auto"><col style="width:120px"></colgroup>
       <tr style="background:#fdecea"><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Nội dung</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Người</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Công trình</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:right;font-weight:800">Số tiền</th></tr>
-      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${p.desc||'—'}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.person||''}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.site||'—'}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${(_outstanding(p)||0).toLocaleString('vi-VN',{maximumFractionDigits:0})}&nbsp;đ</td></tr>`).join('')}
+      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${p.desc||'—'}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.person||''}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.site||'—'}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${fmtTr(_outstanding(p))}</td></tr>`).join('')}
     </table>
   </div>` : ''}`;
 
@@ -4177,14 +4188,14 @@ function renderReportSummary(){
         (hRej||legH)?(hRej&&hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):''
       ].filter(Boolean).join('<br>') : '';
       const amtCell = showRej
-        ? `<span style="color:var(--red)">${fmtVND(p.amount)}</span>`
+        ? `<span style="color:var(--red)">${fmtTr(p.amount)}</span>`
         : trans>0 && remaining>0.001
-          ? `<span style="color:var(--yellow)">${fmtVND(trans)}</span><br><span style="font-size:9px;color:var(--red)">còn ${fmtVND(remaining)}</span>`
+          ? `<span style="color:var(--yellow)">${fmtTr(trans)}</span><br><span style="font-size:9px;color:var(--red)">còn ${fmtTr(remaining)}</span>`
           : trans>0
-            ? `<span style="color:#16a34a">${fmtVND(trans)}</span>`
+            ? `<span style="color:#16a34a">${fmtTr(trans)}</span>`
             : official>0
-              ? `<span style="color:#d97706">${fmtVND(official)}</span>`
-              : `<span style="color:#64748b">${fmtVND(p.amount)}</span>`;
+              ? `<span style="color:#d97706">${fmtTr(official)}</span>`
+              : `<span style="color:#64748b">${fmtTr(p.amount)}</span>`;
       const prv = p.priority||'normal';
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
       return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
@@ -4204,7 +4215,7 @@ function renderReportSummary(){
         : list.reduce((a,p)=>a+getTotalTransferred(p),0);
     return `
     <div style="padding:0 12px 12px">
-      <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtVND(groupTotal)}</div>
+      <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtTr(groupTotal)}</div>
       <div style="border-radius:0 0 8px 8px;overflow:hidden">
         <table class="report-table">
           <thead><tr><th style="text-align:center;width:18px">#</th><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th class="col-rej">Lý do</th>':''}</tr></thead>
