@@ -828,7 +828,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260704-v59';
+const APP_VERSION = '20260704-v60';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -4095,7 +4095,9 @@ function renderExcelTable(containerId, items, kind){
   const totalTransferred = kind==='done'
     ? sorted.reduce((a,p)=>a+getTotalTransferred(p),0)
     : sorted.reduce((a,p)=>{ const approved=getOfficialApprovedAmount(p)||parseFloat(p.amount)||0; return a+(approved-getTotalTransferred(p)); },0);
-  const colsPending = `<colgroup><col style="width:18px"><col style="width:auto"><col style="width:76px"><col style="width:34px"><col style="width:30px"><col style="width:68px"><col style="width:68px"><col style="width:36px"><col style="width:30px"></colgroup>`;
+  // Cột "Còn chuyển"/"D duyệt"/"H duyệt" thu nhỏ vừa đủ (tiền đã hiện dạng rút gọn "X tr" nên không
+  // cần rộng như trước) để nhường chỗ cho cột "Tên đề xuất" (width:auto) rộng ra, dễ đọc nội dung hơn.
+  const colsPending = `<colgroup><col style="width:18px"><col style="width:auto"><col style="width:52px"><col style="width:34px"><col style="width:30px"><col style="width:46px"><col style="width:46px"><col style="width:36px"><col style="width:30px"></colgroup>`;
   const colsDone    = `<colgroup><col style="width:18px"><col style="width:auto"><col style="width:82px"><col style="width:40px"><col style="width:52px"><col style="width:28px"></colgroup>`;
   el.innerHTML = `
     <div class="excel-table-wrap">
