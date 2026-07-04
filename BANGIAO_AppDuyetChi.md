@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v56** (`APP_VERSION = '20260702-v56'`, `sw.js VERSION = '20260702-49'`, `version.txt = 20260702-v56`). Ngày 02/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v57** (`APP_VERSION = '20260704-v57'`, `sw.js VERSION = '20260704-50'`, `version.txt = 20260704-v57`). Ngày 04/07/2026.
 
 ---
 
@@ -240,6 +240,12 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   ```
 - **Nếu sau này đổi domain** (ví dụ chuyển sang domain riêng, hoặc dùng thêm `vandung0802.github.io` repo kia cho app3) → phải thêm origin đó vào `cors.json` rồi `gsutil cors set` lại, nếu không COPY ẢNH sẽ lại hỏng dù code không đổi gì.
 - Đã kiểm chứng bằng preview: trước khi set CORS, `fetch(url,{mode:'cors'})` báo "Failed to fetch" nhưng `fetch(url,{mode:'no-cors'})` trả `type:'opaque'` (chứng minh mạng thông, chỉ là CORS chặn đọc) — sau khi set CORS thì `dataUrlToBlob` (hàm copy dùng) đọc được blob bình thường.
+
+### K. Copy ảnh vẫn không được sau khi sửa CORS — lỗi thứ 2 chồng lên (v57, 04/07/2026)
+- **Sau khi sửa CORS (mục J), user báo copy VẪN không được** trên iPhone. Tìm tiếp ra lỗi thứ 2, đặc thù Safari: `imgActionCopy()` (~1046) cũ gọi `await dataUrlToBlob(src)` (tải ảnh qua mạng — CHẬM, có độ trễ) RỒI MỚI gọi `navigator.clipboard.write()`. **Safari (WebKit) coi lệnh ghi clipboard là "không còn nằm trong lúc người dùng vừa bấm" nếu có một `await` mạng thật (macrotask) xen giữa** → từ chối ghi (`NotAllowedError`), dù ảnh tải về hoàn toàn thành công. Đây là lý do ảnh Zalo cũ (base64, xử lý tức thì không qua mạng) copy được, còn ảnh mới ở Kho ảnh (phải tải qua mạng) thì không — dù CORS đã đúng.
+- **Sửa (v57):** gọi `navigator.clipboard.write()` NGAY LẬP TỨC với một `ClipboardItem` chứa **Promise CHƯA xong** thay vì đợi Blob thật xong mới gọi — đây là cách chuẩn WebKit khuyến nghị để giữ "tính hợp lệ trong lúc bấm" trong khi việc tải ảnh vẫn chạy ngầm bên trong Promise đó.
+- **Giới hạn khi kiểm thử:** preview chạy Chromium (không phải WebKit/Safari), và trình duyệt tự động hoá luôn từ chối quyền clipboard-write (`Write permission denied`) bất kể code đúng hay sai — đây là giới hạn của môi trường test, không phải lỗi thật. Đã kiểm chứng tách bạch được: **phần tải ảnh + chuyển PNG chạy đúng** (dùng ảnh PNG 1×1 thật để test, không phải chuỗi giả) khi CORS được cấp — chỉ riêng bước gọi `clipboard.write()` không xác minh được 100% qua preview, cần user tự test trên iPhone thật.
+- ⚠️ Nếu user báo còn lỗi copy nữa: hỏi rõ **hiện tượng cụ thể** (không có gì xảy ra? có xin quyền rồi từ chối? tự động tải ảnh về? hiện popup "chuột phải để copy"?) — mỗi hiện tượng chỉ ra nguyên nhân khác nhau, đừng đoán mò lặp lại.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
