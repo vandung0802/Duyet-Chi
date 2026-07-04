@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v62** (`APP_VERSION = '20260704-v62'`, `sw.js VERSION = '20260704-55'`, `version.txt = 20260704-v62`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v63** (`APP_VERSION = '20260704-v63'`, `sw.js VERSION = '20260704-56'`, `version.txt = 20260704-v63`). Ngày 04/07/2026.
 
 ---
 
@@ -263,7 +263,8 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - Sửa `colsPending` trong `renderExcelTable` (~4098): "Còn chuyển" 76px→52px, "D duyệt"/"H duyệt" 68px→46px mỗi cột (giảm tổng 66px, dồn hết cho cột Tên đề xuất vì đó là cột duy nhất `width:auto`). Chỉ áp dụng cho bảng tab **Chưa chuyển** (`kind==='pending'`) — bảng tab Đã chuyển (`colsDone`) không có 2 cột D/H duyệt nên không đụng tới.
 
 ### O. Bố cục 3 bảng Báo cáo — thu nhỏ cột tiền, tăng cột nội dung, căn giữa, cuộn ngang (v61, 04/07/2026)
-- **Tab Tóm tắt** (`makeTable` trong `renderReportSummary`): thêm class CSS riêng **`report-table-summary`** (đi kèm `report-table`) để override width/text-align CHỈ cho 4 bảng nhóm ở tab này (Chờ duyệt/Đã duyệt·chờ chuyển/Đã chuyển/Từ chối-trong-Tóm-tắt) — `.col-desc` 80px→130px, `.col-amt` 84px→56px, toàn bộ `td` căn giữa. **CSS đặt SAU rule gốc `.report-table .col-amt` trong `<style>` (cùng 2-class specificity, ai đứng sau thắng)** — nếu sau này sửa lại nhớ giữ đúng thứ tự, không thì mất tác dụng.
+- **Tab Tóm tắt** (`makeTable` trong `renderReportSummary`): thêm class CSS riêng **`report-table-summary`** (đi kèm `report-table`) để override width/align CHỈ cho 4 bảng nhóm ở tab này (Chờ duyệt/Đã duyệt·chờ chuyển/Đã chuyển/Từ chối-trong-Tóm-tắt) — `.col-desc` 80px→130px, `.col-amt` 84px→56px. **CSS đặt SAU rule gốc `.report-table .col-amt` trong `<style>` (cùng 2-class specificity, ai đứng sau thắng)** — nếu sau này sửa lại nhớ giữ đúng thứ tự, không thì mất tác dụng.
+- ⚠️ **v63 sửa lại (đọc kỹ, đừng làm lại như v61):** cột **Nội dung** (`.col-desc`) KHÔNG được `text-align:center` — user chỉ muốn căn giữa THEO CHIỀU DỌC trong hàng (`vertical-align:middle`), chữ vẫn đọc căn trái tự nhiên. v61 tôi hiểu nhầm "căn giữa hàng" = căn giữa chữ theo chiều ngang, áp `text-align:center` cho cả `.col-desc` → SAI, đã bị user chỉnh lại. Các cột còn lại (Người/Công trình/Số tiền/Lý do) mới đúng là căn giữa chữ ngang như y/c ban đầu — GIỮ NGUYÊN, không đụng.
 - ⚠️ **Tab "Từ chối" ĐỘC LẬP** (`renderReportRejected`, khác với bảng Từ chối con trong Tóm tắt) dùng chung `<table class="report-table">` gốc, KHÔNG có class `report-table-summary` → không bị ảnh hưởng bởi mục này (đã kiểm chứng qua preview: width/align giữ nguyên 84px/phải).
 - **Tab Đã chuyển** (`colsDone` trong `renderExcelTable`): cột "Đã chuyển" 82px→56px, nhường cho Tên đề xuất (`width:auto`).
 - **Tab Chưa chuyển**: bỏ hậu tố " ✓" sau tiền D/H duyệt; cột D duyệt/H duyệt 46px→38px; cột Mức 36px→24px; đổi từ `excel-table-fixed` (ép vừa 100% khung, không bao giờ cuộn) sang **`excel-table-scroll`** (bảng CUỘN NGANG) — cột Tên đề xuất giờ **160px cố định** (không phải `auto`).
