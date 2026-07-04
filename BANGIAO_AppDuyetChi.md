@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v59** (`APP_VERSION = '20260704-v59'`, `sw.js VERSION = '20260704-52'`, `version.txt = 20260704-v59`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v60** (`APP_VERSION = '20260704-v60'`, `sw.js VERSION = '20260704-53'`, `version.txt = 20260704-v60`). Ngày 04/07/2026.
 
 ---
 
@@ -257,6 +257,10 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Đã làm:** thêm hàm dùng chung `fmtTr(n)` (~3865, ngay trước `_renderReportTab`) — dưới 1 triệu vẫn hiện nguyên `fmtVND` (tránh "0.5 tr" khó đọc), từ 1 triệu trở lên hiện `"X.XX tr"` (tối đa 2 chữ số thập phân), dùng nbsp giữa số và "tr" để không rớt dòng riêng (giống nguyên tắc `fmtVND`). Áp dụng thay `fmtVND` → `fmtTr` trong ĐÚNG 4 hàm dựng bảng ở tab Báo cáo: `renderReportSummary` (~4123, thẻ thống kê + bảng Việc gấp + `makeTable` cho Chờ duyệt/Đã duyệt·chờ chuyển/Đã chuyển/Từ chối), `renderExcelTable` (~4052, tab Đã chuyển/Chưa chuyển — xóa hàm `fmtShort` cục bộ trùng lặp, dùng `fmtTr` thống nhất), `renderReportRejected` (~3943, tab Từ chối), `renderReportList` (~3983, tab Danh sách).
 - **KHÔNG đổi** (cố ý, đúng yêu cầu "giữ nguyên chỗ khác"): `generateReport`/`copyReport` (văn bản copy dán Zalo, ~4225-4260), phần xuất CSV/Excel (`addSection` ~4340), đồng bộ Google Sheet (`syncApprovalToSheet` và các hàm sync khác) — Sheet có định dạng tiền riêng (`#,##0" đ"`) trong `copyScript()`, không liên quan tới thay đổi này.
 - Đã kiểm chứng qua preview: `fmtTr(5500000)`→"5.5 tr", `fmtTr(65000000)`→"65 tr", `fmtTr(500000)`→"500.000 đ" (dưới 1tr), `fmtTr(0)`→"—"; `fmtVND` không đổi; cả 4 tab báo cáo render đúng với dữ liệu giả, không còn số đồng đầy đủ lọt vào bảng tổng hợp.
+
+### N. Bảng "Chưa chuyển" — thu nhỏ cột Còn chuyển/D duyệt/H duyệt (v60, 04/07/2026)
+- Sau khi tiền đã rút gọn dạng "X tr" (mục M), user muốn 3 cột này hẹp lại để nhường chỗ cho cột "Tên đề xuất" (đang `width:auto`) rộng ra, dễ đọc nội dung.
+- Sửa `colsPending` trong `renderExcelTable` (~4098): "Còn chuyển" 76px→52px, "D duyệt"/"H duyệt" 68px→46px mỗi cột (giảm tổng 66px, dồn hết cho cột Tên đề xuất vì đó là cột duy nhất `width:auto`). Chỉ áp dụng cho bảng tab **Chưa chuyển** (`kind==='pending'`) — bảng tab Đã chuyển (`colsDone`) không có 2 cột D/H duyệt nên không đụng tới.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
