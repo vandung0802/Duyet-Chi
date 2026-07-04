@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v64** (`APP_VERSION = '20260704-v64'`, `sw.js VERSION = '20260704-57'`, `version.txt = 20260704-v64`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v65** (`APP_VERSION = '20260704-v65'`, `sw.js VERSION = '20260704-58'`, `version.txt = 20260704-v65`). Ngày 04/07/2026.
 
 ---
 
@@ -302,6 +302,21 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Cử chỉ hỗ trợ:** pinch 2 ngón (thu/phóng, giới hạn 1×–4×), nhấn đúp (double-tap) bật/tắt nhanh 2.5×, kéo 1 ngón để pan khi đang zoom (>1×). Tự về lại 1× khi: pinch thu về gần 1 (≤1.02), lướt sang ảnh khác (`showModalImg` gọi `resetModalZoom()`), hoặc đóng modal (`closeImgModal` gọi `resetModalZoom()`).
 - CSS `#imgModalSrc{touch-action:none}` để trình duyệt không tự cuộn/giật đè lên lúc đang pinch/kéo bằng JS.
 - Đã kiểm chứng đầy đủ qua preview bằng `TouchEvent`/`Touch` giả lập thật (không chỉ gọi hàm suông): pinch giãn 2× → scale đúng 2.5; pinch thu lại → tự reset về 1; double-tap → 2.5 rồi double-tap lại → về 1; kéo khi đã zoom → toạ độ dịch chuyển đúng chính xác pixel; lướt ảnh khác / đóng modal → tự reset; long-press-copy vẫn mở menu bình thường khi chưa zoom (không bị phá).
+
+### S. Tăng độ phân giải nén ảnh 600px → 1000px để zoom rõ hơn (v65, 04/07/2026)
+- **Lý do:** sau khi có zoom (mục R), ảnh cũ nén 600px khi zoom 4× khá mờ (chỉ tương đương ~150px "thật" ở mức zoom cao nhất). User hỏi tăng lên có ảnh hưởng tốc độ app không — đã **đo thực tế** bằng `compressImage()` thật với ảnh giả lập giống ảnh chứng từ (2000×3000, nhiều dòng chữ nhỏ) trước khi đổi code, không đoán:
+
+  | MAX | Kích thước | Dung lượng | Thời gian nén |
+  |---|---|---|---|
+  | 600 (cũ) | 400×600 | 34 KB | ~0.3s |
+  | 900 | 600×900 | 71 KB | ~0.3s |
+  | **1000 (chọn)** | 667×1000 | 80 KB | ~0.3s |
+  | 1200 | 800×1200 | 91 KB | ~0.35s |
+  | 1600 | 1067×1600 | 151 KB | ~0.6s |
+
+  Kết luận: KHÔNG ảnh hưởng tốc độ chung của app (chỉ tác động lúc nén-upload và tải-xem ảnh, không đụng list/duyệt/chuyển); dung lượng gấp ~2.35 lần nhưng vẫn rất nhỏ so với hạn mức Firebase Storage free tier ngay cả ở quy mô 2000 ảnh/5 tháng. User chọn mức **1000px**.
+- **Sửa:** `compressImage()` (~1072) đổi `const MAX = 600` → `const MAX = 1000`. Comment cũ trong code ghi "1200px" là SAI/lỗi thời (thực tế code là 600 trước khi sửa) — đã sửa comment khớp đúng.
+- Đã kiểm chứng qua preview: gọi ĐÚNG hàm `compressImage()` thật (không phải bản sao) với ảnh test → ra đúng 667×1000, không lỗi.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
