@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v61** (`APP_VERSION = '20260704-v61'`, `sw.js VERSION = '20260704-54'`, `version.txt = 20260704-v61`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v62** (`APP_VERSION = '20260704-v62'`, `sw.js VERSION = '20260704-55'`, `version.txt = 20260704-v62`). Ngày 04/07/2026.
 
 ---
 
@@ -287,6 +287,13 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   ```
   Theo dõi run mới bằng API ở trên đến khi `"conclusion": "success"`, rồi mới `curl version.txt` xác nhận.
 - Máy tính này KHÔNG có `gh` CLI cài đặt — dùng `curl` gọi thẳng REST API công khai (không cần token cho repo public) là đủ để chẩn đoán.
+
+### Q. Thẻ phiếu "Đã chuyển" (duyệt 1 phần) vẫn hiện đỏ/"chờ duyệt" gây hiểu nhầm chưa xong (v62, 04/07/2026)
+- **Bối cảnh:** đề xuất 10tr, D duyệt 6tr (H chưa duyệt), Trang chuyển đủ 6tr → app đã tự đúng chuyển `status='transferred'` từ trước (không bắt T chuyển thêm 4tr — đúng quy tắc mục 4). Nhưng **thẻ phiếu vẫn hiện sai**: badge D đỏ "6tr/10tr" (so với tổng đề xuất GỐC) và badge H "⏳ H chờ duyệt" — khiến nhìn vào tưởng vẫn còn dang dở, dù thực ra giao dịch đã ĐÓNG HẲN.
+- **Sửa** trong `_buildCard` (~2415, khối `if(p.status==='approved' || p.status==='transferred')`): thêm biến `isClosed = p.status==='transferred'`. Khi `isClosed`, `dFull`/`hFull` chỉ cần `amt>0` (không so với `total` = đề xuất gốc nữa) → hết đỏ; bên nào KHÔNG duyệt gì (amt=0) hiện **"D/H không cần duyệt"** (icon ➖ trung tính) thay vì **"chờ duyệt"** (⏳, ngụ ý còn phải làm gì đó).
+- **CHỈ áp dụng khi `status==='transferred'`** (đã đóng hẳn) — phiếu còn `status==='approved'` (D/H duyệt 1 phần nhưng T CHƯA chuyển xong) **giữ nguyên hành vi cũ** (vẫn hiện đỏ + "chờ duyệt"), vì tiền chưa chuyển thì vẫn còn khả năng duyệt thêm/chuyển thêm, không được coi là xong.
+- Đã kiểm chứng qua preview 3 kịch bản: (1) chỉ D duyệt 1 phần + đã chuyển → hết đỏ, H hiện "không cần duyệt"; (2) chỉ H duyệt 1 phần + đã chuyển → hết đỏ, D hiện "không cần duyệt"; (3) cả D và H duyệt đủ 100% + đã chuyển → không đổi gì (vẫn đúng như cũ). Phiếu `status==='approved'` (chưa chuyển xong) vẫn hiện đỏ + chờ duyệt như trước — không bị ảnh hưởng.
+- ⚠️ **Chưa sửa (phát hiện phụ, ngoài phạm vi user yêu cầu lần này):** nút hành động của `renderBtnD`/`renderBtnH` (~2518/2544) vẫn cho phép bấm "Duyệt" dù phiếu đã `status==='transferred'` đóng hẳn qua 1 mình D hoặc H (canPress không loại trừ status='transferred'). Bấm thêm không phá được số chính thức (do `getOfficialApprovedAmount` ưu tiên H không so độ lớn), nhưng tạo thêm 1 dòng lịch sử duyệt thừa/gây rối. Nếu user muốn khoá hẳn nút này khi đã đóng, cần hỏi rõ trước khi sửa (đây là quyết định nghiệp vụ, không tự ý đổi).
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
