@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v60** (`APP_VERSION = '20260704-v60'`, `sw.js VERSION = '20260704-53'`, `version.txt = 20260704-v60`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v61** (`APP_VERSION = '20260704-v61'`, `sw.js VERSION = '20260704-54'`, `version.txt = 20260704-v61`). Ngày 04/07/2026.
 
 ---
 
@@ -261,6 +261,32 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 ### N. Bảng "Chưa chuyển" — thu nhỏ cột Còn chuyển/D duyệt/H duyệt (v60, 04/07/2026)
 - Sau khi tiền đã rút gọn dạng "X tr" (mục M), user muốn 3 cột này hẹp lại để nhường chỗ cho cột "Tên đề xuất" (đang `width:auto`) rộng ra, dễ đọc nội dung.
 - Sửa `colsPending` trong `renderExcelTable` (~4098): "Còn chuyển" 76px→52px, "D duyệt"/"H duyệt" 68px→46px mỗi cột (giảm tổng 66px, dồn hết cho cột Tên đề xuất vì đó là cột duy nhất `width:auto`). Chỉ áp dụng cho bảng tab **Chưa chuyển** (`kind==='pending'`) — bảng tab Đã chuyển (`colsDone`) không có 2 cột D/H duyệt nên không đụng tới.
+
+### O. Bố cục 3 bảng Báo cáo — thu nhỏ cột tiền, tăng cột nội dung, căn giữa, cuộn ngang (v61, 04/07/2026)
+- **Tab Tóm tắt** (`makeTable` trong `renderReportSummary`): thêm class CSS riêng **`report-table-summary`** (đi kèm `report-table`) để override width/text-align CHỈ cho 4 bảng nhóm ở tab này (Chờ duyệt/Đã duyệt·chờ chuyển/Đã chuyển/Từ chối-trong-Tóm-tắt) — `.col-desc` 80px→130px, `.col-amt` 84px→56px, toàn bộ `td` căn giữa. **CSS đặt SAU rule gốc `.report-table .col-amt` trong `<style>` (cùng 2-class specificity, ai đứng sau thắng)** — nếu sau này sửa lại nhớ giữ đúng thứ tự, không thì mất tác dụng.
+- ⚠️ **Tab "Từ chối" ĐỘC LẬP** (`renderReportRejected`, khác với bảng Từ chối con trong Tóm tắt) dùng chung `<table class="report-table">` gốc, KHÔNG có class `report-table-summary` → không bị ảnh hưởng bởi mục này (đã kiểm chứng qua preview: width/align giữ nguyên 84px/phải).
+- **Tab Đã chuyển** (`colsDone` trong `renderExcelTable`): cột "Đã chuyển" 82px→56px, nhường cho Tên đề xuất (`width:auto`).
+- **Tab Chưa chuyển**: bỏ hậu tố " ✓" sau tiền D/H duyệt; cột D duyệt/H duyệt 46px→38px; cột Mức 36px→24px; đổi từ `excel-table-fixed` (ép vừa 100% khung, không bao giờ cuộn) sang **`excel-table-scroll`** (bảng CUỘN NGANG) — cột Tên đề xuất giờ **160px cố định** (không phải `auto`).
+  - 🔴 **Bẫy đã gặp khi làm:** `table-layout:fixed` + `width:auto` bị Chromium co bảng về đúng bằng khung chứa (bỏ qua tổng độ rộng cột khai báo trong colgroup) — PHẢI tính tổng các cột bằng JS (`pendingTotalWidth`) rồi gán thẳng `style="width:${pendingTotalWidth}px"` vào thẻ `<table>` mới ép đúng ý. Chỉ khai báo `width:auto` trong CSS class KHÔNG đủ.
+  - Cũng phải thêm `min-width:unset` cho `.excel-table-scroll` vì class gốc `.excel-table` có sẵn `min-width:560px` — nếu không, bảng luôn rộng tối thiểu 560px (nhiều hơn cần) khiến bị cuộn/che nhiều hơn dự tính (lố qua cả cột H duyệt).
+  - Kết quả đã đo trong preview (mobile 375px): cột #→H duyệt hiện đủ không cuộn (H duyệt bị che ~16px cuối, chấp nhận được), Mức+Ngày hoàn toàn khuất phải cuộn phải mới thấy — đúng ý muốn.
+
+### P. GitHub Pages đôi khi deploy THẤT BẠI ở bước "deploy" (không phải CDN cache chậm) — cách chẩn đoán
+- Sau khi push v61, `version.txt` không đổi trên production dù **>20 phút** (bình thường 30-90s). Ban đầu tưởng CDN Fastly cache lâu — SAI. Kiểm tra qua API công khai mới ra đúng nguyên nhân:
+  ```bash
+  curl -s "https://api.github.com/repos/vandung0802/Duyet-Chi/actions/runs?per_page=5"
+  ```
+  → tìm run có `head_sha` khớp commit vừa push, thấy `"conclusion": "failure"`. Xem chi tiết job:
+  ```bash
+  curl -s "https://api.github.com/repos/vandung0802/Duyet-Chi/actions/runs/<run_id>/jobs"
+  ```
+  → job **"deploy"** (không phải "build") có bước "Deploy to GitHub Pages" `conclusion: "failure"` — build tĩnh vẫn ra đúng, nhưng bước đẩy lên hosting bị lỗi (hạ tầng GitHub, không phải lỗi code của mình).
+- **Cách sửa: push một commit mới bất kỳ để GitHub tự tạo lượt deploy mới** (deploy cũ KHÔNG tự retry). Nhanh nhất, không đụng nội dung:
+  ```bash
+  git commit --allow-empty -m "chore: kich hoat lai GitHub Pages deploy" && git push origin main
+  ```
+  Theo dõi run mới bằng API ở trên đến khi `"conclusion": "success"`, rồi mới `curl version.txt` xác nhận.
+- Máy tính này KHÔNG có `gh` CLI cài đặt — dùng `curl` gọi thẳng REST API công khai (không cần token cho repo public) là đủ để chẩn đoán.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
