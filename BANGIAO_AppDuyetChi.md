@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v68** (`APP_VERSION = '20260705-v68'`, `sw.js VERSION = '20260705-61'`, `version.txt = 20260705-v68`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v69** (`APP_VERSION = '20260705-v69'`, `sw.js VERSION = '20260705-62'`, `version.txt = 20260705-v69`). Ngày 05/07/2026.
 
 ---
 
@@ -333,6 +333,36 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 | `showPage()` (~2251) | thêm `'plan'` vào mảng trang ẩn/hiện + `if(pg==='plan') renderPlans();` — 2 dòng, không đổi logic cũ |
 
 **Đã kiểm chứng qua preview (không chỉ đọc code):** thêm/sửa/xoá kế hoạch, tô màu đúng theo số ngày còn lại, D xác nhận đúng, đổi trạng thái đúng, bấm "Tạo đề xuất chi" điền đúng công trình+nội dung sang Thêm mới, gửi xong tự nối `linkedProposalId` đúng phiếu, thẻ đổi thành "✅ Đã có đề xuất". Đồng thời **test lại toàn bộ tính năng CŨ sau khi thêm module này**: duyệt D (status→approved đúng), chuyển tiền Trang (status→transferred đúng), báo cáo tóm tắt render bình thường, Cài đặt hiện đúng có nút Đăng xuất mới, thanh nav đúng 5 nút không vỡ layout — **không có gì bị ảnh hưởng**, đúng cam kết với user.
+
+### V. 🔴 Kế hoạch KHÔNG ĐỒNG BỘ được — thiếu luật Firebase (phát hiện + fix HẠ TẦNG, 05/07/2026)
+- **Triệu chứng thật tế trên production:** vừa lên v67, user báo banner đỏ "⚠️ Không đồng bộ được kế hoạch — kiểm tra mạng" mỗi lần thêm kế hoạch, dù mạng/kết nối Firebase (proposals) vẫn OK bình thường.
+- **Gốc — KHÔNG phải lỗi mạng, KHÔNG phải lỗi app3.html:** Firebase Realtime Database Security Rules của dự án khai báo CHO PHÉP từng đường dẫn con RIÊNG LẺ dưới `duyetchi` (`userRoles`, `meta`, `proposals`, `images`, `pendingOtp`, `online`) — **hoàn toàn CHƯA có luật cho `duyetchi/plans`** (module mới ở v67). Firebase mặc định TỪ CHỐI ghi nếu không có `.write` rule khớp đường dẫn, dù `.read` ở cấp `duyetchi` cha có `auth != null` (read cascade xuống được nhưng **write thì KHÔNG tự cascade** — phải khai rõ ràng ở đúng path).
+- **Đây là lỗ hổng quy trình đáng ghi nhớ:** preview luôn báo PERMISSION_DENIED cho MỌI đường dẫn (vì preview không đăng nhập) → không thể phân biệt được "lỗi do preview chưa login" với "lỗi do thiếu luật thật trên production dù đã login" khi test trước khi release. **Bài học: mỗi khi thêm ngăn dữ liệu Firebase MỚI (node mới dưới `duyetchi/`), PHẢI nhớ thêm luật `.read`/`.write` tương ứng trong Security Rules — việc này không thể test được qua preview, chỉ lộ ra khi dùng thật trên production.**
+- **Cách chẩn đoán (đã dùng, ghi lại để tái sử dụng):**
+  ```bash
+  firebase login:list                                          # xác nhận đã đăng nhập đúng tài khoản
+  MSYS_NO_PATHCONV=1 firebase database:get "/.settings/rules" --project duyetchi-pva379   # xem luật hiện tại
+  ```
+  ⚠️ Trên Windows git-bash, path bắt đầu bằng `/` bị MSYS tự động "dịch" sang path Windows → PHẢI có tiền tố `MSYS_NO_PATHCONV=1` mới gọi đúng, nếu không sẽ báo lỗi "Path must begin with /" dù đã gõ đúng.
+- **Cách sửa (đã làm, deploy 1 lần, có hiệu lực NGAY LẬP TỨC — không cần bump version/deploy lại app):** tạo file rules mới = y hệt luật cũ + thêm đúng 1 khối cho `plans` (copy pattern của `proposals`, cùng mức quyền — ai đăng nhập cũng đọc/ghi được):
+  ```json
+  "plans": {
+    ".read": "auth != null",
+    "$id": { ".write": "auth != null" }
+  }
+  ```
+  Deploy bằng: tạo `firebase.json` (trỏ `database.rules` tới file rules) + `.firebaserc` (project mặc định `duyetchi-pva379`) trong 1 thư mục tạm (KHÔNG phải thư mục app3.html — repo Duyet-Chi không cần chứa file rules này), rồi `firebase deploy --only database --project duyetchi-pva379`. Đã xác nhận deploy "released successfully" và đọc lại rules thấy khối `plans` đã có.
+- ⚠️ **Nếu sau này thêm ngăn Firebase mới nào khác** (giống mô hình `duyetchi/plans` độc lập) — **NHỚ LÀM BƯỚC NÀY TRƯỚC KHI báo user tính năng đã xong**, đừng đợi user tự phát hiện lỗi đồng bộ trên production nữa.
+
+### W. Kế hoạch vật tư — thêm trường tiền + người đề xuất + tab Thống kê (v69, 05/07/2026)
+- User phản hồi sau khi dùng thử v67: (1) chưa có ô "số tiền dự kiến", (2) thẻ không hiện tên người đề xuất (dù đã lưu `createdBy`, chỉ quên hiện), (3) cần có tab thống kê tổng hợp trong Kế hoạch.
+- **Đã bàn kỹ trước khi code** (đúng yêu cầu user) — chốt: thống kê CÓ chia theo loại vật tư (bê tông/thép/cát...), KHÔNG cần chia theo công trình (đã có bộ lọc CT ở tab Danh sách rồi).
+- **Đã làm:**
+  - Thêm field `estimatedAmount` vào data model + form (`#plan-inp-amount`, không bắt buộc) + hiện trên thẻ (dùng `fmtVND` — số tiền đầy đủ, giống cách thẻ phiếu đề xuất hiển thị).
+  - Thẻ kế hoạch hiện thêm dòng "🙋 Người đề xuất: ${p.createdBy}".
+  - Trang Kế hoạch giờ có **2 tab con** (`setPlanTab()`, tái dùng class `.report-subtab`/`.report-subtabs` có sẵn — không thêm CSS mới): **📋 Danh sách** (nội dung cũ) và **📊 Thống kê** (`renderPlanStats()`, mới) — gồm 4 ô tổng theo trạng thái (đếm + tổng tiền dự kiến mỗi nhóm, dùng `fmtTr` rút gọn triệu giống Báo cáo), khối "🔴 SẮP ĐẾN HẠN" (≤2 ngày, tái dùng `planUrgencyInfo`'s ngưỡng ngày), và bảng "Tổng theo loại vật tư" (gộp theo `p.material.trim()`, sắp theo tổng tiền giảm dần).
+  - `showPage('plan')` và Firebase listener `duyetchi/plans` giờ render ĐÚNG tab đang active (list hay stats) thay vì luôn mặc định render Danh sách.
+- Đã kiểm chứng qua preview với 2 kế hoạch giả (Bê tông 150tr còn 1 ngày, Thép 80tr còn 10 ngày): thẻ hiện đúng tên+tiền; tab Thống kê hiện đúng "ĐANG CHỜ 2 KH 230 tr", khối Sắp đến hạn chỉ có đúng Bê tông (đúng vì Thép còn 10 ngày > ngưỡng 2), bảng vật tư đúng thứ tự Bê tông(150tr) trước Thép(80tr). Test lại duyệt D + báo cáo tóm tắt vẫn đúng, không ảnh hưởng.
 
 ### Q. Thẻ phiếu "Đã chuyển" (duyệt 1 phần) vẫn hiện đỏ/"chờ duyệt" gây hiểu nhầm chưa xong (v62, 04/07/2026)
 - **Bối cảnh:** đề xuất 10tr, D duyệt 6tr (H chưa duyệt), Trang chuyển đủ 6tr → app đã tự đúng chuyển `status='transferred'` từ trước (không bắt T chuyển thêm 4tr — đúng quy tắc mục 4). Nhưng **thẻ phiếu vẫn hiện sai**: badge D đỏ "6tr/10tr" (so với tổng đề xuất GỐC) và badge H "⏳ H chờ duyệt" — khiến nhìn vào tưởng vẫn còn dang dở, dù thực ra giao dịch đã ĐÓNG HẲN.
