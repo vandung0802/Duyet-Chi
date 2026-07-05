@@ -846,6 +846,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: Thống kê -->
   <div id="plan-tab-stats" style="display:none">
+    <div class="card">
+      <div class="card-body" style="padding:10px 12px">
+        <select id="plan-stats-filter-site" onchange="renderPlanStats()" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+          <option value="">🏗 Tất cả công trình</option>
+        </select>
+      </div>
+    </div>
     <div id="plan-stats-content"></div>
   </div>
 </div>
@@ -925,7 +932,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v71';
+const APP_VERSION = '20260705-v72';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -4007,7 +4014,19 @@ function renderPlanStats(){
     el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có kế hoạch nào để thống kê</div>';
     return;
   }
-  const items = plans.slice().sort((a,b)=>(a.neededDate||0)-(b.neededDate||0));
+  // Bộ lọc công trình — dùng riêng cho tab Thống kê (khác select của tab Danh sách), giữ nguyên lựa chọn hiện tại khi vẽ lại
+  const filterSel = document.getElementById('plan-stats-filter-site');
+  if(filterSel){
+    const cur = filterSel.value;
+    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+    filterSel.value = cur;
+  }
+  const filterSite = filterSel ? filterSel.value : '';
+  const items = plans.filter(p=>!filterSite || p.site===filterSite).sort((a,b)=>(a.neededDate||0)-(b.neededDate||0));
+  if(!items.length){
+    el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Không có kế hoạch nào khớp công trình đã chọn</div>';
+    return;
+  }
   const totalAmount = items.reduce((a,p)=>a+(p.estimatedAmount||0),0);
 
   const rows = items.map((p,i)=>{
@@ -4020,7 +4039,7 @@ function renderPlanStats(){
     else if(days <= 2){ rowBorder='#dc2626'; dueColor='#dc2626'; dueSub = `Còn ${days} ngày`; }
     else { dueSub = `Còn ${days} ngày`; }
     const st = PLAN_STATUS_INFO[p.status] || PLAN_STATUS_INFO.pending;
-    return `<tr style="box-shadow:inset 3px 0 0 ${rowBorder}">
+    return `<tr class="plan-row-link" ondblclick="jumpToPlanCard('${p.id}')" style="box-shadow:inset 3px 0 0 ${rowBorder};cursor:pointer">
       <td style="text-align:center;font-size:10px;color:var(--text-sub);vertical-align:middle">${stt}</td>
       <td style="font-weight:700;font-size:11px;vertical-align:middle;line-height:1.3">${p.material}</td>
       <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${p.quantity||'—'}</td>
@@ -4056,6 +4075,7 @@ function renderPlanStats(){
         </div>
       </div>
     </div>`;
+  attachPlanDoubleTap(el);
 }
 
 function renderPlans(){
@@ -4081,7 +4101,7 @@ function buildPlanCard(p){
   const urgency = planUrgencyInfo(p);
   const canManage = currentRole==='dung' || (p.createdBy && p.createdBy===getCurrentUserName());
   const showRemind = (p.status==='pending' || p.status==='ordered');
-  return `<div class="proposal" style="border-left-color:${urgency.color}">
+  return `<div class="proposal" id="plancard-${p.id}" style="border-left-color:${urgency.color}">
     <div style="padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
@@ -4210,6 +4230,39 @@ function createProposalFromPlan(id){
   const inpDesc = document.getElementById('inp-desc');
   if(inpDesc) inpDesc.value = `${p.material}${p.quantity?' '+p.quantity:''} cho ${p.site}`;
   showToast('Đã điền sẵn công trình + nội dung — nhập số tiền rồi gửi đề xuất');
+}
+
+// Nhấn đúp 1 hàng trong bảng Thống kê → nhảy sang thẻ chi tiết của đúng kế hoạch đó ở tab Danh sách
+// (giống hệt cơ chế jumpToProposal/attachReportDoubleTap bên Báo cáo — viết hàm riêng, KHÔNG dùng
+// chung, để tránh đụng vào code báo cáo/đề xuất đang chạy ổn định).
+function jumpToPlanCard(id){
+  setPlanTab('list', document.querySelector('#page-plan .report-subtab[data-tab="list"]'));
+  const filterSel = document.getElementById('plan-filter-site');
+  if(filterSel){ filterSel.value = ''; } // bỏ lọc công trình ở tab Danh sách để chắc chắn thấy được kế hoạch cần tìm
+  renderPlans();
+  setTimeout(()=>{
+    const card = document.getElementById('plancard-'+id);
+    if(!card) return;
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.classList.remove('card-highlighted');
+    void card.offsetWidth;
+    card.classList.add('card-highlighted');
+    card.addEventListener('animationend', ()=>card.classList.remove('card-highlighted'), {once:true});
+  }, 150);
+}
+function attachPlanDoubleTap(container){
+  let lastTap = 0, lastTarget = null;
+  container.addEventListener('touchend', e=>{
+    const row = e.target.closest('.plan-row-link');
+    if(!row) return;
+    const now = Date.now();
+    if(now - lastTap < 350 && lastTarget === row){
+      e.preventDefault();
+      const fn = row.getAttribute('ondblclick');
+      if(fn){ const id = fn.match(/'([^']+)'/)?.[1]; if(id) jumpToPlanCard(id); }
+    }
+    lastTap = now; lastTarget = row;
+  }, {passive:false});
 }
 
 function autofillPerson(name){
