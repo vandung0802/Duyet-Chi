@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v72** (`APP_VERSION = '20260705-v72'`, `sw.js VERSION = '20260705-65'`, `version.txt = 20260705-v72`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v73** (`APP_VERSION = '20260705-v73'`, `sw.js VERSION = '20260705-66'`, `version.txt = 20260705-v73`). Ngày 05/07/2026.
 
 ---
 
@@ -214,6 +214,18 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Các trigger resync khác GIỮ NGUYÊN không đổi** (đã đúng từ đầu, không phải nguyên nhân chậm): `online` event (mạng vừa có lại — sự kiện hiếm, không lặp lại liên tục), `pageshow` với `e.persisted` (mở lại từ bfcache — cũng hiếm), watchdog `setInterval` 30s (đã tự gate bằng điều kiện `!fbConnected`, chỉ chạy khi THẬT SỰ mất kết nối).
 - Đã kiểm chứng qua preview bằng cách giả lập `document.visibilityState` thật (không chỉ gọi hàm suông): ẩn <10s → `forceFirebaseResync` KHÔNG bị gọi; ẩn >10s (giả lập `_hiddenAt` lùi về quá khứ) → CÓ bị gọi đúng.
 - ⚠️ Nếu sau này vẫn còn ai báo "tải lại lâu" dù đã lên v68 — khả năng cao là do **mạng thật sự yếu** (4G/5G chập chờn) chứ không phải lỗi logic này nữa; hỏi rõ họ đang ở tình huống nào (vừa mở app lần đầu? vừa quay lại sau bao lâu? mạng có yếu không?) trước khi sửa tiếp, đừng đoán mò lặp lại.
+
+### Z. Vẫn còn "tải lại lâu" lúc MỞ APP (khác với lúc quay lại app đã sửa ở mục U) — v73, 05/07/2026
+- User báo tiếp: mỗi lần **mở app** (không phải quay lại từ nền) vẫn thấy "Tải lại" rất lâu — **"chờ vài giây đến CẢ MỘT PHÚT"** rồi tự hết, dữ liệu đúng, không cần bấm gì (xác nhận đây là vấn đề TỐC ĐỘ/mạng, không phải lỗi logic hiển thị sai dữ liệu).
+- **Đã đo thử bằng dữ liệu giả 150 phiếu đủ lịch sử/ý kiến:** vẽ toàn bộ thẻ lên màn hình chỉ mất ~330ms trên máy tính (ước ~0.6-1s điện thoại thật) — **KHÔNG đủ giải thích "cả phút"**. Đã hỏi user xác nhận ảnh chứng từ KHÔNG bị kẹt (đã chuyển hết sang Kho ảnh) — loại trừ luôn nghi ngờ ảnh nặng.
+- **Nguyên nhân thật tìm được (đọc kỹ code, không phải đoán):**
+  1. **`window.addEventListener('online', forceFirebaseResync)`** (thêm ở mục G/v53) gọi ép `db.goOffline()+goOnline()` **KHÔNG PHÂN BIỆT** đang là lần mở app đầu tiên hay đang dùng dở. Trên iPhone, mở app đúng lúc điện thoại vừa bật sóng lại (từ màn khoá, khỏi vùng mất sóng...) thường bắn sự kiện `online` **NGAY GIỮA LÚC Firebase đang tự kết nối lần đầu** → vô tình "đá ngang" quá trình kết nối tự nhiên, bắt làm lại từ đầu.
+  2. **Watchdog tự sửa mất kết nối** (mục G) trước đây chỉ chạy mỗi **30 giây** — nếu lần kết nối đầu bị vướng vì lý do 1 ở trên (hoặc bất kỳ lý do nào), phải chờ đủ 30s mới có đợt tự sửa ĐẦU TIÊN, và nếu đợt đó cũng trục trặc thì thêm 30s nữa → khớp đúng "có khi cả phút" user mô tả (30s + 30s).
+- **Đã sửa (2 việc, không đụng gì khác):**
+  1. Thêm `const _appLoadedAt = Date.now()` lúc script chạy; listener `online` giờ **bỏ qua nếu chưa quá 8 giây** kể từ lúc mở app (`Date.now()-_appLoadedAt < 8000`) — để Firebase yên tâm tự kết nối lần đầu không bị đá ngang. Sau 8 giây thì `online` vẫn hoạt động bình thường như cũ (ép nối lại khi mạng vừa có lại giữa lúc đang dùng).
+  2. Thêm 1 lần kiểm tra SỚM lúc **8 giây** (`setTimeout(...,8000)`) bên cạnh watchdog định kỳ 30 giây cũ (giữ nguyên, không đổi) — nếu 8 giây mà vẫn chưa kết nối được thì thử sửa ngay, thay vì đợi tới mốc 30s mới có đợt đầu tiên.
+- Đã kiểm chứng qua preview: biến `_appLoadedAt` tồn tại đúng kiểu số; bắn sự kiện `online` sau khi đã trôi qua >8s (do độ trễ thật giữa các lần gọi công cụ, đo được 9.6s và 35.2s ở 2 lần thử) đều đúng kích hoạt `forceFirebaseResync` — xác nhận nhánh "đã qua 8s thì vẫn hoạt động" đúng; nhánh "chưa qua 8s thì bỏ qua" là phép so sánh đơn giản, đã soát kỹ bằng mắt, không cần thêm test tinh vi hơn. Test lại duyệt D vẫn đúng, không ảnh hưởng.
+- ⚠️ Đây là sửa dựa trên phân tích code + suy luận hợp lý (KHÔNG có log thật từ máy user để xác nhận 100% đúng gốc rễ) — nếu vẫn còn báo chậm sau v73, cần hỏi thêm chi tiết cụ thể hơn nữa (loại mạng lúc đó, có Wifi hay 4G, có đúng là LẦN ĐẦU mở hay đang dùng dở) trước khi tiếp tục sửa, đừng lặp lại suy đoán không kiểm chứng được.
 
 ### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng, ĐÃ VÁ LẠI ở v68 xem mục U)
 - **Gốc:** iPhone cắt NGẦM kết nối realtime khi app chạy nền/khóa màn hình; Firebase mất 30–60s+ mới tự nhận ra → mở app thấy số CŨ rất lâu, duyệt máy này máy kia không thấy.
