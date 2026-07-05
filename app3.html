@@ -932,7 +932,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v73';
+const APP_VERSION = '20260705-v74';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2274,12 +2274,22 @@ function _refetchImagesFor(id, stamp){
   }).catch(()=>{ _loadingImages.delete(id); });
 }
 
+let _fbBadgeIsRed = false; // đang hiện "Tải lại" (đỏ) hay không — dùng để biết lúc nào cho phép đếm giây lên badge
 function updateFbBadge(ok){
   const b=document.getElementById('fb-badge');
   if(!b) return;
-  if(ok){ b.className='sheet-badge sheet-ok'; b.style.background='rgba(255,255,255,0.2)'; b.style.color='#fff'; b.textContent='☁️ OK'; b.onclick=null; b.style.cursor=''; }
-  else{ b.className='sheet-badge sheet-err'; b.style.background='rgba(255,0,0,0.25)'; b.style.color='#ffd6d6'; b.textContent='☁️ Tải lại'; b.style.cursor='pointer'; b.onclick=()=>location.reload(true); }
+  if(ok){ _fbBadgeIsRed=false; b.className='sheet-badge sheet-ok'; b.style.background='rgba(255,255,255,0.2)'; b.style.color='#fff'; b.textContent='☁️ OK'; b.onclick=null; b.style.cursor=''; }
+  else{ _fbBadgeIsRed=true; b.className='sheet-badge sheet-err'; b.style.background='rgba(255,0,0,0.25)'; b.style.color='#ffd6d6'; b.textContent='☁️ Tải lại'; b.style.cursor='pointer'; b.onclick=()=>location.reload(true); }
 }
+// Đếm số giây NGAY TRÊN badge trong lúc đang mất kết nối — để user tự đọc số báo lại chính xác lúc
+// gặp "tải lại lâu", không cần công cụ kỹ thuật hay chia sẻ mật khẩu đăng nhập gì cả.
+setInterval(function(){
+  if(!_fbBadgeIsRed) return;
+  const b = document.getElementById('fb-badge');
+  if(!b) return;
+  const secs = Math.max(0, Math.floor((Date.now() - _appLoadedAt) / 1000));
+  b.textContent = `☁️ Tải lại (${secs}s)`;
+}, 1000);
 function fmt(n){return n||n===0?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0}):'—'}
 function parseAmountInput(el){return parseInt((el.value||'').replace(/\./g,'').replace(/[^\d]/g,''))||0;}
 function fmtAmountInput(el){
