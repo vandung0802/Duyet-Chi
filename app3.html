@@ -925,7 +925,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v69';
+const APP_VERSION = '20260705-v70';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2140,6 +2140,7 @@ function initFirebaseSync(){
   db.ref('duyetchi/plans').on('value', snap=>{
     const raw = snap.val() || {};
     plans = Object.keys(raw).map(k=>raw[k]);
+    _lastPlanIds = new Set(plans.map(p=>p.id)); // ghi nhận đúng những id đang có TRÊN SERVER, để savePlans() xoá đúng khi có phiếu bị xoá ở local
     try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
     const pg = document.getElementById('page-plan');
     if(pg && pg.style.display!=='none'){
@@ -3936,12 +3937,20 @@ function populateSelects(){
 // ── KẾ HOẠCH VẬT TƯ ── (module MỚI HOÀN TOÀN, tách biệt khỏi proposals — xem mục lưu trữ ở
 // initFirebaseSync/savePlans. Mọi hàm dưới đây chỉ đọc/ghi biến `plans`, không đụng `proposals`.)
 // ══════════════════════════════════════════
+// Ghi TỪNG kế hoạch riêng theo path con (duyetchi/plans/{id}), GIỐNG HỆT cách proposals đang ghi
+// (db.ref().update() với nhiều path) — KHÔNG được set() đè nguyên cả ngăn 'duyetchi/plans', vì luật
+// bảo mật chỉ cấp quyền ghi ở CẤP CON $id, không cấp ở cấp ngăn cha (set() đè cả ngăn bị DENY dù
+// từng phiếu con vẫn được phép ghi riêng lẻ — đây là lỗi thật đã gặp, không phải lỗi mạng/luật).
+let _lastPlanIds = new Set();
 function savePlans(){
   try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
   if(!fbInitialLoadDone) return; // dùng chung cờ với proposals, tránh ghi đè rác lúc mới mở app
-  const obj = {};
-  plans.forEach(p=>{ obj[p.id]=p; });
-  db.ref('duyetchi/plans').set(obj).catch(err=>{
+  const updates = {};
+  const nowIds = new Set();
+  plans.forEach(p=>{ updates['duyetchi/plans/'+p.id] = p; nowIds.add(p.id); });
+  _lastPlanIds.forEach(id=>{ if(!nowIds.has(id)) updates['duyetchi/plans/'+id] = null; }); // kế hoạch đã xoá ở local → xoá luôn trên Firebase
+  _lastPlanIds = nowIds;
+  db.ref().update(updates).catch(err=>{
     console.warn('Lỗi ghi Kế hoạch lên Firebase:', err.message);
     showToast('⚠️ Không đồng bộ được kế hoạch — kiểm tra mạng. Dữ liệu vẫn lưu tạm trên máy này.');
   });
