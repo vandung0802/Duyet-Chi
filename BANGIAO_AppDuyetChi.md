@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v66** (`APP_VERSION = '20260705-v66'`, `sw.js VERSION = '20260705-59'`, `version.txt = 20260705-v66`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v67** (`APP_VERSION = '20260705-v67'`, `sw.js VERSION = '20260705-60'`, `version.txt = 20260705-v67`). Ngày 05/07/2026.
 
 ---
 
@@ -289,6 +289,42 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   Theo dõi run mới bằng API ở trên đến khi `"conclusion": "success"`, rồi mới `curl version.txt` xác nhận.
 - Máy tính này KHÔNG có `gh` CLI cài đặt — dùng `curl` gọi thẳng REST API công khai (không cần token cho repo public) là đủ để chẩn đoán.
 - **Đã tái diễn lần 2 ở v66 (05/07/2026)** — xác nhận đây là lỗi hạ tầng GitHub ngẫu nhiên, KHÔNG phải sự cố một lần. Cứ push xong mà `version.txt` không đổi sau ~90s, kiểm tra ngay theo quy trình trên — commit rỗng retry lần nào cũng thành công trong <1 phút. Chú ý: run mới có thể ở trạng thái `"waiting"` một lúc trước khi chuyển `"in_progress"` rồi `"completed"` — đừng vội kết luận fail nếu thấy "waiting", phải đợi tới khi `status` = `"completed"` mới đọc `conclusion`.
+
+### T. 🆕 TÍNH NĂNG MỚI — Kế hoạch vật tư (v67, 05/07/2026)
+**Bối cảnh:** user muốn ghi trước nhu cầu vật tư tương lai cho từng công trình (VD "còn 5 ngày cần 50m³ bê tông"), tách biệt hẳn với đề xuất chi tiền. Đã bàn kỹ với user trước khi code — user nhấn mạnh nhiều lần: **tuyệt đối không được ảnh hưởng tính năng cũ đang chạy** (cả công ty phụ thuộc). Cách đảm bảo: mọi thứ dưới đây là **THÊM MỚI HOÀN TOÀN**, không sửa 1 dòng nào của proposals/duyệt/chuyển/báo cáo hiện có.
+
+**Quyết định thiết kế đã chốt cùng user (không tự ý đổi nếu không hỏi lại):**
+- Vị trí: nút **"📅 Kế hoạch"** thay chỗ "🚪 Thoát" trên thanh nav dưới; nút Thoát dời vào cuối trang Cài đặt (`logoutRole()` không đổi, chỉ đổi chỗ gọi).
+- Quyền: D/H/Trang/Khác đều thêm/sửa được (giống quyền tạo đề xuất).
+- **Không cần duyệt để hiện** — ai ghi cũng hiện ngay cho mọi người. D/H có nút **"✅ Xác nhận"** riêng (2 cờ độc lập `confirmedByD`/`confirmedByH`) — CHỈ mang tính tham khảo, KHÔNG ẩn/chặn kế hoạch nếu chưa xác nhận.
+- Ngưỡng khẩn cấp: **còn ≤2 ngày** → đỏ; 3-7 ngày → cam; quá hạn mà chưa "Đã hoàn thành" → đỏ đậm "❗ Quá hạn".
+- Có nút **"💰 Tạo đề xuất chi"** ngay trên thẻ kế hoạch → điền sẵn công trình + nội dung sang form "Thêm mới" (KHÔNG tự động gửi, vẫn phải tự nhập số tiền + bấm gửi như bình thường).
+- ⚠️ **Đã bàn và xác nhận: KHÔNG làm tự động gửi thông báo đẩy lúc nửa đêm dù không ai mở app** (cần Firebase Cloud Functions + Cloud Scheduler — hạ tầng riêng, phức tạp/rủi ro hơn hẳn kiến trúc client-side hiện tại của app3.html, để dành giai đoạn sau nếu thực sự cần). MVP hiện tại: tự tô màu khi mở app + nút **"🔔 Nhắc"** thủ công (tái dùng `sendPushNotif` có sẵn, giống cơ chế "giục duyệt").
+
+**Cấu trúc dữ liệu 1 kế hoạch** (lưu ở `duyetchi/plans/{id}`, **ngăn Firebase RIÊNG HẲN**, không liên quan `duyetchi/proposals`):
+```javascript
+{
+  id, site, material, quantity, neededDate, assignee, note,
+  status: "pending"|"ordered"|"done"|"cancelled",
+  createdBy, createdAt,
+  confirmedByD: ts|null, confirmedByH: ts|null,
+  linkedProposalId: id|null,   // gán khi bấm "Tạo đề xuất chi" và GỬI THÀNH CÔNG
+}
+```
+
+**Vị trí code (app3.html):**
+| Hàm/mục | Vai trò |
+|---|---|
+| `let plans` (~996) | biến toàn cục, load từ `localStorage.dc_plans` |
+| Listener `db.ref('duyetchi/plans').on(...)` (trong `initFirebaseSync`, ngay sau listener `proposals`) | đồng bộ — **cố ý KHÔNG gọi `_mergeAndRender()`**, hoàn toàn độc lập |
+| `savePlans()` | lưu local + đẩy Firebase (dùng chung cờ `fbInitialLoadDone` để tránh ghi rác lúc mới mở app, giống `pushToFirebase()`) |
+| `renderPlans()` / `buildPlanCard()` / `planUrgencyInfo()` / `planConfirmBadge()` | hiển thị danh sách + thẻ + màu khẩn cấp + nút xác nhận |
+| `openPlanModal()` / `closePlanModal()` / `savePlanFromModal()` / `deletePlan()` / `setPlanStatus()` / `confirmPlan()` / `remindPlan()` | CRUD + hành động |
+| `createProposalFromPlan(id)` + `_pendingPlanLink` (biến toàn cục) | điền sẵn form Thêm mới; **móc nối DUY NHẤT vào code cũ**: trong `submitProposal()`, ngay sau `proposals.unshift(p); save();` có thêm 4 dòng kiểm tra `if(_pendingPlanLink)` để gán `linkedProposalId` — nếu KHÔNG đến từ kế hoạch (`_pendingPlanLink` null, mặc định) thì hành vi `submitProposal()` y hệt như trước, không đổi gì |
+| HTML `#page-plan`, `#plan-modal-overlay` | chèn giữa `#page-settings` và `<!-- BOTTOM NAV -->`, dùng lại nguyên các class có sẵn (`.card`, `.proposal`, `.badge*`, `.form-input`, `.btn-full`) — không thêm CSS mới |
+| `showPage()` (~2251) | thêm `'plan'` vào mảng trang ẩn/hiện + `if(pg==='plan') renderPlans();` — 2 dòng, không đổi logic cũ |
+
+**Đã kiểm chứng qua preview (không chỉ đọc code):** thêm/sửa/xoá kế hoạch, tô màu đúng theo số ngày còn lại, D xác nhận đúng, đổi trạng thái đúng, bấm "Tạo đề xuất chi" điền đúng công trình+nội dung sang Thêm mới, gửi xong tự nối `linkedProposalId` đúng phiếu, thẻ đổi thành "✅ Đã có đề xuất". Đồng thời **test lại toàn bộ tính năng CŨ sau khi thêm module này**: duyệt D (status→approved đúng), chuyển tiền Trang (status→transferred đúng), báo cáo tóm tắt render bình thường, Cài đặt hiện đúng có nút Đăng xuất mới, thanh nav đúng 5 nút không vỡ layout — **không có gì bị ảnh hưởng**, đúng cam kết với user.
 
 ### Q. Thẻ phiếu "Đã chuyển" (duyệt 1 phần) vẫn hiện đỏ/"chờ duyệt" gây hiểu nhầm chưa xong (v62, 04/07/2026)
 - **Bối cảnh:** đề xuất 10tr, D duyệt 6tr (H chưa duyệt), Trang chuyển đủ 6tr → app đã tự đúng chuyển `status='transferred'` từ trước (không bắt T chuyển thêm 4tr — đúng quy tắc mục 4). Nhưng **thẻ phiếu vẫn hiện sai**: badge D đỏ "6tr/10tr" (so với tổng đề xuất GỐC) và badge H "⏳ H chờ duyệt" — khiến nhìn vào tưởng vẫn còn dang dở, dù thực ra giao dịch đã ĐÓNG HẲN.
