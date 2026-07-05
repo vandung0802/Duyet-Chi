@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v69** (`APP_VERSION = '20260705-v69'`, `sw.js VERSION = '20260705-62'`, `version.txt = 20260705-v69`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v70** (`APP_VERSION = '20260705-v70'`, `sw.js VERSION = '20260705-63'`, `version.txt = 20260705-v70`). Ngày 05/07/2026.
 
 ---
 
@@ -353,6 +353,15 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   ```
   Deploy bằng: tạo `firebase.json` (trỏ `database.rules` tới file rules) + `.firebaserc` (project mặc định `duyetchi-pva379`) trong 1 thư mục tạm (KHÔNG phải thư mục app3.html — repo Duyet-Chi không cần chứa file rules này), rồi `firebase deploy --only database --project duyetchi-pva379`. Đã xác nhận deploy "released successfully" và đọc lại rules thấy khối `plans` đã có.
 - ⚠️ **Nếu sau này thêm ngăn Firebase mới nào khác** (giống mô hình `duyetchi/plans` độc lập) — **NHỚ LÀM BƯỚC NÀY TRƯỚC KHI báo user tính năng đã xong**, đừng đợi user tự phát hiện lỗi đồng bộ trên production nữa.
+- 🔴 **CHƯA HẾT — sau khi thêm luật, user vẫn báo lỗi y hệt ở v69!** Té ra rules chỉ là NỬA vấn đề. Nửa còn lại (thật sự là NGUYÊN NHÂN CHÍNH, xem mục V2 ngay dưới) nằm trong chính code `savePlans()`.
+
+### V2. 🔴 savePlans() ghi SAI KIỂU — `.set()` đè cả ngăn thay vì ghi từng path con (v70, 05/07/2026)
+- **Bài học đắt giá:** sau khi thêm luật `.write` ở mục V, user thử lại **VẪN báo y hệt lỗi cũ**. Té ra rules KHÔNG PHẢI toàn bộ vấn đề — code `savePlans()` (viết lúc v67) tự nó có lỗi độc lập, hai lỗi CHỒNG LÊN NHAU khiến chẩn đoán lần 1 tưởng đã xong nhưng thực ra chưa chạm gốc rễ thật.
+- **Gốc:** `savePlans()` gọi `db.ref('duyetchi/plans').set(obj)` — ghi đè **NGUYÊN CẢ ngăn `duyetchi/plans`** cùng một lúc (đóng gói mọi kế hoạch vào 1 object rồi set 1 phát). Nhưng luật bảo mật (mục V) chỉ cấp `.write` ở **CẤP CON** `duyetchi/plans/$id`, KHÔNG cấp ở cấp ngăn cha `duyetchi/plans`. Theo đúng cơ chế Firebase RTDB: **`.write` rule ở cấp con KHÔNG cấp quyền ghi cho một lệnh set() ở cấp cha bao trùm nhiều con** — phải ghi rule ở ĐÚNG cấp đang ghi, hoặc ghi bằng multi-path `update()` (mỗi key trong object là 1 path đầy đủ, được xét quyền RIÊNG theo path đó).
+- **Đối chiếu:** `proposals` chưa từng gặp lỗi này vì `pushToFirebase()` vốn đã dùng đúng kiểu `db.ref().update({'duyetchi/proposals/{id}': lightFields, ...})` — multi-path update, mỗi phiếu 1 path riêng — khớp đúng luật `duyetchi/proposals/$id`. Khi viết `savePlans()` cho tính năng mới, đã KHÔNG soi theo mẫu này mà tự viết `.set()` đơn giản hơn — đây là chỗ sai.
+- **Sửa:** viết lại `savePlans()` giống hệt kiểu proposals — dùng `db.ref().update(updates)` với `updates['duyetchi/plans/'+p.id] = p` cho từng kế hoạch, và `updates['duyetchi/plans/'+id] = null` cho kế hoạch đã bị xoá ở local (theo dõi qua biến `_lastPlanIds`, cập nhật lại mỗi khi listener nhận dữ liệu mới từ server).
+- Đã kiểm chứng qua preview bằng cách chặn bắt `db.ref().update()` thật để xem đúng cấu trúc gửi đi: thêm kế hoạch → key đúng là `'duyetchi/plans/{id}'` (không phải `'duyetchi/plans'`); xoá kế hoạch → gửi đúng `null` ở path con tương ứng, các kế hoạch khác không bị đụng.
+- **Bài học tổng quát cho lần sau:** khi thêm module Firebase MỚI, đừng chỉ copy "thêm luật cho path mới" — phải **kiểm tra luôn cách CODE ghi dữ liệu có khớp ĐÚNG CẤP mà luật đó cấp quyền hay không** (ghi cả node cha vs ghi từng path con là 2 chuyện khác nhau về mặt luật, dù nhìn code tưởng tương đương). Preview không test được cả hai lỗi này (luôn PERMISSION_DENIED do chưa đăng nhập), nên phải tự soát kỹ bằng mắt + đối chiếu với pattern đã chứng minh đúng (`pushToFirebase()`), không dựa hoàn toàn vào "preview không báo lỗi" làm bằng chứng đủ.
 
 ### W. Kế hoạch vật tư — thêm trường tiền + người đề xuất + tab Thống kê (v69, 05/07/2026)
 - User phản hồi sau khi dùng thử v67: (1) chưa có ô "số tiền dự kiến", (2) thẻ không hiện tên người đề xuất (dù đã lưu `createdBy`, chỉ quên hiện), (3) cần có tab thống kê tổng hợp trong Kế hoạch.
