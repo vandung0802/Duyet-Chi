@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v70** (`APP_VERSION = '20260705-v70'`, `sw.js VERSION = '20260705-63'`, `version.txt = 20260705-v70`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v71** (`APP_VERSION = '20260705-v71'`, `sw.js VERSION = '20260705-64'`, `version.txt = 20260705-v71`). Ngày 05/07/2026.
 
 ---
 
@@ -372,6 +372,13 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   - Trang Kế hoạch giờ có **2 tab con** (`setPlanTab()`, tái dùng class `.report-subtab`/`.report-subtabs` có sẵn — không thêm CSS mới): **📋 Danh sách** (nội dung cũ) và **📊 Thống kê** (`renderPlanStats()`, mới) — gồm 4 ô tổng theo trạng thái (đếm + tổng tiền dự kiến mỗi nhóm, dùng `fmtTr` rút gọn triệu giống Báo cáo), khối "🔴 SẮP ĐẾN HẠN" (≤2 ngày, tái dùng `planUrgencyInfo`'s ngưỡng ngày), và bảng "Tổng theo loại vật tư" (gộp theo `p.material.trim()`, sắp theo tổng tiền giảm dần).
   - `showPage('plan')` và Firebase listener `duyetchi/plans` giờ render ĐÚNG tab đang active (list hay stats) thay vì luôn mặc định render Danh sách.
 - Đã kiểm chứng qua preview với 2 kế hoạch giả (Bê tông 150tr còn 1 ngày, Thép 80tr còn 10 ngày): thẻ hiện đúng tên+tiền; tab Thống kê hiện đúng "ĐANG CHỜ 2 KH 230 tr", khối Sắp đến hạn chỉ có đúng Bê tông (đúng vì Thép còn 10 ngày > ngưỡng 2), bảng vật tư đúng thứ tự Bê tông(150tr) trước Thép(80tr). Test lại duyệt D + báo cáo tóm tắt vẫn đúng, không ảnh hưởng.
+- ⚠️ **Đã thay thế ở v71** — xem mục X ngay dưới. Bản tóm tắt số gộp (4 ô trạng thái + bảng theo vật tư) ở mục W KHÔNG CÒN dùng nữa, đừng nhầm với bản hiện tại.
+
+### X. Tab Thống kê đổi thành BẢNG CHI TIẾT đầy đủ (v71, 05/07/2026 — thay thế mục W)
+- User phản hồi bản tóm tắt-gộp ở v69 (chỉ có 4 ô trạng thái + bảng gộp theo vật tư) **không đủ để hiểu** — cần xem đủ TỪNG kế hoạch với TẤT CẢ thông tin: vật tư, khối lượng, công trình, người phụ trách, người đề xuất, số tiền, trạng thái, ngày cần.
+- **Đã làm đúng quy trình "bàn trước rồi mới code":** dựng bản mẫu (mockup) bằng Artifact với dữ liệu ví dụ, cho user xem trước bố cục bảng — KHÔNG code thẳng vào app. User duyệt bố cục + chốt 2 điểm: (1) đổi tên trạng thái "Đã đặt hàng" → **"Đã đặt cọc"** (khớp thực tế công trường: đặt cọc trước, chưa chắc nhận hàng ngay), (2) bảng chi tiết này **THAY THẾ HẲN** phần số gộp cũ, không giữ song song.
+- **Đã làm:** viết lại toàn bộ `renderPlanStats()` (~3991) thành 1 bảng chi tiết — mỗi hàng = 1 kế hoạch, đủ 9 cột (#, Vật tư, Khối lượng, Công trình, Phụ trách, Đề xuất, Dự kiến, Trạng thái, Ngày cần), sắp theo ngày cần gần nhất lên đầu. Viền trái đổi màu theo độ khẩn (đỏ đậm = quá hạn, đỏ = còn ≤2 ngày, trong suốt = bình thường) — tái dùng đúng khuôn `.excel-table-scroll` + `.excel-table-wrap` đã dùng cho bảng "Chưa chuyển" ở Báo cáo (mục N/O), không tạo kiểu bảng mới. Đổi nhãn trạng thái "Đã đặt hàng"→"Đã đặt cọc" ở CẢ 2 chỗ: `<select>` trong `buildPlanCard()` VÀ badge trong bảng Thống kê (biến `PLAN_STATUS_INFO`, key nội bộ vẫn là `'ordered'`, chỉ đổi nhãn hiển thị).
+- Đã kiểm chứng qua preview với 4 kế hoạch giả đủ tình huống (quá hạn, còn 1 ngày, chưa có giá, đã hoàn thành): bảng hiện đủ tất cả cột đúng dữ liệu (vật tư/khối lượng/CT/phụ trách/đề xuất/tiền/trạng thái/ngày), nhãn "Đã đặt cọc" đúng ở cả thẻ Danh sách lẫn bảng Thống kê, tổng tiền cuối bảng đúng (141.5tr = 65+58+0+18.5), độ rộng bảng 584px (đúng cuộn ngang trên màn ~355px). Test lại duyệt D vẫn đúng, không ảnh hưởng.
 
 ### Q. Thẻ phiếu "Đã chuyển" (duyệt 1 phần) vẫn hiện đỏ/"chờ duyệt" gây hiểu nhầm chưa xong (v62, 04/07/2026)
 - **Bối cảnh:** đề xuất 10tr, D duyệt 6tr (H chưa duyệt), Trang chuyển đủ 6tr → app đã tự đúng chuyển `status='transferred'` từ trước (không bắt T chuyển thêm 4tr — đúng quy tắc mục 4). Nhưng **thẻ phiếu vẫn hiện sai**: badge D đỏ "6tr/10tr" (so với tổng đề xuất GỐC) và badge H "⏳ H chờ duyệt" — khiến nhìn vào tưởng vẫn còn dang dở, dù thực ra giao dịch đã ĐÓNG HẲN.
