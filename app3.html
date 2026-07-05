@@ -809,6 +809,67 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
   </div>
 
+  <!-- Đăng xuất — dời từ thanh dưới vào đây để nhường chỗ cho nút Kế hoạch -->
+  <div class="card">
+    <div class="card-body">
+      <button class="btn-full btn-outline-full" style="color:var(--red);border-color:var(--red)" onclick="logoutRole()">🚪 Thoát / Đăng xuất</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- PAGE: KẾ HOẠCH VẬT TƯ — hoàn toàn độc lập với đề xuất chi (dữ liệu, hàm riêng, không đụng luồng duyệt/chuyển) -->
+<div id="page-plan" class="main" style="display:none">
+  <div class="card">
+    <div class="card-header">📅 Kế hoạch vật tư</div>
+    <div class="card-body" style="padding:10px 12px">
+      <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Ghi trước nhu cầu vật tư sắp tới cho từng công trình (bê tông, thép, cát...) để chủ động chuẩn bị — đây chỉ là kế hoạch nhắc nhở, KHÔNG phải đề xuất chi tiền.</p>
+      <button class="btn-full btn-primary-full" onclick="openPlanModal()" style="margin-bottom:10px">➕ Thêm kế hoạch</button>
+      <select id="plan-filter-site" onchange="renderPlans()" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+        <option value="">🏗 Tất cả công trình</option>
+      </select>
+    </div>
+  </div>
+  <div id="plan-list"></div>
+</div>
+
+<!-- Modal Thêm/Sửa kế hoạch vật tư -->
+<div class="role-screen" id="plan-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--text)" id="plan-modal-title">Thêm kế hoạch</div>
+      <button onclick="closePlanModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Công trường <span class="req">*</span></label>
+      <select class="form-input form-select" id="plan-inp-site"><option value="">— Chọn công trường —</option></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Vật tư <span class="req">*</span></label>
+      <input class="form-input" id="plan-inp-material" list="plan-material-list" placeholder="VD: Bê tông, Thép, Cát...">
+      <datalist id="plan-material-list">
+        <option value="Bê tông"><option value="Thép"><option value="Cát"><option value="Xi măng"><option value="Gạch"><option value="Nhân công">
+      </datalist>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Số lượng</label>
+      <input class="form-input" id="plan-inp-qty" placeholder="VD: 50 m³, 20 tấn...">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ngày cần có <span class="req">*</span></label>
+      <input class="form-input" id="plan-inp-date" type="date">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Người phụ trách</label>
+      <input class="form-input" id="plan-inp-assignee" placeholder="Tên người theo dõi">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ghi chú</label>
+      <textarea class="form-input" id="plan-inp-note" rows="2"></textarea>
+    </div>
+    <button class="btn-full btn-primary-full" onclick="savePlanFromModal()">💾 Lưu kế hoạch</button>
+    <button class="btn-full btn-outline-full" onclick="closePlanModal()">Hủy</button>
+  </div>
 </div>
 
 <!-- BOTTOM NAV -->
@@ -825,8 +886,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <button class="nav-item" onclick="showPage('settings',this)">
     <span class="nav-icon">⚙️</span><span>Cài đặt</span>
   </button>
-  <button class="nav-item" onclick="logoutRole()">
-    <span class="nav-icon">🚪</span><span>Thoát</span>
+  <button class="nav-item" onclick="showPage('plan',this)">
+    <span class="nav-icon">📅</span><span>Kế hoạch</span>
   </button>
 </nav>
 
@@ -843,7 +904,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v66';
+const APP_VERSION = '20260705-v67';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -934,6 +995,7 @@ let proposals = JSON.parse(localStorage.getItem('dc_proposals')||'[]');
 let persons    = JSON.parse(localStorage.getItem('dc_persons')||'[]');
 let sites      = JSON.parse(localStorage.getItem('dc_sites')||'[]');
 let sheetUrl   = localStorage.getItem('dc_sheetUrl')||'';
+let plans      = JSON.parse(localStorage.getItem('dc_plans')||'[]'); // Kế hoạch vật tư — TÁCH BIỆT hoàn toàn khỏi proposals (ngăn Firebase riêng: duyetchi/plans)
 let filter     = 'all';
 let uploadedImages = []; // mảng nhiều ảnh Zalo đính kèm (mỗi phần tử là base64 dataURL)
 
@@ -2040,6 +2102,17 @@ function initFirebaseSync(){
   // Ảnh nay tải TRỄ — kích hoạt từ _mergeAndRender sau khi đã hiện phiếu (xem trên),
   // để lúc mở app ưu tiên kết nối + tải phiếu (nhẹ), không bị đống ảnh (nặng) làm chậm.
 
+  // ── KẾ HOẠCH VẬT TƯ — ngăn Firebase RIÊNG, HOÀN TOÀN TÁCH BIỆT khỏi proposals/meta/images ──
+  // Cố ý KHÔNG gọi _mergeAndRender() hay đụng vào _proposalsData/_metaData — lỗi ở đây (nếu có)
+  // không thể làm hỏng luồng duyệt/chuyển tiền đang chạy ổn định.
+  db.ref('duyetchi/plans').on('value', snap=>{
+    const raw = snap.val() || {};
+    plans = Object.keys(raw).map(k=>raw[k]);
+    try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
+    const pg = document.getElementById('page-plan');
+    if(pg && pg.style.display!=='none') renderPlans();
+  });
+
   // Xử lý dữ liệu cũ (format mảng) — tự migrate lên format mới
   function _handleOldFormat(oldProposals){
     const snapshot_combined = { proposals: oldProposals, meta: _metaData };
@@ -2233,12 +2306,13 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ── NAVIGATION ──
 function showPage(pg, btn){
-  ['home','add','report','settings'].forEach(p=>document.getElementById('page-'+p).style.display='none');
+  ['home','add','report','settings','plan'].forEach(p=>document.getElementById('page-'+p).style.display='none');
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+pg).style.display='block';
   if(btn) btn.classList.add('active');
   if(pg==='add') populateSelects();
   if(pg==='settings') renderSettings();
+  if(pg==='plan') renderPlans();
   if(pg==='report'){
     renderReportFilters();
     // Chỉ render tab đang active, không render tất cả
@@ -3767,6 +3841,13 @@ function submitProposal(){
     proposals.unshift(p);
     save();
     syncToSheet(p);
+    // Nếu vừa bấm "Tạo đề xuất chi" từ 1 kế hoạch vật tư → nối kế hoạch đó với phiếu vừa tạo
+    // (chỉ thêm, không đụng logic tạo phiếu bình thường ở trên khi không đến từ kế hoạch)
+    if(_pendingPlanLink){
+      const _plan = plans.find(x=>x.id===_pendingPlanLink);
+      if(_plan){ _plan.linkedProposalId = p.id; savePlans(); }
+      _pendingPlanLink = null;
+    }
 
     document.getElementById('inp-desc').value='';
     document.getElementById('inp-amount').value='';
@@ -3811,6 +3892,195 @@ function populateSelects(){
     ps.value = '';
   }
   ss.innerHTML='<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+
+// ══════════════════════════════════════════
+// ── KẾ HOẠCH VẬT TƯ ── (module MỚI HOÀN TOÀN, tách biệt khỏi proposals — xem mục lưu trữ ở
+// initFirebaseSync/savePlans. Mọi hàm dưới đây chỉ đọc/ghi biến `plans`, không đụng `proposals`.)
+// ══════════════════════════════════════════
+function savePlans(){
+  try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
+  if(!fbInitialLoadDone) return; // dùng chung cờ với proposals, tránh ghi đè rác lúc mới mở app
+  const obj = {};
+  plans.forEach(p=>{ obj[p.id]=p; });
+  db.ref('duyetchi/plans').set(obj).catch(err=>{
+    console.warn('Lỗi ghi Kế hoạch lên Firebase:', err.message);
+    showToast('⚠️ Không đồng bộ được kế hoạch — kiểm tra mạng. Dữ liệu vẫn lưu tạm trên máy này.');
+  });
+}
+
+function fmtDateOnly(ts){
+  const d = new Date(ts);
+  return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+}
+
+function planUrgencyInfo(p){
+  if(p.status==='done') return { color:'#16a34a', badge:'<span class="badge badge-done">✅ Đã hoàn thành</span>' };
+  if(p.status==='cancelled') return { color:'#94a3b8', badge:'<span class="badge" style="background:#f1f5f9;color:#64748b">❌ Đã huỷ</span>' };
+  const days = Math.ceil((p.neededDate - Date.now()) / 86400000);
+  if(days < 0) return { color:'#7f1d1d', badge:`<span class="badge" style="background:#7f1d1d;color:#fff">❗ Quá hạn ${Math.abs(days)} ngày</span>` };
+  if(days <= 2) return { color:'#dc2626', badge:`<span class="badge badge-reject">🔴 Còn ${days} ngày</span>` };
+  if(days <= 7) return { color:'#f97316', badge:`<span class="badge" style="background:#fff7ed;color:#c2410c">🟠 Còn ${days} ngày</span>` };
+  return { color:'#94a3b8', badge:`<span class="badge badge-wait">Còn ${days} ngày</span>` };
+}
+
+// D/H "xác nhận" — CHỈ mang tính tham khảo (đã bàn với user), KHÔNG ẩn kế hoạch nếu chưa xác nhận.
+function planConfirmBadge(p, who){
+  const field = who==='D' ? 'confirmedByD' : 'confirmedByH';
+  const roleMatch = who==='D' ? 'dung' : 'hien';
+  if(p[field]) return `<span class="badge badge-approved">✅ ${who} đã xác nhận</span>`;
+  if(currentRole===roleMatch) return `<button onclick="confirmPlan('${p.id}','${who}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:20px;cursor:pointer">✅ ${who} xác nhận</button>`;
+  return `<span class="badge badge-wait">⏳ ${who} chưa xác nhận</span>`;
+}
+
+function renderPlans(){
+  const list = document.getElementById('plan-list');
+  if(!list) return;
+  const filterSel = document.getElementById('plan-filter-site');
+  if(filterSel){
+    const cur = filterSel.value;
+    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+    filterSel.value = cur;
+  }
+  const filterSite = filterSel ? filterSel.value : '';
+  let items = plans.filter(p=>!filterSite || p.site===filterSite);
+  items.sort((a,b)=>(a.neededDate||0)-(b.neededDate||0));
+  if(!items.length){
+    list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có kế hoạch nào<br><small>Nhấn "➕ Thêm kế hoạch" để bắt đầu</small></div>';
+    return;
+  }
+  list.innerHTML = items.map(p=>buildPlanCard(p)).join('');
+}
+
+function buildPlanCard(p){
+  const urgency = planUrgencyInfo(p);
+  const canManage = currentRole==='dung' || (p.createdBy && p.createdBy===getCurrentUserName());
+  const showRemind = (p.status==='pending' || p.status==='ordered');
+  return `<div class="proposal" style="border-left-color:${urgency.color}">
+    <div style="padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div class="proposal-desc">${p.material}${p.quantity?' · '+p.quantity:''}</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${p.site}${p.assignee?' · 👤 '+p.assignee:''}</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📆 Cần có: ${fmtDateOnly(p.neededDate)}</div>
+        </div>
+        <div style="flex-shrink:0">${urgency.badge}</div>
+      </div>
+      ${p.note?`<div class="proposal-note">${p.note}</div>`:''}
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
+        <select onchange="setPlanStatus('${p.id}', this.value)" style="padding:5px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+          <option value="pending" ${p.status==='pending'?'selected':''}>Đang chờ</option>
+          <option value="ordered" ${p.status==='ordered'?'selected':''}>Đã đặt hàng</option>
+          <option value="done" ${p.status==='done'?'selected':''}>Đã hoàn thành</option>
+          <option value="cancelled" ${p.status==='cancelled'?'selected':''}>Đã huỷ</option>
+        </select>
+        ${planConfirmBadge(p,'D')}
+        ${planConfirmBadge(p,'H')}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        ${p.linkedProposalId
+          ? `<button onclick="jumpToProposal('${p.linkedProposalId}')" style="flex:1;min-width:120px;padding:8px;font-size:12px;font-weight:700;background:var(--green-light);color:var(--green);border:none;border-radius:8px;cursor:pointer">✅ Đã có đề xuất — xem</button>`
+          : `<button onclick="createProposalFromPlan('${p.id}')" style="flex:1;min-width:120px;padding:8px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer">💰 Tạo đề xuất chi</button>`}
+        ${showRemind?`<button onclick="remindPlan('${p.id}')" style="padding:8px 10px;font-size:12px;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:8px;cursor:pointer">🔔 Nhắc</button>`:''}
+        ${canManage?`<button onclick="openPlanModal('${p.id}')" style="padding:8px 10px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button><button onclick="deletePlan('${p.id}')" style="padding:8px 10px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>`:''}
+      </div>
+    </div>
+  </div>`;
+}
+
+let _editingPlanId = null;
+let _pendingPlanLink = null;
+
+function openPlanModal(id){
+  _editingPlanId = id || null;
+  const p = id ? plans.find(x=>x.id===id) : null;
+  document.getElementById('plan-modal-title').textContent = p ? 'Sửa kế hoạch' : 'Thêm kế hoạch';
+  const siteSel = document.getElementById('plan-inp-site');
+  siteSel.innerHTML = '<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+  siteSel.value = p ? p.site : '';
+  document.getElementById('plan-inp-material').value = p ? p.material : '';
+  document.getElementById('plan-inp-qty').value = p ? (p.quantity||'') : '';
+  document.getElementById('plan-inp-date').value = p ? new Date(p.neededDate).toISOString().slice(0,10) : '';
+  document.getElementById('plan-inp-assignee').value = p ? (p.assignee||'') : '';
+  document.getElementById('plan-inp-note').value = p ? (p.note||'') : '';
+  document.getElementById('plan-modal-overlay').style.display = 'flex';
+}
+function closePlanModal(){
+  document.getElementById('plan-modal-overlay').style.display = 'none';
+  _editingPlanId = null;
+}
+function savePlanFromModal(){
+  const site = document.getElementById('plan-inp-site').value;
+  const material = document.getElementById('plan-inp-material').value.trim();
+  const qty = document.getElementById('plan-inp-qty').value.trim();
+  const dateStr = document.getElementById('plan-inp-date').value;
+  const assignee = document.getElementById('plan-inp-assignee').value.trim();
+  const note = document.getElementById('plan-inp-note').value.trim();
+  if(!site){ showToast('Vui lòng chọn công trường'); return; }
+  if(!material){ showToast('Vui lòng nhập loại vật tư'); return; }
+  if(!dateStr){ showToast('Vui lòng chọn ngày cần có'); return; }
+  const neededDate = new Date(dateStr+'T00:00:00').getTime();
+  if(_editingPlanId){
+    const p = plans.find(x=>x.id===_editingPlanId);
+    if(p) Object.assign(p, { site, material, quantity: qty, neededDate, assignee, note });
+  } else {
+    plans.unshift({
+      id: Date.now().toString(),
+      site, material, quantity: qty, neededDate, assignee, note,
+      status: 'pending',
+      createdBy: getCurrentUserName(),
+      createdAt: Date.now(),
+      confirmedByD: null, confirmedByH: null,
+      linkedProposalId: null,
+    });
+  }
+  savePlans();
+  closePlanModal();
+  renderPlans();
+  showToast('✅ Đã lưu kế hoạch');
+}
+function deletePlan(id){
+  if(!confirm('Xoá kế hoạch này?')) return;
+  const idx = plans.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  plans.splice(idx,1);
+  savePlans();
+  renderPlans();
+  showToast('🗑 Đã xoá kế hoạch');
+}
+function setPlanStatus(id, status){
+  const p = plans.find(x=>x.id===id);
+  if(!p) return;
+  p.status = status;
+  savePlans();
+  renderPlans();
+}
+function confirmPlan(id, who){
+  const p = plans.find(x=>x.id===id);
+  if(!p) return;
+  if(who==='D') p.confirmedByD = Date.now(); else p.confirmedByH = Date.now();
+  savePlans();
+  renderPlans();
+  showToast(`✅ ${who} đã xác nhận kế hoạch`);
+}
+function remindPlan(id){
+  const p = plans.find(x=>x.id===id);
+  if(!p) return;
+  sendPushNotif('📅 Nhắc kế hoạch vật tư', `${p.material}${p.quantity?' '+p.quantity:''} cho ${p.site} — cần trước ${fmtDateOnly(p.neededDate)}`, ['dung','hien','trang','other']);
+  showToast('🔔 Đã gửi nhắc nhở');
+}
+// Bấm từ 1 kế hoạch → điền sẵn công trình + nội dung sang form "Thêm mới" (chỉ điền hộ, KHÔNG
+// tự động gửi — vẫn phải nhập số tiền rồi tự bấm "Gửi đề xuất" như bình thường).
+function createProposalFromPlan(id){
+  const p = plans.find(x=>x.id===id);
+  if(!p) return;
+  _pendingPlanLink = id;
+  showPage('add');
+  const inpSite = document.getElementById('inp-site');
+  if(inpSite) inpSite.value = p.site;
+  const inpDesc = document.getElementById('inp-desc');
+  if(inpDesc) inpDesc.value = `${p.material}${p.quantity?' '+p.quantity:''} cho ${p.site}`;
+  showToast('Đã điền sẵn công trình + nội dung — nhập số tiền rồi gửi đề xuất');
 }
 
 function autofillPerson(name){
