@@ -932,7 +932,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v72';
+const APP_VERSION = '20260705-v73';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1003,9 +1003,23 @@ document.addEventListener('visibilitychange', function(){
     if(hiddenMs > 10000) forceFirebaseResync();
   }
 });
-window.addEventListener('online', forceFirebaseResync); // mạng vừa có lại → nối ngay
+// Lúc app VỪA MỞ (đặc biệt trên iPhone: mở app đúng lúc điện thoại vừa bật sóng lại từ màn khoá),
+// hệ điều hành hay bắn sự kiện "online" NGAY GIỮA LÚC Firebase đang tự kết nối lần đầu — nếu ép
+// ngắt+nối lại đúng lúc đó thì vô tình "đá" luôn quá trình kết nối tự nhiên đang chạy dở, khiến
+// phải làm lại từ đầu → kéo dài thời gian chờ (đây là 1 phần lý do "tải lại có khi cả phút").
+// Bỏ qua tín hiệu "online" trong 8 giây đầu để Firebase yên tâm tự kết nối lần đầu không bị đá ngang.
+const _appLoadedAt = Date.now();
+window.addEventListener('online', function(){
+  if(Date.now() - _appLoadedAt < 8000) return;
+  forceFirebaseResync();
+});
 window.addEventListener('pageshow', function(e){ if(e.persisted) forceFirebaseResync(); }); // mở lại từ cache trình duyệt
-// Giám sát: đang mở app mà mất kết nối kéo dài → tự nối lại, không cần bấm "Tải lại"
+// Giám sát: đang mở app mà mất kết nối kéo dài → tự nối lại, không cần bấm "Tải lại".
+// Kiểm tra SỚM một lần lúc 8 giây (thay vì đợi tới mốc 30s mới có đợt sửa đầu tiên) để giảm thời
+// gian chờ tối đa khi lần kết nối ban đầu bị vướng gì đó — sau đó vẫn giám sát định kỳ mỗi 30 giây.
+setTimeout(function(){
+  if(document.visibilityState === 'visible' && !fbConnected) forceFirebaseResync();
+}, 8000);
 setInterval(function(){
   if(document.visibilityState === 'visible' && !fbConnected) forceFirebaseResync();
 }, 30000);
