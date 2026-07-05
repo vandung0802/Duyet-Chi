@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v67** (`APP_VERSION = '20260705-v67'`, `sw.js VERSION = '20260705-60'`, `version.txt = 20260705-v67`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v68** (`APP_VERSION = '20260705-v68'`, `sw.js VERSION = '20260705-61'`, `version.txt = 20260705-v68`). Ngày 05/07/2026.
 
 ---
 
@@ -207,7 +207,15 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - Tự đối chiếu, xoá dòng phiếu đã bị xoá bên app (dọn rác).
 - Định dạng tiền phân cách nghìn + " đ" cho sheet chính + 4 sheet báo cáo.
 
-### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng)
+### U. "Tải lại" lúc vào app ngày càng LÂU khi số phiếu tăng (v68, 05/07/2026 — vá lại mục G/v53)
+- **Triệu chứng:** app đang có 123 phiếu, mở/quay lại app thấy kẹt lâu ở badge "☁️ Tải lại" (mất kết nối).
+- **Gốc:** cơ chế `forceFirebaseResync()` (mục G, v53) gọi `db.goOffline()+db.goOnline()` **VÔ ĐIỀU KIỆN mỗi lần app chuyển từ ẩn→hiện**, kể cả khi chỉ lướt qua app khác 1-2 giây rồi quay lại ngay (kết nối cũ thực ra vẫn còn sống nguyên). Mỗi lần ép nối lại kiểu này bắt buộc tải lại TOÀN BỘ dữ liệu từ đầu — càng nhiều phiếu (123, sẽ còn tăng) thì càng lâu. Đây là đánh đổi chưa tối ưu của bản vá v53: chữa được "dữ liệu cũ" nhưng lại đẻ ra "chậm dần theo thời gian".
+- **Sửa:** thêm biến `_hiddenAt` ghi lại thời điểm app vừa ẩn; khi hiện lại, **CHỈ gọi `forceFirebaseResync()` nếu đã ẩn quá 10 giây** (`hiddenMs > 10000`) — dưới ngưỡng đó hệ điều hành gần như chắc chắn CHƯA cắt kết nối ngầm, giữ nguyên kết nối cũ là đủ, khỏi tải lại vô ích. Trên 10 giây mới có khả năng thật sự bị cắt, lúc đó ép nối lại vẫn đúng như thiết kế gốc.
+- **Các trigger resync khác GIỮ NGUYÊN không đổi** (đã đúng từ đầu, không phải nguyên nhân chậm): `online` event (mạng vừa có lại — sự kiện hiếm, không lặp lại liên tục), `pageshow` với `e.persisted` (mở lại từ bfcache — cũng hiếm), watchdog `setInterval` 30s (đã tự gate bằng điều kiện `!fbConnected`, chỉ chạy khi THẬT SỰ mất kết nối).
+- Đã kiểm chứng qua preview bằng cách giả lập `document.visibilityState` thật (không chỉ gọi hàm suông): ẩn <10s → `forceFirebaseResync` KHÔNG bị gọi; ẩn >10s (giả lập `_hiddenAt` lùi về quá khứ) → CÓ bị gọi đúng.
+- ⚠️ Nếu sau này vẫn còn ai báo "tải lại lâu" dù đã lên v68 — khả năng cao là do **mạng thật sự yếu** (4G/5G chập chờn) chứ không phải lỗi logic này nữa; hỏi rõ họ đang ở tình huống nào (vừa mở app lần đầu? vừa quay lại sau bao lâu? mạng có yếu không?) trước khi sửa tiếp, đừng đoán mò lặp lại.
+
+### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng, ĐÃ VÁ LẠI ở v68 xem mục U)
 - **Gốc:** iPhone cắt NGẦM kết nối realtime khi app chạy nền/khóa màn hình; Firebase mất 30–60s+ mới tự nhận ra → mở app thấy số CŨ rất lâu, duyệt máy này máy kia không thấy.
 - **Sửa:** thêm `forceFirebaseResync()` (goOffline→goOnline, throttle 5s) gọi khi: `visibilitychange`→visible, `online`, `pageshow` (bfcache), và watchdog 30s khi mất kết nối. Badge đỏ "Tải lại" chỉ hiện nếu mất kết nối >3s (tránh nhấp nháy lúc bắt tay lại).
 - ~~**Ảnh:** node `duyetchi/images` đổi `once('value')` → `on('value')`~~ ⚠️ **ĐÃ GỠ ở v54 — đừng làm lại:** `on()` cả node ảnh khiến MỖI LẦN nối lại mạng (4G/app nền) kéo lại cả kho ảnh hàng chục MB → nghẽn mạng, mọi cập nhật chậm theo (chính là lỗi "hôm nay chậm" user báo ngay sau v53). v54 quay về `once` + cơ chế **imgStamp** (xem H).
