@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v73** (`APP_VERSION = '20260705-v73'`, `sw.js VERSION = '20260705-66'`, `version.txt = 20260705-v73`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v74** (`APP_VERSION = '20260705-v74'`, `sw.js VERSION = '20260705-67'`, `version.txt = 20260705-v74`). Ngày 05/07/2026.
 
 ---
 
@@ -226,6 +226,12 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   2. Thêm 1 lần kiểm tra SỚM lúc **8 giây** (`setTimeout(...,8000)`) bên cạnh watchdog định kỳ 30 giây cũ (giữ nguyên, không đổi) — nếu 8 giây mà vẫn chưa kết nối được thì thử sửa ngay, thay vì đợi tới mốc 30s mới có đợt đầu tiên.
 - Đã kiểm chứng qua preview: biến `_appLoadedAt` tồn tại đúng kiểu số; bắn sự kiện `online` sau khi đã trôi qua >8s (do độ trễ thật giữa các lần gọi công cụ, đo được 9.6s và 35.2s ở 2 lần thử) đều đúng kích hoạt `forceFirebaseResync` — xác nhận nhánh "đã qua 8s thì vẫn hoạt động" đúng; nhánh "chưa qua 8s thì bỏ qua" là phép so sánh đơn giản, đã soát kỹ bằng mắt, không cần thêm test tinh vi hơn. Test lại duyệt D vẫn đúng, không ảnh hưởng.
 - ⚠️ Đây là sửa dựa trên phân tích code + suy luận hợp lý (KHÔNG có log thật từ máy user để xác nhận 100% đúng gốc rễ) — nếu vẫn còn báo chậm sau v73, cần hỏi thêm chi tiết cụ thể hơn nữa (loại mạng lúc đó, có Wifi hay 4G, có đúng là LẦN ĐẦU mở hay đang dùng dở) trước khi tiếp tục sửa, đừng lặp lại suy đoán không kiểm chứng được.
+
+### AA. Badge đếm giây để chẩn đoán "tải lại lâu" mà KHÔNG cần mật khẩu (v74, 05/07/2026)
+- Sau v73, user chủ động đề nghị đưa mật khẩu đăng nhập để tôi tự vào kiểm tra trực tiếp — **đã từ chối nhận** (nguyên tắc an toàn: không nên cầm thông tin đăng nhập hệ thống tài chính thật của công ty, dù ý tốt). Đề xuất thay thế: cho hiện số giây thật ngay trên badge, để user tự đọc và báo lại chính xác, không cần công cụ/mật khẩu gì.
+- **Đã làm:** thêm biến `_fbBadgeIsRed` (đúng bởi `updateFbBadge()`, ~2277) đánh dấu badge đang đỏ hay không; thêm `setInterval` 1 giây — khi đang đỏ, tự cập nhật chữ badge thành `☁️ Tải lại (Ns)` với N = giây tính từ `_appLoadedAt` (biến đã có sẵn từ v73). Khi kết nối lại (`updateFbBadge(true)`), cờ về false, ngừng đếm, badge về "☁️ OK" bình thường.
+- Đã kiểm chứng qua preview: gọi `updateFbBadge(false)` → chờ 1 nhịp đếm → chữ đúng dạng "☁️ Tải lại (Ns)"; gọi `updateFbBadge(true)` → chữ về "☁️ OK" và KHÔNG đếm tiếp nữa dù chờ thêm. Test lại duyệt D vẫn đúng, không ảnh hưởng.
+- **Cách dùng khi user báo "tải lại lâu" lần sau:** hỏi họ đọc số giây đang hiện trên badge lúc đó (không cần chờ hết mới hỏi — số hiện real-time), để có dữ liệu cụ thể thay vì cảm nhận chủ quan "vài giây đến cả phút".
 
 ### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng, ĐÃ VÁ LẠI ở v68 xem mục U)
 - **Gốc:** iPhone cắt NGẦM kết nối realtime khi app chạy nền/khóa màn hình; Firebase mất 30–60s+ mới tự nhận ra → mở app thấy số CŨ rất lâu, duyệt máy này máy kia không thấy.
