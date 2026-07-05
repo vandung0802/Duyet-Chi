@@ -904,7 +904,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v67';
+const APP_VERSION = '20260705-v68';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -961,8 +961,19 @@ function forceFirebaseResync(){
   try{ db.goOffline(); }catch(e){}
   try{ db.goOnline(); }catch(e){}
 }
+// Chỉ ép nối lại (tốn thời gian tải lại TOÀN BỘ dữ liệu từ đầu) khi app đã ẩn ĐỦ LÂU (>10 giây) —
+// lúc đó hệ điều hành mới có khả năng đã cắt kết nối ngầm thật sự. Ẩn/hiện nhanh (bấm về Home rồi
+// quay lại ngay, xem thông báo rồi trở lại...) thì kết nối cũ VẪN CÒN SỐNG, ép nối lại chỉ tổ chờ
+// vô ích — đây chính là lý do "tải lại lúc vào app" ngày càng LÂU khi số phiếu càng tăng (mỗi lần
+// ép nối lại phải tải lại y hệt từ đầu, bất kể có cần hay không).
+let _hiddenAt = 0;
 document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'visible') forceFirebaseResync();
+  if(document.visibilityState === 'hidden'){
+    _hiddenAt = Date.now();
+  } else if(document.visibilityState === 'visible'){
+    const hiddenMs = _hiddenAt ? (Date.now() - _hiddenAt) : 0;
+    if(hiddenMs > 10000) forceFirebaseResync();
+  }
 });
 window.addEventListener('online', forceFirebaseResync); // mạng vừa có lại → nối ngay
 window.addEventListener('pageshow', function(e){ if(e.persisted) forceFirebaseResync(); }); // mở lại từ cache trình duyệt
