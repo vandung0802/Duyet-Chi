@@ -925,7 +925,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v70';
+const APP_VERSION = '20260705-v71';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3988,6 +3988,18 @@ function setPlanTab(tab, btn){
   if(tab==='list') renderPlans(); else renderPlanStats();
 }
 
+// Nhãn + màu cho từng trạng thái — dùng chung cho badge trong bảng chi tiết Thống kê.
+const PLAN_STATUS_INFO = {
+  pending:   { label:'⏳ Đang chờ',      bg:'#fdf4ff', color:'#9333ea' },
+  ordered:   { label:'📦 Đã đặt cọc',    bg:'#fffbeb', color:'#d97706' },
+  done:      { label:'✅ Đã hoàn thành', bg:'#f0fdf4', color:'#16a34a' },
+  cancelled: { label:'❌ Đã huỷ',        bg:'#f1f5f9', color:'#64748b' },
+};
+
+// Tab Thống kê = 1 BẢNG CHI TIẾT đầy đủ mọi thông tin từng kế hoạch (user yêu cầu — xem đủ mới hiểu,
+// không chỉ số gộp): vật tư, khối lượng, công trình, người phụ trách, người đề xuất, số tiền dự kiến,
+// trạng thái, ngày cần. Cuộn ngang trên điện thoại — tái dùng đúng khuôn `.excel-table-scroll` đã
+// dùng cho bảng "Chưa chuyển" ở Báo cáo (mục N/O trong bàn giao) để không phải tạo kiểu bảng mới.
 function renderPlanStats(){
   const el = document.getElementById('plan-stats-content');
   if(!el) return;
@@ -3995,72 +4007,53 @@ function renderPlanStats(){
     el.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có kế hoạch nào để thống kê</div>';
     return;
   }
-  // Sắp đến hạn (≤2 ngày, chưa xong/chưa huỷ) — nổi bật lên đầu
-  const urgent = plans.filter(p=>{
-    if(p.status==='done' || p.status==='cancelled') return false;
-    return Math.ceil((p.neededDate - Date.now()) / 86400000) <= 2;
-  }).sort((a,b)=>(a.neededDate||0)-(b.neededDate||0));
-  const urgentHtml = urgent.length ? `<div style="margin:0 12px 10px;border-radius:10px;overflow:hidden;border:1.5px solid #f5a0a0">
-    <div style="background:#c0392b;padding:6px 10px;font-size:10px;color:#fff;font-weight:700">🔴 SẮP ĐẾN HẠN — ${urgent.length} kế hoạch</div>
-    <table style="width:100%;border-collapse:collapse;background:#fff;table-layout:fixed">
-      <colgroup><col style="width:auto"><col style="width:70px"><col style="width:70px"><col style="width:80px"></colgroup>
-      <tr style="background:#fdecea"><th style="padding:5px 6px;font-size:11px;text-align:left">Vật tư</th><th style="padding:5px 6px;font-size:11px;text-align:left">CT</th><th style="padding:5px 6px;font-size:11px;text-align:left">Hạn</th><th style="padding:5px 6px;font-size:11px;text-align:right">Dự kiến</th></tr>
-      ${urgent.map(p=>{
-        const days = Math.ceil((p.neededDate - Date.now()) / 86400000);
-        const hanTxt = days < 0 ? `Quá hạn ${Math.abs(days)}ng` : `Còn ${days}ng`;
-        return `<tr style="border-top:1px solid #fde8e8">
-          <td style="padding:4px 6px;font-size:11px;overflow:hidden;text-overflow:ellipsis">${p.material}</td>
-          <td style="padding:4px 6px;font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.site}</td>
-          <td style="padding:4px 6px;font-size:10px;color:#c0392b;font-weight:700">${hanTxt}</td>
-          <td style="padding:4px 6px;font-size:11px;text-align:right">${p.estimatedAmount?fmtTr(p.estimatedAmount):'—'}</td>
-        </tr>`;
-      }).join('')}
-    </table>
-  </div>` : '';
+  const items = plans.slice().sort((a,b)=>(a.neededDate||0)-(b.neededDate||0));
+  const totalAmount = items.reduce((a,p)=>a+(p.estimatedAmount||0),0);
 
-  // Tổng theo trạng thái
-  const statusDefs = [
-    {key:'pending',   label:'Đang chờ',      color:'#9333ea', bg:'#fdf4ff'},
-    {key:'ordered',   label:'Đã đặt hàng',   color:'#d97706', bg:'#fffbeb'},
-    {key:'done',      label:'Đã hoàn thành', color:'#16a34a', bg:'#f0fdf4'},
-    {key:'cancelled', label:'Đã huỷ',        color:'#64748b', bg:'#f1f5f9'},
-  ];
-  const statusCards = statusDefs.map(s=>{
-    const items = plans.filter(p=>p.status===s.key);
-    const total = items.reduce((a,p)=>a+(p.estimatedAmount||0),0);
-    return `<div style="background:${s.bg};border-radius:10px;padding:8px 6px;text-align:center">
-      <div style="font-size:9px;color:${s.color};font-weight:600">${s.label.toUpperCase()}</div>
-      <div style="font-size:15px;font-weight:800;color:${s.color};white-space:nowrap">${items.length} <span style="font-size:9px;font-weight:500">KH</span></div>
-      <div style="font-size:9px;color:${s.color};font-weight:600">${total>0?fmtTr(total):'—'}</div>
-    </div>`;
+  const rows = items.map((p,i)=>{
+    const stt = i + 1;
+    const isOpen = p.status!=='done' && p.status!=='cancelled';
+    const days = Math.ceil((p.neededDate - Date.now()) / 86400000);
+    let rowBorder = 'transparent', dueColor = 'var(--text-sub)', dueSub = '';
+    if(!isOpen){ dueSub = p.status==='done' ? 'Đã xong' : '—'; }
+    else if(days < 0){ rowBorder='#7f1d1d'; dueColor='#7f1d1d'; dueSub = `Quá hạn ${Math.abs(days)} ngày`; }
+    else if(days <= 2){ rowBorder='#dc2626'; dueColor='#dc2626'; dueSub = `Còn ${days} ngày`; }
+    else { dueSub = `Còn ${days} ngày`; }
+    const st = PLAN_STATUS_INFO[p.status] || PLAN_STATUS_INFO.pending;
+    return `<tr style="box-shadow:inset 3px 0 0 ${rowBorder}">
+      <td style="text-align:center;font-size:10px;color:var(--text-sub);vertical-align:middle">${stt}</td>
+      <td style="font-weight:700;font-size:11px;vertical-align:middle;line-height:1.3">${p.material}</td>
+      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${p.quantity||'—'}</td>
+      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${p.site}</td>
+      <td style="font-size:10px;vertical-align:middle">${p.assignee||'—'}</td>
+      <td style="font-size:10px;vertical-align:middle">${p.createdBy||'—'}</td>
+      <td style="text-align:right;font-size:10px;font-weight:700;color:${p.estimatedAmount?'var(--blue)':'#cbd5e1'};vertical-align:middle">${p.estimatedAmount?fmtTr(p.estimatedAmount):'—'}</td>
+      <td style="vertical-align:middle"><span class="badge" style="background:${st.bg};color:${st.color}">${st.label}</span></td>
+      <td style="font-size:10px;color:${dueColor};font-weight:${dueColor==='var(--text-sub)'?'600':'700'};vertical-align:middle">${fmtDateOnly(p.neededDate)}<div style="font-size:9px;color:${dueColor}">${dueSub}</div></td>
+    </tr>`;
   }).join('');
 
-  // Tổng theo LOẠI VẬT TƯ (gộp theo tên vật tư đã nhập, không phân biệt hoa/thường/khoảng trắng thừa)
-  const byMaterial = {};
-  plans.forEach(p=>{
-    const key = (p.material||'Khác').trim() || 'Khác';
-    if(!byMaterial[key]) byMaterial[key] = { count: 0, total: 0 };
-    byMaterial[key].count++;
-    byMaterial[key].total += (p.estimatedAmount || 0);
-  });
-  const materialKeys = Object.keys(byMaterial).sort((a,b)=>byMaterial[b].total - byMaterial[a].total);
-  const materialRows = materialKeys.map(k=>{
-    const d = byMaterial[k];
-    return `<tr><td style="padding:6px 8px;font-size:12px;font-weight:600">${k}</td><td style="padding:6px 8px;font-size:12px;text-align:center;color:var(--text-sub)">${d.count}</td><td style="padding:6px 8px;font-size:12px;text-align:right;font-weight:700;color:var(--blue)">${d.total>0?fmtTr(d.total):'—'}</td></tr>`;
-  }).join('');
-  const materialTotal = materialKeys.reduce((a,k)=>a+byMaterial[k].total,0);
+  const colWidths = [18, 90, 62, 88, 56, 56, 74, 78, 62];
+  const totalWidth = colWidths.reduce((a,w)=>a+w,0);
+  const colgroup = `<colgroup>${colWidths.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>`;
 
   el.innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px">${statusCards}</div>
-    ${urgentHtml}
-    <div style="padding:0 12px 12px">
-      <div style="font-size:11px;font-weight:700;color:var(--blue-dark);background:var(--blue-light);padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid var(--blue)">📦 Tổng theo loại vật tư — ${materialTotal>0?fmtTr(materialTotal):'chưa có giá dự kiến'}</div>
-      <div style="border-radius:0 0 8px 8px;overflow:hidden">
-        <table style="width:100%;border-collapse:collapse;font-size:12px;border:1.5px solid #b0b8c9;table-layout:fixed">
-          <colgroup><col style="width:auto"><col style="width:50px"><col style="width:90px"></colgroup>
-          <thead><tr style="background:var(--blue)"><th style="padding:6px 8px;color:#fff;text-align:left">Vật tư</th><th style="padding:6px 8px;color:#fff;text-align:center">SL</th><th style="padding:6px 8px;color:#fff;text-align:right">Dự kiến</th></tr></thead>
-          <tbody>${materialRows}</tbody>
-        </table>
+    <div class="card">
+      <div class="card-body" style="padding:0">
+        <div class="excel-table-wrap">
+          <table class="excel-table excel-table-scroll" style="width:${totalWidth}px">
+            ${colgroup}
+            <thead><tr>
+              <th style="text-align:center">#</th><th>Vật tư</th><th>Khối lượng</th><th>Công trình</th>
+              <th>Phụ trách</th><th>Đề xuất</th><th style="text-align:right">Dự kiến</th><th>Trạng thái</th><th>Ngày cần</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        <div class="excel-table-footer">
+          <span>Tổng cộng: ${items.length} kế hoạch</span>
+          <span>${totalAmount>0?fmtTr(totalAmount):'—'}</span>
+        </div>
       </div>
     </div>`;
 }
@@ -4104,7 +4097,7 @@ function buildPlanCard(p){
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
         <select onchange="setPlanStatus('${p.id}', this.value)" style="padding:5px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
           <option value="pending" ${p.status==='pending'?'selected':''}>Đang chờ</option>
-          <option value="ordered" ${p.status==='ordered'?'selected':''}>Đã đặt hàng</option>
+          <option value="ordered" ${p.status==='ordered'?'selected':''}>Đã đặt cọc</option>
           <option value="done" ${p.status==='done'?'selected':''}>Đã hoàn thành</option>
           <option value="cancelled" ${p.status==='cancelled'?'selected':''}>Đã huỷ</option>
         </select>
