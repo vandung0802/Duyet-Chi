@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v65** (`APP_VERSION = '20260704-v65'`, `sw.js VERSION = '20260704-58'`, `version.txt = 20260704-v65`). Ngày 04/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v66** (`APP_VERSION = '20260705-v66'`, `sw.js VERSION = '20260705-59'`, `version.txt = 20260705-v66`). Ngày 05/07/2026.
 
 ---
 
@@ -288,6 +288,7 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   ```
   Theo dõi run mới bằng API ở trên đến khi `"conclusion": "success"`, rồi mới `curl version.txt` xác nhận.
 - Máy tính này KHÔNG có `gh` CLI cài đặt — dùng `curl` gọi thẳng REST API công khai (không cần token cho repo public) là đủ để chẩn đoán.
+- **Đã tái diễn lần 2 ở v66 (05/07/2026)** — xác nhận đây là lỗi hạ tầng GitHub ngẫu nhiên, KHÔNG phải sự cố một lần. Cứ push xong mà `version.txt` không đổi sau ~90s, kiểm tra ngay theo quy trình trên — commit rỗng retry lần nào cũng thành công trong <1 phút. Chú ý: run mới có thể ở trạng thái `"waiting"` một lúc trước khi chuyển `"in_progress"` rồi `"completed"` — đừng vội kết luận fail nếu thấy "waiting", phải đợi tới khi `status` = `"completed"` mới đọc `conclusion`.
 
 ### Q. Thẻ phiếu "Đã chuyển" (duyệt 1 phần) vẫn hiện đỏ/"chờ duyệt" gây hiểu nhầm chưa xong (v62, 04/07/2026)
 - **Bối cảnh:** đề xuất 10tr, D duyệt 6tr (H chưa duyệt), Trang chuyển đủ 6tr → app đã tự đúng chuyển `status='transferred'` từ trước (không bắt T chuyển thêm 4tr — đúng quy tắc mục 4). Nhưng **thẻ phiếu vẫn hiện sai**: badge D đỏ "6tr/10tr" (so với tổng đề xuất GỐC) và badge H "⏳ H chờ duyệt" — khiến nhìn vào tưởng vẫn còn dang dở, dù thực ra giao dịch đã ĐÓNG HẲN.
@@ -295,6 +296,9 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **CHỈ áp dụng khi `status==='transferred'`** (đã đóng hẳn) — phiếu còn `status==='approved'` (D/H duyệt 1 phần nhưng T CHƯA chuyển xong) **giữ nguyên hành vi cũ** (vẫn hiện đỏ + "chờ duyệt"), vì tiền chưa chuyển thì vẫn còn khả năng duyệt thêm/chuyển thêm, không được coi là xong.
 - Đã kiểm chứng qua preview 3 kịch bản: (1) chỉ D duyệt 1 phần + đã chuyển → hết đỏ, H hiện "không cần duyệt"; (2) chỉ H duyệt 1 phần + đã chuyển → hết đỏ, D hiện "không cần duyệt"; (3) cả D và H duyệt đủ 100% + đã chuyển → không đổi gì (vẫn đúng như cũ). Phiếu `status==='approved'` (chưa chuyển xong) vẫn hiện đỏ + chờ duyệt như trước — không bị ảnh hưởng.
 - ⚠️ **Chưa sửa (phát hiện phụ, ngoài phạm vi user yêu cầu lần này):** nút hành động của `renderBtnD`/`renderBtnH` (~2518/2544) vẫn cho phép bấm "Duyệt" dù phiếu đã `status==='transferred'` đóng hẳn qua 1 mình D hoặc H (canPress không loại trừ status='transferred'). Bấm thêm không phá được số chính thức (do `getOfficialApprovedAmount` ưu tiên H không so độ lớn), nhưng tạo thêm 1 dòng lịch sử duyệt thừa/gây rối. Nếu user muốn khoá hẳn nút này khi đã đóng, cần hỏi rõ trước khi sửa (đây là quyết định nghiệp vụ, không tự ý đổi). — User đã xác nhận (04/07/2026): **để nguyên, không sửa.**
+- 🔴 **v66 (05/07/2026) — SỬA LẠI mục Q, v62 đã làm SAI 1 phần, đọc kỹ đừng lặp lại:** user chỉ ra ảnh thực tế (thẻ "Thanh toán tiền 400l dầu") — D **CHƯA duyệt gì cả** (không phải "duyệt 1 phần" như ví dụ ban đầu), chỉ H duyệt + T đã chuyển đủ theo H. v62 lỡ đổi badge thành **"D không cần duyệt"** cho case này — **SAI**: dù tiền đã chuyển dựa trên 1 mình H duyệt, D **VẪN CÒN VIỆC PHẢI XEM/DUYỆT LẠI** cho đúng quy trình (không phải "không cần" vĩnh viễn). Đã sửa lại: khi `amt===0` (chưa duyệt gì) → **LUÔN hiện "chờ duyệt"** như v61, bất kể `isClosed` hay không.
+  - **Vẫn giữ đúng phần v62 làm đúng:** khi đã duyệt MỘT PHẦN (amt>0, ví dụ D duyệt 6tr/10tr) VÀ đã đóng (`status==='transferred'`) → hết đỏ so với đề xuất gốc, hiện thẳng số đã duyệt không kèm "/tổng".
+  - **Tóm gọn quy tắc đúng (đã chốt):** "chưa duyệt gì" (amt=0) → luôn "chờ duyệt", không phân biệt đóng/chưa đóng. "Đã duyệt một phần" (amt>0) → nếu CHƯA đóng thì vẫn đỏ so với gốc (đúng, tiền chưa chuyển nên còn khả năng duyệt/chuyển thêm); nếu ĐÃ đóng thì hết đỏ (đúng, phần đã duyệt đó coi như xong).
 
 ### R. Zoom ảnh trong modal xem to — pinch + double-tap + kéo (v64, 04/07/2026)
 - **Lý do:** nhiều ảnh chứng từ chữ nhỏ, xem vừa khung (fit-to-screen) trên điện thoại không đọc được. Toàn app khoá pinch-zoom trang (`<meta viewport ... maximum-scale=1.0>`) nên phải tự làm zoom RIÊNG cho ảnh trong modal bằng CSS `transform` — không gỡ `maximum-scale` (sẽ zoom được cả UI nút bấm/chữ toàn app, phá layout).
