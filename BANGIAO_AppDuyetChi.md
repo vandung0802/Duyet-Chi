@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v74** (`APP_VERSION = '20260705-v74'`, `sw.js VERSION = '20260705-67'`, `version.txt = 20260705-v74`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v75** (`APP_VERSION = '20260705-v75'`, `sw.js VERSION = '20260705-68'`, `version.txt = 20260705-v75`). Ngày 05/07/2026.
 
 ---
 
@@ -232,6 +232,14 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Đã làm:** thêm biến `_fbBadgeIsRed` (đúng bởi `updateFbBadge()`, ~2277) đánh dấu badge đang đỏ hay không; thêm `setInterval` 1 giây — khi đang đỏ, tự cập nhật chữ badge thành `☁️ Tải lại (Ns)` với N = giây tính từ `_appLoadedAt` (biến đã có sẵn từ v73). Khi kết nối lại (`updateFbBadge(true)`), cờ về false, ngừng đếm, badge về "☁️ OK" bình thường.
 - Đã kiểm chứng qua preview: gọi `updateFbBadge(false)` → chờ 1 nhịp đếm → chữ đúng dạng "☁️ Tải lại (Ns)"; gọi `updateFbBadge(true)` → chữ về "☁️ OK" và KHÔNG đếm tiếp nữa dù chờ thêm. Test lại duyệt D vẫn đúng, không ảnh hưởng.
 - **Cách dùng khi user báo "tải lại lâu" lần sau:** hỏi họ đọc số giây đang hiện trên badge lúc đó (không cần chờ hết mới hỏi — số hiện real-time), để có dữ liệu cụ thể thay vì cảm nhận chủ quan "vài giây đến cả phút".
+- **Kết quả đo thật từ user (05/07/2026):** 2 lần đọc badge được **12s và 26s** — dao động lớn giữa các lần → chủ yếu do TÌNH TRẠNG MẠNG thực tế từng lúc, KHÔNG phải hằng số lỗi code có thể "vặn" nhỏ mãi. User cũng xác nhận: **trong lúc badge đếm giây, danh sách phiếu VẪN hiện và dùng được bình thường** (từ cache local) — tức app không hề "đứng", chỉ là dữ liệu mới nhất chưa về. Đề xuất tiếp theo (chưa làm, đang chờ user quyết): đổi badge lúc mới mở app thành màu trung tính "Đang đồng bộ..." trong ~15-20s đầu, chỉ đỏ "Tải lại" thật sự nếu lâu hơn — vì đỏ chói ngay từ đầu trông như LỖI gây hoang mang trong khi là chuyện bình thường.
+
+### AB. Dũng không đăng nhập lại được — nút treo "Đang đăng nhập..." vô hạn (v75, 05/07/2026)
+- **Tình huống:** user (Dũng) thoát app rồi không đăng nhập lại được — màn hình kẹt ở nút "⏳ Đang đăng nhập..." không báo lỗi gì. Ảnh chụp cho thấy **điện thoại đang có CUỘC GỌI đang diễn ra** (thanh trạng thái).
+- **Chẩn đoán:** test thẳng endpoint đăng nhập Google từ máy tính (`curl POST identitytoolkit.googleapis.com/v1/accounts:signInWithPassword` với key của app + tài khoản giả) → **HTTP 400 trong 1.3s = máy chủ auth hoạt động bình thường**. Vậy lỗi ở MẠNG PHÍA ĐIỆN THOẠI lúc đó. Nghi phạm chính: **cuộc gọi đang diễn ra** — trên iPhone nếu cuộc gọi chạy sóng thường (không VoLTE), dữ liệu di động bị TẠM NGƯNG hoàn toàn trong suốt cuộc gọi; icon WiFi có hiện cũng chưa chắc WiFi có internet thật. Đã hướng dẫn user: cúp máy rồi thử lại / đổi WiFi↔4G / đóng hẳn app mở lại.
+- **Lỗ hổng code lộ ra (đã sửa v75):** `doLogin()` (~1462) không có giới hạn chờ — nếu `signInWithEmailAndPassword` không bao giờ phản hồi (mạng tắc), nút treo "Đang đăng nhập..." VĨNH VIỄN, user tưởng app hỏng. Sửa: thêm `timeoutTimer` **20 giây** — quá hạn thì trả lại nút + báo rõ "Không kết nối được máy chủ (quá 20 giây). Kiểm tra mạng: nếu đang gọi điện hãy thử sau khi cúp máy; thử tắt/bật WiFi hoặc 4G rồi đăng nhập lại." (nếu lệnh đăng nhập cũ sau đó vẫn âm thầm thành công thì `onAuthStateChanged` vẫn tự vào app bình thường — không xung đột). Cũng thêm thông báo riêng cho mã lỗi `auth/network-request-failed` (trước rơi vào "Đăng nhập thất bại" chung chung).
+- Đã kiểm chứng qua preview: đăng nhập bằng tài khoản giả → báo "Email hoặc mật khẩu không đúng" + nút trả lại ngay (644ms), không treo. Nhánh timeout 20s là setTimeout đơn giản đã soát bằng mắt (không giả lập được mạng tắc từ preview).
+- ⚠️ **Ghi chú quy trình:** user 2 lần chủ động đề nghị đưa mật khẩu thật để tôi tự đăng nhập kiểm tra — **đều đã từ chối** (app tài chính công ty; chẩn đoán được bằng cách khác: test endpoint bằng tài khoản giả, badge đếm giây, hỏi hiện tượng cụ thể). Giữ nguyên tắc này.
 
 ### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng, ĐÃ VÁ LẠI ở v68 xem mục U)
 - **Gốc:** iPhone cắt NGẦM kết nối realtime khi app chạy nền/khóa màn hình; Firebase mất 30–60s+ mới tự nhận ra → mở app thấy số CŨ rất lâu, duyệt máy này máy kia không thấy.
