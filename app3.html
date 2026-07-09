@@ -932,7 +932,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v74';
+const APP_VERSION = '20260705-v75';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1471,16 +1471,26 @@ async function doLogin(){
   const slowTimer = setTimeout(()=>{
     if(btn.disabled) errEl.textContent = '🌐 Mạng chậm, vui lòng chờ thêm...';
   }, 4000);
+  // Sau 20 giây vẫn không có phản hồi → coi như mạng tắc, TRẢ LẠI NÚT cho bấm thử lại
+  // (trước đây nút treo "Đang đăng nhập..." VÔ HẠN nếu mạng không phản hồi — user tưởng app hỏng).
+  // Lưu ý: nếu lệnh đăng nhập cũ vẫn âm thầm thành công sau đó, onAuthStateChanged vẫn tự vào app bình thường.
+  const timeoutTimer = setTimeout(()=>{
+    if(btn.disabled){
+      btn.disabled = false; btn.textContent = 'Đăng nhập';
+      errEl.textContent = '❌ Không kết nối được máy chủ (quá 20 giây). Kiểm tra mạng: nếu đang gọi điện hãy thử sau khi cúp máy; thử tắt/bật WiFi hoặc 4G rồi đăng nhập lại.';
+    }
+  }, 20000);
   try {
     await firebase.auth().signInWithEmailAndPassword(email, pass);
-    clearTimeout(slowTimer);
+    clearTimeout(slowTimer); clearTimeout(timeoutTimer);
     // onAuthStateChanged ẩn màn login, không cần reset btn
   } catch(e) {
-    clearTimeout(slowTimer);
+    clearTimeout(slowTimer); clearTimeout(timeoutTimer);
     let msg = 'Đăng nhập thất bại';
     if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential') msg='Email hoặc mật khẩu không đúng';
     else if(e.code==='auth/invalid-email') msg='Email không hợp lệ';
     else if(e.code==='auth/too-many-requests') msg='Thử lại quá nhiều, vui lòng chờ';
+    else if(e.code==='auth/network-request-failed') msg='❌ Lỗi mạng — kiểm tra WiFi/4G rồi thử lại (nếu đang gọi điện, thử sau khi cúp máy)';
     errEl.textContent = msg;
     btn.disabled = false; btn.textContent = 'Đăng nhập';
   }
