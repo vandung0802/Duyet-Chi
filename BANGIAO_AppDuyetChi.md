@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v76** (`APP_VERSION = '20260705-v76'`, `sw.js VERSION = '20260705-69'`, `version.txt = 20260705-v76`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v77** (`APP_VERSION = '20260705-v77'`, `sw.js VERSION = '20260705-70'`, `version.txt = 20260705-v77`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
 
 ---
 
@@ -450,6 +450,36 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
   Kết luận: KHÔNG ảnh hưởng tốc độ chung của app (chỉ tác động lúc nén-upload và tải-xem ảnh, không đụng list/duyệt/chuyển); dung lượng gấp ~2.35 lần nhưng vẫn rất nhỏ so với hạn mức Firebase Storage free tier ngay cả ở quy mô 2000 ảnh/5 tháng. User chọn mức **1000px**.
 - **Sửa:** `compressImage()` (~1072) đổi `const MAX = 600` → `const MAX = 1000`. Comment cũ trong code ghi "1200px" là SAI/lỗi thời (thực tế code là 600 trước khi sửa) — đã sửa comment khớp đúng.
 - Đã kiểm chứng qua preview: gọi ĐÚNG hàm `compressImage()` thật (không phải bản sao) với ảnh test → ra đúng 667×1000, không lỗi.
+
+### AD. 🔐 BẢO MẬT LỚN v77 — chống sửa số tài khoản/nội dung SAU khi duyệt (05/07/2026, đọc kỹ trước khi đụng vào luật/luồng duyệt)
+**Bối cảnh:** user đặt vấn đề: nếu ai đó vào được hệ thống, sửa số tài khoản trong phiếu SAU khi D,H đã duyệt → Trang chuyển nhầm. Đã bàn 3 lớp + user duyệt cả 3, mốc đóng băng = "ngay khi D HOẶC H duyệt".
+
+**Các lỗ hổng THẬT đã phát hiện trong lúc làm (đều đã vá):**
+1. Luật cũ: `proposals/$id .write: auth != null` — BẤT KỲ tài khoản nào (kể cả role 'other') sửa được MỌI phiếu MỌI trạng thái, gọi thẳng DB không cần qua UI.
+2. **Leo quyền:** `userRoles/$uid` cho TỰ ghi role của mình + `doRegister` ghi role theo TÊN TỰ CHỌN (`nameToRole`) → đăng ký tên "Dũng" là thành role dung, trước cả khi qua OTP (OTP chỉ chặn UI, không chặn DB).
+3. **Hồ sơ role của Hiền trên DB là 'other'** (app chạy được nhờ email-fallback client-side ở initAuth) — nếu deploy luật gate-theo-role mà không sửa trước thì CHẶN NHẦM Hiền → tắc tài chính. Đã sửa trực tiếp qua CLI: uid `8Q8g7dm...` (hiensbgt@gmail.com) → `{role:'hien', name:'Hiền'}`. **Bài học: TRƯỚC khi gate theo role DB, PHẢI đọc userRoles thật + auth:export đối chiếu email.**
+
+**Luật Firebase mới (file `database.rules.json` trong repo; bản cũ để hoàn tác: `database.rules.backup-truoc-v77.json`; deploy bằng thư mục tạm + `firebase deploy --only database`):**
+- **Đóng băng nội dung:** `desc/note/amount/amountUnit/person/site` chỉ được GIỮ NGUYÊN một khi phiếu có bất kỳ dấu duyệt nào (approvedD/approvedH/2 history tồn tại). Muốn sửa: D/H bỏ duyệt → sửa → duyệt lại.
+- **Dấu duyệt:** thêm/đổi `approvedD` chỉ role dung, `approvedH` chỉ hien; GỠ dấu (bỏ duyệt) cũng chỉ đúng người (guard ở `$id .validate` — vì validate con không chạy khi newData con không tồn tại, removal phải guard ở cha).
+- **Lịch sử duyệt/chuyển:** từng entry bất biến (so amount+ts); THÊM entry mới chỉ đúng role (D/H/T tương ứng). Gỡ CẢ node transfers chỉ trang.
+- **status:** đặt lần đầu ai cũng được (tạo phiếu); ĐỔI chỉ dung/hien/trang (chặn 'other' giả "đã chuyển").
+- **contentSnapshot:** từng trường chỉ dung/hien ghi/đổi; gỡ node chỉ dung/hien.
+- **Xóa cả phiếu:** đã duyệt → chỉ dung; chưa duyệt → ai cũng được (như cũ).
+- **userRoles:** tự ghi role mình CHỈ được 'other' — TRỪ đúng email: dung=vandung0802@gmail.com, hien=hiensbgt@gmail.com, trang=phantrang770@gmail.com (`auth.token.email`, khớp email-fallback trong initAuth); dung ghi được cho mọi người. (Lưu ý: initAuth fallback trang là `includes('trang')` — luật dùng email CHÍNH XÁC của Trang thật, chặt hơn client.)
+- **KHÔNG gate** (cố ý, để không vỡ luồng): `approvedDAmount/HAmount` (chỉ là bản lưu phụ, nguồn chuẩn là history đã khóa), `priority/remind*/opinion*/imgStamp/transferredAt/rejected*`.
+
+**Code app v77 đi kèm (BẮT BUỘC khớp luật, không thì thiết bị bị kẹt đồng bộ vì update() multi-path là NGUYÊN KHỐI — 1 validate fail là toàn bộ fail):**
+1. `confirmApproveAmount`: chụp `p.contentSnapshot = {desc,note,amount,person,site}` mỗi lần duyệt.
+2. `doTransfer`: đối chiếu snapshot vs hiện tại — LỆCH → `alert` cảnh báo bảo mật + CHẶN mở khung chuyển. Phiếu duyệt trước v77 không có snapshot → bỏ qua đối chiếu.
+3. `saveEditProposal`: chặn sửa NỘI DUNG phiếu đã duyệt ngay trên UI (vẫn cho sửa ý kiến/ưu tiên/ảnh — các phần không đóng băng, ghi lên với nội dung không đổi thì luật cho qua).
+4. `del()`: phiếu đã duyệt chỉ dung xóa.
+5. `remindApprove` KHÔNG ghi đuôi giục vào `note` nữa (note đóng băng!) — thông tin giục hiện qua badge + `remindReportLabel` (đọc remindBy/remindCount).
+6. Normalize (`_mergeAndRender`): chỉ thiết bị dung push bản sửa lệch; thiết bị khác giữ bản sửa cục bộ + vá `lastPushedSnapshot.proposalsMap` cho các id vừa sửa để push sau này không cố ghi (tránh bị từ chối oan → kẹt).
+7. Bỏ duyệt TOÀN BỘ (cả 3 đường: undoApproveFromModal, undoApprove thường + nhánh legacy) → `delete p.contentSnapshot`.
+- Thứ tự deploy đã dùng: **app v77 lên Pages TRƯỚC → luật sau** (giảm cửa sổ lệch app cũ/luật mới). App v76 cũ nếu giục-chuyển (ghi note) sẽ bị luật chặn → nhắc mọi người cập nhật v77 ngay.
+- Đã test 10 kịch bản qua preview (snapshot đúng, chặn chuyển khi bị sửa, cho chuyển khi khớp/legacy, chặn sửa nội dung đã duyệt, cho sửa ý kiến, chặn xóa non-dung, giục không đụng note, bỏ duyệt xóa snapshot, duyệt→chuyển full flow OK). ⚠️ LUẬT chưa test được bằng user thật từ phía tôi (preview không đăng nhập) — đã yêu cầu D/H/T mỗi người test 1 thao tác ngay sau release.
+- **Rủi ro còn lại (chưa xử lý, cân nhắc sau):** xóa BỚT entry lịch sử duyệt/chuyển (removal từng entry không guard được đơn giản trong RTDB rules) → chỉ hạ thấp số/gây nhiễu, không tăng tiền được; role 'trang' vẫn theo email chứa cụm cứng ở client (luật dùng email chính xác — lệch nhau chút, client lỏng hơn); **Storage rules vẫn mở cho ghi không đăng nhập** (việc treo từ v55 — làm cùng đợt migrate ảnh cũ); push-queue ai đăng nhập cũng gửi được (spam risk nhỏ).
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.

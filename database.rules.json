@@ -1,0 +1,111 @@
+{
+  "rules": {
+
+    "duyetchi": {
+      // Chỉ người đã đăng nhập mới đọc được
+      ".read": "auth != null",
+
+      "userRoles": {
+        "$uid": {
+          ".read": "auth != null",
+          // CHẶN LEO QUYỀN (v77): tự ghi role của MÌNH chỉ được 'other' — TRỪ 3 người nhà xác thực
+          // bằng ĐÚNG EMAIL đăng nhập (không thể giả). Dũng ghi được cho bất kỳ ai.
+          // Trước đây ai cũng tự ghi role tùy ý → đăng ký tên "Dũng" là thành dung — lỗ hổng chí mạng.
+          ".write": "auth != null && ((auth.uid === $uid && (newData.child('role').val() === 'other' || (newData.child('role').val() === 'dung' && auth.token.email === 'vandung0802@gmail.com') || (newData.child('role').val() === 'hien' && auth.token.email === 'hiensbgt@gmail.com') || (newData.child('role').val() === 'trang' && auth.token.email === 'phantrang770@gmail.com'))) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+        }
+      },
+
+      "meta": {
+        // Chỉ Dũng mới sửa được danh sách người/công trình
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'"
+      },
+
+      "proposals": {
+        ".read": "auth != null",
+        "$id": {
+          // Tạo/sửa: ai đăng nhập cũng được (chi tiết bị siết bằng validate từng trường bên dưới).
+          // XÓA CẢ PHIẾU (newData không tồn tại): phiếu ĐÃ có duyệt → chỉ Dũng; phiếu chưa duyệt → ai cũng được (như cũ).
+          ".write": "auth != null && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('approvedDHistory').exists() || data.child('approvedHHistory').exists()))",
+
+          // CHẶN GỠ DẤU DUYỆT / GỠ LỊCH SỬ CHUYỂN / GỠ ẢNH NỘI DUNG (v77):
+          // - gỡ approvedD chỉ Dũng; gỡ approvedH chỉ Hiền (bỏ duyệt hợp lệ) — kẻ khác không thể "tự bỏ duyệt để mở khóa sửa"
+          // - gỡ cả node transfers chỉ Trang (hoàn tác lần chuyển cuối hợp lệ)
+          // - gỡ contentSnapshot (ảnh nội dung lúc duyệt) chỉ Dũng/Hiền
+          ".validate": "(newData.child('approvedD').exists() || !data.child('approvedD').exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (newData.child('approvedH').exists() || !data.child('approvedH').exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien') && (newData.child('transfers').exists() || !data.child('transfers').exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang') && (newData.child('contentSnapshot').exists() || !data.child('contentSnapshot').exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien')",
+
+          // ĐÓNG BĂNG NỘI DUNG sau khi D HOẶC H đã duyệt (v77 — chống sửa số tài khoản/số tiền sau duyệt):
+          // các trường dưới đây chỉ được GIỮ NGUYÊN một khi phiếu đã có bất kỳ dấu duyệt nào.
+          // Muốn sửa thật: D/H bỏ duyệt trước (được phép theo luật trên) → sửa → duyệt lại.
+          "desc":       { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
+          "note":       { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
+          "amount":     { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
+          "amountUnit": { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
+          "person":     { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
+          "site":       { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
+
+          // DẤU DUYỆT: thêm/đổi approvedD chỉ Dũng, approvedH chỉ Hiền (giữ nguyên thì ai ghi cũng được —
+          // cần thiết vì app luôn ghi CẢ phiếu mỗi lần có gì đổi, các trường không đổi phải đi qua được)
+          "approvedD": { ".validate": "(data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'" },
+          "approvedH": { ".validate": "(data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien'" },
+
+          // LỊCH SỬ DUYỆT (nguồn chuẩn số tiền): từng lần duyệt BẤT BIẾN sau khi ghi; THÊM lần mới chỉ đúng người
+          "approvedDHistory": { "$i": { ".validate": "(data.exists() && newData.child('amount').val() === data.child('amount').val() && newData.child('ts').val() === data.child('ts').val()) || (!data.exists() && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } },
+          "approvedHHistory": { "$i": { ".validate": "(data.exists() && newData.child('amount').val() === data.child('amount').val() && newData.child('ts').val() === data.child('ts').val()) || (!data.exists() && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien')" } },
+
+          // LỊCH SỬ CHUYỂN TIỀN: từng lần chuyển bất biến; thêm lần mới chỉ Trang
+          "transfers": { "$i": { ".validate": "(data.exists() && newData.child('amount').val() === data.child('amount').val() && newData.child('ts').val() === data.child('ts').val()) || (!data.exists() && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang')" } },
+
+          // TRẠNG THÁI: đặt lần đầu (tạo phiếu) ai cũng được; ĐỔI về sau chỉ Dũng/Hiền/Trang (chặn vai trò 'other' giả mạo "đã chuyển")
+          "status": { ".validate": "!data.exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang'" },
+
+          // ẢNH NỘI DUNG LÚC DUYỆT (contentSnapshot — lớp phát hiện): từng trường chỉ Dũng/Hiền ghi/đổi
+          "contentSnapshot": { "$f": { ".validate": "(data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien'" } }
+        }
+      },
+
+      "images": {
+        ".read": "auth != null",
+        "$id": {
+          ".write": "auth != null"
+        }
+      },
+
+      "plans": {
+        // Kế hoạch vật tư — cùng quyền như proposals: ai đăng nhập cũng đọc/ghi được
+        ".read": "auth != null",
+        "$id": {
+          ".write": "auth != null"
+        }
+      },
+
+      "pendingOtp": {
+        "$uid": {
+          // Chỉ chính mình hoặc Dũng đọc/xóa OTP
+          ".read": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+          ".write": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+        }
+      },
+
+      "online": {
+        ".read": "auth != null",
+        "$uid": {
+          // Chỉ chính mình ghi trạng thái online của mình
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    "push-subs": {
+      // Chỉ người đăng nhập mới đăng ký nhận thông báo
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "push-queue": {
+      // Chỉ người đăng nhập mới gửi được thông báo
+      ".read": false,
+      ".write": "auth != null"
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "rules": {
+
+    "duyetchi": {
+      // Chỉ người đã đăng nhập mới đọc được
+      ".read": "auth != null",
+
+      "userRoles": {
+        "$uid": {
+          // Chỉ chính mình hoặc Dũng mới sửa được role
+          ".read": "auth != null",
+          ".write": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+        }
+      },
+
+      "meta": {
+        // Chỉ Dũng mới sửa được danh sách người/công trình
+        ".read": "auth != null",
+        ".write": "auth != null && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'"
+      },
+
+      "proposals": {
+        ".read": "auth != null",
+        "$id": {
+          // Tạo mới: ai đăng nhập cũng được
+          ".write": "auth != null"
+        }
+      },
+
+      "images": {
+        ".read": "auth != null",
+        "$id": {
+          ".write": "auth != null"
+        }
+      },
+
+      "plans": {
+        // Kế hoạch vật tư — cùng quyền như proposals: ai đăng nhập cũng đọc/ghi được
+        ".read": "auth != null",
+        "$id": {
+          ".write": "auth != null"
+        }
+      },
+
+      "pendingOtp": {
+        "$uid": {
+          // Chỉ chính mình hoặc Dũng đọc/xóa OTP
+          ".read": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+          ".write": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+        }
+      },
+
+      "online": {
+        ".read": "auth != null",
+        "$uid": {
+          // Chỉ chính mình ghi trạng thái online của mình
+          ".write": "auth != null && auth.uid === $uid"
+        }
+      }
+    },
+
+    "push-subs": {
+      // Chỉ người đăng nhập mới đăng ký nhận thông báo
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+
+    "push-queue": {
+      // Chỉ người đăng nhập mới gửi được thông báo
+      ".read": false,
+      ".write": "auth != null"
+    }
+  }
+}
+
