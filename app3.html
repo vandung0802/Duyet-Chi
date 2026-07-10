@@ -942,7 +942,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v77';
+const APP_VERSION = '20260705-v78';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1053,11 +1053,26 @@ async function uploadToStorage(dataUrl, storagePath){
 let fbConnected = false;
 let fbInitialLoadDone = false; // tránh ghi đè lẫn lộn lúc mới load
 
+// v78 BẢO MẬT (APP3-01/08): sheetUrl được nhét vào <script src=...> để đồng bộ Google Sheets (JSONP).
+// Nếu ai đó ghi được 1 URL lạ vào đây (qua Firebase/localStorage) thì app sẽ TẢI VÀ CHẠY JavaScript
+// của kẻ đó ngay trong app → chiếm toàn quyền. Chốt chặn: chỉ chấp nhận URL đúng dạng Google Apps
+// Script (https, đúng hostname script.google.com, path /macros/s/...). URL lạ → coi như rỗng (tắt
+// đồng bộ Sheet, KHÔNG tải script). Lọc tại MỌI chỗ gán giá trị bên dưới.
+function sanitizeSheetUrl(u){
+  try{
+    const url = new URL(String(u||'').trim());
+    if(url.protocol !== 'https:') return '';
+    if(url.hostname !== 'script.google.com') return '';
+    if(!url.pathname.startsWith('/macros/s/')) return '';
+    return url.href;
+  }catch(e){ return ''; }
+}
+
 // ── DATA ── (localStorage giữ vai trò cache dự phòng khi mất mạng)
 let proposals = JSON.parse(localStorage.getItem('dc_proposals')||'[]');
 let persons    = JSON.parse(localStorage.getItem('dc_persons')||'[]');
 let sites      = JSON.parse(localStorage.getItem('dc_sites')||'[]');
-let sheetUrl   = localStorage.getItem('dc_sheetUrl')||'';
+let sheetUrl   = sanitizeSheetUrl(localStorage.getItem('dc_sheetUrl')||'');
 let plans      = JSON.parse(localStorage.getItem('dc_plans')||'[]'); // Kế hoạch vật tư — TÁCH BIỆT hoàn toàn khỏi proposals (ngăn Firebase riêng: duyetchi/plans)
 let filter     = 'all';
 let uploadedImages = []; // mảng nhiều ảnh Zalo đính kèm (mỗi phần tử là base64 dataURL)
@@ -1415,7 +1430,7 @@ function switchAuthTab(mode){
   if(isReg){
     const sel = document.getElementById('auth-name');
     sel.innerHTML = '<option value="">-- Chọn tên của bạn --</option>' +
-      persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
+      persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
   }
 }
 
@@ -2089,7 +2104,7 @@ function initFirebaseSync(){
     persons = meta.persons || [];
     sites   = meta.sites   || [];
     if(meta.sheetUrl){
-      sheetUrl = meta.sheetUrl;
+      sheetUrl = sanitizeSheetUrl(meta.sheetUrl); // v78: chặn URL lạ từ Firebase
       localStorage.setItem('dc_sheetUrl', sheetUrl);
       const inp = document.getElementById('inp-sheet-url');
       if(inp) inp.value = sheetUrl;
@@ -2340,6 +2355,13 @@ function fmtAmountInput(el){
   try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
 }
 function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ':'—'}
+// v78 BẢO MẬT (chống XSS): lọc ký tự HTML trong MỌI dữ liệu do người dùng nhập trước khi ghép vào
+// innerHTML (nội dung phiếu, ghi chú, tên, công trường, lý do từ chối, kế hoạch vật tư...). Nếu không
+// lọc, kẻ có tài khoản có thể nhập <img onerror=...> vào 1 phiếu → chạy mã trên máy MỌI người khi họ
+// mở danh sách. Chỉ dùng cho ngữ cảnh HTML — KHÔNG dùng cho nội dung thông báo đẩy (là văn bản thuần).
+function esc(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; });
+}
 // Chuyển đổi dữ liệu cũ (đơn vị triệu) sang đồng — chỉ chạy 1 lần
 function migrateAmountsToVND(){
   let changed=false;
@@ -2526,8 +2548,8 @@ function renderNotifPanel(){
   list.innerHTML = items.map(it=>`
     <div onclick="closeNotifAndGo('${it.id}')" style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
       <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.desc}</div>
-        <div style="font-size:11px;color:#64748b;margin-top:2px">${it.person||''} · <span style="color:var(--blue);font-weight:600">${it.note}</span></div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.desc)}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">${esc(it.person||'')} · <span style="color:var(--blue);font-weight:600">${esc(it.note)}</span></div>
       </div>
       <div style="color:#cbd5e1;font-size:16px">›</div>
     </div>`).join('');
@@ -2666,8 +2688,8 @@ function _buildCard(p){
     const legH = !dRej && !hRej && p.rejectedBy==='H';
     const dTs = dRej&&dRej.ts ? ' · '+fmtFull(dRej.ts) : (p.rejectedAt?' · '+fmtFull(p.rejectedAt):'');
     const hTs = hRej&&hRej.ts ? ' · '+fmtFull(hRej.ts) : (p.rejectedAt?' · '+fmtFull(p.rejectedAt):'');
-    const dLine = (dRej||legD) ? `<div class="badge-history" style="color:#c81e1e;font-style:italic">D${dRej&&dRej.reason?': "'+dRej.reason+'"':' từ chối'}${dTs}</div>` : '';
-    const hLine = (hRej||legH) ? `<div class="badge-history" style="color:#7c3aed;font-style:italic">H${hRej&&hRej.reason?': "'+hRej.reason+'"':' từ chối'}${hTs}</div>` : '';
+    const dLine = (dRej||legD) ? `<div class="badge-history" style="color:#c81e1e;font-style:italic">D${dRej&&dRej.reason?': "'+esc(dRej.reason)+'"':' từ chối'}${dTs}</div>` : '';
+    const hLine = (hRej||legH) ? `<div class="badge-history" style="color:#7c3aed;font-style:italic">H${hRej&&hRej.reason?': "'+esc(hRej.reason)+'"':' từ chối'}${hTs}</div>` : '';
     badgeHtml = `<div class="badge-stack"><span class="badge badge-reject">❌ Từ chối</span>${dLine}${hLine}</div>`;
   }
   if(p.status==='approved' || p.status==='transferred'){
@@ -2740,18 +2762,18 @@ function _buildCard(p){
     <div class="proof-thumb" data-pid="${p.id}" data-kind="proof" data-idx="${idx}">
       <img src="${src}" loading="lazy" decoding="async" onclick="openImg('${p.id}','proof',${idx})" alt="Chứng từ ${idx+1}">
     </div>`).join('')}</div>` : '';
-  const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${p.note}</div>` : '';
+  const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${esc(p.note)}</div>` : '';
   const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
-  const opinionHtml = (_opD||_opH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_opD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${_opD}</div>`:''}${_opH?`<div${_opD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${_opH}</div>`:''}</div>` : '';
+  const opinionHtml = (_opD||_opH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_opD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_opH?`<div${_opD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${esc(_opH)}</div>`:''}</div>` : '';
 
   return `<div class="proposal status-${p.status||'pending'}" id="card-${p.id}">
     <div class="proposal-top">
       <div class="proposal-top-row">
         <div class="proposal-left-col">
-          <div class="proposal-desc">${p.desc}</div>
+          <div class="proposal-desc">${esc(p.desc)}</div>
           <div class="proposal-meta">
-            <span>👤 ${p.person||'—'}</span>
-            ${p.site?`<span>📍 ${p.site}</span>`:''}
+            <span>👤 ${esc(p.person||'—')}</span>
+            ${p.site?`<span>📍 ${esc(p.site)}</span>`:''}
             <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -2943,8 +2965,8 @@ function maybeShowTransferReminder(){
     const hTs = p.approvedH || 0;
     const days = hTs ? Math.floor((Date.now()-hTs)/86400000) : 0;
     return `<div onclick="closeTransferReminder();jumpToProposal('${p.id}')" style="padding:10px 12px;border:1px solid var(--gray-border);border-radius:10px;margin-bottom:8px;cursor:pointer">
-      <div style="font-size:13px;font-weight:700;color:var(--text)">${p.desc}</div>
-      <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${p.site||'—'} · ${days<1?'duyệt hôm nay':'đã chờ '+days+' ngày'}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(p.desc)}</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${esc(p.site||'—')} · ${days<1?'duyệt hôm nay':'đã chờ '+days+' ngày'}</div>
       <div style="font-size:14px;font-weight:800;color:#c2410c;margin-top:2px">Còn ${fmtVND(remain)}</div>
     </div>`;
   }).join('');
@@ -2968,7 +2990,7 @@ function remindReportLabel(p){
 function opinionReportHtml(p){
   const opD=(p.opinionD||'').trim(), opH=(p.opinionH||'').trim();
   if(!opD&&!opH) return '';
-  return `<div style="font-style:italic;font-weight:600;font-size:0.92em;margin-top:1px">${opD?`<div style="color:var(--blue-dark)">💬 D: ${opD}</div>`:''}${opH?`<div style="color:#7c3aed">💬 H: ${opH}</div>`:''}</div>`;
+  return `<div style="font-style:italic;font-weight:600;font-size:0.92em;margin-top:1px">${opD?`<div style="color:var(--blue-dark)">💬 D: ${esc(opD)}</div>`:''}${opH?`<div style="color:#7c3aed">💬 H: ${esc(opH)}</div>`:''}</div>`;
 }
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
@@ -3469,7 +3491,7 @@ function openEditProposal(id){
   const personSel = document.getElementById('edit-person');
   const siteSel = document.getElementById('edit-site');
   personSel.innerHTML = '<option value="">— Chọn tên —</option>' + persons.map(pp=>`<option value="${pp.name}">${pp.name}${pp.role?' — '+pp.role:''}</option>`).join('');
-  siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+  siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
   document.getElementById('edit-person').value = p.person||'';
   document.getElementById('edit-site').value = p.site||'';
@@ -4082,10 +4104,10 @@ function populateSelects(){
     roInput.style.display = 'none';
     ps.style.display = 'block';
     ps.disabled = false;
-    ps.innerHTML='<option value="">— Chọn tên —</option>'+persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
+    ps.innerHTML='<option value="">— Chọn tên —</option>'+persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
     ps.value = '';
   }
-  ss.innerHTML='<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+  ss.innerHTML='<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
 }
 
 // ══════════════════════════════════════════
@@ -4166,7 +4188,7 @@ function renderPlanStats(){
   const filterSel = document.getElementById('plan-stats-filter-site');
   if(filterSel){
     const cur = filterSel.value;
-    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     filterSel.value = cur;
   }
   const filterSite = filterSel ? filterSel.value : '';
@@ -4189,11 +4211,11 @@ function renderPlanStats(){
     const st = PLAN_STATUS_INFO[p.status] || PLAN_STATUS_INFO.pending;
     return `<tr class="plan-row-link" ondblclick="jumpToPlanCard('${p.id}')" style="box-shadow:inset 3px 0 0 ${rowBorder};cursor:pointer">
       <td style="text-align:center;font-size:10px;color:var(--text-sub);vertical-align:middle">${stt}</td>
-      <td style="font-weight:700;font-size:11px;vertical-align:middle;line-height:1.3">${p.material}</td>
-      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${p.quantity||'—'}</td>
-      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${p.site}</td>
-      <td style="font-size:10px;vertical-align:middle">${p.assignee||'—'}</td>
-      <td style="font-size:10px;vertical-align:middle">${p.createdBy||'—'}</td>
+      <td style="font-weight:700;font-size:11px;vertical-align:middle;line-height:1.3">${esc(p.material)}</td>
+      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${esc(p.quantity||'—')}</td>
+      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${esc(p.site)}</td>
+      <td style="font-size:10px;vertical-align:middle">${esc(p.assignee||'—')}</td>
+      <td style="font-size:10px;vertical-align:middle">${esc(p.createdBy||'—')}</td>
       <td style="text-align:right;font-size:10px;font-weight:700;color:${p.estimatedAmount?'var(--blue)':'#cbd5e1'};vertical-align:middle">${p.estimatedAmount?fmtTr(p.estimatedAmount):'—'}</td>
       <td style="vertical-align:middle"><span class="badge" style="background:${st.bg};color:${st.color}">${st.label}</span></td>
       <td style="font-size:10px;color:${dueColor};font-weight:${dueColor==='var(--text-sub)'?'600':'700'};vertical-align:middle">${fmtDateOnly(p.neededDate)}<div style="font-size:9px;color:${dueColor}">${dueSub}</div></td>
@@ -4232,7 +4254,7 @@ function renderPlans(){
   const filterSel = document.getElementById('plan-filter-site');
   if(filterSel){
     const cur = filterSel.value;
-    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     filterSel.value = cur;
   }
   const filterSite = filterSel ? filterSel.value : '';
@@ -4253,15 +4275,15 @@ function buildPlanCard(p){
     <div style="padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
-          <div class="proposal-desc">${p.material}${p.quantity?' · '+p.quantity:''}</div>
-          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${p.site}${p.assignee?' · 👤 phụ trách: '+p.assignee:''}</div>
-          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">🙋 Người đề xuất: ${p.createdBy||'—'}</div>
+          <div class="proposal-desc">${esc(p.material)}${p.quantity?' · '+esc(p.quantity):''}</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${esc(p.site)}${p.assignee?' · 👤 phụ trách: '+esc(p.assignee):''}</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">🙋 Người đề xuất: ${esc(p.createdBy||'—')}</div>
           <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📆 Cần có: ${fmtDateOnly(p.neededDate)}</div>
           ${p.estimatedAmount>0?`<div style="font-size:14px;font-weight:700;color:var(--blue);margin-top:4px">${fmtVND(p.estimatedAmount)}</div>`:''}
         </div>
         <div style="flex-shrink:0">${urgency.badge}</div>
       </div>
-      ${p.note?`<div class="proposal-note">${p.note}</div>`:''}
+      ${p.note?`<div class="proposal-note">${esc(p.note)}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
         <select onchange="setPlanStatus('${p.id}', this.value)" style="padding:5px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
           <option value="pending" ${p.status==='pending'?'selected':''}>Đang chờ</option>
@@ -4291,7 +4313,7 @@ function openPlanModal(id){
   const p = id ? plans.find(x=>x.id===id) : null;
   document.getElementById('plan-modal-title').textContent = p ? 'Sửa kế hoạch' : 'Thêm kế hoạch';
   const siteSel = document.getElementById('plan-inp-site');
-  siteSel.innerHTML = '<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${s}">${s}</option>`).join('');
+  siteSel.innerHTML = '<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   siteSel.value = p ? p.site : '';
   document.getElementById('plan-inp-material').value = p ? p.material : '';
   document.getElementById('plan-inp-qty').value = p ? (p.quantity||'') : '';
@@ -4424,7 +4446,7 @@ function showUpdateRolePrompt(){
   if(!overlay) return;
   const sel = document.getElementById('first-login-name');
   sel.innerHTML = '<option value="">-- Chọn tên của bạn --</option>' +
-    persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
+    persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
   overlay.style.display = 'flex';
 }
 
@@ -4495,7 +4517,7 @@ function renderSettings(){
   }
   // Điền dropdown cập nhật tên
   const selRole = document.getElementById('update-role-name');
-  if(selRole) selRole.innerHTML = '<option value="">-- Chọn tên của bạn --</option>'+persons.map(p=>`<option value="${p.name}">${p.name}${p.role?' — '+p.role:''}</option>`).join('');
+  if(selRole) selRole.innerHTML = '<option value="">-- Chọn tên của bạn --</option>'+persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
   // Hiện nút admin reset chỉ cho D
   const adminSec = document.getElementById('admin-reset-section');
   if(adminSec) adminSec.style.display = currentRole==='dung' ? 'block' : 'none';
@@ -4513,8 +4535,8 @@ function renderSettings(){
   pl.innerHTML=persons.length
     ? persons.map((p,i)=>`<div class="person-item">
         <div class="person-info">
-          <div class="person-avatar">${initials(p.name)}</div>
-          <div><div class="person-name">${p.name}</div>${p.role?`<div class="person-role">${p.role}</div>`:''}</div>
+          <div class="person-avatar">${esc(initials(p.name))}</div>
+          <div><div class="person-name">${esc(p.name)}</div>${p.role?`<div class="person-role">${esc(p.role)}</div>`:''}</div>
         </div>
         <button class="delete-btn" onclick="delPerson(${i})">×</button>
       </div>`).join('')
@@ -4523,7 +4545,7 @@ function renderSettings(){
   const sl=document.getElementById('site-list');
   sl.innerHTML=sites.length
     ? sites.map((s,i)=>`<div class="site-item">
-        <div class="site-name">🏗️ ${s}</div>
+        <div class="site-name">🏗️ ${esc(s)}</div>
         <button class="delete-btn" onclick="delSite(${i})">×</button>
       </div>`).join('')
     : '<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chưa có công trình. Thêm bên dưới.</p>';
@@ -4623,9 +4645,9 @@ function renderReportFilters(){
   const names = [...new Set(proposals.map(p=>p.person||'').filter(Boolean))].sort();
   const siteList = [...new Set(proposals.map(p=>p.site||'').filter(Boolean))].sort();
   selP.innerHTML = '<option value="">👤 Tất cả người</option>' +
-    names.map(n=>`<option value="${n.replace(/"/g,'&quot;')}"${curP===n?' selected':''}>${n}</option>`).join('');
+    names.map(n=>`<option value="${esc(n)}"${curP===n?' selected':''}>${esc(n)}</option>`).join('');
   selS.innerHTML = '<option value="">🏗 Tất cả CT</option>' +
-    siteList.map(s=>`<option value="${s.replace(/"/g,'&quot;')}"${curS===s?' selected':''}>${s}</option>`).join('');
+    siteList.map(s=>`<option value="${esc(s)}"${curS===s?' selected':''}>${esc(s)}</option>`).join('');
 }
 
 function getFilteredProposals(){
@@ -4662,8 +4684,8 @@ function renderReportRejected(){
     const stt = sorted.length - i;
     const dRej=p.rejectedByD, hRej=p.rejectedByH;
     const legD=!dRej&&!hRej&&p.rejectedBy==='D', legH=!dRej&&!hRej&&p.rejectedBy==='H';
-    const dLine = (dRej||legD)?(dRej&&dRej.reason?`"${dRej.reason}"`:'—'):'';
-    const hLine = (hRej||legH)?(hRej&&hRej.reason?`"${hRej.reason}"`:'—'):'';
+    const dLine = (dRej||legD)?(dRej&&dRej.reason?`"${esc(dRej.reason)}"`:'—'):'';
+    const hLine = (hRej||legH)?(hRej&&hRej.reason?`"${esc(hRej.reason)}"`:'—'):'';
     const dTs = dRej&&dRej.ts?fmtT(dRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const hTs = hRej&&hRej.ts?fmtT(hRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const prv=p.priority||'normal';
@@ -4671,9 +4693,9 @@ function renderReportRejected(){
     const rejNote = [dLine?`D: ${dLine}`:'' , hLine?`H: ${hLine}`:''].filter(Boolean).join('<br>');
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
-      <td class="col-desc" style="font-weight:600">${p.desc}</td>
-      <td class="col-person">${p.person||'—'}</td>
-      <td class="col-site" style="color:#64748b">${(p.site||'—').replace('CT ','')}</td>
+      <td class="col-desc" style="font-weight:600">${esc(p.desc)}</td>
+      <td class="col-person">${esc(p.person||'—')}</td>
+      <td class="col-site" style="color:#64748b">${esc((p.site||'—').replace('CT ',''))}</td>
       <td class="col-pri">${prCell}</td>
       <td class="col-amt" style="color:var(--red)">${fmtTr(p.amount)}</td>
       <td class="col-rej">${rejNote||'—'}</td>
@@ -4705,8 +4727,8 @@ function renderReportList(){
     const st = STATUS[p.status]||STATUS.pending;
     const dRej = p.rejectedByD; const hRej = p.rejectedByH;
     const legD = !dRej&&!hRej&&p.rejectedBy==='D'; const legH = !dRej&&!hRej&&p.rejectedBy==='H';
-    const rejD = (dRej||legD)?(dRej&&dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'';
-    const rejH = (hRej||legH)?(hRej&&hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):'';
+    const rejD = (dRej||legD)?(dRej&&dRej.reason?`D: "${esc(dRej.reason)}"`:'D từ chối'):'';
+    const rejH = (hRej||legH)?(hRej&&hRej.reason?`H: "${esc(hRej.reason)}"`:'H từ chối'):'';
     const rejStr = [rejD,rejH].filter(Boolean).join('<br>');
     const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmtTr(dAmt):'');
     const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmtTr(hAmt):'');
@@ -4716,9 +4738,9 @@ function renderReportList(){
     const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
-      <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
-      <td ${cellBase} style="font-size:10px">${p.person||'—'}</td>
-      <td ${cellBase} style="font-size:9px">${p.site||'—'}</td>
+      <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
+      <td ${cellBase} style="font-size:10px">${esc(p.person||'—')}</td>
+      <td ${cellBase} style="font-size:9px">${esc(p.site||'—')}</td>
       <td class="col-amount" style="vertical-align:middle;white-space:nowrap">${fmtTr(p.amount)}</td>
       <td style="vertical-align:middle;text-align:center;font-size:14px">${prCell2}</td>
       <td ${cellBase} style="font-size:9px;color:var(--blue);white-space:nowrap">${dHist}</td>
@@ -4783,10 +4805,10 @@ function renderExcelTable(containerId, items, kind){
     const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;font-size:10px;word-break:normal">${fmtTr(hAmt)}</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
-      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
+      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
       <td style="text-align:right;font-size:10px;line-height:1.3;vertical-align:middle">${amtLabel}</td>
-      <td style="font-size:9px;color:var(--text-sub);white-space:normal;word-break:normal;vertical-align:middle">${p.person||'—'}</td>
-      <td style="word-break:normal;font-size:9px;color:var(--text-sub);vertical-align:middle">${(p.site||'—').replace('CT ','')}</td>
+      <td style="font-size:9px;color:var(--text-sub);white-space:normal;word-break:normal;vertical-align:middle">${esc(p.person||'—')}</td>
+      <td style="word-break:normal;font-size:9px;color:var(--text-sub);vertical-align:middle">${esc((p.site||'—').replace('CT ',''))}</td>
       ${kind==='pending'?`<td style="text-align:right;vertical-align:middle;padding:4px 2px">${dCell}</td><td style="text-align:right;vertical-align:middle;padding:4px 2px">${hCell}</td><td style="text-align:center;vertical-align:middle;padding:4px 2px">${prCell}</td>`:''}
       <td style="font-size:9px;text-align:center;color:var(--text-sub);vertical-align:middle">${dateCol}</td>
     </tr>`;
@@ -4876,7 +4898,7 @@ function renderReportSummary(){
     <table style="width:100%;border-collapse:collapse;background:#fff;table-layout:fixed">
       <colgroup><col style="width:auto"><col style="width:56px"><col style="width:auto"><col style="width:120px"></colgroup>
       <tr style="background:#fdecea"><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Nội dung</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Người</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Công trình</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:right;font-weight:800">Số tiền</th></tr>
-      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${p.desc||'—'}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.person||''}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${p.site||'—'}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${fmtTr(_outstanding(p))}</td></tr>`).join('')}
+      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'—')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.person||'')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.site||'—')}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${fmtTr(_outstanding(p))}</td></tr>`).join('')}
     </table>
   </div>` : ''}`;
 
@@ -4891,8 +4913,8 @@ function renderReportSummary(){
       const dRej=p.rejectedByD, hRej=p.rejectedByH;
       const legD=!dRej&&!hRej&&p.rejectedBy==='D', legH=!dRej&&!hRej&&p.rejectedBy==='H';
       const rejStr = showRej ? [
-        (dRej||legD)?(dRej&&dRej.reason?`D: "${dRej.reason}"`:'D từ chối'):'',
-        (hRej||legH)?(hRej&&hRej.reason?`H: "${hRej.reason}"`:'H từ chối'):''
+        (dRej||legD)?(dRej&&dRej.reason?`D: "${esc(dRej.reason)}"`:'D từ chối'):'',
+        (hRej||legH)?(hRej&&hRej.reason?`H: "${esc(hRej.reason)}"`:'H từ chối'):''
       ].filter(Boolean).join('<br>') : '';
       const amtCell = showRej
         ? `<span style="color:var(--red)">${fmtTr(p.amount)}</span>`
@@ -4907,9 +4929,9 @@ function renderReportSummary(){
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
       return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
         <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap;width:18px">${stt}</td>
-        <td class="col-desc" style="font-weight:600;line-height:1.4">${p.desc}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${remindReportLabel(p)})</span>`:''}${opinionReportHtml(p)}</td>
-        <td class="col-person">${p.person||'—'}</td>
-        <td class="col-site" style="color:#64748b">${(p.site||'').replace('CT ','')}</td>
+        <td class="col-desc" style="font-weight:600;line-height:1.4">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
+        <td class="col-person">${esc(p.person||'—')}</td>
+        <td class="col-site" style="color:#64748b">${esc((p.site||'').replace('CT ',''))}</td>
         <td class="col-pri">${prCell}</td>
         <td class="col-amt">${amtCell}</td>
         ${showRej?`<td class="col-rej">${rejStr||'—'}</td>`:''}
@@ -5019,7 +5041,14 @@ function downloadSummaryExcel(){
   const urgent   = fp.filter(p=>(p.priority||'normal')==='urgent' && p.status!=='rejected' && _outstanding2(p) > 0.001);
 
   const priLabel = v => v==='urgent'?'Gấp':v==='low'?'Có thể chờ':'Bình thường';
-  const esc = s => '"' + String(s||'').replace(/"/g,'""') + '"';
+  // v78 BẢO MẬT (chống Formula Injection Excel/CSV): ô bắt đầu bằng = + - @ (hoặc tab/xuống dòng)
+  // có thể bị Excel/Sheets hiểu là CÔNG THỨC và tự chạy khi mở file → chèn dấu ' phía trước để vô
+  // hiệu hoá, giữ đúng nội dung hiển thị. Vẫn bọc "" và nhân đôi " như cũ để đúng chuẩn CSV.
+  const esc = s => {
+    let v = String(s==null?'':s);
+    if(/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+    return '"' + v.replace(/"/g,'""') + '"';
+  };
 
   const header = ['#','Nội dung','Người','Công trình','Ưu tiên','Số tiền đề xuất','Số tiền duyệt','Đã chuyển','Còn lại','Trạng thái','Ghi chú'].map(esc).join(',');
 
@@ -5077,7 +5106,9 @@ function downloadSummaryExcel(){
 
 // ── GOOGLE SHEETS ──
 function saveSheet(){
-  sheetUrl=document.getElementById('inp-sheet-url').value.trim();
+  const _raw = document.getElementById('inp-sheet-url').value.trim();
+  sheetUrl = sanitizeSheetUrl(_raw); // v78: chỉ nhận URL Google Apps Script hợp lệ
+  if(_raw && !sheetUrl){ showToast('❌ URL không hợp lệ — phải là link Google Apps Script (https://script.google.com/macros/s/.../exec)'); return; }
   localStorage.setItem('dc_sheetUrl',sheetUrl);
   pushToFirebase(); // đồng bộ URL Sheets này tới mọi thiết bị khác
   if(!sheetUrl){ showToast('❌ URL không hợp lệ'); return; }
