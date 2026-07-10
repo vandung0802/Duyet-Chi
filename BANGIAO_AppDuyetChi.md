@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v75** (`APP_VERSION = '20260705-v75'`, `sw.js VERSION = '20260705-68'`, `version.txt = 20260705-v75`). Ngày 05/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v76** (`APP_VERSION = '20260705-v76'`, `sw.js VERSION = '20260705-69'`, `version.txt = 20260705-v76`). Ngày 05/07/2026.
 
 ---
 
@@ -240,6 +240,13 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - **Lỗ hổng code lộ ra (đã sửa v75):** `doLogin()` (~1462) không có giới hạn chờ — nếu `signInWithEmailAndPassword` không bao giờ phản hồi (mạng tắc), nút treo "Đang đăng nhập..." VĨNH VIỄN, user tưởng app hỏng. Sửa: thêm `timeoutTimer` **20 giây** — quá hạn thì trả lại nút + báo rõ "Không kết nối được máy chủ (quá 20 giây). Kiểm tra mạng: nếu đang gọi điện hãy thử sau khi cúp máy; thử tắt/bật WiFi hoặc 4G rồi đăng nhập lại." (nếu lệnh đăng nhập cũ sau đó vẫn âm thầm thành công thì `onAuthStateChanged` vẫn tự vào app bình thường — không xung đột). Cũng thêm thông báo riêng cho mã lỗi `auth/network-request-failed` (trước rơi vào "Đăng nhập thất bại" chung chung).
 - Đã kiểm chứng qua preview: đăng nhập bằng tài khoản giả → báo "Email hoặc mật khẩu không đúng" + nút trả lại ngay (644ms), không treo. Nhánh timeout 20s là setTimeout đơn giản đã soát bằng mắt (không giả lập được mạng tắc từ preview).
 - ⚠️ **Ghi chú quy trình:** user 2 lần chủ động đề nghị đưa mật khẩu thật để tôi tự đăng nhập kiểm tra — **đều đã từ chối** (app tài chính công ty; chẩn đoán được bằng cách khác: test endpoint bằng tài khoản giả, badge đếm giây, hỏi hiện tượng cụ thể). Giữ nguyên tắc này.
+
+### AC. Nhắc Trang chuyển tiền khi D,H đã duyệt mà T quên (v76, 05/07/2026)
+- **Yêu cầu user + đã bàn phương án trước khi code.** User chốt: làm 1+2+3 (bỏ phương án 4 tự động gửi lại push hằng ngày — để sau); **CHỈ nhắc khi H ĐÃ DUYỆT** (người chốt cuối — phiếu mới có D duyệt thì T được phép chuyển nhưng KHÔNG bị nhắc); badge chờ chuyển **hiện NGAY** không chờ ngưỡng ngày; nút 🔁 khi D,H duyệt xong **vẫn hiện** để bấm đẩy phiếu lên đầu.
+- **(1) Nút 🔁 kiêm GIỤC CHUYỂN:** `canRemind(p)` (~2873) giờ chỉ loại `rejected`/`transferred` (trước đây loại luôn phiếu D,H đã duyệt xong → mất nút). Hàm mới `isAwaitingTransferRemind(p)` = D và H đều >0. `remindApprove` phân nhánh: nếu đang chờ chuyển → note tag "Nhắc chuyển lần N" + push `'💸 Nhắc chuyển tiền'` tới `['trang']` + toast riêng; ngược lại giữ nguyên giục duyệt cũ (push dung,hien). Chặn lặp push 600s/phiếu dùng chung key cũ. `remindReportLabel` nhận cả 2 loại tag (regex `(?:Đề xuất lại|Nhắc chuyển)`), nhãn báo cáo "đã nhắc chuyển lần N" khi đang chờ chuyển.
+- **(2) Bảng nhắc khi Trang mở app:** modal `#transfer-reminder-modal` (HTML cạnh plan-modal) + `maybeShowTransferReminder()` (cạnh `isAwaitingTransferRemind`) — chỉ role `trang`, chỉ khoản `hAmt>0 && transferred<official`, sắp khoản chờ lâu nhất lên đầu, hiện tổng còn phải chuyển, bấm khoản nào `jumpToProposal` khoản đó. Cờ `_transferReminderShown` chống hiện lặp trong phiên. Gọi từ 2 chỗ (vì thứ tự role/dữ liệu không cố định): cuối `setRole()` (delay 400ms) và trong `_mergeAndRender` khi `wasFirst` — chỗ nào chạy sau khi đủ cả role+data thì thắng, cờ chống trùng.
+- **(3) Badge "💸 Chờ chuyển":** trong `_buildCard` khối approved/transferred — khi `!isClosed && hAmt>0 && transferredAmt<approvedAmt` → badge "Chờ chuyển (hôm nay)" / "Chờ chuyển — đã N ngày" (N tính từ `p.approvedH`), cam `#fff7ed/#c2410c`, chuyển `badge-reject` (đỏ) khi ≥3 ngày. Lưu ý `_cardHash` không chứa ngày → số ngày chỉ đổi khi thẻ được vẽ lại (mở app mới là đủ — thẻ rebuild mỗi phiên).
+- Đã kiểm chứng qua preview 8 điều kiện badge/nút (đủ duyệt-chưa chuyển: nút+badge+đỏ 4 ngày ✓; chỉ D duyệt: không badge, nút giục duyệt cũ ✓; H duyệt hôm nay: badge cam "hôm nay" ✓; đã chuyển: không gì cả ✓), giục chuyển (note/label/nhảy đầu/badge giục ✓), bảng nhắc (đúng role, đúng danh sách lọc H-đã-duyệt, tổng 18tr đúng, 1 lần/phiên ✓), regression duyệt/chuyển/giục-duyệt-cũ ✓.
 
 ### G. Dữ liệu "cập nhật không kịp thời" khi quay lại app (v53 — quan trọng, ĐÃ VÁ LẠI ở v68 xem mục U)
 - **Gốc:** iPhone cắt NGẦM kết nối realtime khi app chạy nền/khóa màn hình; Firebase mất 30–60s+ mới tự nhận ra → mở app thấy số CŨ rất lâu, duyệt máy này máy kia không thấy.
