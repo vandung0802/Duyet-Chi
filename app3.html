@@ -900,6 +900,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<!-- Bảng nhắc Trang lúc mở app: các khoản H đã duyệt đang chờ chuyển (hiện 1 lần mỗi lần mở) -->
+<div class="role-screen" id="transfer-reminder-modal" style="display:none;z-index:9300;background:rgba(0,0,0,0.55)">
+  <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto">
+    <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">💸 Các khoản chờ chuyển tiền</div>
+    <div id="tr-remind-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:12px"></div>
+    <div id="tr-remind-list"></div>
+    <button class="btn-full btn-primary-full" style="margin-top:12px" onclick="closeTransferReminder()">Đã hiểu</button>
+  </div>
+</div>
+
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <button class="nav-item active" onclick="showPage('home',this)">
@@ -932,7 +942,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v75';
+const APP_VERSION = '20260705-v76';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1691,6 +1701,8 @@ function setRole(role){
   checkNotifBanner();
   renderAll();
   populateSelects();
+  // Trang vừa vào app (đã đăng nhập xong) → nhắc các khoản chờ chuyển nếu dữ liệu đã tải xong
+  setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
 }
 
 const VAPID_PUBLIC = 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0';
@@ -2124,6 +2136,9 @@ function initFirebaseSync(){
     renderAll();
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
     if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
+    // Nhắc Trang các khoản chờ chuyển (trường hợp vào app bằng role cache TRƯỚC khi dữ liệu tải xong
+    // thì lượt gọi trong setRole bị chặn bởi cờ fbInitialLoadDone — lượt này bù lại; đã có cờ chống hiện lặp)
+    if(wasFirst) setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
 
     // Tải ảnh SAU khi đã kết nối + hiện phiếu xong → lúc mở app không bị đống ảnh tranh băng thông (mở nhanh hơn)
     // ⚠️ CHỈ tải 1 lần (once) — TUYỆT ĐỐI không on() cả node ảnh: mỗi lần mạng nối lại sẽ kéo
@@ -2679,10 +2694,22 @@ function _buildCard(p){
       ).join('<br>')}</div>` : '';
       tRow = `<span class="badge badge-done">💸 ${tLabel}</span>${historyHtml}`;
     }
+    // Nhắc "CHỜ CHUYỂN" hiện NGAY (user chốt 05/07: không chờ ngưỡng ngày) — chỉ khi H đã duyệt
+    // (người chốt cuối; chỉ D duyệt thì chưa nhắc) và chưa chuyển đủ. Kèm số ngày đã chờ tính từ
+    // lúc H duyệt; cam bình thường, chuyển ĐỎ khi đã chờ ≥3 ngày cho nổi bật.
+    let waitRow = '';
+    if(!isClosed && hAmt>0 && transferredAmt < approvedAmt - 0.0001){
+      const hTs = p.approvedH || (hHistory.length ? hHistory[hHistory.length-1].ts : 0);
+      const waitDays = hTs ? Math.floor((Date.now()-hTs)/86400000) : 0;
+      const label = waitDays < 1 ? '💸 Chờ chuyển (hôm nay)' : `💸 Chờ chuyển — đã ${waitDays} ngày`;
+      const styleAttr = waitDays >= 3 ? '' : ' style="background:#fff7ed;color:#c2410c"';
+      waitRow = `<span class="badge${waitDays>=3?' badge-reject':''}"${styleAttr}>${label}</span>`;
+    }
     badgeHtml = `<div class="badge-stack">
       <span class="badge ${dBadgeClass}"><span>${dAmt>0?'✅':'⏳'} ${dLabel}</span></span>${dHistoryHtml}
       <span class="badge ${hBadgeClass}"><span>${hAmt>0?'✅':'⏳'} ${hLabel}</span></span>${hHistoryHtml}
       ${tRow}
+      ${waitRow}
     </div>`;
   }
   // Đánh dấu phiếu đã bị giục duyệt (chưa duyệt xong) — hiện số lần + thời điểm giục gần nhất
@@ -2872,19 +2899,56 @@ function renderBtnShare(p){
 // Chỉ hiện khi phiếu CHƯA duyệt xong (chưa đủ cả D và H duyệt) và chưa từ chối / chưa chuyển.
 function canRemind(p){
   if(p.status==='rejected' || p.status==='transferred') return false;
-  const dDone = approvedAmtOf(p,'D') > 0;
-  const hDone = approvedAmtOf(p,'H') > 0;
-  return !(dDone && hDone);
+  // Chưa duyệt xong → giục duyệt (như cũ). ĐÃ duyệt xong cả D,H nhưng CHƯA chuyển → vẫn cho bấm 🔁
+  // để GIỤC CHUYỂN (nhắc Trang) + đẩy phiếu lên đầu — trước đây nút biến mất khi D,H duyệt xong,
+  // không có cách nào nhắc T khi T quên chuyển (user yêu cầu 05/07/2026).
+  return true;
 }
-// Nhãn cho báo cáo: "{tên người bấm}: đã đề xuất lần N" (chỉ phiếu bị giục & chưa duyệt xong)
+// Phiếu đang ở giai đoạn GIỤC CHUYỂN (thay vì giục duyệt)? = cả D và H đều đã duyệt, chưa chuyển xong
+function isAwaitingTransferRemind(p){
+  return approvedAmtOf(p,'D') > 0 && approvedAmtOf(p,'H') > 0;
+}
+
+// ── BẢNG NHẮC TRANG LÚC MỞ APP ── (user yêu cầu 05/07: D,H duyệt rồi mà T quên chuyển thì nhắc)
+// Hiện 1 lần mỗi lần mở app, CHỈ cho role trang, CHỈ tính khoản H đã duyệt (người chốt cuối) chưa chuyển đủ.
+let _transferReminderShown = false;
+function maybeShowTransferReminder(){
+  if(_transferReminderShown) return;
+  if(currentRole !== 'trang') return;
+  if(!fbInitialLoadDone) return;
+  const items = proposals.filter(p =>
+    p.status!=='rejected' && approvedAmtOf(p,'H') > 0 &&
+    getTotalTransferred(p) < getOfficialApprovedAmount(p) - 0.0001
+  ).sort((a,b)=>(a.approvedH||0)-(b.approvedH||0)); // khoản chờ lâu nhất lên đầu
+  if(!items.length) return;
+  _transferReminderShown = true;
+  const total = items.reduce((a,p)=>a+(getOfficialApprovedAmount(p)-getTotalTransferred(p)),0);
+  document.getElementById('tr-remind-sub').textContent = `Có ${items.length} khoản đã được duyệt đang chờ chuyển — tổng còn ${fmtVND(total)}`;
+  document.getElementById('tr-remind-list').innerHTML = items.map(p=>{
+    const remain = getOfficialApprovedAmount(p)-getTotalTransferred(p);
+    const hTs = p.approvedH || 0;
+    const days = hTs ? Math.floor((Date.now()-hTs)/86400000) : 0;
+    return `<div onclick="closeTransferReminder();jumpToProposal('${p.id}')" style="padding:10px 12px;border:1px solid var(--gray-border);border-radius:10px;margin-bottom:8px;cursor:pointer">
+      <div style="font-size:13px;font-weight:700;color:var(--text)">${p.desc}</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${p.site||'—'} · ${days<1?'duyệt hôm nay':'đã chờ '+days+' ngày'}</div>
+      <div style="font-size:14px;font-weight:800;color:#c2410c;margin-top:2px">Còn ${fmtVND(remain)}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('transfer-reminder-modal').style.display = 'flex';
+}
+function closeTransferReminder(){
+  document.getElementById('transfer-reminder-modal').style.display = 'none';
+}
+// Nhãn cho báo cáo: "{tên người bấm}: đã đề xuất lần N" (giục duyệt) / "đã nhắc chuyển lần N" (giục chuyển)
 function remindReportLabel(p){
   if(!((p.remindCount||0)>1 && canRemind(p))) return '';
   let who = p.remindBy || '';
   if(!who && p.note){
-    const m = p.note.match(/([^():]+?):\s*Đề xuất lại lần \d+\)?\s*$/);
+    const m = p.note.match(/([^():]+?):\s*(?:Đề xuất lại|Nhắc chuyển) lần \d+\)?\s*$/);
     if(m) who = m[1].trim();
   }
-  return (who ? who + ': ' : '') + 'đã đề xuất lần ' + p.remindCount;
+  const action = isAwaitingTransferRemind(p) ? 'đã nhắc chuyển lần ' : 'đã đề xuất lần ';
+  return (who ? who + ': ' : '') + action + p.remindCount;
 }
 // Ý kiến người duyệt cho báo cáo: "💬 D: ... / 💬 H: ..."
 function opinionReportHtml(p){
@@ -2902,14 +2966,15 @@ function renderBtnRemind(p){
 function remindApprove(id){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
-  if(!canRemind(p)){ showToast('Phiếu đã được D và H duyệt — không cần giục'); return; }
+  if(!canRemind(p)){ showToast('Phiếu đã chuyển xong — không cần giục'); return; }
+  const isTransferRemind = isAwaitingTransferRemind(p); // D,H đã duyệt xong → đây là GIỤC CHUYỂN (nhắc Trang)
   p.remindCount = (p.remindCount||1) + 1;
   p.lastRemindAt = Date.now();
-  // Giữ nguyên ghi chú cũ, cập nhật đuôi "{người đang bấm giục}: Đề xuất lại lần N"
+  // Giữ nguyên ghi chú cũ, cập nhật đuôi "{người đang bấm giục}: Đề xuất lại lần N" / "Nhắc chuyển lần N"
   const who = getCurrentUserName() || p.person || '';
   p.remindBy = who; // lưu tên người bấm giục gần nhất để báo cáo hiển thị
-  const base = (p.note||'').replace(/\s*\(?[^()]*?Đề xuất lại lần \d+\)?\s*$/,'').trim();
-  const tag = (who ? who + ': ' : '') + 'Đề xuất lại lần ' + p.remindCount;
+  const base = (p.note||'').replace(/\s*\(?[^()]*?(Đề xuất lại|Nhắc chuyển) lần \d+\)?\s*$/,'').trim();
+  const tag = (who ? who + ': ' : '') + (isTransferRemind ? 'Nhắc chuyển lần ' : 'Đề xuất lại lần ') + p.remindCount;
   p.note = base ? (base + ' (' + tag + ')') : tag;
   save();
   renderAll();
@@ -2917,8 +2982,14 @@ function remindApprove(id){
   const lastPush = parseInt(localStorage.getItem(pushKey)||'0');
   if(Date.now() - lastPush >= 600000){
     localStorage.setItem(pushKey, String(Date.now()));
-    sendPushNotif('🔁 Xin duyệt lại', `${p.desc} — đề xuất ${fmtFull(p.ts)}, chưa duyệt xong`, ['dung','hien']);
-    showToast('🔁 Đã giục D và H duyệt lại (lần '+p.remindCount+')');
+    if(isTransferRemind){
+      const official = getOfficialApprovedAmount(p);
+      sendPushNotif('💸 Nhắc chuyển tiền', `${p.desc} — ${fmtVND(official)} đã duyệt, chưa chuyển`, ['trang']);
+      showToast('💸 Đã nhắc Trang chuyển tiền (lần '+p.remindCount+')');
+    } else {
+      sendPushNotif('🔁 Xin duyệt lại', `${p.desc} — đề xuất ${fmtFull(p.ts)}, chưa duyệt xong`, ['dung','hien']);
+      showToast('🔁 Đã giục D và H duyệt lại (lần '+p.remindCount+')');
+    }
   } else {
     const wait = Math.max(1, Math.ceil((600000-(Date.now()-lastPush))/60000));
     showToast('🔁 Đã ghi giục lần '+p.remindCount+' — chưa gửi lại thông báo (chờ ~'+wait+' phút)');
