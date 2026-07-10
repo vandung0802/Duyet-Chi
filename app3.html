@@ -942,7 +942,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v76';
+const APP_VERSION = '20260705-v77';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2126,7 +2126,21 @@ function initFirebaseSync(){
     const _fixedIds = normalizeApprovedAmounts(proposals);
     if(_fixedIds.length){
       try{ localStorage.setItem('dc_proposals', _lightProposalsJson()); }catch(e){}
-      pushToFirebase();
+      if(currentRole === 'dung'){
+        // Chỉ thiết bị Dũng đẩy bản sửa lệch lên máy chủ — luật bảo mật v77 chỉ cho đúng vai trò
+        // ghi lịch sử duyệt, thiết bị khác đẩy sẽ bị máy chủ từ chối làm KẸT đồng bộ cả thiết bị.
+        pushToFirebase();
+      } else {
+        // Thiết bị khác: giữ bản sửa CỤC BỘ để hiển thị đúng, nhưng đánh dấu "đã đẩy rồi" cho các
+        // phiếu vừa sửa → pushToFirebase sau này không cố ghi phần sửa này lên (tránh bị từ chối oan).
+        _fixedIds.forEach(id=>{
+          const p = proposals.find(x=>x.id===id);
+          if(p && lastPushedSnapshot && lastPushedSnapshot.proposalsMap){
+            const {imgImages,imgB64,proofImages,proofB64,...lf} = p;
+            lastPushedSnapshot.proposalsMap[id] = JSON.stringify(lf);
+          }
+        });
+      }
     }
     // Firebase rỗng lần đầu → đẩy dữ liệu local lên
     if(wasFirst && !proposals.length && !persons.length) pushToFirebase();
@@ -2970,12 +2984,11 @@ function remindApprove(id){
   const isTransferRemind = isAwaitingTransferRemind(p); // D,H đã duyệt xong → đây là GIỤC CHUYỂN (nhắc Trang)
   p.remindCount = (p.remindCount||1) + 1;
   p.lastRemindAt = Date.now();
-  // Giữ nguyên ghi chú cũ, cập nhật đuôi "{người đang bấm giục}: Đề xuất lại lần N" / "Nhắc chuyển lần N"
   const who = getCurrentUserName() || p.person || '';
   p.remindBy = who; // lưu tên người bấm giục gần nhất để báo cáo hiển thị
-  const base = (p.note||'').replace(/\s*\(?[^()]*?(Đề xuất lại|Nhắc chuyển) lần \d+\)?\s*$/,'').trim();
-  const tag = (who ? who + ': ' : '') + (isTransferRemind ? 'Nhắc chuyển lần ' : 'Đề xuất lại lần ') + p.remindCount;
-  p.note = base ? (base + ' (' + tag + ')') : tag;
+  // v77: KHÔNG ghi đuôi giục vào ô ghi chú nữa — ghi chú bị ĐÓNG BĂNG ở máy chủ sau khi duyệt
+  // (chống sửa số tài khoản). Thông tin giục đã hiện đầy đủ qua badge "🔔 Đã giục N lần" trên thẻ
+  // + nhãn trong báo cáo (remindReportLabel đọc từ remindBy/remindCount, không cần ghi chú).
   save();
   renderAll();
   const pushKey = 'dc_remind_push_' + id;
@@ -3120,6 +3133,8 @@ function undoApproveFromModal(){
   p[field]        = null; // mốc thời gian duyệt
   // Nếu không còn ai duyệt và chưa chuyển đồng nào → đưa về "chờ duyệt"
   if(getOfficialApprovedAmount(p) <= 0 && getTotalTransferred(p) <= 0 && p.status !== 'rejected') p.status = 'pending';
+  // v77: không còn ai duyệt → xoá luôn "ảnh nội dung lúc duyệt" cũ (sửa hợp lệ xong duyệt lại sẽ chụp ảnh mới)
+  if(approvedAmtOf(p,'D') <= 0 && approvedAmtOf(p,'H') <= 0) delete p.contentSnapshot;
   closeApproveAmountModal();
   save();
   _cardCache.delete(id);
@@ -3177,6 +3192,10 @@ function confirmApproveAmount(){
   if(!Array.isArray(p[historyField])) p[historyField] = [];
   p[historyField].push({ amount: val, ts: p[timeField] });
   if(getOfficialApprovedAmount(p) > 0) p.status = 'approved';
+  // v77 BẢO MẬT: chụp "ảnh nội dung" tại thời điểm duyệt — Trang sẽ đối chiếu trước khi chuyển tiền,
+  // nếu nội dung/số tài khoản bị sửa sau duyệt (dù bằng cách nào) sẽ bị phát hiện và CHẶN chuyển.
+  // Máy chủ chỉ cho D/H ghi/đổi snapshot này (kẻ khác không thể sửa cho khớp nội dung giả).
+  p.contentSnapshot = { desc: p.desc||'', note: p.note||'', amount: p.amount||0, person: p.person||'', site: p.site||'' };
 
   save();
   // Vẽ lại NGAY thẻ vừa duyệt (không chờ debounce) → tránh thẻ còn hiện "Chờ duyệt"
@@ -3211,6 +3230,7 @@ function undoApprove(id, field){
       if(!confirm(`Bỏ toàn bộ phần duyệt của ${who} (${fmtVND(fieldAmt)})?`)) return;
       p[amountField] = null; p[historyField] = []; p[field] = null;
       if(getOfficialApprovedAmount(p) <= 0 && getTotalTransferred(p) <= 0 && p.status !== 'rejected') p.status = 'pending';
+      if(approvedAmtOf(p,'D') <= 0 && approvedAmtOf(p,'H') <= 0) delete p.contentSnapshot; // v77
       save();
       _cardCache.delete(id);
       renderProposals(); renderStats(); updateNotifBadge();
@@ -3241,6 +3261,8 @@ function undoApprove(id, field){
   if(p.status==='approved' && getOfficialApprovedAmount(p)<=0){
     p.status = 'pending';
   }
+  // v77: không còn ai duyệt → xoá "ảnh nội dung lúc duyệt" cũ (duyệt lại sẽ chụp ảnh mới)
+  if(approvedAmtOf(p,'D') <= 0 && approvedAmtOf(p,'H') <= 0) delete p.contentSnapshot;
   save();
   // Vẽ lại thẻ NGAY (không chờ debounce) — đồng nhất với lúc duyệt, tránh thẻ hiện số cũ một nhịp
   _cardCache.delete(id);
@@ -3260,6 +3282,14 @@ let pendingTransferId = null;
 function doTransfer(id){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
+  // v77 BẢO MẬT: đối chiếu nội dung HIỆN TẠI với "ảnh nội dung" chụp lúc D/H duyệt — lệch nhau
+  // nghĩa là phiếu ĐÃ BỊ SỬA SAU KHI DUYỆT (VD đổi số tài khoản) → CHẶN chuyển, báo ngay.
+  // Phiếu duyệt trước v77 chưa có ảnh nội dung → bỏ qua đối chiếu (sẽ có từ lần duyệt sau).
+  const _cs = p.contentSnapshot;
+  if(_cs && ((_cs.desc||'') !== (p.desc||'') || (_cs.note||'') !== (p.note||'') || (_cs.amount||0) !== (p.amount||0) || (_cs.person||'') !== (p.person||'') || (_cs.site||'') !== (p.site||''))){
+    alert('⚠️ CẢNH BÁO BẢO MẬT\n\nNội dung phiếu này ĐÃ BỊ THAY ĐỔI sau khi duyệt (khác với bản lúc D/H bấm duyệt).\n\nKHÔNG chuyển tiền — báo ngay cho anh Dũng / chị Hiền kiểm tra. Muốn chuyển được phải bỏ duyệt và duyệt lại nội dung đúng.');
+    return;
+  }
   const approvedAmt = getOfficialApprovedAmount(p);
   const transferred = getTotalTransferred(p);
   const remain = approvedAmt - transferred;
@@ -3415,6 +3445,9 @@ function undoReject(id){
 function del(id){
   const p = proposals.find(x=>x.id===id);
   if(p && p.status==='transferred' && currentRole!=='dung'){ showToast('🔒 Không thể xóa phiếu đã chuyển tiền'); return; }
+  // v77 BẢO MẬT: phiếu ĐÃ có D/H duyệt → chỉ Dũng xóa được (máy chủ cũng chặn — khớp luật mới)
+  const _frozenDel = p && !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
+  if(_frozenDel && currentRole!=='dung'){ showToast('🔒 Phiếu đã được duyệt — chỉ Dũng mới xóa được'); return; }
   if(!confirm('Xóa đề xuất này?')) return;
   proposals = proposals.filter(p=>p.id!==id);
   save();
@@ -3578,6 +3611,16 @@ function saveEditProposal(){
   if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
   if(!desc){ showToast('Vui lòng nhập nội dung'); return; }
   if(!amountRaw){ showToast('Vui lòng nhập số tiền'); return; }
+
+  // v77 BẢO MẬT: phiếu đã có D hoặc H duyệt → NỘI DUNG bị đóng băng ở máy chủ (chống sửa số tài
+  // khoản/số tiền sau duyệt). Chặn ngay tại đây cho rõ ràng — nếu để lọt, máy chủ cũng sẽ từ chối
+  // và thiết bị này bị kẹt đồng bộ. Vẫn cho sửa ý kiến/mức ưu tiên/ảnh (không thuộc phần đóng băng).
+  const _frozen = !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
+  const _contentChanged = desc !== (p.desc||'') || note !== (p.note||'') || amountRaw !== (p.amount||0) || person !== (p.person||'') || site !== (p.site||'');
+  if(_frozen && _contentChanged){
+    showToast('🔒 Phiếu đã được duyệt — không sửa được nội dung/số tiền/người/công trường. Cần D/H bỏ duyệt trước, sửa xong duyệt lại.');
+    return;
+  }
 
   p.person = person;
   p.site = site;
