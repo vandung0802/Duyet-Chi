@@ -942,7 +942,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v79';
+const APP_VERSION = '20260705-v80';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2375,6 +2375,11 @@ function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFr
 function esc(s){
   return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; });
 }
+// v80 BẢO MẬT: id phiếu/kế hoạch được ghép vào HTML (card-${id}) VÀ vào chuỗi JS trong onclick
+// (jumpToProposal('${id}')). Đây là ngữ cảnh KÉP (HTML + JS) mà esc() một mình KHÔNG chặn được —
+// kẻ xấu tạo phiếu với "khóa" chứa dấu nháy/thẻ HTML sẽ thoát ra chạy mã. id hợp lệ luôn là chuỗi số
+// (Date.now()), nên lọc về đúng [chữ-số-gạch] là AN TOÀN TUYỆT ĐỐI mà không mất dữ liệu thật.
+function sid(id){ return String(id==null?'':id).replace(/[^a-zA-Z0-9_-]/g,''); }
 // Chuyển đổi dữ liệu cũ (đơn vị triệu) sang đồng — chỉ chạy 1 lần
 function migrateAmountsToVND(){
   let changed=false;
@@ -2559,7 +2564,7 @@ function renderNotifPanel(){
     return;
   }
   list.innerHTML = items.map(it=>`
-    <div onclick="closeNotifAndGo('${it.id}')" style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+    <div onclick="closeNotifAndGo('${sid(it.id)}')" style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.desc)}</div>
         <div style="font-size:11px;color:#64748b;margin-top:2px">${esc(it.person||'')} · <span style="color:var(--blue);font-weight:600">${esc(it.note)}</span></div>
@@ -2767,19 +2772,19 @@ function _buildCard(p){
   }
   const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
   const imgHtml = imgImages.length ? `<div class="proof-grid">${imgImages.map((src,idx)=>`
-    <div class="proof-thumb" data-pid="${p.id}" data-kind="img" data-idx="${idx}">
-      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${p.id}','img',${idx})" alt="Ảnh Zalo ${idx+1}">
+    <div class="proof-thumb" data-pid="${sid(p.id)}" data-kind="img" data-idx="${idx}">
+      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','img',${idx})" alt="Ảnh Zalo ${idx+1}">
     </div>`).join('')}</div>` : '';
   const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64 ? [p.proofB64] : []);
   const proofHtml = proofImages.length ? `<div class="proof-grid">${proofImages.map((src,idx)=>`
-    <div class="proof-thumb" data-pid="${p.id}" data-kind="proof" data-idx="${idx}">
-      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${p.id}','proof',${idx})" alt="Chứng từ ${idx+1}">
+    <div class="proof-thumb" data-pid="${sid(p.id)}" data-kind="proof" data-idx="${idx}">
+      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','proof',${idx})" alt="Chứng từ ${idx+1}">
     </div>`).join('')}</div>` : '';
   const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${esc(p.note)}</div>` : '';
   const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
   const opinionHtml = (_opD||_opH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_opD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_opH?`<div${_opD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${esc(_opH)}</div>`:''}</div>` : '';
 
-  return `<div class="proposal status-${p.status||'pending'}" id="card-${p.id}">
+  return `<div class="proposal status-${esc(p.status||'pending')}" id="card-${sid(p.id)}">
     <div class="proposal-top">
       <div class="proposal-top-row">
         <div class="proposal-left-col">
@@ -2809,9 +2814,9 @@ function _buildCard(p){
       ${renderBtnShare(p)}
       ${renderBtnRemind(p)}
       ${(currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||p.person===getCurrentUserName())
-        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${p.id}')" title="Sửa đề xuất / ghi ý kiến">✏️</button>`
+        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${sid(p.id)}')" title="Sửa đề xuất / ghi ý kiến">✏️</button>`
         : ''}
-      <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="del('${p.id}')" title="Xóa đề xuất">🗑</button>
+      <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="del('${sid(p.id)}')" title="Xóa đề xuất">🗑</button>
     </div>
     ${proofHtml}
   </div>`;
@@ -2837,12 +2842,12 @@ function renderBtnD(p){
     const bg  = done ? '#eafff0' : '#fffbeb';
     const lbl = done ? 'Đã duyệt' : 'Chờ duyệt';
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">D</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${p.id}','approvedD')">${inner}</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${sid(p.id)}','approvedD')">${inner}</button></div>`;
   }
   if(amt>0){
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">D</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
     const canUndo = currentRole==='dung' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${p.id}','approvedD')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedD')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
@@ -2863,12 +2868,12 @@ function renderBtnH(p){
     const bg  = done ? '#eafff0' : '#fffbeb';
     const lbl = done ? 'Đã duyệt' : 'Chờ duyệt';
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">H</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${p.id}','approvedH')">${inner}</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${sid(p.id)}','approvedH')">${inner}</button></div>`;
   }
   if(amt>0){
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">H</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
     const canUndo = currentRole==='hien' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${p.id}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
@@ -2892,22 +2897,22 @@ function renderBtnReject(p){
     const whoLabel = (dHasRejected && hHasRejected) ? 'D+H' : (dHasRejected ? 'D' : 'H');
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">${whoLabel}</span><span class="ab-mid-label" style="color:#c81e1e">Từ chối${remLabel}</span></div>`;
     if(canRejectD && dHasRejected)
-      return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${p.id}','D')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
+      return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${sid(p.id)}','D')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
     if(canRejectH && hHasRejected)
-      return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${p.id}','H')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
+      return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${sid(p.id)}','H')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
     if(canRejectD && !dHasRejected)
-      return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${p.id}','D')"><span style="color:var(--red)">D</span> ✕ Từ chối</button></div>`;
+      return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${sid(p.id)}','D')"><span style="color:var(--red)">D</span> ✕ Từ chối</button></div>`;
     if(canRejectH && !hHasRejected)
-      return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${p.id}','H')"><span style="color:#7c3aed">H</span> ✕ Từ chối</button></div>`;
+      return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${sid(p.id)}','H')"><span style="color:#7c3aed">H</span> ✕ Từ chối</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><div class="ab-done-btn" style="color:var(--red)">${inner}</div></div>`;
   }
 
   if(canRejectD && canRejectH)
-    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D, H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D, H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   if(canRejectD)
-    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   if(canRejectH)
-    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${p.id}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">—</div></div>`;
 }
 function renderBtnTransfer(p){
@@ -2919,12 +2924,12 @@ function renderBtnTransfer(p){
   if(canPress){
     const mainLabel = transferred>0 ? `${fmt(transferred)}/${fmtVND(approvedAmt)}` : 'Chờ chuyển';
     const prevInfo = transferred>0 ? `<span class="ab-prev-info">${p.transferredAt?fmtFull(p.transferredAt):''}</span>` : '';
-    return `<div class="approve-box"><button class="ab-btn ab-btn-tight ab-btn-transfer" onclick="doTransfer('${p.id}')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
+    return `<div class="approve-box"><button class="ab-btn ab-btn-tight ab-btn-transfer" onclick="doTransfer('${sid(p.id)}')"><span>${mainLabel}</span>${prevInfo}</button></div>`;
   }
   if(transferred>0){
     const full = transferred >= approvedAmt - 0.0001;
     const inner = `<div class="ab-row-top"><span class="ab-big-letter">T</span><span class="ab-mid-label">${full?'Đã chuyển':fmt(transferred)+'/'+fmtVND(approvedAmt)}</span></div>`;
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="color:var(--yellow)" onclick="undoTransfer('${p.id}')" title="Bấm để hoàn tác lần chuyển gần nhất">${inner}</button></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="color:var(--yellow)" onclick="undoTransfer('${sid(p.id)}')" title="Bấm để hoàn tác lần chuyển gần nhất">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><div class="ab-done-btn" style="color:var(--yellow)">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 T</div></div>`;
@@ -2936,11 +2941,11 @@ function renderBtnShare(p){
   const canUpload=currentRole==='trang'&&(done||p.status==='approved');
   if(hasProof && canUpload) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)">
     <div class="ab-share-stack">
-      <button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${p.id}')">📤 ${proofImages.length} ảnh</button>
-      <button class="ab-btn" style="background:#fff;color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${p.id}')">📎 Thêm</button>
+      <button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${sid(p.id)}')">📤 ${proofImages.length} ảnh</button>
+      <button class="ab-btn" style="background:#fff;color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${sid(p.id)}')">📎 Thêm</button>
     </div></div>`;
-  if(hasProof) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)"><button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${p.id}')">📤 ${proofImages.length} ảnh</button></div>`;
-  if(canUpload) return `<div class="approve-box"><button class="ab-btn ab-btn-tight" style="background:var(--blue-light);color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${p.id}')">📎 Upload</button></div>`;
+  if(hasProof) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)"><button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${sid(p.id)}')">📤 ${proofImages.length} ảnh</button></div>`;
+  if(canUpload) return `<div class="approve-box"><button class="ab-btn ab-btn-tight" style="background:var(--blue-light);color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${sid(p.id)}')">📎 Upload</button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">${done?'⏳ Chờ T':'🔒'}</div></div>`;
 }
 
@@ -2977,7 +2982,7 @@ function maybeShowTransferReminder(){
     const remain = getOfficialApprovedAmount(p)-getTotalTransferred(p);
     const hTs = p.approvedH || 0;
     const days = hTs ? Math.floor((Date.now()-hTs)/86400000) : 0;
-    return `<div onclick="closeTransferReminder();jumpToProposal('${p.id}')" style="padding:10px 12px;border:1px solid var(--gray-border);border-radius:10px;margin-bottom:8px;cursor:pointer">
+    return `<div onclick="closeTransferReminder();jumpToProposal('${sid(p.id)}')" style="padding:10px 12px;border:1px solid var(--gray-border);border-radius:10px;margin-bottom:8px;cursor:pointer">
       <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(p.desc)}</div>
       <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${esc(p.site||'—')} · ${days<1?'duyệt hôm nay':'đã chờ '+days+' ngày'}</div>
       <div style="font-size:14px;font-weight:800;color:#c2410c;margin-top:2px">Còn ${fmtVND(remain)}</div>
@@ -3008,7 +3013,7 @@ function opinionReportHtml(p){
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
   // Nút trắng bình thường như ✏️/🗑; 3 nút 🔁/✏️/🗑 chia đều bằng nhau (flex:0.6). Số lần đã có ở ghi chú + badge.
-  return `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="remindApprove('${p.id}')" title="Đề xuất duyệt lại">🔁</button>`;
+  return `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="remindApprove('${sid(p.id)}')" title="Đề xuất duyệt lại">🔁</button>`;
 }
 // Bấm "Đề xuất lại": tăng số lần (gốc tính là lần 1 → bắt đầu từ 2), cập nhật đuôi ghi chú,
 // đánh dấu + đẩy phiếu lên đầu, và gửi push tới D, H (chặn lặp 600 giây/phiếu).
@@ -4166,7 +4171,7 @@ function planConfirmBadge(p, who){
   const field = who==='D' ? 'confirmedByD' : 'confirmedByH';
   const roleMatch = who==='D' ? 'dung' : 'hien';
   if(p[field]) return `<span class="badge badge-approved">✅ ${who} đã xác nhận</span>`;
-  if(currentRole===roleMatch) return `<button onclick="confirmPlan('${p.id}','${who}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:20px;cursor:pointer">✅ ${who} xác nhận</button>`;
+  if(currentRole===roleMatch) return `<button onclick="confirmPlan('${sid(p.id)}','${who}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:20px;cursor:pointer">✅ ${who} xác nhận</button>`;
   return `<span class="badge badge-wait">⏳ ${who} chưa xác nhận</span>`;
 }
 
@@ -4222,7 +4227,7 @@ function renderPlanStats(){
     else if(days <= 2){ rowBorder='#dc2626'; dueColor='#dc2626'; dueSub = `Còn ${days} ngày`; }
     else { dueSub = `Còn ${days} ngày`; }
     const st = PLAN_STATUS_INFO[p.status] || PLAN_STATUS_INFO.pending;
-    return `<tr class="plan-row-link" ondblclick="jumpToPlanCard('${p.id}')" style="box-shadow:inset 3px 0 0 ${rowBorder};cursor:pointer">
+    return `<tr class="plan-row-link" ondblclick="jumpToPlanCard('${sid(p.id)}')" style="box-shadow:inset 3px 0 0 ${rowBorder};cursor:pointer">
       <td style="text-align:center;font-size:10px;color:var(--text-sub);vertical-align:middle">${stt}</td>
       <td style="font-weight:700;font-size:11px;vertical-align:middle;line-height:1.3">${esc(p.material)}</td>
       <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${esc(p.quantity||'—')}</td>
@@ -4284,7 +4289,7 @@ function buildPlanCard(p){
   const urgency = planUrgencyInfo(p);
   const canManage = currentRole==='dung' || (p.createdBy && p.createdBy===getCurrentUserName());
   const showRemind = (p.status==='pending' || p.status==='ordered');
-  return `<div class="proposal" id="plancard-${p.id}" style="border-left-color:${urgency.color}">
+  return `<div class="proposal" id="plancard-${sid(p.id)}" style="border-left-color:${urgency.color}">
     <div style="padding:14px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
@@ -4298,7 +4303,7 @@ function buildPlanCard(p){
       </div>
       ${p.note?`<div class="proposal-note">${esc(p.note)}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
-        <select onchange="setPlanStatus('${p.id}', this.value)" style="padding:5px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+        <select onchange="setPlanStatus('${sid(p.id)}', this.value)" style="padding:5px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
           <option value="pending" ${p.status==='pending'?'selected':''}>Đang chờ</option>
           <option value="ordered" ${p.status==='ordered'?'selected':''}>Đã đặt cọc</option>
           <option value="done" ${p.status==='done'?'selected':''}>Đã hoàn thành</option>
@@ -4309,10 +4314,10 @@ function buildPlanCard(p){
       </div>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
         ${p.linkedProposalId
-          ? `<button onclick="jumpToProposal('${p.linkedProposalId}')" style="flex:1;min-width:120px;padding:8px;font-size:12px;font-weight:700;background:var(--green-light);color:var(--green);border:none;border-radius:8px;cursor:pointer">✅ Đã có đề xuất — xem</button>`
-          : `<button onclick="createProposalFromPlan('${p.id}')" style="flex:1;min-width:120px;padding:8px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer">💰 Tạo đề xuất chi</button>`}
-        ${showRemind?`<button onclick="remindPlan('${p.id}')" style="padding:8px 10px;font-size:12px;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:8px;cursor:pointer">🔔 Nhắc</button>`:''}
-        ${canManage?`<button onclick="openPlanModal('${p.id}')" style="padding:8px 10px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button><button onclick="deletePlan('${p.id}')" style="padding:8px 10px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>`:''}
+          ? `<button onclick="jumpToProposal('${sid(p.linkedProposalId)}')" style="flex:1;min-width:120px;padding:8px;font-size:12px;font-weight:700;background:var(--green-light);color:var(--green);border:none;border-radius:8px;cursor:pointer">✅ Đã có đề xuất — xem</button>`
+          : `<button onclick="createProposalFromPlan('${sid(p.id)}')" style="flex:1;min-width:120px;padding:8px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer">💰 Tạo đề xuất chi</button>`}
+        ${showRemind?`<button onclick="remindPlan('${sid(p.id)}')" style="padding:8px 10px;font-size:12px;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:8px;cursor:pointer">🔔 Nhắc</button>`:''}
+        ${canManage?`<button onclick="openPlanModal('${sid(p.id)}')" style="padding:8px 10px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button><button onclick="deletePlan('${sid(p.id)}')" style="padding:8px 10px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>`:''}
       </div>
     </div>
   </div>`;
@@ -4704,7 +4709,7 @@ function renderReportRejected(){
     const prv=p.priority||'normal';
     const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Chờ':'🟡 BT';
     const rejNote = [dLine?`D: ${dLine}`:'' , hLine?`H: ${hLine}`:''].filter(Boolean).join('<br>');
-    return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
+    return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
       <td class="col-desc" style="font-weight:600">${esc(p.desc)}</td>
       <td class="col-person">${esc(p.person||'—')}</td>
@@ -4749,7 +4754,7 @@ function renderReportList(){
     const cellBase = 'style="vertical-align:middle;white-space:normal;line-height:1.5"';
     const prv2 = p.priority||'normal';
     const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
-    return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
+    return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
       <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
       <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
       <td ${cellBase} style="font-size:10px">${esc(p.person||'—')}</td>
@@ -4816,7 +4821,7 @@ function renderExcelTable(containerId, items, kind){
     const hAmt = approvedAmtOf(p,'H');
     const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700;font-size:10px;word-break:normal">${fmtTr(dAmt)}</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
     const hCell = kind==='pending' ? (hAmt>0?`<span style="color:#7c3aed;font-weight:700;font-size:10px;word-break:normal">${fmtTr(hAmt)}</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
-    return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
+    return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
       <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
       <td style="text-align:right;font-size:10px;line-height:1.3;vertical-align:middle">${amtLabel}</td>
@@ -4911,7 +4916,7 @@ function renderReportSummary(){
     <table style="width:100%;border-collapse:collapse;background:#fff;table-layout:fixed">
       <colgroup><col style="width:auto"><col style="width:56px"><col style="width:auto"><col style="width:120px"></colgroup>
       <tr style="background:#fdecea"><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Nội dung</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Người</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Công trình</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:right;font-weight:800">Số tiền</th></tr>
-      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'—')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.person||'')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.site||'—')}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${fmtTr(_outstanding(p))}</td></tr>`).join('')}
+      ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'—')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.person||'')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.site||'—')}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${fmtTr(_outstanding(p))}</td></tr>`).join('')}
     </table>
   </div>` : ''}`;
 
@@ -4940,7 +4945,7 @@ function renderReportSummary(){
               : `<span style="color:#64748b">${fmtTr(p.amount)}</span>`;
       const prv = p.priority||'normal';
       const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
-      return `<tr class="report-row-link" ondblclick="jumpToProposal('${p.id}')">
+      return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
         <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap;width:18px">${stt}</td>
         <td class="col-desc" style="font-weight:600;line-height:1.4">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
         <td class="col-person">${esc(p.person||'—')}</td>
