@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v81** (`APP_VERSION = '20260705-v81'`, `sw.js VERSION = '20260705-74'`, `version.txt = 20260705-v81`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
+> **Cập nhật lần cuối:** phiên bản app **v82** (`APP_VERSION = '20260705-v82'`, `sw.js VERSION = '20260705-75'`, `version.txt = 20260705-v82`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
 
 ---
 
@@ -529,6 +529,14 @@ ChatGPT xác nhận các vá v77-v79 đúng, nêu thêm đường khai thác. Đ
 - **Onboarding người MỚI từ nay:** tự đăng ký (role 'other', chưa approved) → thấy màn "chờ duyệt" → Dũng vào Cài đặt bấm "Cho xem" → họ xem được. (OTP cũ vẫn chạy song song, không đụng.)
 - Đã kiểm chứng: 4 nhánh gated đúng, 9/9 tài khoản còn approved sau deploy; preview test renderApproveList (chưa-duyệt lên đầu, đúng nút), showPendingApprovalScreen, revoke-chặn-chính-mình, duyệt+chuyển vẫn OK. ⚠️ Chưa test được bằng tài khoản THẬT chưa-duyệt từ phía tôi (preview không auth) — cần user xác nhận: (1) 9 người hiện tại vẫn xem bình thường; (2) thử tạo 1 account lạ xem có bị màn "chờ duyệt" không.
 - **File `database.rules.json` trong repo là bản đang chạy;** bản trước v77 ở `database.rules.backup-truoc-v77.json`. Hoàn tác: `firebase deploy --only database` với file cũ.
+
+### AI. Danh sách "Tài khoản đã đăng nhập" để soi tài khoản lạ (v82, 05/07/2026)
+User muốn xem mọi tài khoản từng đăng nhập để phát hiện tài khoản lạ.
+- **Ghi email + lastLogin:** mỗi lần đăng nhập (onAuthStateChanged, nhánh có role), `db.ref('userRoles/'+uid).update({email, lastLogin})`. Backfill 1 lần cho 9 tài khoản cũ qua CLI (từ `firebase auth:export`).
+- **UI (chỉ Dũng, trong `admin-approve-section`):** `renderApproveList()` giờ hiện tên · vai trò · **email** · lần đăng nhập gần nhất · trạng thái duyệt, + nút Cho xem/Thu hồi. Email KHÔNG thuộc `KNOWN_EMAILS` (8 email người nhà hardcode trong hàm) → tô đỏ "⚠️ email lạ". Có nút "🔄 Tải lại danh sách".
+- **Sửa luật (v82):** self-write userRole đổi điều kiện `approved !== true` → `newData.approved === data.approved` (giữ nguyên approved, không tự đổi) — vì `!== true` khiến user ĐÃ duyệt không tự cập nhật được tên/email/lastLogin của mình (approved=true làm điều kiện luôn false). Nay họ ghi được hồ sơ mình nhưng vẫn KHÔNG tự bật approved.
+- **Phát hiện thực tế:** trong 9 tài khoản có `kimanh120311@gnail.com` (gõ nhầm "gnail") — 1 tài khoản trùng/typo, app tự flag đỏ. User tự quyết xoá/thu hồi.
+- ⚠️ Email chỉ hiện với tài khoản đã đăng nhập bằng app v82+ (hoặc đã backfill). Tài khoản chưa mở bản mới sẽ hiện "(chưa ghi email)".
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
