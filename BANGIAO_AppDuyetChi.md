@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v79** (`APP_VERSION = '20260705-v79'`, `sw.js VERSION = '20260705-72'`, `version.txt = 20260705-v79`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
+> **Cập nhật lần cuối:** phiên bản app **v80** (`APP_VERSION = '20260705-v80'`, `sw.js VERSION = '20260705-73'`, `version.txt = 20260705-v80`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
 
 ---
 
@@ -506,6 +506,17 @@ User gửi lại `app3.html` + `database.rules.json` cho ChatGPT → báo cáo v
   - **APP3-05 (xóa BỚT entry lịch sử):** RTDB `.validate` không chạy khi xóa; xóa entry lịch sử chỉ LÀM GIẢM số đã duyệt/chuyển (không tăng tiền được), nội dung vẫn đóng băng → không trộm được tiền. Khó vá sạch trong RTDB rules.
   - **APP3-09 (push spam), APP3-11 (CSP/SRI), APP3-12 phần Storage:** Storage rules vẫn mở ghi (treo từ v55). Ưu tiên thấp/chờ.
 - Đã test v79 qua preview: XSS qua `src` ảnh KHÔNG chạy (src giữ nguyên văn, không sinh onerror), sheetUrl thiếu `/exec` bị chặn, `/exec` + `/dev` OK, URL độc vẫn chặn, logout xoá đúng cache, duyệt+chuyển vẫn OK. Rules deploy thành công.
+
+### AG. 🔐 BẢO MẬT v80 — vá theo báo cáo CHUYÊN SÂU của ChatGPT (05/07/2026)
+ChatGPT xác nhận các vá v77-v79 đúng, nêu thêm đường khai thác. Đã vá phần THẬT & trong tầm; ghi rõ phần còn lại + lý do.
+- **XSS qua ID phiếu + STATUS (ChatGPT đúng — đã vá v80):** `id` phiếu là KEY node Firebase, kẻ xấu tạo phiếu với key chứa `' < >` → ghép vào `card-${id}` (HTML) + `onclick="jumpToProposal('${id}')"` (chuỗi JS trong thuộc tính) = **ngữ cảnh KÉP HTML+JS mà `esc()` một mình KHÔNG chặn** (HTML decode entity trước khi JS chạy). Fix: thêm `sid(id)` (~2351) lọc id về `[a-zA-Z0-9_-]`; id thật luôn là `Date.now()` (số) nên lọc lossless. Thay đồng loạt `'${p.id}'`→`'${sid(p.id)}'`, `card-${p.id}`, `plancard-${p.id}`, `data-pid=`, `closeNotifAndGo`, `linkedProposalId`. `status` escape trong `class="... status-${esc(p.status)}"`.
+- **Làm giả số tiền qua field phụ + xóa lịch sử (ChatGPT đúng — vá bằng Rules v80):** `approvedDAmount/HAmount` (bản lưu phụ) TRƯỚC ĐÂY KHÔNG bị khóa; kẻ xấu có thể null `approvedDHistory` (removal — `.validate` không chạy khi xóa) rồi đặt `approvedDAmount` giả → máy D/H `normalizeApprovedAmounts` backfill history từ field → hợp thức hoá. Fix Rules: (a) `approvedDAmount` chỉ dung đổi / `approvedHAmount` chỉ hien (cho phép giữ nguyên + xóa vì history đã là nguồn chuẩn được khóa); (b) thêm vào `$id .validate`: xóa node `approvedDHistory` chỉ dung, `approvedHHistory` chỉ hien.
+- **Nghe lén OTP qua push (ChatGPT đúng — vá Rules v80):** `push-subs/{role}/{token}` trước cho mọi tài khoản ghi bất kỳ role → kẻ xấu đăng ký dưới `dung` để NHẬN push của Dũng (gồm OTP). Fix: `push-subs/$role .write` chỉ khi `$role === role-server-xác-nhận-của-mình`; `.read: false`.
+- **CHƯA vá — cần QUYẾT ĐỊNH của user hoặc hạ tầng (đã trình bày, chờ user):**
+  - 🔴 **C-01 (quan trọng nhất còn lại): người lạ tự đăng ký → ĐỌC được toàn bộ dữ liệu tài chính.** Firebase Auth mở self-signup; ai tạo được account là `auth != null` → đọc `duyetchi/proposals` (`.read: auth != null`), gồm số tiền + số tài khoản trong ghi chú. OTP chỉ chặn GIAO DIỆN, không chặn đọc DB. **Không thể ĐỔI/TRỘM tiền** (Rules khóa ghi), chỉ LỘ thông tin. Fix đúng = gate `.read` theo cờ `approved` do Dũng đặt (cần migrate cờ cho 9 user hiện có TRƯỚC, nếu không sẽ khóa nhầm người đang dùng → RỦI RO, KHÔNG tự làm). Đã trình bày cho user chọn.
+  - **APP3-01/08 (Sheets JSONP), APP3-05 (xóa bớt entry lịch sử — chỉ giảm tiền không tăng), APP3-09/11/12, Apps Script chưa xác thực (kẻ biết sheetUrl gọi thẳng sửa Sheet — cần thêm token vào `copyScript()` + redeploy Apps Script thủ công), Storage rules mở:** ưu tiên thấp / cần backend / nội bộ chấp nhận.
+- Đã test v80 preview: XSS qua id (thoát chuỗi JS) + status (thoát class) KHÔNG chạy; `sid` lọc sạch ký tự nguy hiểm, id số giữ nguyên (không phá lookup card); duyệt+chuyển vẫn OK. Rules deploy thành công.
+- ⚠️ **Đã 4 vòng bảo mật (v77-v80).** Các mục còn lại tăng dần độ phức tạp (cần backend/Cloud Functions/đổi luồng đăng ký). Nên user cân nhắc "đủ cho app nội bộ ~9 người" vs "tiếp tục" — điểm lợi ích giảm dần.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
