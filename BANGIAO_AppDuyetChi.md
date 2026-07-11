@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v78** (`APP_VERSION = '20260705-v78'`, `sw.js VERSION = '20260705-71'`, `version.txt = 20260705-v78`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
+> **Cập nhật lần cuối:** phiên bản app **v79** (`APP_VERSION = '20260705-v79'`, `sw.js VERSION = '20260705-72'`, `version.txt = 20260705-v79`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
 
 ---
 
@@ -490,6 +490,22 @@ User nhờ ChatGPT phân tích tĩnh app3.html → báo cáo 12 lỗi (APP3-01..
   3. **APP3-10 Formula Injection:** `esc` cục bộ trong `downloadSummaryExcel` (~5031) giờ chèn `'` trước ô bắt đầu bằng `= + - @ \t \r` (giữ CSV quoting cũ).
 - **Còn lại / chấp nhận với app nội bộ ~9 người quen:** APP3-03 (OTP — impact giảm mạnh sau v77 vì bypass OTP cũng chỉ ra role 'other'), APP3-07 (localStorage), APP3-09 (push spam), APP3-11 (CSP/SRI), APP3-12. Đáng cải thiện dần, không gấp. **Storage rules vẫn mở** (treo từ v55 — làm cùng migrate ảnh).
 - Đã test qua preview: XSS payload `<img onerror>` KHÔNG chạy ở cả thẻ phiếu lẫn 4 bảng báo cáo (window flag vẫn false, HTML thấy `&lt;img`, không có thẻ img thật); `sanitizeSheetUrl` chặn đúng 4 URL độc / giữ URL hợp lệ; CSV chèn `'` trước `=`/`@`/`+`; duyệt + chuyển tiền vẫn OK sau tất cả thay đổi.
+
+### AF. 🔐 BẢO MẬT v79 — vá theo báo cáo TÁI kiểm tra của ChatGPT (05/07/2026)
+User gửi lại `app3.html` + `database.rules.json` cho ChatGPT → báo cáo v2. ChatGPT thấy được Rules lần này, đánh giá kỹ hơn. Phần lớn góp ý ĐÚNG; đã vá các lỗ THẬT còn sót, ghi rõ phần còn lại + lý do.
+- **Lỗ XSS còn sót (ChatGPT bắt đúng — đã vá v79):**
+  - **`src` của ẢNH** (`_buildCard` thumbnail + preview khi Thêm/Sửa): node `duyetchi/images/$id` cho mọi tài khoản ghi → kẻ xấu ghi `src = 'x" onerror="..."'` → thoát khỏi thuộc tính → XSS. Đã bọc `esc(src)` ở 4 chỗ.
+  - **Tên NGƯỜI ONLINE** (`online-users-list`, ~1619): mỗi user tự ghi `online/$uid/name` → chèn XSS chạy trên máy người khác khi mở Cài đặt. Đã `esc(nm)`.
+  - **Ô chọn tên màn Sửa** (~3493): dùng biến `pp` nên KHÔNG khớp `replace_all` cho `p=>` ở v78 → bỏ sót. Đã `esc`.
+  - Rà lại: các `${p.desc}`... còn lại đều ở `sendPushNotif` (text thuần), `.value` (DOM property), hoặc `generateReport` (text copy Zalo) — KHÔNG phải HTML, cố ý không escape.
+- **Rules — OTP world-readable (ChatGPT đúng, cơ chế RTDB — đã vá v79):** `.read` ở cấp cha `duyetchi` LAN XUỐNG mọi con và con KHÔNG thu hồi được → `pendingOtp` bị mọi tài khoản đọc dù có luật đọc-hạn-chế riêng. **Đã bỏ `.read` cấp cha**, khai `.read` riêng ở từng nhánh (proposals/images/plans/meta/userRoles/online cho người đăng nhập; pendingOtp chỉ chính chủ/Dũng). Đã kiểm tra app KHÔNG đọc nguyên cả node `duyetchi` (chỉ đọc từng con) → không vỡ.
+- **Siết thêm (v79):** `sanitizeSheetUrl` bắt buộc path kết thúc `/exec` hoặc `/dev`; fallback role client đổi `email.includes('trang')` → email CHÍNH XÁC `phantrang770@gmail.com`; `logoutRole` xoá cache `dc_*` khỏi máy (APP3-07); CSV thêm `\n` vào danh sách ký tự mở đầu bị chèn `'`.
+- **CHƯA vá — cần backend/hạ tầng, chấp nhận với app nội bộ (đã báo user, chờ quyết định):**
+  - **APP3-01/08 full (Sheets JSONP):** vẫn dùng `<script src=sheetUrl>`. ChatGPT đúng rằng hostname-allowlist không loại bỏ hoàn toàn (script.google.com đa tenant). NHƯNG rủi ro thực THẤP vì `meta` (chứa sheetUrl) chỉ role `dung` ghi được (Rules) — kẻ khác không đổi được URL. Fix triệt để = chuyển sang Cloud Function backend (chưa làm).
+  - **APP3-02 full:** chưa dùng custom claims/Admin SDK/`email_verified`. Cơ chế email-gate + password hiện tại đủ cho nội bộ. (Rủi ro "email đặc quyền chưa từng đăng ký bị người khác tạo account" — thực tế cả 3 email đã đăng ký rồi.)
+  - **APP3-05 (xóa BỚT entry lịch sử):** RTDB `.validate` không chạy khi xóa; xóa entry lịch sử chỉ LÀM GIẢM số đã duyệt/chuyển (không tăng tiền được), nội dung vẫn đóng băng → không trộm được tiền. Khó vá sạch trong RTDB rules.
+  - **APP3-09 (push spam), APP3-11 (CSP/SRI), APP3-12 phần Storage:** Storage rules vẫn mở ghi (treo từ v55). Ưu tiên thấp/chờ.
+- Đã test v79 qua preview: XSS qua `src` ảnh KHÔNG chạy (src giữ nguyên văn, không sinh onerror), sheetUrl thiếu `/exec` bị chặn, `/exec` + `/dev` OK, URL độc vẫn chặn, logout xoá đúng cache, duyệt+chuyển vẫn OK. Rules deploy thành công.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
