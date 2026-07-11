@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v82** (`APP_VERSION = '20260705-v82'`, `sw.js VERSION = '20260705-75'`, `version.txt = 20260705-v82`) + **luật v83** (chỉ sửa `database.rules.json`, app KHÔNG đổi — xem mục AJ). Ngày 11/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v82** (`APP_VERSION = '20260705-v82'`, `sw.js VERSION = '20260705-75'`, `version.txt = 20260705-v82`) + **luật v83+v84** (chỉ sửa `database.rules.json`, app KHÔNG đổi — xem mục AJ, AK) + backup tự động (mục AK). Ngày 11/07/2026.
 
 ---
 
@@ -547,6 +547,13 @@ ChatGPT tái kiểm tra v82 chỉ ra: cờ `approved` mới chỉ chặn **`.rea
 - **Đã deploy luật** (`firebase deploy --only database`). Kiểm tra sau deploy: 8/9 tài khoản `approved:true` ghi bình thường; tài khoản thứ 9 chưa duyệt đúng là `kimanh120311@gnail.com` (typo "gnail", chưa từng đăng nhập) → không phải người thật, không regression.
 - **Không bump version** (app không đổi). Nếu về sau đụng app3.html thì mới bump.
 - **Còn tồn (thấp / cần backend):** F-02 (xoá lẻ 1 dòng lịch sử — chỉ làm giảm tiền, khó chặn bằng luật RTDB), APP3-08 (JSONP Sheets), APP3-11 (CSP/SRI), Storage rules, thiết kế lại OTP — đã ghi "chấp nhận cho công cụ nội bộ".
+
+### AK. 🛡️ BẢO MẬT "nhóm 2" v84 — backup tự động + xóa tk rác + giới hạn giá trị (11/07/2026)
+Sau khi user hỏi "bảo mật cao hơn nữa", đã phân tích mối đe dọa (rủi ro cao nhất = **chiếm Gmail** + **mất/mượn điện thoại**, cả hai app không chặn được → cần 2FA + khóa máy, việc của user). Nhóm việc AN TOÀN tôi làm được:
+- **Backup tự động (3a):** script `scripts/backup-db.ps1` (thuần ASCII, tự suy `$root` từ `$PSScriptRoot` vì path có dấu tiếng Việt), chạy `firebase database:get "/" -o backups/backup-YYYY-MM-DD.json`, giữ 30 ngày. Đăng ký **Windows Task Scheduler** task `DuyetChi-Backup` chạy 12:30 hằng ngày (đã chạy thử, LastResult=0). ⚠️ **`backups/` đã `.gitignore`** — repo này CÔNG KHAI (GitHub Pages), TUYỆT ĐỐI không commit dữ liệu backup (chứa tiền + tên người). File backup CHỈ ở máy local; máy phải bật thì mới backup ngày đó.
+- **Xóa tài khoản rác (3d):** đã `database:remove /duyetchi/userRoles/8ep3MWIzq1SNRN46yAMGQ1ljBXb2` (email typo `kimanh120311@gnail.com`, chưa duyệt, chưa từng đăng nhập). Còn 8 tài khoản thật. (Bản ghi Auth "vỏ" vẫn còn — vô hại, muốn xóa hẳn phải vào Firebase Console vì CLI không xóa được Auth user.)
+- **Giới hạn giá trị (3c) — luật v84:** mỗi field `desc/note/amount/amountUnit/person/site` giờ = `(ĐÓNG BĂNG cũ) && (CAP)`. Cap: desc/note ≤ 5000 ký tự, person/site ≤ 200, amountUnit ≤ 40, amount là số trong [0 ; 100.000.000.000] (100 tỷ). Ngưỡng RẤT RỘNG so với thật (desc dài nhất 158, note 179, amount lớn nhất ~859tr) → không chặn nhầm. Cap chỉ "cắn" đúng kiểu (`!isString||len<=N`, `!isNumber||range`) nên không bao giờ từ chối dữ liệu cũ khi app ghi lại cả phiếu. Đã deploy + xác nhận 6/6 field có cap, 190 phiếu nguyên vẹn.
+- **CÒN LẠI cho user tự làm (mạnh nhất):** bật **2FA** 3 Gmail + **khóa màn hình** mọi điện thoại. Nhóm 3 (App Check theo dõi→siết, xác nhận-lại khi duyệt/chuyển, audit log ghi-một-lần, test luật tự động) — chờ user chọn làm tiếp.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.

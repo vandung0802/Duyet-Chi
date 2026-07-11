@@ -47,12 +47,16 @@
           // ĐÓNG BĂNG NỘI DUNG sau khi D HOẶC H đã duyệt (v77 — chống sửa số tài khoản/số tiền sau duyệt):
           // các trường dưới đây chỉ được GIỮ NGUYÊN một khi phiếu đã có bất kỳ dấu duyệt nào.
           // Muốn sửa thật: D/H bỏ duyệt trước (được phép theo luật trên) → sửa → duyệt lại.
-          "desc":       { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
-          "note":       { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
-          "amount":     { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
-          "amountUnit": { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
-          "person":     { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
-          "site":       { ".validate": "newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())" },
+          // v84: mỗi trường = (ĐÓNG BĂNG sau duyệt như cũ) && (GIỚI HẠN kích thước — chống tài khoản bị chiếm
+          //      nhồi chữ rác / số tiền phi lý). Ngưỡng đặt RẤT RỘNG so với dữ liệu thật (desc dài nhất 158,
+          //      note 179, amount lớn nhất ~859tr) nên KHÔNG thể chặn nhầm phiếu hợp lệ. Cap chỉ "cắn" đúng
+          //      kiểu (isString/isNumber) — nếu không đúng kiểu thì không chặn (để lớp đóng băng lo).
+          "desc":       { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())) && (!newData.isString() || newData.val().length <= 5000)" },
+          "note":       { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())) && (!newData.isString() || newData.val().length <= 5000)" },
+          "amount":     { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())) && (!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 100000000000))" },
+          "amountUnit": { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())) && (!newData.isString() || newData.val().length <= 40)" },
+          "person":     { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())) && (!newData.isString() || newData.val().length <= 200)" },
+          "site":       { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists())) && (!newData.isString() || newData.val().length <= 200)" },
 
           // DẤU DUYỆT: thêm/đổi approvedD chỉ Dũng, approvedH chỉ Hiền (giữ nguyên thì ai ghi cũng được —
           // cần thiết vì app luôn ghi CẢ phiếu mỗi lần có gì đổi, các trường không đổi phải đi qua được)
