@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v77** (`APP_VERSION = '20260705-v77'`, `sw.js VERSION = '20260705-70'`, `version.txt = 20260705-v77`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
+> **Cập nhật lần cuối:** phiên bản app **v78** (`APP_VERSION = '20260705-v78'`, `sw.js VERSION = '20260705-71'`, `version.txt = 20260705-v78`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
 
 ---
 
@@ -480,6 +480,16 @@ git add app3.html sw.js version.txt && git commit -m "..." && git push origin ma
 - Thứ tự deploy đã dùng: **app v77 lên Pages TRƯỚC → luật sau** (giảm cửa sổ lệch app cũ/luật mới). App v76 cũ nếu giục-chuyển (ghi note) sẽ bị luật chặn → nhắc mọi người cập nhật v77 ngay.
 - Đã test 10 kịch bản qua preview (snapshot đúng, chặn chuyển khi bị sửa, cho chuyển khi khớp/legacy, chặn sửa nội dung đã duyệt, cho sửa ý kiến, chặn xóa non-dung, giục không đụng note, bỏ duyệt xóa snapshot, duyệt→chuyển full flow OK). ⚠️ LUẬT chưa test được bằng user thật từ phía tôi (preview không đăng nhập) — đã yêu cầu D/H/T mỗi người test 1 thao tác ngay sau release.
 - **Rủi ro còn lại (chưa xử lý, cân nhắc sau):** xóa BỚT entry lịch sử duyệt/chuyển (removal từng entry không guard được đơn giản trong RTDB rules) → chỉ hạ thấp số/gây nhiễu, không tăng tiền được; role 'trang' vẫn theo email chứa cụm cứng ở client (luật dùng email chính xác — lệch nhau chút, client lỏng hơn); **Storage rules vẫn mở cho ghi không đăng nhập** (việc treo từ v55 — làm cùng đợt migrate ảnh cũ); push-queue ai đăng nhập cũng gửi được (spam risk nhỏ).
+
+### AE. 🔐 BẢO MẬT v78 — vá theo báo cáo kiểm tra của ChatGPT (05/07/2026)
+User nhờ ChatGPT phân tích tĩnh app3.html → báo cáo 12 lỗi (APP3-01..12). Báo cáo NGHIÊM TÚC + phần lớn ĐÚNG, nhưng có giới hạn tự nêu: **chỉ đọc app3.html, KHÔNG xem được Firebase Rules** → nhiều lỗi "Critical" của nó (APP3-02 tự gán role, APP3-05 hành động đặc quyền chỉ ở client, phần lớn APP3-06) **thực ra đã vá ở v77** bằng luật máy chủ (mục AD) — báo cáo không biết. Đối chiếu lại từng lỗi với hiện trạng:
+- **Đã xử lý ở v77:** APP3-02, APP3-05, phần lớn APP3-06 (khóa ghi theo vai trò ở máy chủ).
+- **Còn hở thật → đã vá ở v78 (3 việc):**
+  1. **APP3-04 Stored XSS (nghiêm trọng nhất):** đã xác minh CÓ THẬT — `${p.desc}`, `${p.note}`... ghép thẳng vào `innerHTML` KHÔNG lọc, app KHÔNG có hàm escape nào. Kẻ có tài khoản tạo phiếu chứa `<img onerror=...>` → chạy mã trên máy MỌI người xem list. **Vá:** thêm `esc()` (~2347, sau `fmtVND`) lọc `& < > " '`; áp vào TẤT CẢ chỗ nhét dữ liệu người dùng vào HTML: `_buildCard` (desc/note/person/site/opinion/lý do từ chối), notif panel, `opinionReportHtml`, 4 bảng báo cáo (renderReportRejected/renderReportList/renderExcelTable/makeTable + bảng Việc gấp), bảng thống kê kế hoạch, `buildPlanCard`, bảng nhắc chuyển, mọi `<option>` dropdown người/công trường, danh sách người/CT trong Cài đặt. **KHÔNG áp cho `sendPushNotif`** (nội dung thông báo là text thuần, escape sẽ hỏng chữ) và `.value` của input (DOM property, không phải innerHTML — vốn an toàn).
+  2. **APP3-01/08 sheetUrl → `<script src>`:** `sanitizeSheetUrl()` (~1062) chỉ chấp nhận `https://` + hostname CHÍNH XÁC `script.google.com` + path `/macros/s/...`; áp tại 3 chỗ gán (khởi tạo từ localStorage, nhận từ Firebase meta trong `_mergeAndRender`, lưu từ ô Cài đặt `saveSheet`). URL lạ → thành `''` → các hàm sync có sẵn `if(!sheetUrl) return` nên không tải script. Không cần sửa 10 hàm sync (chốt tại điểm gán là đủ; DevTools tự đổi biến là máy kẻ tấn công, không tính).
+  3. **APP3-10 Formula Injection:** `esc` cục bộ trong `downloadSummaryExcel` (~5031) giờ chèn `'` trước ô bắt đầu bằng `= + - @ \t \r` (giữ CSV quoting cũ).
+- **Còn lại / chấp nhận với app nội bộ ~9 người quen:** APP3-03 (OTP — impact giảm mạnh sau v77 vì bypass OTP cũng chỉ ra role 'other'), APP3-07 (localStorage), APP3-09 (push spam), APP3-11 (CSP/SRI), APP3-12. Đáng cải thiện dần, không gấp. **Storage rules vẫn mở** (treo từ v55 — làm cùng migrate ảnh).
+- Đã test qua preview: XSS payload `<img onerror>` KHÔNG chạy ở cả thẻ phiếu lẫn 4 bảng báo cáo (window flag vẫn false, HTML thấy `&lt;img`, không có thẻ img thật); `sanitizeSheetUrl` chặn đúng 4 URL độc / giữ URL hợp lệ; CSV chèn `'` trước `=`/`@`/`+`; duyệt + chuyển tiền vẫn OK sau tất cả thay đổi.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
