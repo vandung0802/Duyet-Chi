@@ -704,6 +704,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div id="mig-img-status" style="font-size:12px;color:var(--text);margin-bottom:8px;min-height:16px"></div>
         <button id="mig-img-btn" onclick="toggleMigrateOldImages()" style="width:100%;padding:8px;font-size:13px;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">▶ Bắt đầu chuyển</button>
       </div>
+      <div id="admin-approve-section" style="display:none;margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px">
+        <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">🔐 Duyệt tài khoản được XEM dữ liệu (chỉ D)</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Tài khoản mới đăng ký sẽ KHÔNG xem được dữ liệu cho tới khi bạn bấm "Cho xem". Người lạ tự đăng ký sẽ bị chặn ở đây.</div>
+        <div id="approve-list" style="font-size:13px;color:var(--text)">Đang tải...</div>
+      </div>
       <details style="margin-bottom:10px">
         <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Cập nhật tên &amp; vai trò</summary>
         <div style="margin-top:10px">
@@ -942,7 +947,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v80';
+const APP_VERSION = '20260705-v81';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1467,7 +1472,7 @@ async function doRegister(){
     const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
     const role = nameToRole(name);
     // Lưu tên + role vào Firebase theo UID
-    await db.ref('duyetchi/userRoles/'+cred.user.uid).set({ role, name });
+    await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name }); // v81: update (khong set) de khong xoa mat co approved neu co
     // Tạo OTP 6 số, lưu DB, gửi push về Dũng
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     await db.ref('duyetchi/pendingOtp/'+cred.user.uid).set({ otp, name, ts: Date.now() });
@@ -2218,6 +2223,12 @@ function initFirebaseSync(){
     _proposalsData = raw || {};
     _proposalsLoaded = true;
     _mergeAndRender();
+  }, err=>{
+    // v81: đọc phiếu bị TỪ CHỐI = tài khoản chưa được Dũng duyệt cho xem dữ liệu. Hiện thông báo rõ,
+    // không để màn hình trống khó hiểu. (Người đã duyệt không bao giờ vào nhánh này.)
+    if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
+      showPendingApprovalScreen();
+    }
   });
   // Ảnh nay tải TRỄ — kích hoạt từ _mergeAndRender sau khi đã hiện phiếu (xem trên),
   // để lúc mở app ưu tiên kết nối + tải phiếu (nhẹ), không bị đống ảnh (nặng) làm chậm.
@@ -4475,9 +4486,23 @@ async function confirmFirstLogin(){
   if(!currentUser){ return; }
   const role = nameToRole(name);
   currentUserName = name;
-  await db.ref('duyetchi/userRoles/'+currentUser.uid).set({ role, name });
+  await db.ref('duyetchi/userRoles/'+currentUser.uid).update({ role, name }); // v81: update giu co approved
   document.getElementById('first-login-overlay').style.display = 'none';
   setRole(role);
+}
+
+// v81: màn hình cho tài khoản CHƯA được duyệt xem dữ liệu (bị chặn đọc phiếu ở máy chủ)
+function showPendingApprovalScreen(){
+  if(document.getElementById('pending-approval-overlay')) return; // đã hiện rồi
+  const div = document.createElement('div');
+  div.id = 'pending-approval-overlay';
+  div.style.cssText = 'position:fixed;inset:0;background:#6b3fd4;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;color:#fff';
+  div.innerHTML = `
+    <div style="font-size:44px;margin-bottom:12px">🔒</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:10px">Tài khoản chờ được duyệt</div>
+    <div style="font-size:14px;line-height:1.6;max-width:340px;opacity:.95">Tài khoản của bạn đã đăng nhập nhưng <b>chưa được cấp quyền xem dữ liệu</b>.<br><br>Vui lòng liên hệ <b>anh Dũng</b> để được duyệt (vào Cài đặt → "Duyệt tài khoản được xem dữ liệu" → Cho xem).</div>
+    <button onclick="logoutRole()" style="margin-top:22px;padding:10px 24px;font-size:14px;font-weight:700;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:10px;cursor:pointer">🚪 Đăng xuất</button>`;
+  document.body.appendChild(div);
 }
 
 async function adminResetAllRoles(){
@@ -4485,6 +4510,51 @@ async function adminResetAllRoles(){
   if(!confirm('Xóa toàn bộ dữ liệu vai trò của tất cả người dùng?\nMọi người phải đăng ký lại từ đầu.')) return;
   await db.ref('duyetchi/userRoles').remove();
   showToast('✅ Đã xóa toàn bộ userRoles');
+}
+
+// v81 BẢO MẬT: danh sách tài khoản + trạng thái "được xem dữ liệu". Chỉ Dũng đọc được cả node
+// userRoles (luật cho phép). Người CHƯA duyệt hiện nút "Cho xem"; người đã duyệt hiện nút "Thu hồi".
+async function renderApproveList(){
+  const el = document.getElementById('approve-list');
+  if(!el || currentRole!=='dung') return;
+  let snap;
+  try{ snap = await db.ref('duyetchi/userRoles').get(); }
+  catch(e){ el.innerHTML = '<span style="color:var(--red)">Không đọc được danh sách (kiểm tra mạng).</span>'; return; }
+  const data = snap.exists() ? snap.val() : {};
+  const uids = Object.keys(data);
+  if(!uids.length){ el.innerHTML = '<span style="color:var(--text-sub)">Chưa có tài khoản nào.</span>'; return; }
+  // Chưa duyệt lên đầu
+  uids.sort((a,b)=> (data[a].approved?1:0) - (data[b].approved?1:0));
+  el.innerHTML = uids.map(uid=>{
+    const u = data[uid]||{};
+    const ok = u.approved === true;
+    const nm = esc(u.name || '(chưa đặt tên)');
+    const rl = esc(u.role || 'other');
+    const btn = ok
+      ? `<button onclick="revokeUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#fef2f2;color:var(--red);border:none;border-radius:20px;cursor:pointer">Thu hồi</button>`
+      : `<button onclick="approveUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:20px;cursor:pointer">✅ Cho xem</button>`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:700;font-size:13px">${nm} <span style="font-size:10px;color:var(--text-sub)">(${rl})</span></div>
+        <div style="font-size:11px;color:${ok?'#16a34a':'#c2410c'}">${ok?'✅ đang được xem dữ liệu':'⛔ chưa được xem'}</div>
+      </div>
+      ${btn}
+    </div>`;
+  }).join('');
+}
+async function approveUser(uid){
+  if(currentRole!=='dung') return;
+  try{ await db.ref('duyetchi/userRoles/'+uid+'/approved').set(true); showToast('✅ Đã cho tài khoản này xem dữ liệu'); }
+  catch(e){ showToast('❌ Không lưu được: '+e.message); }
+  renderApproveList();
+}
+async function revokeUser(uid){
+  if(currentRole!=='dung') return;
+  if(uid===currentUser.uid){ showToast('Không thể thu hồi chính mình'); return; }
+  if(!confirm('Thu hồi quyền XEM dữ liệu của tài khoản này? Họ sẽ không xem được phiếu cho tới khi bạn cho xem lại.')) return;
+  try{ await db.ref('duyetchi/userRoles/'+uid+'/approved').set(false); showToast('⛔ Đã thu hồi quyền xem'); }
+  catch(e){ showToast('❌ Không lưu được: '+e.message); }
+  renderApproveList();
 }
 
 async function doUpdateRole(){
@@ -4495,7 +4565,7 @@ async function doUpdateRole(){
   if(!currentUser){ msg.textContent='Chưa đăng nhập'; return; }
   const role = nameToRole(name);
   currentUserName = name;
-  await db.ref('duyetchi/userRoles/'+currentUser.uid).set({ role, name });
+  await db.ref('duyetchi/userRoles/'+currentUser.uid).update({ role, name }); // v81: update giu co approved
   setRole(role);
   msg.style.color='var(--green)'; msg.textContent='✅ Đã cập nhật: '+name;
   renderSettings();
@@ -4547,6 +4617,12 @@ function renderSettings(){
       if(!_imagesLoaded) _migSetStatus('⏳ Kho ảnh đang tải — mở lại mục này sau ít phút.');
       else { const n=_migB64Ids().length; _migSetStatus(n ? ('📦 Còn <b>'+n+'</b> phiếu đang lưu ảnh trong database.') : '✅ Đã chuyển hết — database chỉ còn link ảnh.'); }
     }
+  }
+  // Mục duyệt tài khoản xem dữ liệu — chỉ D
+  const apprSec = document.getElementById('admin-approve-section');
+  if(apprSec){
+    apprSec.style.display = currentRole==='dung' ? 'block' : 'none';
+    if(currentRole==='dung') renderApproveList();
   }
   updateNotifSettingsStatus();
   const pl=document.getElementById('person-list');
