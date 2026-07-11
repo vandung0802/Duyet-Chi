@@ -9,23 +9,27 @@
       // riêng pendingOtp chỉ chính chủ hoặc Dũng đọc).
 
       "userRoles": {
+        // v81: Dũng đọc được CẢ node (để hiện danh sách "duyệt tài khoản"). Người khác chỉ đọc bản thân (ở $uid).
+        ".read": "auth != null && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'",
         "$uid": {
           ".read": "auth != null",
           // CHẶN LEO QUYỀN (v77): tự ghi role của MÌNH chỉ được 'other' — TRỪ 3 người nhà xác thực
           // bằng ĐÚNG EMAIL đăng nhập (không thể giả). Dũng ghi được cho bất kỳ ai.
-          // Trước đây ai cũng tự ghi role tùy ý → đăng ký tên "Dũng" là thành dung — lỗ hổng chí mạng.
-          ".write": "auth != null && ((auth.uid === $uid && (newData.child('role').val() === 'other' || (newData.child('role').val() === 'dung' && auth.token.email === 'vandung0802@gmail.com') || (newData.child('role').val() === 'hien' && auth.token.email === 'hiensbgt@gmail.com') || (newData.child('role').val() === 'trang' && auth.token.email === 'phantrang770@gmail.com'))) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+          // v81: TỰ ghi KHÔNG được đặt approved=true (chống tự cấp quyền xem) — chỉ Dũng đặt approved.
+          ".write": "auth != null && ((auth.uid === $uid && newData.child('approved').val() !== true && (newData.child('role').val() === 'other' || (newData.child('role').val() === 'dung' && auth.token.email === 'vandung0802@gmail.com') || (newData.child('role').val() === 'hien' && auth.token.email === 'hiensbgt@gmail.com') || (newData.child('role').val() === 'trang' && auth.token.email === 'phantrang770@gmail.com'))) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
         }
       },
 
       "meta": {
+        // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT (approved) hoặc 3 email người nhà mới đọc được.
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         // Chỉ Dũng mới sửa được danh sách người/công trình
-        ".read": "auth != null",
         ".write": "auth != null && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'"
       },
 
       "proposals": {
-        ".read": "auth != null",
+        // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được (chống người lạ tự đăng ký xem).
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
           // Tạo/sửa: ai đăng nhập cũng được (chi tiết bị siết bằng validate từng trường bên dưới).
           // XÓA CẢ PHIẾU (newData không tồn tại): phiếu ĐÃ có duyệt → chỉ Dũng; phiếu chưa duyệt → ai cũng được (như cũ).
@@ -74,15 +78,16 @@
       },
 
       "images": {
-        ".read": "auth != null",
+        // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được.
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
           ".write": "auth != null"
         }
       },
 
       "plans": {
-        // Kế hoạch vật tư — cùng quyền như proposals: ai đăng nhập cũng đọc/ghi được
-        ".read": "auth != null",
+        // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được.
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
           ".write": "auth != null"
         }

@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v80** (`APP_VERSION = '20260705-v80'`, `sw.js VERSION = '20260705-73'`, `version.txt = 20260705-v80`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
+> **Cập nhật lần cuối:** phiên bản app **v81** (`APP_VERSION = '20260705-v81'`, `sw.js VERSION = '20260705-74'`, `version.txt = 20260705-v81`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
 
 ---
 
@@ -517,6 +517,18 @@ ChatGPT xác nhận các vá v77-v79 đúng, nêu thêm đường khai thác. Đ
   - **APP3-01/08 (Sheets JSONP), APP3-05 (xóa bớt entry lịch sử — chỉ giảm tiền không tăng), APP3-09/11/12, Apps Script chưa xác thực (kẻ biết sheetUrl gọi thẳng sửa Sheet — cần thêm token vào `copyScript()` + redeploy Apps Script thủ công), Storage rules mở:** ưu tiên thấp / cần backend / nội bộ chấp nhận.
 - Đã test v80 preview: XSS qua id (thoát chuỗi JS) + status (thoát class) KHÔNG chạy; `sid` lọc sạch ký tự nguy hiểm, id số giữ nguyên (không phá lookup card); duyệt+chuyển vẫn OK. Rules deploy thành công.
 - ⚠️ **Đã 4 vòng bảo mật (v77-v80).** Các mục còn lại tăng dần độ phức tạp (cần backend/Cloud Functions/đổi luồng đăng ký). Nên user cân nhắc "đủ cho app nội bộ ~9 người" vs "tiếp tục" — điểm lợi ích giảm dần.
+
+### AH. 🔐 BẢO MẬT v81 — CHẶN NGƯỜI LẠ ĐỌC DỮ LIỆU (C-01, user duyệt làm — 05/07/2026)
+Đóng lỗ nghiêm trọng nhất còn lại: người lạ tự đăng ký (Firebase Auth mở self-signup) → `auth != null` → đọc được toàn bộ proposals (số tiền, số TK trong ghi chú). Cơ chế: cờ `approved` cho từng tài khoản; chỉ tài khoản Dũng-duyệt (hoặc 3 email người nhà) mới đọc được.
+- **Làm ĐÚNG THỨ TỰ 3 bước (quan trọng — sai thứ tự sẽ khóa nhầm người đang dùng → tắc cả công ty):**
+  1. **Migrate TRƯỚC:** set `approved:true` cho CẢ 9 tài khoản hiện có qua CLI (`firebase database:update /duyetchi/userRoles approve_all.json`) — lúc này luật chưa dùng cờ nên vô hại. Xác nhận 9/9.
+  2. **Deploy APP v81** (có UI duyệt + màn "chờ duyệt") lên GitHub Pages, chờ live.
+  3. **Deploy RULES** (gate `.read` theo approved) SAU CÙNG — lúc này mọi người đã có app mới + đã có cờ, không ai bị chặn.
+- **Rules (`.read` của proposals/images/plans/meta):** `auth != null && (userRoles/{uid}/approved === true || email là 1 trong 3 người nhà)`. 3 email người nhà đọc được BẤT KỂ cờ (phòng cờ bị mất do ghi userRole) → Dũng/Hiền/Trang không bao giờ tự khóa mình. `userRoles` cấp cha `.read` mở cho Dũng (để hiện danh sách duyệt). `userRoles/$uid .write`: TỰ ghi KHÔNG được đặt `approved:true` (chống tự cấp quyền) — chỉ Dũng đặt.
+- **App:** (a) 3 chỗ ghi userRole đổi `.set({role,name})`→`.update({role,name})` để KHÔNG xoá cờ `approved` khi user đổi tên/vai trò; (b) Cài đặt (chỉ Dũng) có mục "🔐 Duyệt tài khoản được XEM dữ liệu" (`renderApproveList`/`approveUser`/`revokeUser`) — list tài khoản, chưa duyệt lên đầu, nút "Cho xem"/"Thu hồi", không thu hồi được chính mình; (c) tài khoản chưa duyệt → listener proposals nhận PERMISSION_DENIED → `showPendingApprovalScreen()` hiện màn tím "Tài khoản chờ được duyệt — liên hệ Dũng" + nút Đăng xuất (thay vì màn trống khó hiểu).
+- **Onboarding người MỚI từ nay:** tự đăng ký (role 'other', chưa approved) → thấy màn "chờ duyệt" → Dũng vào Cài đặt bấm "Cho xem" → họ xem được. (OTP cũ vẫn chạy song song, không đụng.)
+- Đã kiểm chứng: 4 nhánh gated đúng, 9/9 tài khoản còn approved sau deploy; preview test renderApproveList (chưa-duyệt lên đầu, đúng nút), showPendingApprovalScreen, revoke-chặn-chính-mình, duyệt+chuyển vẫn OK. ⚠️ Chưa test được bằng tài khoản THẬT chưa-duyệt từ phía tôi (preview không auth) — cần user xác nhận: (1) 9 người hiện tại vẫn xem bình thường; (2) thử tạo 1 account lạ xem có bị màn "chờ duyệt" không.
+- **File `database.rules.json` trong repo là bản đang chạy;** bản trước v77 ở `database.rules.backup-truoc-v77.json`. Hoàn tác: `firebase deploy --only database` với file cũ.
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
