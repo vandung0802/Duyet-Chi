@@ -942,7 +942,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v78';
+const APP_VERSION = '20260705-v79';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1064,6 +1064,7 @@ function sanitizeSheetUrl(u){
     if(url.protocol !== 'https:') return '';
     if(url.hostname !== 'script.google.com') return '';
     if(!url.pathname.startsWith('/macros/s/')) return '';
+    if(!/\/(exec|dev)$/.test(url.pathname)) return ''; // v79: bắt buộc kết thúc /exec (hoặc /dev), đúng dạng Web App
     return url.href;
   }catch(e){ return ''; }
 }
@@ -1616,7 +1617,7 @@ function listenOnlineUsers(){
       const ts = typeof u.since==='number' ? new Date(u.since).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}) : '--:--';
       return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-border)">
         <span style="width:8px;height:8px;border-radius:50%;background:#22c55e;flex-shrink:0;display:inline-block"></span>
-        <span style="font-weight:700;color:${ROLE_COLOR[u.role]||'var(--text)'}">${nm}</span>
+        <span style="font-weight:700;color:${ROLE_COLOR[u.role]||'var(--text)'}">${esc(nm)}</span>
         <span style="font-size:11px;color:var(--text-sub);margin-left:auto">vào lúc ${ts}</span>
       </div>`;
     }).join('');
@@ -1654,10 +1655,12 @@ function initAuth(){
       let role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
       currentUserName = (role_val && typeof role_val === 'object' && role_val.name) ? role_val.name : '';
       if(!role || role==='other'){
+        // v79 BẢO MẬT: suy vai trò theo email CHÍNH XÁC (bỏ 'includes(trang)' cũ — email bất kỳ chứa
+        // chữ "trang" sẽ được giao diện role Trang, dù máy chủ vẫn chặn ghi. Khớp đúng luật Firebase.)
         const em = (user.email||'').toLowerCase();
         if(em==='vandung0802@gmail.com') role='dung';
         else if(em==='hiensbgt@gmail.com') role='hien';
-        else if(em.includes('trang')) role='trang';
+        else if(em==='phantrang770@gmail.com') role='trang';
       }
       document.getElementById('role-screen').style.display='none';
       if(role){
@@ -1687,6 +1690,16 @@ function initAuth(){
 async function logoutRole(){
   if(!confirm('Đăng xuất?')) return;
   currentRole = '';
+  currentUserName = '';
+  // v79 BẢO MẬT (APP3-07): xoá cache nghiệp vụ + vai trò khỏi máy khi đăng xuất, để người mượn/nhặt
+  // được máy không đọc lại được dữ liệu phiếu hay vai trò cũ. (Giữ app_version/dc_notif_seen — vô hại.)
+  try{
+    Object.keys(localStorage).forEach(k=>{
+      if(k.startsWith('dc_role_') || k==='dc_proposals' || k==='dc_persons' || k==='dc_sites' || k==='dc_plans' || k==='dc_sheetUrl' || k==='dc_role'){
+        localStorage.removeItem(k);
+      }
+    });
+  }catch(e){}
   await firebase.auth().signOut();
 }
 
@@ -2755,12 +2768,12 @@ function _buildCard(p){
   const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
   const imgHtml = imgImages.length ? `<div class="proof-grid">${imgImages.map((src,idx)=>`
     <div class="proof-thumb" data-pid="${p.id}" data-kind="img" data-idx="${idx}">
-      <img src="${src}" loading="lazy" decoding="async" onclick="openImg('${p.id}','img',${idx})" alt="Ảnh Zalo ${idx+1}">
+      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${p.id}','img',${idx})" alt="Ảnh Zalo ${idx+1}">
     </div>`).join('')}</div>` : '';
   const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64 ? [p.proofB64] : []);
   const proofHtml = proofImages.length ? `<div class="proof-grid">${proofImages.map((src,idx)=>`
     <div class="proof-thumb" data-pid="${p.id}" data-kind="proof" data-idx="${idx}">
-      <img src="${src}" loading="lazy" decoding="async" onclick="openImg('${p.id}','proof',${idx})" alt="Chứng từ ${idx+1}">
+      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${p.id}','proof',${idx})" alt="Chứng từ ${idx+1}">
     </div>`).join('')}</div>` : '';
   const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${esc(p.note)}</div>` : '';
   const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
@@ -3490,7 +3503,7 @@ function openEditProposal(id){
   // Đổ danh sách người đề xuất / công trường vào 2 ô select (giống màn Thêm mới)
   const personSel = document.getElementById('edit-person');
   const siteSel = document.getElementById('edit-site');
-  personSel.innerHTML = '<option value="">— Chọn tên —</option>' + persons.map(pp=>`<option value="${pp.name}">${pp.name}${pp.role?' — '+pp.role:''}</option>`).join('');
+  personSel.innerHTML = '<option value="">— Chọn tên —</option>' + persons.map(pp=>`<option value="${esc(pp.name)}">${esc(pp.name)}${pp.role?' — '+esc(pp.role):''}</option>`).join('');
   siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
 
   document.getElementById('edit-person').value = p.person||'';
@@ -3605,7 +3618,7 @@ function renderEditImgPreview(){
   wrap.style.display='flex';
   wrap.innerHTML = editingImages.map((src,idx)=>`
     <div class="img-preview-item" data-idx="${idx}">
-      <img src="${src}" alt="Ảnh ${idx+1}">
+      <img src="${esc(src)}" alt="Ảnh ${idx+1}">
     </div>`).join('');
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{
     const idx = parseInt(item.dataset.idx, 10);
@@ -3713,7 +3726,7 @@ function renderUploadPreview(){
   document.getElementById('upload-area').style.display='block'; // vẫn cho thêm ảnh tiếp
   wrap.innerHTML = uploadedImages.map((src,idx)=>`
     <div class="img-preview-item" data-idx="${idx}">
-      <img src="${src}" alt="Ảnh Zalo ${idx+1}">
+      <img src="${esc(src)}" alt="Ảnh Zalo ${idx+1}">
     </div>`).join('');
   // Gắn nhấn giữ cho từng ảnh vừa render
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{
@@ -5046,7 +5059,7 @@ function downloadSummaryExcel(){
   // hiệu hoá, giữ đúng nội dung hiển thị. Vẫn bọc "" và nhân đôi " như cũ để đúng chuẩn CSV.
   const esc = s => {
     let v = String(s==null?'':s);
-    if(/^[=+\-@\t\r]/.test(v)) v = "'" + v;
+    if(/^[=+\-@\t\r\n]/.test(v)) v = "'" + v; // v79: thêm xuống dòng (\n) vào danh sách ký tự mở đầu nguy hiểm
     return '"' + v.replace(/"/g,'""') + '"';
   };
 

@@ -2,8 +2,11 @@
   "rules": {
 
     "duyetchi": {
-      // Chỉ người đã đăng nhập mới đọc được
-      ".read": "auth != null",
+      // v79 BẢO MẬT: KHÔNG đặt ".read" ở cấp cha này. Trong Firebase RTDB, ".read" ở cha LAN XUỐNG mọi
+      // con và con KHÔNG thu hồi được — nếu để ".read: auth != null" ở đây thì pendingOtp (mã OTP) sẽ bị
+      // MỌI tài khoản đọc được, vô hiệu hoá luật đọc-hạn-chế của nó. Vì vậy quyền đọc được khai riêng ở
+      // TỪNG nhánh con bên dưới (proposals/images/plans/meta/userRoles/online đều cho người đăng nhập đọc;
+      // riêng pendingOtp chỉ chính chủ hoặc Dũng đọc).
 
       "userRoles": {
         "$uid": {
