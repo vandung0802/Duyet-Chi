@@ -705,8 +705,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button id="mig-img-btn" onclick="toggleMigrateOldImages()" style="width:100%;padding:8px;font-size:13px;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">▶ Bắt đầu chuyển</button>
       </div>
       <div id="admin-approve-section" style="display:none;margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px">
-        <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">🔐 Duyệt tài khoản được XEM dữ liệu (chỉ D)</div>
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Tài khoản mới đăng ký sẽ KHÔNG xem được dữ liệu cho tới khi bạn bấm "Cho xem". Người lạ tự đăng ký sẽ bị chặn ở đây.</div>
+        <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">👥 Tài khoản đã đăng nhập + Duyệt xem dữ liệu (chỉ D)</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Danh sách MỌI tài khoản từng đăng nhập (tên · email · lần vào gần nhất). Soi email lạ để phát hiện tài khoản không phải người nhà. Tài khoản mới KHÔNG xem được dữ liệu tới khi bạn bấm "Cho xem".</div>
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button onclick="renderApproveList()" style="padding:5px 10px;font-size:11px;font-weight:700;background:#e8f0fe;color:var(--blue-dark);border:none;border-radius:8px;cursor:pointer">🔄 Tải lại danh sách</button>
+        </div>
         <div id="approve-list" style="font-size:13px;color:var(--text)">Đang tải...</div>
       </div>
       <details style="margin-bottom:10px">
@@ -947,7 +950,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260705-v81';
+const APP_VERSION = '20260705-v82';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1673,6 +1676,9 @@ function initAuth(){
         localStorage.setItem('dc_role_'+user.uid, JSON.stringify({ role, name: currentUserName }));
         setRole(role);
         trackOnline(user.uid, currentUserName||user.email, role);
+        // v82: ghi EMAIL + LẦN ĐĂNG NHẬP gần nhất vào hồ sơ (để Dũng soi tài khoản lạ ở Cài đặt).
+        // update() giữ nguyên role/name/approved. Lỗi (mạng) bỏ qua, không chặn vào app.
+        db.ref('duyetchi/userRoles/'+user.uid).update({ email: user.email||'', lastLogin: Date.now() }).catch(()=>{});
       } else {
         showUpdateRolePrompt();
       }
@@ -4523,19 +4529,29 @@ async function renderApproveList(){
   const data = snap.exists() ? snap.val() : {};
   const uids = Object.keys(data);
   if(!uids.length){ el.innerHTML = '<span style="color:var(--text-sub)">Chưa có tài khoản nào.</span>'; return; }
-  // Chưa duyệt lên đầu
-  uids.sort((a,b)=> (data[a].approved?1:0) - (data[b].approved?1:0));
-  el.innerHTML = uids.map(uid=>{
+  // Chưa duyệt lên đầu; trong cùng nhóm thì đăng nhập gần nhất lên trên
+  uids.sort((a,b)=> (data[a].approved?1:0) - (data[b].approved?1:0) || (data[b].lastLogin||0) - (data[a].lastLogin||0));
+  const KNOWN_EMAILS = ['vandung0802@gmail.com','hiensbgt@gmail.com','phantrang770@gmail.com','kimanh120311@gmail.com','phanhangbp@gmail.com','anhngocdt9@gmail.com','thaibaoo1203@gmail.com','thhdcongty@gmail.com'];
+  el.innerHTML = `<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px">Tổng: <b>${uids.length}</b> tài khoản</div>` + uids.map(uid=>{
     const u = data[uid]||{};
     const ok = u.approved === true;
     const nm = esc(u.name || '(chưa đặt tên)');
     const rl = esc(u.role || 'other');
+    const email = (u.email||'').toLowerCase();
+    const emailShown = email ? esc(u.email) : '(chưa ghi email — sẽ hiện sau khi họ mở app bản mới)';
+    const isKnown = email && KNOWN_EMAILS.indexOf(email) >= 0;
+    // Email lạ (không nằm trong danh sách người nhà đã biết) → tô đỏ cảnh báo
+    const emailColor = !email ? 'var(--text-sub)' : (isKnown ? 'var(--text-sub)' : '#dc2626');
+    const strangerFlag = (email && !isKnown) ? ' <span style="color:#dc2626;font-weight:700">⚠️ email lạ</span>' : '';
+    const lastLogin = u.lastLogin ? fmtFull(u.lastLogin) : '—';
     const btn = ok
-      ? `<button onclick="revokeUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#fef2f2;color:var(--red);border:none;border-radius:20px;cursor:pointer">Thu hồi</button>`
-      : `<button onclick="approveUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:20px;cursor:pointer">✅ Cho xem</button>`;
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-border)">
+      ? `<button onclick="revokeUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#fef2f2;color:var(--red);border:none;border-radius:20px;cursor:pointer;flex-shrink:0">Thu hồi</button>`
+      : `<button onclick="approveUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:20px;cursor:pointer;flex-shrink:0">✅ Cho xem</button>`;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-border)">
       <div style="flex:1;min-width:0">
-        <div style="font-weight:700;font-size:13px">${nm} <span style="font-size:10px;color:var(--text-sub)">(${rl})</span></div>
+        <div style="font-weight:700;font-size:13px">${nm} <span style="font-size:10px;color:var(--text-sub)">(${rl})</span>${strangerFlag}</div>
+        <div style="font-size:11px;color:${emailColor};word-break:break-all">✉️ ${emailShown}</div>
+        <div style="font-size:11px;color:var(--text-sub)">🕐 Đăng nhập gần nhất: ${lastLogin}</div>
         <div style="font-size:11px;color:${ok?'#16a34a':'#c2410c'}">${ok?'✅ đang được xem dữ liệu':'⛔ chưa được xem'}</div>
       </div>
       ${btn}

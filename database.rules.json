@@ -15,8 +15,9 @@
           ".read": "auth != null",
           // CHẶN LEO QUYỀN (v77): tự ghi role của MÌNH chỉ được 'other' — TRỪ 3 người nhà xác thực
           // bằng ĐÚNG EMAIL đăng nhập (không thể giả). Dũng ghi được cho bất kỳ ai.
-          // v81: TỰ ghi KHÔNG được đặt approved=true (chống tự cấp quyền xem) — chỉ Dũng đặt approved.
-          ".write": "auth != null && ((auth.uid === $uid && newData.child('approved').val() !== true && (newData.child('role').val() === 'other' || (newData.child('role').val() === 'dung' && auth.token.email === 'vandung0802@gmail.com') || (newData.child('role').val() === 'hien' && auth.token.email === 'hiensbgt@gmail.com') || (newData.child('role').val() === 'trang' && auth.token.email === 'phantrang770@gmail.com'))) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+          // v81/v82: TỰ ghi được hồ sơ của mình (tên/email/lastLogin) nhưng KHÔNG được TỰ ĐỔI cờ approved
+          // (phải giữ nguyên như cũ) — chống tự cấp quyền xem. Chỉ Dũng mới đặt/đổi approved.
+          ".write": "auth != null && ((auth.uid === $uid && newData.child('approved').val() === data.child('approved').val() && (newData.child('role').val() === 'other' || (newData.child('role').val() === 'dung' && auth.token.email === 'vandung0802@gmail.com') || (newData.child('role').val() === 'hien' && auth.token.email === 'hiensbgt@gmail.com') || (newData.child('role').val() === 'trang' && auth.token.email === 'phantrang770@gmail.com'))) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
         }
       },
 
