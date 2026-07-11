@@ -32,9 +32,10 @@
         // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được (chống người lạ tự đăng ký xem).
         ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
-          // Tạo/sửa: ai đăng nhập cũng được (chi tiết bị siết bằng validate từng trường bên dưới).
-          // XÓA CẢ PHIẾU (newData không tồn tại): phiếu ĐÃ có duyệt → chỉ Dũng; phiếu chưa duyệt → ai cũng được (như cũ).
-          ".write": "auth != null && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('approvedDHistory').exists() || data.child('approvedHHistory').exists()))",
+          // Tạo/sửa: phải là tài khoản ĐÃ DUYỆT (v83 — tài khoản lạ/đã thu hồi không tạo/sửa phiếu được);
+          // chi tiết bị siết thêm bằng validate từng trường bên dưới.
+          // XÓA CẢ PHIẾU (newData không tồn tại): phiếu ĐÃ có duyệt → chỉ Dũng; phiếu chưa duyệt → tài khoản đã duyệt.
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('approvedDHistory').exists() || data.child('approvedHHistory').exists()))",
 
           // CHẶN GỠ DẤU DUYỆT / GỠ LỊCH SỬ (duyệt+chuyển) / GỠ ẢNH NỘI DUNG (v77 + v80):
           // - gỡ approvedD chỉ Dũng; gỡ approvedH chỉ Hiền (bỏ duyệt hợp lệ) — kẻ khác không thể "tự bỏ duyệt để mở khóa sửa"
@@ -82,7 +83,8 @@
         // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được.
         ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
-          ".write": "auth != null"
+          // v83: GHI cũng phải là tài khoản ĐÃ DUYỆT (tài khoản lạ / đã bị thu hồi không ghi/xoá ảnh được).
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
         }
       },
 
@@ -90,7 +92,8 @@
         // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được.
         ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
-          ".write": "auth != null"
+          // v83: GHI cũng phải là tài khoản ĐÃ DUYỆT.
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
         }
       },
 
@@ -117,12 +120,15 @@
       // OTP gửi qua push). Nay chỉ được ghi vào ĐÚNG vai trò server xác nhận của mình.
       "$role": {
         ".read": false,
-        ".write": "auth != null && $role === root.child('duyetchi/userRoles').child(auth.uid).child('role').val()"
+        // v83: thêm điều kiện ĐÃ DUYỆT (tài khoản đã thu hồi không đăng ký nhận push nữa).
+        ".write": "auth != null && $role === root.child('duyetchi/userRoles').child(auth.uid).child('role').val() && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
       }
     },
 
     "push-queue": {
-      // Chỉ người đăng nhập mới gửi được thông báo
+      // v83: GIỮ cho mọi tài khoản đăng nhập gửi được — vì lúc ĐĂNG KÝ (chưa duyệt) app phải gửi push
+      // báo mã OTP cho Dũng. Khóa theo approved sẽ hỏng luồng đăng ký. Rủi ro spam thông báo là nhỏ,
+      // Cloud Function nhận push có thể tự lọc thêm nếu cần.
       ".read": false,
       ".write": "auth != null"
     }

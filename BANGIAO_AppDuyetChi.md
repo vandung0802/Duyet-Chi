@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v82** (`APP_VERSION = '20260705-v82'`, `sw.js VERSION = '20260705-75'`, `version.txt = 20260705-v82`). Ngày 05/07/2026 (theo lịch phiên làm việc; commit có thể ghi ngày khác).
+> **Cập nhật lần cuối:** phiên bản app **v82** (`APP_VERSION = '20260705-v82'`, `sw.js VERSION = '20260705-75'`, `version.txt = 20260705-v82`) + **luật v83** (chỉ sửa `database.rules.json`, app KHÔNG đổi — xem mục AJ). Ngày 11/07/2026.
 
 ---
 
@@ -537,6 +537,16 @@ User muốn xem mọi tài khoản từng đăng nhập để phát hiện tài 
 - **Sửa luật (v82):** self-write userRole đổi điều kiện `approved !== true` → `newData.approved === data.approved` (giữ nguyên approved, không tự đổi) — vì `!== true` khiến user ĐÃ duyệt không tự cập nhật được tên/email/lastLogin của mình (approved=true làm điều kiện luôn false). Nay họ ghi được hồ sơ mình nhưng vẫn KHÔNG tự bật approved.
 - **Phát hiện thực tế:** trong 9 tài khoản có `kimanh120311@gnail.com` (gõ nhầm "gnail") — 1 tài khoản trùng/typo, app tự flag đỏ. User tự quyết xoá/thu hồi.
 - ⚠️ Email chỉ hiện với tài khoản đã đăng nhập bằng app v82+ (hoặc đã backfill). Tài khoản chưa mở bản mới sẽ hiện "(chưa ghi email)".
+
+### AJ. 🔐 BẢO MẬT v83 — KHÓA QUYỀN **GHI** theo cờ approved (F-01, chỉ sửa LUẬT, 11/07/2026)
+ChatGPT tái kiểm tra v82 chỉ ra: cờ `approved` mới chỉ chặn **`.read`**, chưa chặn **`.write`** → tài khoản lạ/đã "Thu hồi" vẫn tạo/sửa đề xuất, ghi/xoá ảnh + kế hoạch, spam push. **Sửa ở `database.rules.json`** (KHÔNG đụng app3.html — app vẫn v82), thêm điều kiện approved vào 4 nơi ghi:
+- `images/$id .write`, `plans/$id .write`: từ `auth != null` → `auth != null && (approved===true || 3 email người nhà)`.
+- `proposals/$id .write`: **thêm** điều kiện approved bằng `&&` **trước** logic cũ (tạo mới / dung / chưa có dấu duyệt). Người chưa duyệt không tạo/sửa được đề xuất.
+- `push-subs/$role .write`: thêm `&& approved` (người chưa duyệt không đăng ký nhận push — vô hại, `fcmRegister` đã `.catch`).
+- **`push-queue .write`: CỐ Ý GIỮ `auth != null`** (KHÔNG khóa) — vì lúc **đăng ký** (chưa duyệt) app phải gửi push báo mã OTP cho Dũng; khóa sẽ **hỏng luồng đăng ký**. Rủi ro spam thông báo nhỏ, chấp nhận.
+- **Đã deploy luật** (`firebase deploy --only database`). Kiểm tra sau deploy: 8/9 tài khoản `approved:true` ghi bình thường; tài khoản thứ 9 chưa duyệt đúng là `kimanh120311@gnail.com` (typo "gnail", chưa từng đăng nhập) → không phải người thật, không regression.
+- **Không bump version** (app không đổi). Nếu về sau đụng app3.html thì mới bump.
+- **Còn tồn (thấp / cần backend):** F-02 (xoá lẻ 1 dòng lịch sử — chỉ làm giảm tiền, khó chặn bằng luật RTDB), APP3-08 (JSONP Sheets), APP3-11 (CSP/SRI), Storage rules, thiết kế lại OTP — đã ghi "chấp nhận cho công cụ nội bộ".
 
 ### F. Khác
 - Badge "D/H đã duyệt" không bị tách chữ khi duyệt một phần.
