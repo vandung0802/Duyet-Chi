@@ -954,6 +954,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Khoản ứng cho <b id="adv-month-label">tháng —</b></div>
     <div class="form-group">
+      <label class="form-label">Ảnh đính kèm (giấy đề nghị, tin nhắn...)</label>
+      <label class="upload-zone" for="adv-file-input" style="display:block;text-align:center;padding:14px;border:1.5px dashed var(--blue);border-radius:10px;background:#eff6ff;cursor:pointer">
+        <div style="font-size:22px">📸</div>
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">Chọn / Chụp ảnh</div>
+        <div style="font-size:11px;color:var(--text-sub)">Có thể chọn nhiều ảnh</div>
+      </label>
+      <input type="file" id="adv-file-input" accept="image/*" multiple style="display:none" onchange="handleAdvImg(this)">
+      <div id="adv-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
+    </div>
+    <div class="form-group">
       <label class="form-label">Nhân viên <span class="req">*</span></label>
       <select class="form-input form-select" id="adv-inp-emp"><option value="">— Chọn nhân viên —</option></select>
       <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chưa có tên? Thêm ở tab <b>👥 Nhân viên</b>.</div>
@@ -971,16 +981,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
-<!-- Modal nhập số tiền duyệt/chuyển cho ứng lương (D duyệt / H duyệt / Trang chuyển) -->
-<div class="role-screen" id="sal-amount-modal" style="display:none;z-index:9100;background:rgba(0,0,0,0.55)">
-  <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:340px">
-    <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px" id="sal-am-title">Duyệt số tiền</div>
-    <div id="sal-am-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:12px"></div>
-    <input class="form-input" id="sal-am-amount" type="text" inputmode="numeric" oninput="fmtAmountInput(this)" style="font-size:18px;font-weight:800;text-align:center;margin-bottom:12px">
-    <button class="btn-full btn-primary-full" onclick="confirmSalAmount()" id="sal-am-ok">Xác nhận</button>
-    <button class="btn-full btn-outline-full" onclick="closeSalAmount()">Hủy</button>
-  </div>
-</div>
+<!-- (Ứng lương duyệt/chuyển dùng CHUNG modal của phiếu chi — aa-modal / transfer-amount-modal — nên không cần modal riêng.) -->
 
 <!-- Modal Thêm/Sửa kế hoạch vật tư -->
 <div class="role-screen" id="plan-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
@@ -1070,7 +1071,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260714-v86';
+const APP_VERSION = '20260714-v87';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1203,10 +1204,11 @@ let persons    = JSON.parse(localStorage.getItem('dc_persons')||'[]');
 let sites      = JSON.parse(localStorage.getItem('dc_sites')||'[]');
 let sheetUrl   = sanitizeSheetUrl(localStorage.getItem('dc_sheetUrl')||'');
 let plans      = JSON.parse(localStorage.getItem('dc_plans')||'[]'); // Kế hoạch vật tư — TÁCH BIỆT hoàn toàn khỏi proposals (ngăn Firebase riêng: duyetchi/plans)
-// ── MODULE LƯƠNG (ứng lương) — TÁCH BIỆT hoàn toàn khỏi proposals/plans (ngăn Firebase riêng: duyetchi/employees, duyetchi/salaryAdvances) ──
-let employees      = JSON.parse(localStorage.getItem('dc_employees')||'[]');       // danh sách nhân viên hưởng lương
-let salaryAdvances = JSON.parse(localStorage.getItem('dc_salaryAdvances')||'[]');  // các khoản đề xuất ứng lương
-let salaryMonth    = ''; // tháng đang xem ở tab Ứng lương, dạng 'YYYY-MM' (đặt ở init)
+// ── MODULE LƯƠNG (ứng lương) ── Danh sách NHÂN VIÊN ở ngăn Firebase riêng (duyetchi/employees).
+//    Các KHOẢN ỨNG LƯƠNG nay là phiếu 'proposals' có kind='salary' → dùng CHUNG toàn bộ bộ máy phiếu chi
+//    (ảnh đính kèm, duyệt D/H từng phần, chuyển, chứng từ, chia sẻ, giục, sửa/ý kiến, chống sửa sau duyệt).
+let employees   = JSON.parse(localStorage.getItem('dc_employees')||'[]'); // danh sách nhân viên hưởng lương
+let salaryMonth = ''; // tháng đang xem ở tab Ứng lương, dạng 'YYYY-MM' (đặt ở init)
 let filter     = 'all';
 let uploadedImages = []; // mảng nhiều ảnh Zalo đính kèm (mỗi phần tử là base64 dataURL)
 
@@ -2378,20 +2380,13 @@ function initFirebaseSync(){
     }
   });
 
-  // ── LƯƠNG — 2 ngăn Firebase RIÊNG, HOÀN TOÀN TÁCH BIỆT (lỗi ở đây không đụng luồng duyệt/chuyển chi) ──
+  // ── LƯƠNG — DANH SÁCH NHÂN VIÊN ngăn Firebase riêng. Còn CÁC KHOẢN ỨNG LƯƠNG nay là phiếu 'proposals'
+  //    có kind='salary' (dùng chung bộ máy duyệt/chuyển/ảnh với phiếu chi), nên KHÔNG cần ngăn riêng nữa.
   db.ref('duyetchi/employees').on('value', snap=>{
     const raw = snap.val() || {};
     employees = Object.keys(raw).map(k=>raw[k]);
     _lastEmpIds = new Set(employees.map(e=>e.id));
     try{ localStorage.setItem('dc_employees', JSON.stringify(employees)); }catch(e){}
-    const pg = document.getElementById('page-luong');
-    if(pg && pg.style.display!=='none') renderLuongActive();
-  });
-  db.ref('duyetchi/salaryAdvances').on('value', snap=>{
-    const raw = snap.val() || {};
-    salaryAdvances = Object.keys(raw).map(k=>raw[k]);
-    _lastAdvIds = new Set(salaryAdvances.map(a=>a.id));
-    try{ localStorage.setItem('dc_salaryAdvances', JSON.stringify(salaryAdvances)); }catch(e){}
     const pg = document.getElementById('page-luong');
     if(pg && pg.style.display!=='none') renderLuongActive();
   });
@@ -2651,12 +2646,18 @@ function renderAll(){
   if(editOpen){ _renderAllPending = true; return; }
   // Debounce 80ms: tránh render liên tục khi Firebase gửi nhiều update liền nhau
   clearTimeout(_renderAllTimer);
-  _renderAllTimer = setTimeout(()=>{ renderProposals(); renderStats(); updateNotifBadge(); }, 80);
+  _renderAllTimer = setTimeout(()=>{
+    renderProposals(); renderStats(); updateNotifBadge();
+    // Tab Lương đọc từ chính 'proposals' (phiếu kind='salary') → nếu đang mở thì vẽ lại cho đồng bộ
+    const pgL = document.getElementById('page-luong');
+    if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} }
+  }, 80);
 }
 
 function getMyPendingItems(){
   const items = [];
   proposals.forEach(p=>{
+    if(p.kind==='salary') return; // ứng lương không đẩy vào chuông thông báo chi (có tab Lương riêng)
     if(p.status==='rejected') return;
     const dAmt = approvedAmtOf(p,'D');
     const hAmt = approvedAmtOf(p,'H');
@@ -2752,6 +2753,7 @@ function closeNotifAndGo(id){
 // Hàm dùng chung để xác định 1 phiếu có khớp với 1 loại filter hay không.
 // Dùng chung cho cả renderStats (đếm số liệu) và renderProposals (lọc danh sách) để đảm bảo số liệu luôn khớp với danh sách hiển thị.
 function matchFilter(p, f){
+  if(p && p.kind==='salary') return false; // phiếu ỨNG LƯƠNG chỉ hiện ở tab Lương, KHÔNG lẫn vào Danh sách/Thống kê chi
   switch(f){
     case 'all': return true;
     case 'pending': return (p.status==='pending')||(p.status==='approved'&&!(!!p.approvedD&&!!p.approvedH));
@@ -3134,7 +3136,7 @@ function maybeShowTransferReminder(){
   if(currentRole !== 'trang') return;
   if(!fbInitialLoadDone) return;
   const items = proposals.filter(p =>
-    p.status!=='rejected' && approvedAmtOf(p,'H') > 0 &&
+    p.kind!=='salary' && p.status!=='rejected' && approvedAmtOf(p,'H') > 0 &&
     getTotalTransferred(p) < getOfficialApprovedAmount(p) - 0.0001
   ).sort((a,b)=>(a.approvedH||0)-(b.approvedH||0)); // khoản chờ lâu nhất lên đầu
   if(!items.length) return;
@@ -4898,8 +4900,9 @@ function renderReportFilters(){
   const selS = document.getElementById('filter-site');
   if(!selP || !selS) return;
   const curP = selP.value, curS = selS.value;
-  const names = [...new Set(proposals.map(p=>p.person||'').filter(Boolean))].sort();
-  const siteList = [...new Set(proposals.map(p=>p.site||'').filter(Boolean))].sort();
+  const _exp = proposals.filter(p=>p.kind!=='salary'); // báo cáo chi không lấy tên/nhóm của ứng lương
+  const names = [...new Set(_exp.map(p=>p.person||'').filter(Boolean))].sort();
+  const siteList = [...new Set(_exp.map(p=>p.site||'').filter(Boolean))].sort();
   selP.innerHTML = '<option value="">👤 Tất cả người</option>' +
     names.map(n=>`<option value="${esc(n)}"${curP===n?' selected':''}>${esc(n)}</option>`).join('');
   selS.innerHTML = '<option value="">🏗 Tất cả CT</option>' +
@@ -4909,7 +4912,8 @@ function renderReportFilters(){
 function getFilteredProposals(){
   const p = (document.getElementById('filter-person')||{}).value||'';
   const s = (document.getElementById('filter-site')||{}).value||'';
-  return proposals.filter(x=>(!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
+  // Loại phiếu ỨNG LƯƠNG khỏi mọi báo cáo/CSV chi phí (chúng có tab Lương riêng)
+  return proposals.filter(x=>x.kind!=='salary' && (!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
 }
 
 function applyReportFilter(){
@@ -5234,15 +5238,16 @@ function generateReport(){
     if(rejInfo) detail += ` [${rejInfo}]`;
     return `• ${p.desc} — ${p.person} — ${p.site||'?'} — ${fmtVND(p.amount)}${detail}`;
   };
-  const hasTrans = proposals.filter(p=>getTotalTransferred(p)>0);
-  const appd = proposals.filter(p=>p.status==='approved');
-  const pend = proposals.filter(p=>p.status==='pending');
-  const rej  = proposals.filter(p=>p.status==='rejected');
-  const tot  = proposals.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
-  const transTotal = proposals.reduce((a,p)=>a+getTotalTransferred(p),0);
+  const _exp = proposals.filter(p=>p.kind!=='salary'); // báo cáo tổng hợp chi — KHÔNG gồm ứng lương
+  const hasTrans = _exp.filter(p=>getTotalTransferred(p)>0);
+  const appd = _exp.filter(p=>p.status==='approved');
+  const pend = _exp.filter(p=>p.status==='pending');
+  const rej  = _exp.filter(p=>p.status==='rejected');
+  const tot  = _exp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const transTotal = _exp.reduce((a,p)=>a+getTotalTransferred(p),0);
   let lines=[];
   lines.push(`📊 BÁO CÁO TỔNG HỢP — ${new Date().toLocaleDateString('vi-VN')}`);
-  lines.push(`Tổng: ${proposals.length} đề xuất · ${fmtVND(tot)} · Đã chuyển: ${fmtVND(transTotal)}`);
+  lines.push(`Tổng: ${_exp.length} đề xuất · ${fmtVND(tot)} · Đã chuyển: ${fmtVND(transTotal)}`);
   lines.push('');
   lines.push(`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản, ${fmt(hasTrans.reduce((a,p)=>a+getTotalTransferred(p),0))}tr):`);
   lines.push(hasTrans.length ? hasTrans.map(fLine).join('\n') : '(không có)');
@@ -5392,6 +5397,7 @@ function updateSheetBadge(ok){
 
 function syncToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='salary') return; // ứng lương KHÔNG ghi vào Google Sheet chi phí
   const params = new URLSearchParams({
     action:'add',id:p.id,
     ts:new Date(p.ts).toLocaleString('vi-VN'),
@@ -5407,6 +5413,7 @@ function syncToSheet(p){
 
 function syncStatusToSheet(id,status){
   if(!sheetUrl) return;
+  if((proposals.find(x=>x.id===id)||{}).kind==='salary') return; // ứng lương không đụng sheet chi
   const lbl={pending:'Chờ duyệt',approved:'Đã duyệt',transferred:'Đã chuyển',rejected:'Từ chối'};
   const params = new URLSearchParams({action:'updateStatus',id,status:lbl[status]||status});
   var s=document.createElement('script');
@@ -5417,6 +5424,7 @@ function syncStatusToSheet(id,status){
 
 function syncDeleteToSheet(id){
   if(!sheetUrl) return;
+  if((proposals.find(x=>x.id===id)||{}).kind==='salary') return;
   const params = new URLSearchParams({action:'delete',id});
   var s=document.createElement('script');
   s.src=sheetUrl+'?'+params.toString();
@@ -5427,7 +5435,7 @@ function syncDeleteToSheet(id){
 // Đối chiếu: gửi danh sách ID món hiện có → Sheet tự xoá dòng nào không còn trong app (dọn rác đã xoá)
 function syncReconcileToSheet(){
   if(!sheetUrl) return;
-  const ids = proposals.map(p=>p.id).filter(Boolean);
+  const ids = proposals.filter(p=>p.kind!=='salary').map(p=>p.id).filter(Boolean); // sheet chi không gồm ứng lương
   if(!ids.length) return; // an toàn: danh sách rỗng thì không gửi (tránh xoá sạch)
   const params = new URLSearchParams({ action:'reconcile', ids: ids.join(','), total: String(ids.length) });
   var s=document.createElement('script');
@@ -5438,6 +5446,7 @@ function syncReconcileToSheet(){
 
 function syncEditToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='salary') return;
   const params = new URLSearchParams({
     action:'edit', id:p.id,
     desc:p.desc||'', person:p.person||'',
@@ -5451,6 +5460,7 @@ function syncEditToSheet(p){
 
 function syncEditToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='salary') return;
   const params = new URLSearchParams({
     action:'edit', id:p.id,
     desc:p.desc||'', person:p.person||'',
@@ -5464,6 +5474,7 @@ function syncEditToSheet(p){
 
 function syncApprovalToSheet(id, field, time){
   if(!sheetUrl) return;
+  if((proposals.find(x=>x.id===id)||{}).kind==='salary') return;
   const params = new URLSearchParams({
     action:'updateApproval', id,
     field: field==='approvedD' ? 'D' : 'H',
@@ -5477,6 +5488,7 @@ function syncApprovalToSheet(id, field, time){
 
 function syncApprovalAmountToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='salary') return;
   const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const params = new URLSearchParams({
@@ -5493,6 +5505,7 @@ function syncApprovalAmountToSheet(p){
 
 function syncTransferToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='salary') return;
   const history = Array.isArray(p.transfers) ? p.transfers.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const params = new URLSearchParams({
     action:'updateTransfer', id:p.id,
@@ -5507,6 +5520,7 @@ function syncTransferToSheet(p){
 
 function syncRejectedByToSheet(id, rejectedBy){
   if(!sheetUrl) return;
+  if((proposals.find(x=>x.id===id)||{}).kind==='salary') return;
   const params = new URLSearchParams({action:'updateRejectedBy', id, rejectedBy: rejectedBy||''});
   var s=document.createElement('script');
   s.src=sheetUrl+'?'+params.toString();
@@ -5624,29 +5638,20 @@ function showToast(msg){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// ── MODULE LƯƠNG (ỨNG LƯƠNG) ── MỚI HOÀN TOÀN, TÁCH BIỆT: chỉ đọc/ghi `employees` &
-// `salaryAdvances`, KHÔNG đụng `proposals`/`plans`. Ghi Firebase theo path con (giống savePlans).
-// Luồng: ai đã duyệt cũng ĐỀ XUẤT ứng → Dũng duyệt số → Hiền duyệt số → Trang chuyển.
+// ── MODULE LƯƠNG (ỨNG LƯƠNG) ── Danh sách NHÂN VIÊN ở ngăn `employees` riêng. Các KHOẢN ỨNG LƯƠNG là
+// PHIẾU (proposals) có kind='salary' → dùng chung bộ máy + bảo mật phiếu chi (duyệt/chuyển/ảnh/chứng từ...).
+// Luồng: ai đã duyệt cũng ĐỀ XUẤT ứng → Dũng duyệt số → Hiền duyệt số → Trang chuyển (như phiếu chi).
 // ══════════════════════════════════════════════════════════════════════════
 let _lastEmpIds = new Set(employees.map(e=>e.id));
-let _lastAdvIds = new Set(salaryAdvances.map(a=>a.id));
 
 function monthKeyNow(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
 function monthLabel(mk){ if(!mk) return '—'; const p=mk.split('-'); return 'Tháng '+p[1]+'/'+p[0]; }
 function ensureSalaryMonth(){ if(!salaryMonth) salaryMonth = monthKeyNow(); }
 function gIcon(g){ return g==='Văn phòng' ? '🏢' : '🏗'; }
 function salaryGroupOptions(){ return '<option value="Văn phòng">🏢 Văn phòng</option>'+sites.map(s=>`<option value="${esc(s)}">🏗 ${esc(s)}</option>`).join(''); }
-function salOfficialApproved(a){ if(a.approvedH!=null) return parseFloat(a.approvedH)||0; if(a.approvedD!=null) return parseFloat(a.approvedD)||0; return 0; }
-function salStatusInfo(a){
-  const tr=parseFloat(a.transferred)||0, off=salOfficialApproved(a);
-  if(a.status==='rejected') return {label:'❌ Từ chối', bg:'#fef2f2', color:'#dc2626'};
-  if(off>0 && tr>=off-0.0001) return {label:'✅ Đã chuyển', bg:'#f0fdf4', color:'#16a34a'};
-  if(a.approvedH!=null) return {label:'💸 Chờ chuyển', bg:'#eff6ff', color:'#2563eb'};
-  if(a.approvedD!=null) return {label:'⏳ Chờ H duyệt', bg:'#fffbeb', color:'#d97706'};
-  return {label:'⏳ Chờ D duyệt', bg:'#fdf4ff', color:'#9333ea'};
-}
+// (Số duyệt chính thức / đã chuyển của phiếu ứng lương dùng CHUNG hàm phiếu chi: getOfficialApprovedAmount, getTotalTransferred.)
 
-// ── LƯU FIREBASE (per-child update, GIỐNG savePlans — KHÔNG set() đè cả ngăn) ──
+// ── LƯU DANH SÁCH NHÂN VIÊN (per-child update, GIỐNG savePlans — KHÔNG set() đè cả ngăn) ──
 function saveEmployees(){
   try{ localStorage.setItem('dc_employees', JSON.stringify(employees)); }catch(e){}
   if(!fbInitialLoadDone) return;
@@ -5655,15 +5660,6 @@ function saveEmployees(){
   _lastEmpIds.forEach(id=>{ if(!now.has(id)) updates['duyetchi/employees/'+id]=null; });
   _lastEmpIds=now;
   db.ref().update(updates).catch(err=>{ console.warn('Lỗi ghi nhân viên:',err.message); showToast('⚠️ Không đồng bộ được nhân viên — kiểm tra mạng.'); });
-}
-function saveSalaryAdvances(){
-  try{ localStorage.setItem('dc_salaryAdvances', JSON.stringify(salaryAdvances)); }catch(e){}
-  if(!fbInitialLoadDone) return;
-  const updates={}, now=new Set();
-  salaryAdvances.forEach(a=>{ updates['duyetchi/salaryAdvances/'+a.id]=a; now.add(a.id); });
-  _lastAdvIds.forEach(id=>{ if(!now.has(id)) updates['duyetchi/salaryAdvances/'+id]=null; });
-  _lastAdvIds=now;
-  db.ref().update(updates).catch(err=>{ console.warn('Lỗi ghi ứng lương:',err.message); showToast('⚠️ Không đồng bộ được ứng lương — kiểm tra mạng.'); });
 }
 
 // ── ĐIỀU HƯỚNG TAB CON ──
@@ -5745,28 +5741,44 @@ function renderEmployees(){
     </div>`).join('')+`</div></div>`).join('');
 }
 
-// ── ĐỀ XUẤT ỨNG LƯƠNG ──
-let _editAdvId=null;
-function openAdvModal(id){
+// ── ĐỀ XUẤT ỨNG LƯƠNG = tạo 1 PHIẾU (proposals) kind='salary'. Sửa/duyệt/chuyển/ảnh chứng từ/chia sẻ/
+//    giục... đều dùng nút của thẻ phiếu chi (_buildCard) → giống HỆT đề xuất duyệt chi. Modal này chỉ TẠO MỚI.
+//    (Ảnh đính kèm dùng chung mảng `uploadedImages` + compressImage với form Thêm mới.)
+function handleAdvImg(input){ const files=Array.from(input.files||[]); if(files.length) addAdvImages(files); input.value=''; }
+function addAdvImages(files){
+  const valid=files.filter(f=>f.type&&f.type.startsWith('image/'));
+  if(!valid.length) return;
+  showToast('⏳ Đang tải ảnh...');
+  let done=0;
+  valid.forEach(file=>compressImage(file).then(d=>{ uploadedImages.push(d); done++; if(done===valid.length){ renderAdvImgPreview(); showToast('✅ Đã thêm '+valid.length+' ảnh'); } })
+    .catch(()=>{ done++; if(done===valid.length) renderAdvImgPreview(); }));
+}
+function renderAdvImgPreview(){
+  const wrap=document.getElementById('adv-img-preview'); if(!wrap) return;
+  if(!uploadedImages.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(src)}" alt="Ảnh ${idx+1}"></div>`).join('');
+  wrap.querySelectorAll('.img-preview-item').forEach(item=>{ const idx=parseInt(item.dataset.idx,10); const img=item.querySelector('img'); attachLongPress(img, ()=>uploadedImages[idx], ()=>(()=>{ uploadedImages.splice(idx,1); renderAdvImgPreview(); })); });
+}
+function _advClearImages(){ uploadedImages=[]; renderAdvImgPreview(); const fi=document.getElementById('adv-file-input'); if(fi) fi.value=''; }
+
+function openAdvModal(){
   ensureSalaryMonth();
   if(!employees.length){ showToast('Chưa có nhân viên — thêm ở tab 👥 Nhân viên trước'); setLuongTab('emp', document.querySelector('#page-luong .report-subtab[data-tab="emp"]')); return; }
-  _editAdvId=id||null;
-  const a=id?salaryAdvances.find(x=>x.id===id):null;
-  const monthUsed = a?a.month:salaryMonth;
-  document.getElementById('adv-modal-title').textContent=a?'Sửa đề xuất ứng':'Đề xuất ứng lương';
+  _advClearImages();
+  const monthUsed = salaryMonth;
+  document.getElementById('adv-modal-title').textContent='Đề xuất ứng lương';
   document.getElementById('adv-month-label').textContent=monthLabel(monthUsed);
   const sel=document.getElementById('adv-inp-emp');
   const order=['Văn phòng'].concat(sites);
   const sorted=employees.slice().sort((x,y)=>{ let ix=order.indexOf(x.group); let iy=order.indexOf(y.group); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy || (x.name>y.name?1:-1); });
   sel.innerHTML='<option value="">— Chọn nhân viên —</option>'+sorted.map(e=>`<option value="${esc(e.id)}">${esc(e.name)} — ${esc(e.group)}</option>`).join('');
-  sel.value=a?a.empId:'';
-  document.getElementById('adv-inp-amount').value=a?Number(a.amount).toLocaleString('vi-VN'):'';
-  document.getElementById('adv-inp-note').value=a?(a.note||''):'';
-  const ov=document.getElementById('adv-modal-overlay');
-  ov.dataset.month=monthUsed;
-  ov.style.display='flex';
+  sel.value='';
+  document.getElementById('adv-inp-amount').value='';
+  document.getElementById('adv-inp-note').value='';
+  const ov=document.getElementById('adv-modal-overlay'); ov.dataset.month=monthUsed; ov.style.display='flex';
 }
-function closeAdvModal(){ document.getElementById('adv-modal-overlay').style.display='none'; _editAdvId=null; }
+function closeAdvModal(){ document.getElementById('adv-modal-overlay').style.display='none'; _advClearImages(); }
 function saveAdvFromModal(){
   const empId=document.getElementById('adv-inp-emp').value;
   const amount=parseAmountInput(document.getElementById('adv-inp-amount'));
@@ -5776,232 +5788,65 @@ function saveAdvFromModal(){
   if(!amount||amount<=0){ showToast('Nhập số tiền hợp lệ'); return; }
   const emp=employees.find(e=>e.id===empId);
   if(!emp){ showToast('Nhân viên không tồn tại'); return; }
-  if(_editAdvId){
-    const a=salaryAdvances.find(x=>x.id===_editAdvId);
-    if(a){
-      if(a.approvedD!=null||a.approvedH!=null||a.transferred!=null){ showToast('Khoản đã duyệt/chuyển — không sửa nội dung được'); return; }
-      a.empId=empId; a.empName=emp.name; a.group=emp.group; a.amount=amount; a.note=note;
-    }
-  } else {
-    salaryAdvances.push({
-      id:'adv_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-      empId, empName:emp.name, group:emp.group, month, amount, note,
-      createdBy:getCurrentUserName(), ts:Date.now(),
-      approvedD:null, approvedH:null, transferred:null, status:'pending'
-    });
-  }
-  saveSalaryAdvances(); closeAdvModal();
+  // Tạo PHIẾU Ứng lương — cùng cấu trúc phiếu chi + gắn kind/empId/month. person=tên NV, site=nhóm.
+  const p={
+    id: Date.now().toString(),
+    kind: 'salary', empId: emp.id, month,
+    desc: 'Ứng lương ' + monthLabel(month),
+    person: emp.name, site: emp.group,
+    amount, amountUnit:'dong', note,
+    priority:'normal', status:'pending', ts: Date.now(),
+    imgB64: uploadedImages[0]||null, imgImages: uploadedImages.slice(), proofImages: [],
+    approvedD:null, approvedH:null, approvedDAmount:null, approvedHAmount:null,
+    approvedDHistory:[], approvedHHistory:[], transfers:[]
+  };
+  proposals.unshift(p);
+  save();
+  _advClearImages();
+  closeAdvModal();
   salaryMonth=month;
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
   showToast('✅ Đã gửi đề xuất ứng lương');
-  sendPushNotif('💵 Đề xuất ứng lương mới', emp.name+': '+fmtVND(amount), ['dung','hien']);
-}
-function deleteAdv(id){
-  const a=salaryAdvances.find(x=>x.id===id); if(!a) return;
-  if((a.approvedD!=null||a.approvedH!=null||a.transferred!=null) && currentRole!=='dung'){ showToast('Khoản đã duyệt — chỉ Dũng xoá được'); return; }
-  if(!confirm('Xoá khoản đề xuất ứng này?')) return;
-  salaryAdvances=salaryAdvances.filter(x=>x.id!==id);
-  saveSalaryAdvances(); renderLuongActive();
-  showToast('Đã xoá khoản ứng');
-}
-function salReject(id){
-  if(currentRole!=='dung'&&currentRole!=='hien') return;
-  const a=salaryAdvances.find(x=>x.id===id); if(!a) return;
-  if(!confirm('Từ chối khoản ứng này?')) return;
-  a.status='rejected';
-  saveSalaryAdvances(); renderLuongActive();
-  showToast('Đã từ chối khoản ứng');
+  sendPushNotif('💵 Đề xuất ứng lương mới', emp.name+': '+fmtVND(amount), ['dung','hien','trang']);
 }
 
-// ── DUYỆT / CHUYỂN (modal số tiền dùng chung) ──
-let pendingSalAction=null;
-function openSalAmount(id, kind){
-  const a=salaryAdvances.find(x=>x.id===id); if(!a) return;
-  pendingSalAction={id,kind};
-  const amt=parseFloat(a.amount)||0;
-  let title,sub,def;
-  if(kind==='D'){ title='Dũng duyệt ứng'; sub=`Đề xuất: ${fmtVND(amt)}`; def=a.approvedD!=null?a.approvedD:amt; }
-  else if(kind==='H'){ title='Hiền duyệt ứng'; sub=`Đề xuất: ${fmtVND(amt)}${a.approvedD!=null?' · D duyệt: '+fmtVND(a.approvedD):''}`; def=a.approvedH!=null?a.approvedH:(a.approvedD!=null?a.approvedD:amt); }
-  else { const off=salOfficialApproved(a); const tr=parseFloat(a.transferred)||0; title='Trang chuyển ứng'; sub=`Đã duyệt: ${fmtVND(off)} · đã chuyển: ${fmtVND(tr)} · còn: ${fmtVND(Math.max(0,off-tr))}`; def=Math.max(0,off-tr); }
-  document.getElementById('sal-am-title').textContent=title;
-  document.getElementById('sal-am-sub').textContent=sub;
-  document.getElementById('sal-am-amount').value= def? Number(def).toLocaleString('vi-VN'):'';
-  document.getElementById('sal-amount-modal').style.display='flex';
-}
-function closeSalAmount(){ document.getElementById('sal-amount-modal').style.display='none'; pendingSalAction=null; }
-function confirmSalAmount(){
-  if(!pendingSalAction) return;
-  const {id,kind}=pendingSalAction;
-  const a=salaryAdvances.find(x=>x.id===id); if(!a){ closeSalAmount(); return; }
-  const val=parseAmountInput(document.getElementById('sal-am-amount'));
-  const amt=parseFloat(a.amount)||0;
-  if(!val||val<=0){ showToast('Nhập số tiền hợp lệ'); return; }
-  if(kind==='D'){
-    if(currentRole!=='dung'){ showToast('Chỉ Dũng duyệt được mục này'); return; }
-    if(val>amt){ showToast('Không duyệt vượt số đề xuất ('+fmtVND(amt)+')'); return; }
-    a.approvedD=val; a.approvedDAt=Date.now();
-    if(a.status!=='rejected') a.status='approved';
-    saveSalaryAdvances(); closeSalAmount(); renderLuongActive();
-    showToast('✓ Dũng đã duyệt ứng '+fmtVND(val));
-    sendPushNotif('✅ Dũng duyệt ứng lương', a.empName+': '+fmtVND(val), ['hien','trang']);
-  } else if(kind==='H'){
-    if(currentRole!=='hien'){ showToast('Chỉ Hiền duyệt được mục này'); return; }
-    if(val>amt){ showToast('Không duyệt vượt số đề xuất ('+fmtVND(amt)+')'); return; }
-    a.approvedH=val; a.approvedHAt=Date.now();
-    if(a.status!=='rejected') a.status='approved';
-    saveSalaryAdvances(); closeSalAmount(); renderLuongActive();
-    showToast('✓ Hiền đã duyệt ứng '+fmtVND(val));
-    sendPushNotif('✅ Hiền duyệt ứng lương', a.empName+': '+fmtVND(val), ['dung','trang']);
-  } else {
-    if(currentRole!=='trang'){ showToast('Chỉ Trang chuyển được'); return; }
-    const off=salOfficialApproved(a); const prev=parseFloat(a.transferred)||0;
-    if(off<=0){ showToast('Khoản này chưa được duyệt'); return; }
-    if(prev+val>off+1){ showToast('Không chuyển vượt số đã duyệt (còn '+fmtVND(Math.max(0,off-prev))+')'); return; }
-    a.transferred=prev+val; a.transferredAt=Date.now();
-    if((parseFloat(a.transferred)||0)>=off-0.0001) a.status='transferred';
-    saveSalaryAdvances(); closeSalAmount(); renderLuongActive();
-    showToast('💸 Đã chuyển ứng '+fmtVND(val));
-    sendPushNotif('💸 Trang chuyển ứng lương', a.empName+': '+fmtVND(val), ['dung','hien']);
-  }
-}
-
-// ── RENDER TAB ỨNG LƯƠNG (theo tháng, nhóm Văn phòng + công trình) ──
+// ── RENDER TAB ỨNG LƯƠNG (theo tháng, nhóm Văn phòng + công trình) — dùng ĐÚNG thẻ phiếu chi (renderCard) ──
 function renderSalaryAdvances(){
   ensureSalaryMonth();
   const label=document.getElementById('sal-month-label');
   if(label) label.textContent=monthLabel(salaryMonth);
   const list=document.getElementById('sal-adv-list');
   if(!list) return;
-  const items=salaryAdvances.filter(a=>a.month===salaryMonth);
-  const tDX=items.reduce((s,a)=>s+(parseFloat(a.amount)||0),0);
-  const tDuyet=items.reduce((s,a)=>s+salOfficialApproved(a),0);
-  const tChuyen=items.reduce((s,a)=>s+(parseFloat(a.transferred)||0),0);
+  const items=proposals.filter(p=>p.kind==='salary' && p.month===salaryMonth);
+  const tDX=items.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
+  const tDuyet=items.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
+  const tChuyen=items.reduce((s,p)=>s+getTotalTransferred(p),0);
   const sub=document.getElementById('sal-month-sub');
   if(sub) sub.innerHTML = items.length? `Đề xuất ${fmtTr(tDX)} · duyệt ${fmtTr(tDuyet)} · chuyển ${fmtTr(tChuyen)}` : '&nbsp;';
   if(!items.length){ list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có khoản ứng nào trong tháng này<br><small>Nhấn "➕ Đề xuất ứng lương"</small></div>'; return; }
   const order=['Văn phòng'].concat(sites);
   const groups={};
-  items.forEach(a=>{ (groups[a.group]=groups[a.group]||[]).push(a); });
+  items.forEach(p=>{ (groups[p.site]=groups[p.site]||[]).push(p); });
   const keys=Object.keys(groups).sort((x,y)=>{ let ix=order.indexOf(x); let iy=order.indexOf(y); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy; });
   list.innerHTML=keys.map(g=>{
-    const gItems=groups[g];
-    const gSum=gItems.reduce((s,a)=>s+salOfficialApproved(a),0);
+    const gItems=groups[g].slice().sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0)-Math.max(a.ts||0,a.lastRemindAt||0));
+    const gSum=gItems.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
     return `<div style="margin:8px 4px 4px;padding:0 4px;display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:13px;font-weight:800;color:var(--blue)">${gIcon(g)} ${esc(g)} <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${gItems.length} khoản</span></div>
         <div style="font-size:11px;color:var(--text-sub)">duyệt ${fmtTr(gSum)}</div>
-      </div>` + gItems.map(a=>buildAdvCard(a)).join('');
+      </div>` + gItems.map(p=>renderCard(p)).join('');
   }).join('');
-}
-// Bố cục thẻ ứng lương LÀM GIỐNG thẻ "Danh sách đề nghị" (proposal card): trái = tên/nhóm/người/số,
-// phải = badge-stack D/H/T; dưới = approve-row các ô D/H/T như phiếu chi.
-function salBtnD(a){
-  const done = a.approvedD!=null;
-  const closed = a.status==='transferred' || a.status==='rejected';
-  if(currentRole==='dung' && !closed){
-    const txtClr = done?'#dc2626':'var(--yellow)', boxClr = done?'var(--green)':'var(--yellow)', bg = done?'#eafff0':'#fffbeb', lbl = done?'Đã duyệt':'Chờ duyệt';
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">D</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="openSalAmount('${sid(a.id)}','D')">${inner}</button></div>`;
-  }
-  if(done){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">D</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
-  }
-  return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
-}
-function salBtnH(a){
-  const done = a.approvedH!=null;
-  const closed = a.status==='transferred' || a.status==='rejected';
-  if(currentRole==='hien' && !closed){
-    const txtClr = done?'#dc2626':'var(--yellow)', boxClr = done?'var(--green)':'var(--yellow)', bg = done?'#eafff0':'#fffbeb', lbl = done?'Đã duyệt':'Chờ duyệt';
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">H</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="openSalAmount('${sid(a.id)}','H')">${inner}</button></div>`;
-  }
-  if(done){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">H</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
-  }
-  return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
-}
-function salBtnT(a){
-  const off = salOfficialApproved(a), tr = parseFloat(a.transferred)||0;
-  const done = tr>0 && tr>=off-0.0001;
-  const canPress = currentRole==='trang' && off>0 && a.status!=='rejected' && tr < off-0.0001;
-  if(canPress){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:var(--yellow)">T</span><span class="ab-mid-label" style="color:var(--yellow)">Chuyển</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="width:100%" onclick="openSalAmount('${sid(a.id)}','transfer')">${inner}</button></div>`;
-  }
-  if(done){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:var(--green)">T</span><span class="ab-mid-label" style="color:var(--green)">Đã chuyển</span></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
-  }
-  return `<div class="approve-box"><div class="ab-flat-locked">🔒 T</div></div>`;
-}
-function buildAdvCard(a){
-  const emp=employees.find(e=>e.id===a.empId);
-  const note=a.note || (emp&&emp.note) || '';
-  const amt=parseFloat(a.amount)||0;
-  const off=salOfficialApproved(a);
-  const tr=parseFloat(a.transferred)||0;
-  // ── badge-stack bên phải (giống phiếu chi): D / H / T ──
-  let badgeHtml;
-  if(a.status==='rejected'){
-    badgeHtml = `<div class="badge-stack"><span class="badge badge-reject">❌ Từ chối</span></div>`;
-  } else {
-    const dBadge = a.approvedD!=null ? `<span class="badge badge-approved">✅ D duyệt ${fmtVND(a.approvedD)}</span>` : `<span class="badge badge-wait">⏳ D chờ duyệt</span>`;
-    const hBadge = a.approvedH!=null ? `<span class="badge badge-approved">✅ H duyệt ${fmtVND(a.approvedH)}</span>` : `<span class="badge badge-wait">⏳ H chờ duyệt</span>`;
-    let tRow='';
-    if(tr>0){ tRow = `<span class="badge badge-done">💸 T chuyển ${tr>=off-0.0001?fmtVND(tr):fmtVND(tr)+'/'+fmtVND(off)}</span>`; }
-    let waitRow='';
-    if(a.approvedH!=null && tr < off-0.0001){
-      const hTs=a.approvedHAt||0; const waitDays=hTs?Math.floor((Date.now()-hTs)/86400000):0;
-      const label = waitDays<1?'💸 Chờ chuyển (hôm nay)':`💸 Chờ chuyển — đã ${waitDays} ngày`;
-      const styleAttr = waitDays>=3?'':' style="background:#fff7ed;color:#c2410c"';
-      waitRow = `<span class="badge${waitDays>=3?' badge-reject':''}"${styleAttr}>${label}</span>`;
-    }
-    badgeHtml = `<div class="badge-stack">${dBadge}${hBadge}${tRow}${waitRow}</div>`;
-  }
-  // ── approve-row dưới (giống phiếu chi): D / H / T + từ chối + sửa/xoá ──
-  const unlocked = a.approvedD==null && a.approvedH==null && a.transferred==null;
-  const canEdit = unlocked && (currentRole==='dung' || (a.createdBy && a.createdBy===getCurrentUserName()));
-  const canDel  = (unlocked && (currentRole==='dung' || (a.createdBy && a.createdBy===getCurrentUserName()))) || currentRole==='dung';
-  const canReject = (currentRole==='dung'||currentRole==='hien') && a.status!=='rejected' && a.status!=='transferred' && a.transferred==null;
-  const miniStyle = 'flex:0 0 auto;width:22px;min-width:22px;max-width:22px;padding:0;font-size:13px';
-  const rejectBtn = canReject ? `<button class="ab-del-mini" style="${miniStyle};color:var(--red)" onclick="salReject('${sid(a.id)}')" title="Từ chối">✖</button>` : '';
-  const editBtn = canEdit ? `<button class="ab-del-mini" style="${miniStyle}" onclick="openAdvModal('${sid(a.id)}')" title="Sửa">✏️</button>` : '';
-  const delBtn  = canDel  ? `<button class="ab-del-mini" style="${miniStyle};color:var(--red)" onclick="deleteAdv('${sid(a.id)}')" title="Xoá">🗑</button>` : '';
-  return `<div class="proposal status-${esc(a.status||'pending')}" id="advcard-${sid(a.id)}">
-    <div class="proposal-top">
-      <div class="proposal-top-row">
-        <div class="proposal-left-col">
-          <div class="proposal-desc">${esc(a.empName)}</div>
-          <div class="proposal-meta">
-            <span>${gIcon(a.group)} ${esc(a.group)}</span>
-            <span>🙋 ${esc(a.createdBy||'—')}</span>
-            <span>🕐 ${fmtFull(a.ts)}</span>
-          </div>
-          <div class="proposal-amount">${fmtVND(amt)}</div>
-        </div>
-        <div class="proposal-badge-area">${badgeHtml}</div>
-      </div>
-      ${note?`<div class="proposal-note">📝 ${esc(note)}</div>`:''}
-    </div>
-    <div class="approve-row">
-      ${salBtnD(a)}
-      ${salBtnH(a)}
-      ${salBtnT(a)}
-      ${rejectBtn}
-      ${editBtn}
-      ${delBtn}
-    </div>
-  </div>`;
+  attachThumbLongPress(list);
+  try{ if(typeof _observeImageCards==='function') _observeImageCards(); }catch(e){} // ảnh lazy-load cho card ứng lương
 }
 
 // ── THỐNG KÊ ỨNG LƯƠNG ──
 function renderSalaryStats(){
   const el=document.getElementById('sal-stats-content');
   if(!el) return;
+  const all=proposals.filter(p=>p.kind==='salary');
   const per=document.getElementById('sal-stats-period');
-  const months=Array.from(new Set(salaryAdvances.map(a=>a.month).filter(Boolean))).sort().reverse();
+  const months=Array.from(new Set(all.map(p=>p.month).filter(Boolean))).sort().reverse();
   const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
   if(per){
     const cur=per.value;
@@ -6016,18 +5861,18 @@ function renderSalaryStats(){
     site.value=cur;
   }
   const pv=per?per.value:'', sv=site?site.value:'';
-  let items=salaryAdvances.filter(a=>a.status!=='rejected');
-  if(pv.indexOf('Y-')===0) items=items.filter(a=>(a.month||'').indexOf(pv.slice(2)+'-')===0);
-  else if(pv.indexOf('M-')===0) items=items.filter(a=>a.month===pv.slice(2));
-  if(sv) items=items.filter(a=>a.group===sv);
+  let items=all.filter(p=>p.status!=='rejected');
+  if(pv.indexOf('Y-')===0) items=items.filter(p=>(p.month||'').indexOf(pv.slice(2)+'-')===0);
+  else if(pv.indexOf('M-')===0) items=items.filter(p=>p.month===pv.slice(2));
+  if(sv) items=items.filter(p=>p.site===sv);
   if(!items.length){ el.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu ứng lương</div>'; return; }
-  const tDuyet=items.reduce((s,a)=>s+salOfficialApproved(a),0);
-  const tChuyen=items.reduce((s,a)=>s+(parseFloat(a.transferred)||0),0);
+  const tDuyet=items.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
+  const tChuyen=items.reduce((s,p)=>s+getTotalTransferred(p),0);
   const tChoChuyen=Math.max(0,tDuyet-tChuyen);
-  const byG={}; items.forEach(a=>{ byG[a.group]=(byG[a.group]||0)+salOfficialApproved(a); });
+  const byG={}; items.forEach(p=>{ byG[p.site]=(byG[p.site]||0)+(getOfficialApprovedAmount(p)||0); });
   const order=['Văn phòng'].concat(sites);
   const gkeys=Object.keys(byG).sort((x,y)=>{let ix=order.indexOf(x);let iy=order.indexOf(y);if(ix<0)ix=999;if(iy<0)iy=999;return ix-iy;});
-  const byE={}; items.forEach(a=>{ const k=a.empId||a.empName; if(!byE[k]) byE[k]={name:a.empName,group:a.group,sum:0}; byE[k].sum+=salOfficialApproved(a); });
+  const byE={}; items.forEach(p=>{ const k=p.empId||p.person; if(!byE[k]) byE[k]={name:p.person,group:p.site,sum:0}; byE[k].sum+=(getOfficialApprovedAmount(p)||0); });
   const ekeys=Object.keys(byE).sort((x,y)=>byE[y].sum-byE[x].sum);
   el.innerHTML=`
     <div class="card"><div class="card-body" style="padding:12px">

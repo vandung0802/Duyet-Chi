@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v85** (`APP_VERSION = '20260714-v85'`, `sw.js VERSION = '20260714-85'`, `version.txt = 20260714-v85`) — thêm **module Lương/ứng lương** (mục AL). Trước đó: luật v83+v84 (mục AJ, AK) + backup tự động. Ngày 14/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v87** (ứng lương = phiếu chi kind='salary', giống hệt — xem mục AM). Trước đó **v85** (`APP_VERSION = '20260714-v85'`, `sw.js VERSION = '20260714-85'`, `version.txt = 20260714-v85`) — thêm **module Lương/ứng lương** (mục AL). Trước đó: luật v83+v84 (mục AJ, AK) + backup tự động. Ngày 14/07/2026.
 
 ---
 
@@ -555,7 +555,15 @@ Sau khi user hỏi "bảo mật cao hơn nữa", đã phân tích mối đe dọ
 - **Giới hạn giá trị (3c) — luật v84:** mỗi field `desc/note/amount/amountUnit/person/site` giờ = `(ĐÓNG BĂNG cũ) && (CAP)`. Cap: desc/note ≤ 5000 ký tự, person/site ≤ 200, amountUnit ≤ 40, amount là số trong [0 ; 100.000.000.000] (100 tỷ). Ngưỡng RẤT RỘNG so với thật (desc dài nhất 158, note 179, amount lớn nhất ~859tr) → không chặn nhầm. Cap chỉ "cắn" đúng kiểu (`!isString||len<=N`, `!isNumber||range`) nên không bao giờ từ chối dữ liệu cũ khi app ghi lại cả phiếu. Đã deploy + xác nhận 6/6 field có cap, 190 phiếu nguyên vẹn.
 - **CÒN LẠI cho user tự làm (mạnh nhất):** bật **2FA** 3 Gmail + **khóa màn hình** mọi điện thoại. Nhóm 3 (App Check theo dõi→siết, xác nhận-lại khi duyệt/chuyển, audit log ghi-một-lần, test luật tự động) — chờ user chọn làm tiếp.
 
-### AL. 💵 MODULE LƯƠNG (ứng lương) — tab mới, TÁCH BIỆT (v85, 14/07/2026)
+### AM. 💵 LƯƠNG v87 — ứng lương GIỐNG HỆT phiếu chi (14/07/2026, thay kiến trúc mục AL)
+User: "làm đề xuất lương giống như đề xuất duyệt chi từ nút ảnh đính kèm và TẤT CẢ công dụng". → Đổi kiến trúc: **mỗi khoản ứng lương giờ là 1 PHIẾU thật trong `proposals`** có `kind:'salary'` + `empId` + `month` (person=tên NV, site=nhóm/công trình, desc="Ứng lương tháng.."). Nhờ vậy DÙNG CHUNG 100% bộ máy phiếu chi: ảnh Zalo đính kèm, duyệt D/H **từng phần có lịch sử**, chuyển từng phần, ảnh chứng từ, chia sẻ, giục, sửa/ý kiến, **contentSnapshot chống sửa sau duyệt**, và toàn bộ luật bảo mật proposals (KHÔNG cần luật mới — kind/empId/month là field phụ, tự do ghi).
+- **Bỏ** ngăn `duyetchi/salaryAdvances` + mọi hàm tự viết (buildAdvCard, salBtnD/H/T, openSalAmount/confirmSalAmount, salReject, deleteAdv, saveSalaryAdvances...). Tab Lương giờ chỉ là "khung nhìn": `renderSalaryAdvances` lọc `proposals` theo kind='salary' + tháng, nhóm theo site, vẽ bằng chính `renderCard`/`_buildCard` (thẻ + nút y hệt Danh sách chi). Ảnh lazy-load qua `_observeImageCards` (chung).
+- **Tạo mới:** modal `openAdvModal`/`saveAdvFromModal` — có **ảnh đính kèm** (dùng chung `uploadedImages`+`compressImage`, phần tử riêng `#adv-file-input`/`#adv-img-preview`), chọn NV từ `employees`, tạo phiếu kind='salary' rồi `proposals.unshift`+`save()`. Sửa/duyệt/chuyển/xoá đều bằng nút của thẻ (openEditProposal, approveBy, doTransfer, del...).
+- **LỌC để ứng lương KHÔNG lẫn vào chi** (đã test kỹ): `matchFilter` (Danh sách+Thống kê home) trả false nếu kind='salary'; `getFilteredProposals` (mọi tab Báo cáo + CSV) loại salary; `getMyPendingItems` (chuông), `maybeShowTransferReminder` (nhắc Trang), `renderReportFilters` (dropdown), `generateReport` (text), `syncReconcileToSheet` + 8 hàm `sync*ToSheet` (Google Sheet chi) đều bỏ qua salary. `renderAll` thêm vẽ lại tab Lương nếu đang mở.
+- **Đã test end-to-end (preview js):** tạo phiếu ứng (có ảnh) → không lọt home/report → hiện ở tab Lương với nút D/H/T thật → D duyệt (tạo contentSnapshot) → H duyệt → Trang chuyển → status 'transferred'; home DOM chỉ còn phiếu chi. `node --check` sạch.
+- Version: `20260714-v87` (app3 + version.txt + sw.js). Luật KHÔNG đổi (v85 đã đủ). Mục AL bên dưới là kiến trúc CŨ (đã thay).
+
+### AL. 💵 MODULE LƯƠNG (ứng lương) — tab mới, TÁCH BIỆT (v85, 14/07/2026) — ⚠️ ĐÃ THAY bằng mục AM
 Tab "💵 Lương" ở thanh nav (nút thứ 6). **Hoàn toàn tách biệt** proposals/plans — 2 ngăn Firebase riêng `duyetchi/employees` + `duyetchi/salaryAdvances`, biến `employees`/`salaryAdvances`/`salaryMonth`, ghi theo path con giống `savePlans` (KHÔNG set() đè cả ngăn). Lỗi ở đây không đụng luồng duyệt/chuyển chi.
 - **3 tab con** (`setLuongTab`): 💵 Ứng lương · 👥 Nhân viên · 📊 Thống kê. `renderLuongActive()` điều phối.
 - **Nhân viên** (`renderEmployees`, `openEmpModal`/`saveEmpFromModal`/`deleteEmp`): danh sách RIÊNG (không dùng lại `persons`), mỗi người gắn nhóm = **Văn phòng** hoặc 1 công trình (lấy từ `sites`) + ô **ghi chú** (VD chuyển công trình giữa chừng). Đề xuất ứng chọn tên từ đây.
