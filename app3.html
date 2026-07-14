@@ -1078,7 +1078,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260714-v88';
+const APP_VERSION = '20260714-v89';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2953,6 +2953,8 @@ function _buildCard(p){
       <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','proof',${idx})" alt="Chứng từ ${idx+1}">
     </div>`).join('')}</div>` : '';
   const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${esc(p.note)}</div>` : '';
+  // Ứng lương: hiện CHỨC DANH (lấy sống từ DS nhân viên theo empId, không có thì dùng bản lưu lúc tạo)
+  const _salPos = p.kind==='salary' ? (((typeof employees!=='undefined' && employees.find(e=>e.id===p.empId))||{}).position || p.position || '') : '';
   const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
   const opinionHtml = (_opD||_opH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_opD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_opH?`<div${_opD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${esc(_opH)}</div>`:''}</div>` : '';
 
@@ -2963,6 +2965,7 @@ function _buildCard(p){
           <div class="proposal-desc">${esc(p.desc)}</div>
           <div class="proposal-meta">
             <span>👤 ${esc(p.person||'—')}</span>
+            ${_salPos?`<span>💼 ${esc(_salPos)}</span>`:''}
             ${p.site?`<span>📍 ${esc(p.site)}</span>`:''}
             <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
@@ -5720,7 +5723,7 @@ function saveEmpFromModal(){
   } else {
     employees.push({ id:'emp_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), name, position, group, note, active:true, createdBy:getCurrentUserName(), ts:Date.now() });
   }
-  saveEmployees(); closeEmpModal(); renderLuongActive();
+  saveEmployees(); closeEmpModal(); _cardCache.clear(); renderLuongActive();
   showToast('✅ Đã lưu nhân viên');
 }
 function deleteEmp(id){
@@ -5800,7 +5803,7 @@ function saveAdvFromModal(){
   // Tạo PHIẾU Ứng lương — cùng cấu trúc phiếu chi + gắn kind/empId/month. person=tên NV, site=nhóm.
   const p={
     id: Date.now().toString(),
-    kind: 'salary', empId: emp.id, month,
+    kind: 'salary', empId: emp.id, month, position: emp.position||'',
     desc: 'Ứng lương ' + monthLabel(month),
     person: emp.name, site: emp.group,
     amount, amountUnit:'dong', note,
@@ -5849,6 +5852,29 @@ function renderSalaryAdvances(){
   try{ if(typeof _observeImageCards==='function') _observeImageCards(); }catch(e){} // ảnh lazy-load cho card ứng lương
 }
 
+// Nhảy từ THỐNG KÊ sang phiếu ứng lương tương ứng (đổi sang tab Ứng lương + đúng tháng + cuộn tới thẻ)
+function jumpToSalaryAdvance(id){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(p.month) salaryMonth=p.month;
+  setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
+  setTimeout(()=>{
+    const card=document.getElementById('card-'+id);
+    if(!card) return;
+    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.classList.remove('card-highlighted'); void card.offsetWidth; card.classList.add('card-highlighted');
+    card.addEventListener('animationend', ()=>card.classList.remove('card-highlighted'), {once:true});
+  }, 180);
+}
+function attachSalaryStatsDoubleTap(container){
+  let lastTap=0, lastTarget=null;
+  container.addEventListener('touchend', e=>{
+    const row=e.target.closest('.sal-row-link'); if(!row) return;
+    const now=Date.now();
+    if(now-lastTap<350 && lastTarget===row){ e.preventDefault(); const fn=row.getAttribute('ondblclick'); if(fn){ const id=fn.match(/'([^']+)'/)?.[1]; if(id) jumpToSalaryAdvance(id); } }
+    lastTap=now; lastTarget=row;
+  }, {passive:false});
+}
+
 // ── THỐNG KÊ ỨNG LƯƠNG ──
 function renderSalaryStats(){
   const el=document.getElementById('sal-stats-content');
@@ -5881,8 +5907,17 @@ function renderSalaryStats(){
   const byG={}; items.forEach(p=>{ const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p); if(!byG[p.site]) byG[p.site]={duyet:0,chuyen:0}; byG[p.site].duyet+=off; byG[p.site].chuyen+=tr; });
   const order=['Văn phòng'].concat(sites);
   const gkeys=Object.keys(byG).sort((x,y)=>{let ix=order.indexOf(x);let iy=order.indexOf(y);if(ix<0)ix=999;if(iy<0)iy=999;return ix-iy;});
-  const byE={}; items.forEach(p=>{ const k=p.empId||p.person; const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p); if(!byE[k]) byE[k]={name:p.person,group:p.site,duyet:0,chuyen:0}; byE[k].duyet+=off; byE[k].chuyen+=tr; });
+  const posOf = p => (((employees.find(e=>e.id===p.empId))||{}).position || p.position || '');
+  const byE={}; items.forEach(p=>{ const k=p.empId||p.person; const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p); if(!byE[k]) byE[k]={name:p.person,group:p.site,position:posOf(p),duyet:0,chuyen:0}; byE[k].duyet+=off; byE[k].chuyen+=tr; });
   const ekeys=Object.keys(byE).sort((x,y)=>byE[y].duyet-byE[x].duyet);
+  // 2 danh sách như bên Sheet báo cáo: ĐÃ CHUYỂN / CHƯA CHUYỂN. Chạm 2 lần 1 dòng → nhảy sang phiếu ứng.
+  const remainOf = p => { const off=getOfficialApprovedAmount(p)||0; const base=off>0?off:(parseFloat(p.amount)||0); return base-getTotalTransferred(p); };
+  const daChuyen  = items.filter(p=>getTotalTransferred(p)>0).sort((a,b)=>(b.transferredAt||b.ts||0)-(a.transferredAt||a.ts||0));
+  const chuaChuyen= items.filter(p=>remainOf(p)>0.001).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  const rowH = (p, lbl, val, color) => `<div class="sal-row-link" ondblclick="jumpToSalaryAdvance('${sid(p.id)}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer">
+      <div style="flex:1;min-width:0"><div><span style="font-weight:700">${esc(p.person)}</span>${posOf(p)?` <span style="font-size:11px;color:var(--blue)">· ${esc(posOf(p))}</span>`:''}</div><div style="font-size:10px;color:var(--text-sub)">${gIcon(p.site)} ${esc(p.site)} · ${monthLabel(p.month)}</div></div>
+      <div style="text-align:right;flex-shrink:0"><div style="font-weight:700;color:${color}">${fmtVND(val)}</div><div style="font-size:9px;color:var(--text-sub)">${lbl}</div></div>
+    </div>`;
   el.innerHTML=`
     <div class="card"><div class="card-body" style="padding:12px">
       <div style="display:flex;gap:7px">
@@ -5890,15 +5925,21 @@ function renderSalaryStats(){
         <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#16a34a">Đã chuyển</div><div style="font-size:16px;font-weight:800;color:#16a34a">${fmtTr(tChuyen)}</div></div>
         <div style="flex:1;background:#fffbeb;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#d97706">Chưa chuyển</div><div style="font-size:16px;font-weight:800;color:#d97706">${fmtTr(tChoChuyen)}</div></div>
       </div>
+      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Chạm 2 lần vào một khoản để mở phiếu ứng lương</div>
     </div></div>
+    <div style="font-size:13px;font-weight:800;margin:12px 4px 4px;color:#16a34a">💸 Đã chuyển <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${daChuyen.length} khoản · ${fmtTr(tChuyen)}</span></div>
+    <div class="card"><div class="card-body" style="padding:2px 0">${daChuyen.length?daChuyen.map(p=>rowH(p,'đã chuyển',getTotalTransferred(p),'#16a34a')).join(''):'<div style="padding:12px 14px;color:var(--text-sub);font-size:12px">Chưa có khoản nào đã chuyển</div>'}</div></div>
+    <div style="font-size:13px;font-weight:800;margin:12px 4px 4px;color:#d97706">⏳ Chưa chuyển <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${chuaChuyen.length} khoản · ${fmtTr(tChoChuyen)}</span></div>
+    <div class="card"><div class="card-body" style="padding:2px 0">${chuaChuyen.length?chuaChuyen.map(p=>rowH(p,'còn phải chuyển',remainOf(p),'#d97706')).join(''):'<div style="padding:12px 14px;color:var(--text-sub);font-size:12px">Không còn khoản nào chờ chuyển 🎉</div>'}</div></div>
     <div style="font-size:13px;font-weight:800;margin:12px 4px 4px">Theo nhóm</div>
     <div class="card"><div class="card-body" style="padding:2px 0">
       ${gkeys.map(g=>{const d=byG[g];const con=Math.max(0,d.duyet-d.chuyen);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px"><span>${gIcon(g)} ${esc(g)}</span><span style="text-align:right"><div style="font-weight:700">${fmtVND(d.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(d.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span></div>`}).join('')}
     </div></div>
     <div style="font-size:13px;font-weight:800;margin:12px 4px 4px">Lũy kế theo nhân viên</div>
     <div class="card"><div class="card-body" style="padding:2px 0">
-      ${ekeys.map(k=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px"><span>${esc(e.name)} <span style="font-size:11px;color:var(--text-sub)">· ${esc(e.group)}</span></span><span style="text-align:right"><div style="font-weight:700">${fmtVND(e.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(e.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span></div>`}).join('')}
+      ${ekeys.map(k=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px"><span>${esc(e.name)}${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''} <span style="font-size:11px;color:var(--text-sub)">· ${esc(e.group)}</span></span><span style="text-align:right"><div style="font-weight:700">${fmtVND(e.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(e.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span></div>`}).join('')}
     </div></div>`;
+  attachSalaryStatsDoubleTap(el);
 }
 
 </script>
