@@ -101,6 +101,42 @@
         }
       },
 
+      "employees": {
+        // v85: DANH SÁCH NHÂN VIÊN hưởng lương (module Lương, TÁCH BIỆT). Ai đã duyệt cũng đọc/ghi
+        // (thêm/sửa nhân viên) — giống persons nhưng riêng cho lương. Không đụng proposals/plans.
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        "$id": {
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+          "name":  { ".validate": "!newData.isString() || newData.val().length <= 200" },
+          "group": { ".validate": "!newData.isString() || newData.val().length <= 200" },
+          "note":  { ".validate": "!newData.isString() || newData.val().length <= 2000" }
+        }
+      },
+
+      "salaryAdvances": {
+        // v85: ĐỀ XUẤT ỨNG LƯƠNG (module Lương). Bảo mật mô phỏng proposals nhưng đơn giá 1 giá trị:
+        // ai đã duyệt cũng ĐỀ XUẤT được; số D duyệt CHỈ Dũng, số H duyệt CHỈ Hiền, số chuyển CHỈ Trang;
+        // nội dung (nhân viên/tháng/số đề xuất) ĐÓNG BĂNG sau khi có duyệt. Hoàn toàn tách proposals.
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        "$id": {
+          // Tạo/sửa: phải ĐÃ DUYỆT; XÓA phiếu đã có duyệt/chuyển → chỉ Dũng; chưa có gì → ai đã duyệt.
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('transferred').exists()))",
+          // ĐÓNG BĂNG nội dung sau khi có bất kỳ dấu duyệt nào (D hoặc H)
+          "amount":  { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists())) && (!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 100000000000))" },
+          "empId":   { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists())) && (!newData.isString() || newData.val().length <= 200)" },
+          "empName": { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists())) && (!newData.isString() || newData.val().length <= 200)" },
+          "group":   { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists())) && (!newData.isString() || newData.val().length <= 200)" },
+          "month":   { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists())) && (!newData.isString() || newData.val().length <= 20)" },
+          "note":    { ".validate": "!newData.isString() || newData.val().length <= 2000" },
+          // SỐ DUYỆT / CHUYỂN: chỉ đúng vai trò được đặt/đổi; giữ nguyên thì ai ghi cũng qua (app ghi lại cả phiếu)
+          "approvedD":   { ".validate": "(!newData.exists() || (data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 100000000000))" },
+          "approvedH":   { ".validate": "(!newData.exists() || (data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien') && (!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 100000000000))" },
+          "transferred": { ".validate": "(!newData.exists() || (data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang') && (!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 100000000000))" },
+          // TRẠNG THÁI: đặt lần đầu ai cũng được; đổi về sau chỉ D/H/T
+          "status": { ".validate": "!data.exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang'" }
+        }
+      },
+
       "pendingOtp": {
         "$uid": {
           // Chỉ chính mình hoặc Dũng đọc/xóa OTP
