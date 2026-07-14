@@ -1070,7 +1070,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260714-v85';
+const APP_VERSION = '20260714-v86';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5892,48 +5892,106 @@ function renderSalaryAdvances(){
       </div>` + gItems.map(a=>buildAdvCard(a)).join('');
   }).join('');
 }
+// Bố cục thẻ ứng lương LÀM GIỐNG thẻ "Danh sách đề nghị" (proposal card): trái = tên/nhóm/người/số,
+// phải = badge-stack D/H/T; dưới = approve-row các ô D/H/T như phiếu chi.
+function salBtnD(a){
+  const done = a.approvedD!=null;
+  const closed = a.status==='transferred' || a.status==='rejected';
+  if(currentRole==='dung' && !closed){
+    const txtClr = done?'#dc2626':'var(--yellow)', boxClr = done?'var(--green)':'var(--yellow)', bg = done?'#eafff0':'#fffbeb', lbl = done?'Đã duyệt':'Chờ duyệt';
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">D</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="openSalAmount('${sid(a.id)}','D')">${inner}</button></div>`;
+  }
+  if(done){
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">D</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
+  }
+  return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
+}
+function salBtnH(a){
+  const done = a.approvedH!=null;
+  const closed = a.status==='transferred' || a.status==='rejected';
+  if(currentRole==='hien' && !closed){
+    const txtClr = done?'#dc2626':'var(--yellow)', boxClr = done?'var(--green)':'var(--yellow)', bg = done?'#eafff0':'#fffbeb', lbl = done?'Đã duyệt':'Chờ duyệt';
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">H</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="openSalAmount('${sid(a.id)}','H')">${inner}</button></div>`;
+  }
+  if(done){
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">H</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
+  }
+  return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
+}
+function salBtnT(a){
+  const off = salOfficialApproved(a), tr = parseFloat(a.transferred)||0;
+  const done = tr>0 && tr>=off-0.0001;
+  const canPress = currentRole==='trang' && off>0 && a.status!=='rejected' && tr < off-0.0001;
+  if(canPress){
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:var(--yellow)">T</span><span class="ab-mid-label" style="color:var(--yellow)">Chuyển</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="width:100%" onclick="openSalAmount('${sid(a.id)}','transfer')">${inner}</button></div>`;
+  }
+  if(done){
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:var(--green)">T</span><span class="ab-mid-label" style="color:var(--green)">Đã chuyển</span></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
+  }
+  return `<div class="approve-box"><div class="ab-flat-locked">🔒 T</div></div>`;
+}
 function buildAdvCard(a){
-  const st=salStatusInfo(a);
   const emp=employees.find(e=>e.id===a.empId);
   const note=a.note || (emp&&emp.note) || '';
   const amt=parseFloat(a.amount)||0;
   const off=salOfficialApproved(a);
   const tr=parseFloat(a.transferred)||0;
-  const done = a.status==='transferred' || a.status==='rejected';
-  let actions='';
-  if(currentRole==='dung' && !done){
-    actions += `<button onclick="openSalAmount('${sid(a.id)}','D')" style="flex:1;min-width:92px;padding:8px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer">${a.approvedD!=null?'✅ D '+fmtTr(a.approvedD):'D duyệt'}</button>`;
+  // ── badge-stack bên phải (giống phiếu chi): D / H / T ──
+  let badgeHtml;
+  if(a.status==='rejected'){
+    badgeHtml = `<div class="badge-stack"><span class="badge badge-reject">❌ Từ chối</span></div>`;
+  } else {
+    const dBadge = a.approvedD!=null ? `<span class="badge badge-approved">✅ D duyệt ${fmtVND(a.approvedD)}</span>` : `<span class="badge badge-wait">⏳ D chờ duyệt</span>`;
+    const hBadge = a.approvedH!=null ? `<span class="badge badge-approved">✅ H duyệt ${fmtVND(a.approvedH)}</span>` : `<span class="badge badge-wait">⏳ H chờ duyệt</span>`;
+    let tRow='';
+    if(tr>0){ tRow = `<span class="badge badge-done">💸 T chuyển ${tr>=off-0.0001?fmtVND(tr):fmtVND(tr)+'/'+fmtVND(off)}</span>`; }
+    let waitRow='';
+    if(a.approvedH!=null && tr < off-0.0001){
+      const hTs=a.approvedHAt||0; const waitDays=hTs?Math.floor((Date.now()-hTs)/86400000):0;
+      const label = waitDays<1?'💸 Chờ chuyển (hôm nay)':`💸 Chờ chuyển — đã ${waitDays} ngày`;
+      const styleAttr = waitDays>=3?'':' style="background:#fff7ed;color:#c2410c"';
+      waitRow = `<span class="badge${waitDays>=3?' badge-reject':''}"${styleAttr}>${label}</span>`;
+    }
+    badgeHtml = `<div class="badge-stack">${dBadge}${hBadge}${tRow}${waitRow}</div>`;
   }
-  if(currentRole==='hien' && !done){
-    actions += `<button onclick="openSalAmount('${sid(a.id)}','H')" style="flex:1;min-width:92px;padding:8px;font-size:12px;font-weight:700;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer">${a.approvedH!=null?'✅ H '+fmtTr(a.approvedH):'H duyệt'}</button>`;
-  }
-  if(currentRole==='trang' && off>0 && a.status!=='rejected' && tr < off-0.0001){
-    actions += `<button onclick="openSalAmount('${sid(a.id)}','transfer')" style="flex:1;min-width:92px;padding:8px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer">💸 Chuyển</button>`;
-  }
-  if((currentRole==='dung'||currentRole==='hien') && !done && a.transferred==null){
-    actions += `<button onclick="salReject('${sid(a.id)}')" style="padding:8px 10px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">Từ chối</button>`;
-  }
+  // ── approve-row dưới (giống phiếu chi): D / H / T + từ chối + sửa/xoá ──
   const unlocked = a.approvedD==null && a.approvedH==null && a.transferred==null;
   const canEdit = unlocked && (currentRole==='dung' || (a.createdBy && a.createdBy===getCurrentUserName()));
   const canDel  = (unlocked && (currentRole==='dung' || (a.createdBy && a.createdBy===getCurrentUserName()))) || currentRole==='dung';
-  const rowBtns = actions
-    + (canEdit?`<button onclick="openAdvModal('${sid(a.id)}')" style="padding:8px 10px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button>`:'')
-    + (canDel?`<button onclick="deleteAdv('${sid(a.id)}')" style="padding:8px 10px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>`:'');
-  return `<div class="proposal" id="advcard-${sid(a.id)}" style="border-left-color:${st.color}">
-    <div style="padding:13px 14px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="flex:1;min-width:0">
+  const canReject = (currentRole==='dung'||currentRole==='hien') && a.status!=='rejected' && a.status!=='transferred' && a.transferred==null;
+  const miniStyle = 'flex:0 0 auto;width:22px;min-width:22px;max-width:22px;padding:0;font-size:13px';
+  const rejectBtn = canReject ? `<button class="ab-del-mini" style="${miniStyle};color:var(--red)" onclick="salReject('${sid(a.id)}')" title="Từ chối">✖</button>` : '';
+  const editBtn = canEdit ? `<button class="ab-del-mini" style="${miniStyle}" onclick="openAdvModal('${sid(a.id)}')" title="Sửa">✏️</button>` : '';
+  const delBtn  = canDel  ? `<button class="ab-del-mini" style="${miniStyle};color:var(--red)" onclick="deleteAdv('${sid(a.id)}')" title="Xoá">🗑</button>` : '';
+  return `<div class="proposal status-${esc(a.status||'pending')}" id="advcard-${sid(a.id)}">
+    <div class="proposal-top">
+      <div class="proposal-top-row">
+        <div class="proposal-left-col">
           <div class="proposal-desc">${esc(a.empName)}</div>
-          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">${gIcon(a.group)} ${esc(a.group)} · 🙋 ${esc(a.createdBy||'—')}</div>
-          ${note?`<div style="font-size:12px;color:#c2410c;margin-top:3px">📝 ${esc(note)}</div>`:''}
+          <div class="proposal-meta">
+            <span>${gIcon(a.group)} ${esc(a.group)}</span>
+            <span>🙋 ${esc(a.createdBy||'—')}</span>
+            <span>🕐 ${fmtFull(a.ts)}</span>
+          </div>
+          <div class="proposal-amount">${fmtVND(amt)}</div>
         </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:15px;font-weight:800;color:var(--text)">${fmtVND(off>0?off:amt)}</div>
-          <span class="badge" style="background:${st.bg};color:${st.color}">${st.label}</span>
-        </div>
+        <div class="proposal-badge-area">${badgeHtml}</div>
       </div>
-      <div style="font-size:11px;color:var(--text-sub);margin-top:6px">Đề xuất ${fmtVND(amt)}${a.approvedD!=null?' · D '+fmtVND(a.approvedD):''}${a.approvedH!=null?' · H '+fmtVND(a.approvedH):''}${a.transferred!=null?' · đã chuyển '+fmtVND(a.transferred):''}</div>
-      ${rowBtns?`<div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">${rowBtns}</div>`:''}
+      ${note?`<div class="proposal-note">📝 ${esc(note)}</div>`:''}
+    </div>
+    <div class="approve-row">
+      ${salBtnD(a)}
+      ${salBtnH(a)}
+      ${salBtnT(a)}
+      ${rejectBtn}
+      ${editBtn}
+      ${delBtn}
     </div>
   </div>`;
 }
