@@ -1078,7 +1078,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260714-v90';
+const APP_VERSION = '20260715-v91';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1770,6 +1770,9 @@ let currentUserName = ''; // tên người dùng theo danh sách persons
 
 function initAuth(){
   firebase.auth().onAuthStateChanged(async user=>{
+    // v91: đổi trạng thái đăng nhập (vào HOẶC ra) → gỡ màn "chờ được duyệt" cũ nếu còn treo,
+    // để không che màn đăng nhập / app (lỗi Dũng "thoát ra cũng không vào được").
+    try{ hidePendingApprovalScreen(); }catch(e){}
     if(user){
       currentUser = user;
       // Ẩn màn login NGAY khi Firebase xác nhận danh tính (trước khi đọc DB)
@@ -2352,32 +2355,41 @@ function initFirebaseSync(){
     _metaLoaded = true;
     _mergeAndRender();
   });
-  db.ref('duyetchi/proposals').on('value', snap=>{
-    const raw = snap.val();
-    if(raw && Array.isArray(raw)){
-      // Cấu trúc cũ — xử lý migration
-      _handleOldFormat(raw);
-      return;
-    }
-    _proposalsData = raw || {};
-    _proposalsLoaded = true;
-    _mergeAndRender();
-  }, err=>{
-    // v81: đọc phiếu bị TỪ CHỐI = tài khoản chưa được Dũng duyệt cho xem dữ liệu. Hiện thông báo rõ.
-    if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
-      // v90: 3 email người nhà (Dũng/Hiền/Trang) LUÔN được đọc theo luật → denied ở đây chỉ là lỗi TẠM
-      // (auth chưa sẵn sau khi tải lại / xoá cache / mạng chập). KHÔNG hiện "chờ duyệt" gây hiểu nhầm;
-      // listener .on sẽ tự chạy lại khi auth sẵn, và ta thử đọc lại 1 nhịp cho chắc. Người lạ (không phải
-      // 3 email + chưa duyệt) mới hiện màn "chờ được duyệt" như cũ.
-      const _u = (firebase.auth().currentUser && firebase.auth().currentUser.email || '').toLowerCase();
-      const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
-      if(_isPriv){
-        setTimeout(()=>{ try{ db.ref('duyetchi/proposals').once('value').then(s=>{ const r=s.val(); _proposalsData=(r&&!Array.isArray(r))?r:(_proposalsData||{}); _proposalsLoaded=true; _mergeAndRender(); }).catch(()=>{}); }catch(e){} }, 1500);
-      } else {
-        showPendingApprovalScreen();
+  // v91: tách listener proposals thành hàm để NỐI LẠI được — Firebase HỦY listener vĩnh viễn khi lỗi
+  // (denied 1 lần lúc auth chưa sẵn = mất kênh dữ liệu mãi mãi cho tới khi tải lại trang). Nay tự nối lại.
+  let _propRetryCount = 0;
+  function _attachProposalsListener(){
+    db.ref('duyetchi/proposals').on('value', snap=>{
+      _propRetryCount = 0;
+      hidePendingApprovalScreen(); // đọc được dữ liệu = chắc chắn KHÔNG phải "chưa được duyệt" → gỡ màn che nếu còn
+      const raw = snap.val();
+      if(raw && Array.isArray(raw)){
+        // Cấu trúc cũ — xử lý migration
+        _handleOldFormat(raw);
+        return;
       }
-    }
-  });
+      _proposalsData = raw || {};
+      _proposalsLoaded = true;
+      _mergeAndRender();
+    }, err=>{
+      // v81: đọc phiếu bị TỪ CHỐI = tài khoản chưa được Dũng duyệt cho xem. v90/v91: với 3 email người
+      // nhà (LUÔN được đọc theo luật) đây chỉ là lỗi TẠM (auth chưa sẵn sau tải lại/xoá cache/mạng chập)
+      // → KHÔNG hiện màn "chờ duyệt", mà NỐI LẠI listener (vì Firebase đã hủy nó) — tối đa 10 lần, mỗi 3s.
+      if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
+        const _u = (firebase.auth().currentUser && firebase.auth().currentUser.email || '').toLowerCase();
+        const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
+        if(_isPriv){
+          if(_propRetryCount++ < 10) setTimeout(_attachProposalsListener, 3000);
+          else showToast('⚠️ Không đọc được dữ liệu — vuốt tắt app rồi mở lại giúp.');
+        } else {
+          showPendingApprovalScreen();
+          // Người thường: vẫn nối lại chậm (30s) để khi Dũng bấm "Cho xem" là dữ liệu tự về, không cần tải lại
+          setTimeout(_attachProposalsListener, 30000);
+        }
+      }
+    });
+  }
+  _attachProposalsListener();
   // Ảnh nay tải TRỄ — kích hoạt từ _mergeAndRender sau khi đã hiện phiếu (xem trên),
   // để lúc mở app ưu tiên kết nối + tải phiếu (nhẹ), không bị đống ảnh (nặng) làm chậm.
 
@@ -4665,6 +4677,12 @@ async function confirmFirstLogin(){
 }
 
 // v81: màn hình cho tài khoản CHƯA được duyệt xem dữ liệu (bị chặn đọc phiếu ở máy chủ)
+// v91: GỠ màn "chờ được duyệt" — trước đây tạo ra mà không bao giờ gỡ, nên sau khi đăng xuất → đăng nhập
+// lại thành công, tấm màn cũ vẫn che toàn bộ app ("thoát ra cũng không vào được" — lỗi thật của Dũng).
+function hidePendingApprovalScreen(){
+  const d = document.getElementById('pending-approval-overlay');
+  if(d) d.remove();
+}
 function showPendingApprovalScreen(){
   if(document.getElementById('pending-approval-overlay')) return; // đã hiện rồi
   const div = document.createElement('div');
