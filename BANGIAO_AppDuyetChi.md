@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v87** (ứng lương = phiếu chi kind='salary', giống hệt — xem mục AM). Trước đó **v85** (`APP_VERSION = '20260714-v85'`, `sw.js VERSION = '20260714-85'`, `version.txt = 20260714-v85`) — thêm **module Lương/ứng lương** (mục AL). Trước đó: luật v83+v84 (mục AJ, AK) + backup tự động. Ngày 14/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v91** (`APP_VERSION = '20260715-v91'`, sửa màn "chờ duyệt" treo + nối lại listener — xem mục AN). Trước đó **v87** (ứng lương = phiếu chi kind='salary' — mục AM), **v85** (`APP_VERSION = '20260714-v85'`, `sw.js VERSION = '20260714-85'`, `version.txt = 20260714-v85`) — thêm **module Lương/ứng lương** (mục AL). Trước đó: luật v83+v84 (mục AJ, AK) + backup tự động. Ngày 14/07/2026.
 
 ---
 
@@ -554,6 +554,14 @@ Sau khi user hỏi "bảo mật cao hơn nữa", đã phân tích mối đe dọ
 - **Xóa tài khoản rác (3d):** đã `database:remove /duyetchi/userRoles/8ep3MWIzq1SNRN46yAMGQ1ljBXb2` (email typo `kimanh120311@gnail.com`, chưa duyệt, chưa từng đăng nhập). Còn 8 tài khoản thật. (Bản ghi Auth "vỏ" vẫn còn — vô hại, muốn xóa hẳn phải vào Firebase Console vì CLI không xóa được Auth user.)
 - **Giới hạn giá trị (3c) — luật v84:** mỗi field `desc/note/amount/amountUnit/person/site` giờ = `(ĐÓNG BĂNG cũ) && (CAP)`. Cap: desc/note ≤ 5000 ký tự, person/site ≤ 200, amountUnit ≤ 40, amount là số trong [0 ; 100.000.000.000] (100 tỷ). Ngưỡng RẤT RỘNG so với thật (desc dài nhất 158, note 179, amount lớn nhất ~859tr) → không chặn nhầm. Cap chỉ "cắn" đúng kiểu (`!isString||len<=N`, `!isNumber||range`) nên không bao giờ từ chối dữ liệu cũ khi app ghi lại cả phiếu. Đã deploy + xác nhận 6/6 field có cap, 190 phiếu nguyên vẹn.
 - **CÒN LẠI cho user tự làm (mạnh nhất):** bật **2FA** 3 Gmail + **khóa màn hình** mọi điện thoại. Nhóm 3 (App Check theo dõi→siết, xác nhận-lại khi duyệt/chuyển, audit log ghi-một-lần, test luật tự động) — chờ user chọn làm tiếp.
+
+### AN. 🐞 v90+v91 — SỰ CỐ "chờ duyệt" sai & màn che không gỡ (15/07/2026, LỖI THẬT của Trang + Dũng)
+Trang crash lặp ("sự cố xảy ra liên tục" + `?u=` sau khi bấm Cập nhật) rồi hiện "Tài khoản chờ được duyệt"; sau đó Dũng đăng xuất cũng "không vào được". Chẩn đoán: tài khoản/luật/dữ liệu đều SẠCH (đã kiểm CLI: role đúng, approved=true, 238 phiếu không lỗi; code render tải thật <70ms). Hai lỗi thật trong app:
+1. **(v90)** Đọc proposals bị PERMISSION_DENIED **tạm** (auth chưa sẵn sau tải lại/xoá cache) → hiện nhầm màn "chờ được duyệt" cho cả 3 email người nhà (luật LUÔN cho họ đọc). Nay: 3 email này không bao giờ hiện màn đó.
+2. **(v91 — lỗi chính của Dũng)** `showPendingApprovalScreen()` tạo overlay **không bao giờ gỡ** → đăng xuất/đăng nhập lại thành công vẫn bị màn tím che app. Thêm `hidePendingApprovalScreen()`: gọi ở **mọi** lần đổi trạng thái đăng nhập (đầu `onAuthStateChanged`) + khi đọc được dữ liệu.
+3. **(v91)** Firebase **HỦY listener vĩnh viễn** khi callback lỗi chạy → denied 1 lần = mất kênh dữ liệu tới khi tải lại trang. Tách thành `_attachProposalsListener()` tự **nối lại**: 3 email nhà retry 10 lần/3s; người thường hiện màn chờ duyệt + nối lại mỗi 30s (Dũng bấm "Cho xem" là dữ liệu tự về không cần tải lại).
+- ⚠️ BÀI HỌC: đừng ra bản dồn dập (v85→v90 trong 1 ngày) — cache iPhone dễ kẹt; gom thay đổi lại.
+- Khắc phục phía máy người dùng khi crash lặp kiểu Safari: Cài đặt → Safari → Nâng cao → Dữ liệu trang web → xoá `vandung0802.github.io` → mở lại app3.html (URL sạch, không `?u=`).
 
 ### AM. 💵 LƯƠNG v87 — ứng lương GIỐNG HỆT phiếu chi (14/07/2026, thay kiến trúc mục AL)
 User: "làm đề xuất lương giống như đề xuất duyệt chi từ nút ảnh đính kèm và TẤT CẢ công dụng". → Đổi kiến trúc: **mỗi khoản ứng lương giờ là 1 PHIẾU thật trong `proposals`** có `kind:'salary'` + `empId` + `month` (person=tên NV, site=nhóm/công trình, desc="Ứng lương tháng.."). Nhờ vậy DÙNG CHUNG 100% bộ máy phiếu chi: ảnh Zalo đính kèm, duyệt D/H **từng phần có lịch sử**, chuyển từng phần, ảnh chứng từ, chia sẻ, giục, sửa/ý kiến, **contentSnapshot chống sửa sau duyệt**, và toàn bộ luật bảo mật proposals (KHÔNG cần luật mới — kind/empId/month là field phụ, tự do ghi).
