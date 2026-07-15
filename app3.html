@@ -1078,7 +1078,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260714-v89';
+const APP_VERSION = '20260714-v90';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2363,10 +2363,19 @@ function initFirebaseSync(){
     _proposalsLoaded = true;
     _mergeAndRender();
   }, err=>{
-    // v81: đọc phiếu bị TỪ CHỐI = tài khoản chưa được Dũng duyệt cho xem dữ liệu. Hiện thông báo rõ,
-    // không để màn hình trống khó hiểu. (Người đã duyệt không bao giờ vào nhánh này.)
+    // v81: đọc phiếu bị TỪ CHỐI = tài khoản chưa được Dũng duyệt cho xem dữ liệu. Hiện thông báo rõ.
     if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
-      showPendingApprovalScreen();
+      // v90: 3 email người nhà (Dũng/Hiền/Trang) LUÔN được đọc theo luật → denied ở đây chỉ là lỗi TẠM
+      // (auth chưa sẵn sau khi tải lại / xoá cache / mạng chập). KHÔNG hiện "chờ duyệt" gây hiểu nhầm;
+      // listener .on sẽ tự chạy lại khi auth sẵn, và ta thử đọc lại 1 nhịp cho chắc. Người lạ (không phải
+      // 3 email + chưa duyệt) mới hiện màn "chờ được duyệt" như cũ.
+      const _u = (firebase.auth().currentUser && firebase.auth().currentUser.email || '').toLowerCase();
+      const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
+      if(_isPriv){
+        setTimeout(()=>{ try{ db.ref('duyetchi/proposals').once('value').then(s=>{ const r=s.val(); _proposalsData=(r&&!Array.isArray(r))?r:(_proposalsData||{}); _proposalsLoaded=true; _mergeAndRender(); }).catch(()=>{}); }catch(e){} }, 1500);
+      } else {
+        showPendingApprovalScreen();
+      }
     }
   });
   // Ảnh nay tải TRỄ — kích hoạt từ _mergeAndRender sau khi đã hiện phiếu (xem trên),
