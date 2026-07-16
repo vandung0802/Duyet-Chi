@@ -1078,7 +1078,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260715-v91';
+const APP_VERSION = '20260716-v92';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3704,8 +3704,19 @@ function openEditProposal(id){
   // Đổ danh sách người đề xuất / công trường vào 2 ô select (giống màn Thêm mới)
   const personSel = document.getElementById('edit-person');
   const siteSel = document.getElementById('edit-site');
-  personSel.innerHTML = '<option value="">— Chọn tên —</option>' + persons.map(pp=>`<option value="${esc(pp.name)}">${esc(pp.name)}${pp.role?' — '+esc(pp.role):''}</option>`).join('');
-  siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+  if(p.kind==='salary'){
+    // v92: phiếu ỨNG LƯƠNG — người = nhân viên (không nằm trong danh sách người phiếu chi) và nhóm có thể
+    // là "Văn phòng" (không nằm trong sites). Nạp từ danh sách chi khiến ô bị TRỐNG/nhảy sai → lưu bị chặn
+    // ("chọn người đề xuất" hoặc vi phạm đóng băng sau duyệt) → D/H không lưu được Ý KIẾN. Nay: khóa cứng
+    // 2 ô theo đúng giá trị phiếu (muốn đổi tên/nhóm thì sửa ở DS nhân viên), chỉ sửa ý kiến/ảnh/ưu tiên.
+    personSel.innerHTML = `<option value="${esc(p.person||'')}">${esc(p.person||'')}</option>`;
+    siteSel.innerHTML = `<option value="${esc(p.site||'')}">${esc(p.site||'')}</option>`;
+    personSel.disabled = true; siteSel.disabled = true;
+  } else {
+    personSel.innerHTML = '<option value="">— Chọn tên —</option>' + persons.map(pp=>`<option value="${esc(pp.name)}">${esc(pp.name)}${pp.role?' — '+esc(pp.role):''}</option>`).join('');
+    siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    personSel.disabled = false; siteSel.disabled = false;
+  }
 
   document.getElementById('edit-person').value = p.person||'';
   document.getElementById('edit-site').value = p.site||'';
@@ -3838,8 +3849,10 @@ function saveEditProposal(){
   if(!p){ closeEditModal(); return; }
   if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
 
-  const person = document.getElementById('edit-person').value;
-  const site = document.getElementById('edit-site').value;
+  // v92: phiếu ứng lương — người/nhóm KHÓA theo phiếu (ô select bị disable), lấy thẳng giá trị gốc
+  // để chắc chắn không đổi (đổi tên/nhóm là việc của DS nhân viên, và tránh vi phạm đóng băng sau duyệt).
+  const person = p.kind==='salary' ? (p.person||'') : document.getElementById('edit-person').value;
+  const site   = p.kind==='salary' ? (p.site||'')   : document.getElementById('edit-site').value;
   const desc = document.getElementById('edit-desc').value.trim();
   const amountRaw = parseAmountInput(document.getElementById('edit-amount'));
   const note = document.getElementById('edit-note').value.trim();
