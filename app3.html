@@ -510,6 +510,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
 <!-- PAGE: HOME -->
 <div id="page-home" class="main" style="display: block;">
+  <!-- v93 GỬI ẢNH ZALO: 2 banner nhắc — ẩn mặc định, chỉ hiện đúng người (T / người đề xuất). MODULE THÊM MỚI, không đụng gì cũ. -->
+  <div id="zalo-t-banner" onclick="openZaloListModal('t')" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;color:#b91c1c;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;margin-bottom:8px;cursor:pointer"></div>
+  <div id="zalo-p-banner" onclick="openZaloListModal('p')" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;margin-bottom:8px;cursor:pointer"></div>
   <div class="stats-grid" id="stats-grid">
     <div class="stat-box active" data-f="all" onclick="setFilter('all',this)">
       <div class="stat-row"><div class="stat-val" id="st-all">0</div><div class="stat-lbl">Tất cả</div></div>
@@ -1033,6 +1036,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<!-- v93 GỬI ẢNH ZALO: modal danh sách chờ gửi / đã xử lý (module thêm mới, tách biệt) -->
+<div class="role-screen" id="zalo-list-modal" style="display:none;z-index:9250;background:rgba(0,0,0,0.55)">
+  <div style="background:#fff;border-radius:18px;padding:18px 14px;width:100%;max-width:420px;max-height:84vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:16px;font-weight:800;color:var(--text)" id="zalo-list-title">📤 Chờ gửi Zalo</div>
+      <button onclick="closeZaloListModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="zalo-list-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:10px"></div>
+    <div id="zalo-list-body"></div>
+  </div>
+</div>
+
 <!-- Bảng nhắc Trang lúc mở app: các khoản H đã duyệt đang chờ chuyển (hiện 1 lần mỗi lần mở) -->
 <div class="role-screen" id="transfer-reminder-modal" style="display:none;z-index:9300;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto">
@@ -1078,7 +1093,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260716-v92';
+const APP_VERSION = '20260717-v93';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2679,6 +2694,8 @@ function renderAll(){
     // Tab Lương đọc từ chính 'proposals' (phiếu kind='salary') → nếu đang mở thì vẽ lại cho đồng bộ
     const pgL = document.getElementById('page-luong');
     if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} }
+    // v93: banner gửi ảnh Zalo — bọc try/catch để lỗi (nếu có) KHÔNG thể ảnh hưởng luồng render chính
+    try{ renderZaloBanners(); }catch(e){}
   }, 80);
 }
 
@@ -5679,6 +5696,108 @@ function writeReport_(ss, name, headers, color, rows){
 }`;
   navigator.clipboard?.writeText(code).then(()=>showToast('✅ Đã copy code! Dán vào Apps Script')).catch(()=>showToast('Lỗi copy'));
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// ── v93 GỬI ẢNH CHUYỂN TIỀN QUA ZALO ── MODULE THÊM MỚI, TÁCH BIỆT.
+// Chỉ đọc `proposals` + ghi 2 trường mới zaloStatus ('sent'|'muted') & zaloAt trên phiếu (trường tự do,
+// KHÔNG thuộc phần đóng băng sau duyệt → không cần đổi luật). App KHÔNG tự gửi Zalo — chỉ nhắc + hiện ảnh
+// để người đề xuất nhấn giữ copy rồi tự dán vào nhóm Zalo công trường (theo tài liệu TongHop_TinhNangMoi).
+// ══════════════════════════════════════════════════════════════════════════
+// Người "đề xuất" của phiếu: phiếu chi = person; phiếu ứng lương = người TẠO đề xuất (createdBy).
+function _zaloProposerOf(p){ return p.kind==='salary' ? (p.createdBy||'') : (p.person||''); }
+function _zaloProofs(p){ return Array.isArray(p.proofImages)&&p.proofImages.length ? p.proofImages : (p.proofB64?[p.proofB64]:[]); }
+// "Cứ Trang chuyển là nhắc" (user chốt): vào danh sách khi đã có BẤT KỲ lần chuyển nào, chưa đánh dấu gửi/tắt.
+function _zaloPendingForMe(){
+  const me=getCurrentUserName(); if(!me) return [];
+  return proposals.filter(p=>p.status!=='rejected' && !p.zaloStatus && getTotalTransferred(p)>0 && _zaloProposerOf(p)===me);
+}
+function _zaloDoneForMe(){
+  const me=getCurrentUserName(); if(!me) return [];
+  return proposals.filter(p=>(p.zaloStatus==='sent'||p.zaloStatus==='muted') && _zaloProposerOf(p)===me)
+    .sort((a,b)=>(b.zaloAt||0)-(a.zaloAt||0)).slice(0,30); // xem lại 30 món gần nhất là đủ
+}
+// Nhắc Trang: món ĐÃ chuyển nhưng CHƯA có ảnh chuyển tiền (người đề xuất chưa có gì để gửi Zalo).
+function _zaloTMissing(){
+  if(currentRole!=='trang') return [];
+  return proposals.filter(p=>p.status!=='rejected' && getTotalTransferred(p)>0 && _zaloProofs(p).length===0);
+}
+function renderZaloBanners(){
+  const tB=document.getElementById('zalo-t-banner');
+  const pB=document.getElementById('zalo-p-banner');
+  if(!tB||!pB) return;
+  const miss=_zaloTMissing();
+  tB.style.display = miss.length ? 'block':'none';
+  if(miss.length) tB.textContent = `📷 Bạn chưa upload ảnh chuyển tiền cho ${miss.length} món — bấm để xem`;
+  const pend=_zaloPendingForMe();
+  pB.style.display = pend.length ? 'block':'none';
+  if(pend.length) pB.textContent = `🔔 Còn ${pend.length} món chưa gửi Zalo — bấm để xem danh sách`;
+}
+function _zaloLastTransferTs(p){ const t=Array.isArray(p.transfers)?p.transfers:[]; return t.length?t[t.length-1].ts:(p.transferredAt||p.ts||0); }
+function _zaloJump(id){
+  closeZaloListModal();
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
+  else jumpToProposal(id);
+}
+let _zaloModalMode='p';
+function openZaloListModal(mode){
+  _zaloModalMode = mode||'p';
+  renderZaloListModal();
+  document.getElementById('zalo-list-modal').style.display='flex';
+}
+function closeZaloListModal(){ document.getElementById('zalo-list-modal').style.display='none'; }
+function renderZaloListModal(){
+  const body=document.getElementById('zalo-list-body');
+  const title=document.getElementById('zalo-list-title');
+  const sub=document.getElementById('zalo-list-sub');
+  if(!body) return;
+  const row=(p,btns,extra)=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--gray-border)">
+    <div style="flex:1;min-width:0;cursor:pointer" onclick="_zaloJump('${sid(p.id)}')">
+      <div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'')}</div>
+      <div style="font-size:11px;color:var(--text-sub)">${esc(p.site||'')} · ${fmtVND(getTotalTransferred(p))} · ${fmtDateOnly(_zaloLastTransferTs(p))}${extra||''}</div>
+    </div>
+    ${btns}</div>`;
+  if(_zaloModalMode==='t'){
+    title.textContent='📷 Món thiếu ảnh chuyển tiền';
+    const miss=_zaloTMissing();
+    sub.textContent = miss.length? 'Bấm 📤 để upload ảnh cho từng món — upload xong nhắc tự mất.' : '';
+    body.innerHTML = miss.length ? miss.map(p=>row(p,
+      `<button onclick="closeZaloListModal();uploadProof('${sid(p.id)}')" style="padding:7px 10px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">📤 Up ảnh</button>`)).join('')
+      : '<div style="text-align:center;padding:24px;color:#16a34a;font-size:13px">✅ Tất cả món đã chuyển đều có ảnh</div>';
+    return;
+  }
+  title.textContent='📤 Chờ gửi Zalo';
+  const pend=_zaloPendingForMe();
+  const done=_zaloDoneForMe();
+  sub.textContent='Bấm "Gửi Zalo" → nhấn giữ ảnh → Copy → dán vào nhóm Zalo công trường → quay lại bấm "Đã gửi".';
+  const pendHtml = pend.length ? pend.map(p=>{
+    const hasImg=_zaloProofs(p).length>0;
+    return row(p,
+      `<button onclick="zaloShowImg('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:${hasImg?'var(--blue)':'#94a3b8'};color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">${hasImg?'📸 Gửi Zalo':'⏳ Chờ ảnh'}</button>
+       <button onclick="zaloMarkSent('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">✅ Đã gửi</button>
+       <button onclick="zaloMute('${sid(p.id)}')" title="Tắt thông báo món này" style="padding:7px 8px;font-size:12px;background:#f1f5f9;color:var(--text-sub);border:none;border-radius:8px;cursor:pointer;flex-shrink:0">🔕</button>`)
+  }).join('') : '<div style="text-align:center;padding:20px;color:#16a34a;font-size:13px">✅ Không còn món nào chờ gửi 🎉</div>';
+  const doneHtml = done.length ? `<div style="font-size:12px;font-weight:800;color:var(--text-sub);margin:14px 0 2px">ĐÃ XỬ LÝ (xem lại)</div>` + done.map(p=>row(p,
+      `<button onclick="zaloUndo('${sid(p.id)}')" title="Đưa lại vào danh sách chờ" style="padding:7px 9px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">↩</button>`,
+      p.zaloStatus==='sent' ? ` · <span style="color:#16a34a;font-weight:700">✅ đã gửi${p.zaloAt?' '+fmtDateOnly(p.zaloAt):''}</span>` : ` · <span style="color:#c2410c;font-weight:700">🔕 đã tắt thông báo</span>`)).join('') : '';
+  body.innerHTML = pendHtml + doneHtml;
+}
+function zaloShowImg(id){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(!_zaloProofs(p).length){ showToast('Trang chưa upload ảnh chuyển tiền cho món này'); return; }
+  openImg(id,'proof',0); // modal ảnh lớn sẵn có: chụm zoom + nhấn giữ để Copy
+}
+function _zaloSet(id, status){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(status) { p.zaloStatus=status; p.zaloAt=Date.now(); }
+  else { delete p.zaloStatus; delete p.zaloAt; }
+  save();
+  renderZaloBanners();
+  renderZaloListModal();
+}
+function zaloMarkSent(id){ _zaloSet(id,'sent'); showToast('✅ Đã đánh dấu: gửi Zalo xong'); }
+function zaloMute(id){ if(!confirm('Tắt thông báo món này? (Sẽ không nhắc gửi Zalo nữa, trên MỌI thiết bị.)')) return; _zaloSet(id,'muted'); showToast('🔕 Đã tắt thông báo món này'); }
+function zaloUndo(id){ _zaloSet(id,null); showToast('↩ Đã đưa lại vào danh sách chờ gửi'); }
 
 // ── TOAST ──
 function showToast(msg){
