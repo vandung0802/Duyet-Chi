@@ -3,7 +3,7 @@
 > **Dùng file này để Claude ở cửa sổ/Project MỚI hiểu ngay toàn bộ app và làm tiếp không cần hỏi lại.**
 > Chỉ cần nói: *"Kế thừa các việc đã làm trong cửa sổ App Duyệt Chi v2 (file BANGIAO_AppDuyetChi.md)"* là bắt tay vào việc luôn.
 >
-> **Cập nhật lần cuối:** phiên bản app **v93** (`APP_VERSION = '20260717-v93'`, tính năng GỬI ẢNH CHUYỂN TIỀN QUA ZALO — mục AP). Trước đó **v92** (sửa lưu Ý KIẾN D/H trên phiếu ứng lương — mục AO), **v91** (màn "chờ duyệt" treo + nối lại listener — mục AN), **v87** (ứng lương = phiếu chi kind='salary' — mục AM), **v85** (`APP_VERSION = '20260714-v85'`, `sw.js VERSION = '20260714-85'`, `version.txt = 20260714-v85`) — thêm **module Lương/ứng lương** (mục AL). Trước đó: luật v83+v84 (mục AJ, AK) + backup tự động. Ngày 14/07/2026.
+> **Cập nhật lần cuối:** phiên bản app **v94** (`APP_VERSION = '20260717-v94'`, vá 2 lỗi Zalo — mục AQ). Trước đó **v93** (tính năng GỬI ẢNH CHUYỂN TIỀN QUA ZALO — mục AP), **v92** (sửa lưu Ý KIẾN D/H trên phiếu ứng lương — mục AO), **v91** (màn "chờ duyệt" treo + nối lại listener — mục AN), **v87** (ứng lương = phiếu chi kind='salary' — mục AM), **v85** (`APP_VERSION = '20260714-v85'`, `sw.js VERSION = '20260714-85'`, `version.txt = 20260714-v85`) — thêm **module Lương/ứng lương** (mục AL). Trước đó: luật v83+v84 (mục AJ, AK) + backup tự động. Ngày 14/07/2026.
 
 ---
 
@@ -554,6 +554,12 @@ Sau khi user hỏi "bảo mật cao hơn nữa", đã phân tích mối đe dọ
 - **Xóa tài khoản rác (3d):** đã `database:remove /duyetchi/userRoles/8ep3MWIzq1SNRN46yAMGQ1ljBXb2` (email typo `kimanh120311@gnail.com`, chưa duyệt, chưa từng đăng nhập). Còn 8 tài khoản thật. (Bản ghi Auth "vỏ" vẫn còn — vô hại, muốn xóa hẳn phải vào Firebase Console vì CLI không xóa được Auth user.)
 - **Giới hạn giá trị (3c) — luật v84:** mỗi field `desc/note/amount/amountUnit/person/site` giờ = `(ĐÓNG BĂNG cũ) && (CAP)`. Cap: desc/note ≤ 5000 ký tự, person/site ≤ 200, amountUnit ≤ 40, amount là số trong [0 ; 100.000.000.000] (100 tỷ). Ngưỡng RẤT RỘNG so với thật (desc dài nhất 158, note 179, amount lớn nhất ~859tr) → không chặn nhầm. Cap chỉ "cắn" đúng kiểu (`!isString||len<=N`, `!isNumber||range`) nên không bao giờ từ chối dữ liệu cũ khi app ghi lại cả phiếu. Đã deploy + xác nhận 6/6 field có cap, 190 phiếu nguyên vẹn.
 - **CÒN LẠI cho user tự làm (mạnh nhất):** bật **2FA** 3 Gmail + **khóa màn hình** mọi điện thoại. Nhóm 3 (App Check theo dõi→siết, xác nhận-lại khi duyệt/chuyển, audit log ghi-một-lần, test luật tự động) — chờ user chọn làm tiếp.
+
+### AQ. 🐞 v94 — vá 2 lỗi của tính năng Zalo v93 (tự rà soát, 17/07/2026)
+User bảo "kiểm lại phần vừa làm" → tự rà thấy 2 lỗi thật, vá ngay TRƯỚC khi ai dính:
+1. **Tràn nhắc cũ:** "cứ chuyển là nhắc" áp cả ~237 phiếu cũ → người đề xuất mở app thấy hàng chục món "chưa gửi Zalo" từ nhiều tháng trước, Trang bị báo "thiếu ảnh" hàng loạt. Thêm mốc `ZALO_REMIND_SINCE = 16/07/2026`: chỉ nhắc các lần chuyển (lần CUỐI, `_zaloLastTransferTs`) từ mốc trở đi — áp cả 2 danh sách (`_zaloPendingForMe`, `_zaloTMissing`).
+2. **Ảnh tải trễ báo sai:** vài giây đầu mở app, kho ảnh chưa tải (`_imagesLoaded=false`, khai báo dòng ~2135) → `proofImages` rỗng tạm → banner Trang "thiếu ảnh" sai + nút "⏳ Chờ ảnh" sai. Nay: chưa tải xong thì `_zaloTMissing` trả rỗng, nút vẫn "📸 Gửi Zalo", bấm thì toast "ảnh đang tải — chờ vài giây".
+- Đã test 3 kịch bản preview: món cũ (06/2026) bị loại đúng; không báo sai khi `_imagesLoaded=false`; đếm đúng khi ảnh đã tải.
 
 ### AP. 📤 v93 — GỬI ẢNH CHUYỂN TIỀN QUA ZALO (17/07/2026, theo tài liệu TongHop_TinhNangMoi_App3.docx)
 Mục đích: sau khi Trang chuyển + up ảnh, NGƯỜI ĐỀ XUẤT tự nhận nhắc để copy ảnh dán vào nhóm Zalo công trường — D 0% can thiệp. App KHÔNG tự gửi Zalo. **Module THÊM MỚI tách biệt** (user yêu cầu tuyệt đối không ảnh hưởng cũ): chỉ 1 móc `try{renderZaloBanners()}catch{}` trong renderAll; ghi 2 trường TỰ DO trên phiếu `zaloStatus` ('sent'|'muted') + `zaloAt` — không thuộc phần đóng băng → KHÔNG đổi luật.
