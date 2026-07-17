@@ -1093,7 +1093,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260717-v93';
+const APP_VERSION = '20260717-v94';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5706,10 +5706,14 @@ function writeReport_(ss, name, headers, color, rows){
 // Người "đề xuất" của phiếu: phiếu chi = person; phiếu ứng lương = người TẠO đề xuất (createdBy).
 function _zaloProposerOf(p){ return p.kind==='salary' ? (p.createdBy||'') : (p.person||''); }
 function _zaloProofs(p){ return Array.isArray(p.proofImages)&&p.proofImages.length ? p.proofImages : (p.proofB64?[p.proofB64]:[]); }
-// "Cứ Trang chuyển là nhắc" (user chốt): vào danh sách khi đã có BẤT KỲ lần chuyển nào, chưa đánh dấu gửi/tắt.
+// CHỈ nhắc các lần chuyển TỪ KHI tính năng ra đời (17/07/2026) — nếu không, hơn 200 phiếu cũ đã chuyển
+// từ trước sẽ tràn vào danh sách "chưa gửi Zalo" của mọi người ngay lần mở app đầu tiên.
+const ZALO_REMIND_SINCE = new Date('2026-07-16T00:00:00+07:00').getTime();
+// "Cứ Trang chuyển là nhắc" (user chốt): vào danh sách khi đã có BẤT KỲ lần chuyển nào (kể cả 1 phần),
+// chưa đánh dấu gửi/tắt — nhưng lần chuyển gần nhất phải SAU mốc ra tính năng.
 function _zaloPendingForMe(){
   const me=getCurrentUserName(); if(!me) return [];
-  return proposals.filter(p=>p.status!=='rejected' && !p.zaloStatus && getTotalTransferred(p)>0 && _zaloProposerOf(p)===me);
+  return proposals.filter(p=>p.status!=='rejected' && !p.zaloStatus && getTotalTransferred(p)>0 && _zaloLastTransferTs(p)>=ZALO_REMIND_SINCE && _zaloProposerOf(p)===me);
 }
 function _zaloDoneForMe(){
   const me=getCurrentUserName(); if(!me) return [];
@@ -5717,9 +5721,12 @@ function _zaloDoneForMe(){
     .sort((a,b)=>(b.zaloAt||0)-(a.zaloAt||0)).slice(0,30); // xem lại 30 món gần nhất là đủ
 }
 // Nhắc Trang: món ĐÃ chuyển nhưng CHƯA có ảnh chuyển tiền (người đề xuất chưa có gì để gửi Zalo).
+// ⚠️ Ảnh được tải TRỄ sau khi mở app (_imagesLoaded) — chưa tải xong mà đã so proofImages sẽ báo
+// "thiếu ảnh" SAI hàng loạt trong vài giây đầu → chờ kho ảnh tải xong mới tính.
 function _zaloTMissing(){
   if(currentRole!=='trang') return [];
-  return proposals.filter(p=>p.status!=='rejected' && getTotalTransferred(p)>0 && _zaloProofs(p).length===0);
+  if(typeof _imagesLoaded!=='undefined' && !_imagesLoaded) return [];
+  return proposals.filter(p=>p.status!=='rejected' && getTotalTransferred(p)>0 && _zaloLastTransferTs(p)>=ZALO_REMIND_SINCE && _zaloProofs(p).length===0);
 }
 function renderZaloBanners(){
   const tB=document.getElementById('zalo-t-banner');
@@ -5771,7 +5778,8 @@ function renderZaloListModal(){
   const done=_zaloDoneForMe();
   sub.textContent='Bấm "Gửi Zalo" → nhấn giữ ảnh → Copy → dán vào nhóm Zalo công trường → quay lại bấm "Đã gửi".';
   const pendHtml = pend.length ? pend.map(p=>{
-    const hasImg=_zaloProofs(p).length>0;
+    // Kho ảnh chưa tải xong thì coi như CÓ ảnh (tránh hiện "Chờ ảnh" sai) — bấm vào zaloShowImg sẽ kiểm thật
+    const hasImg = (typeof _imagesLoaded!=='undefined' && !_imagesLoaded) ? true : _zaloProofs(p).length>0;
     return row(p,
       `<button onclick="zaloShowImg('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:${hasImg?'var(--blue)':'#94a3b8'};color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">${hasImg?'📸 Gửi Zalo':'⏳ Chờ ảnh'}</button>
        <button onclick="zaloMarkSent('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">✅ Đã gửi</button>
@@ -5784,7 +5792,10 @@ function renderZaloListModal(){
 }
 function zaloShowImg(id){
   const p=proposals.find(x=>x.id===id); if(!p) return;
-  if(!_zaloProofs(p).length){ showToast('Trang chưa upload ảnh chuyển tiền cho món này'); return; }
+  if(!_zaloProofs(p).length){
+    if(typeof _imagesLoaded!=='undefined' && !_imagesLoaded){ showToast('⏳ Ảnh đang tải về — chờ vài giây rồi bấm lại'); return; }
+    showToast('Trang chưa upload ảnh chuyển tiền cho món này'); return;
+  }
   openImg(id,'proof',0); // modal ảnh lớn sẵn có: chụm zoom + nhấn giữ để Copy
 }
 function _zaloSet(id, status){
