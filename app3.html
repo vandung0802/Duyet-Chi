@@ -379,7 +379,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <label class="form-label">Mức độ ưu tiên</label>
       <div style="display:flex;gap:8px">
         <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-          <input type="radio" name="edit-priority" value="urgent" style="accent-color:#e74c3c"> 🔴 Gấp
+          <input type="radio" name="edit-priority" value="urgent" style="accent-color:#e74c3c" onchange="onPriorityPick('edit',this)"> 🔴 Gấp
         </label>
         <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
           <input type="radio" name="edit-priority" value="normal" style="accent-color:#f39c12"> 🟡 BT
@@ -600,7 +600,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <label class="form-label">Mức độ ưu tiên</label>
         <div style="display:flex;gap:8px">
           <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-            <input type="radio" name="inp-priority" value="urgent" style="accent-color:#e74c3c"> 🔴 Gấp
+            <input type="radio" name="inp-priority" value="urgent" style="accent-color:#e74c3c" onchange="onPriorityPick('add',this)"> 🔴 Gấp
           </label>
           <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
             <input type="radio" name="inp-priority" value="normal" checked style="accent-color:#f39c12"> 🟡 Bình thường
@@ -1048,6 +1048,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<!-- v95: modal LÝ DO GẤP — chọn 🔴 Gấp phải gõ lý do thì mới có tác dụng (user: "dùng bừa bãi quá") -->
+<div class="role-screen" id="urgent-reason-modal" style="display:none;z-index:9350;background:rgba(0,0,0,0.55)">
+  <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px">
+    <div style="font-size:16px;font-weight:800;color:#c0392b;margin-bottom:4px">🔴 Lý do GẤP?</div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Phải ghi rõ lý do vì sao khoản này gấp thì mới chọn được mức "Gấp". Lý do sẽ hiện ngay trên phiếu cho D/H thấy.</div>
+    <textarea class="form-input" id="urgent-reason-input" rows="3" placeholder="VD: 8h sáng mai đổ bê tông, thiếu xi măng là dừng cả đội..."></textarea>
+    <div id="urgent-reason-err" style="color:var(--red);font-size:12px;min-height:16px;margin:4px 0 6px"></div>
+    <button class="btn-full btn-primary-full" style="background:#e74c3c" onclick="confirmUrgentReason()">Xác nhận GẤP</button>
+    <button class="btn-full btn-outline-full" onclick="cancelUrgentReason()">Hủy (về Bình thường)</button>
+  </div>
+</div>
+
 <!-- Bảng nhắc Trang lúc mở app: các khoản H đã duyệt đang chờ chuyển (hiện 1 lần mỗi lần mở) -->
 <div class="role-screen" id="transfer-reminder-modal" style="display:none;z-index:9300;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto">
@@ -1093,7 +1105,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260717-v94';
+const APP_VERSION = '20260719-v95';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1790,6 +1802,9 @@ function initAuth(){
     try{ hidePendingApprovalScreen(); }catch(e){}
     if(user){
       currentUser = user;
+      // v95: NỐI LẠI NGAY 4 kênh dữ liệu (bị máy chủ hủy lúc đăng xuất) — trước đây phải chờ vòng
+      // 30s của v91 nên D đăng nhập lại mất ~50s mới thấy dữ liệu.
+      try{ if(typeof _dcReattachGated==='function') _dcReattachGated(); }catch(e){}
       // Ẩn màn login NGAY khi Firebase xác nhận danh tính (trước khi đọc DB)
       document.getElementById('role-screen').style.display='none';
       // Dùng cache để vào app ngay
@@ -2133,6 +2148,7 @@ function pushToFirebase(){
 // (_observeImageCards, _loadImagesForProposal, pushToFirebase) nhìn thấy được.
 // Trước đây khai báo bên trong → _observeImageCards luôn văng lỗi (bị try/catch nuốt), lazy-load ảnh chết ngầm.
 let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false, _imagesLoadStarted=false;
+let _dcReattachGated=null; // v95: hàm nối lại 4 kênh dữ liệu gác quyền — gán trong initFirebaseSync, gọi khi đăng nhập
 let _metaData={}, _proposalsData={}, _imagesData={};
 let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
 let _loadingImages = new Set(); // đang fetch
@@ -2355,7 +2371,12 @@ function initFirebaseSync(){
         // Vừa tải trọn kho ảnh → ghi nhận dấu hiện tại của mọi phiếu, khỏi tải lại lần nữa
         proposals.forEach(p=>{ if(p.imgStamp) _imagesStamps[p.id] = p.imgStamp; });
         _imagesLoaded=true; _mergeAndRender();
-      }, ()=>{ _imagesLoaded=true; });
+      }, ()=>{
+        // v95: lượt tải chạy đúng lúc CHƯA có quyền (vd vừa đăng xuất/token chưa gắn) → cho phép
+        // THỬ LẠI ở lượt _mergeAndRender sau khi đăng nhập, thay vì đánh dấu "đã tải" với kho rỗng
+        // (trước đây làm ảnh trống vĩnh viễn tới khi tải lại trang).
+        _imagesLoadStarted=false;
+      });
     }
     // Ảnh phiếu nào có dấu imgStamp mới hơn bản đang giữ (máy khác vừa thêm/xóa ảnh) → tải lại ĐÚNG phiếu đó
     if(_imagesLoaded){
@@ -2365,15 +2386,24 @@ function initFirebaseSync(){
     }
   }
 
-  db.ref('duyetchi/meta').on('value', snap=>{
-    _metaData = snap.val() || {};
-    _metaLoaded = true;
-    _mergeAndRender();
-  });
-  // v91: tách listener proposals thành hàm để NỐI LẠI được — Firebase HỦY listener vĩnh viễn khi lỗi
-  // (denied 1 lần lúc auth chưa sẵn = mất kênh dữ liệu mãi mãi cho tới khi tải lại trang). Nay tự nối lại.
+  // ═══ v95: GOM 4 KÊNH DỮ LIỆU CÓ GÁC QUYỀN vào 1 hàm NỐI LẠI được ═══
+  // Vì sao: khi ĐĂNG XUẤT, máy chủ HỦY mọi listener trên đường bị gác quyền (meta/proposals/plans/
+  // employees). v91 chỉ nối lại proposals và chờ tới 30s → D đăng nhập lại phải đợi ~30-60s mới có
+  // dữ liệu ("mất khoảng 50s"); meta/plans/employees còn chết hẳn tới khi tải lại trang. Nay: nối lại
+  // TẤT CẢ ngay khi đăng nhập (gọi từ onAuthStateChanged qua _dcReattachGated), off() trước on() để
+  // không bao giờ bị trùng kênh.
   let _propRetryCount = 0;
-  function _attachProposalsListener(){
+  function _attachGatedListeners(){
+    // ── meta (danh mục người/công trường/sheetUrl) ──
+    db.ref('duyetchi/meta').off('value');
+    db.ref('duyetchi/meta').on('value', snap=>{
+      _metaData = snap.val() || {};
+      _metaLoaded = true;
+      _mergeAndRender();
+    }, ()=>{ /* bị hủy khi đăng xuất — sẽ nối lại lúc đăng nhập */ });
+
+    // ── proposals (phiếu chi + ứng lương) ──
+    db.ref('duyetchi/proposals').off('value');
     db.ref('duyetchi/proposals').on('value', snap=>{
       _propRetryCount = 0;
       hidePendingApprovalScreen(); // đọc được dữ liệu = chắc chắn KHÔNG phải "chưa được duyệt" → gỡ màn che nếu còn
@@ -2387,52 +2417,52 @@ function initFirebaseSync(){
       _proposalsLoaded = true;
       _mergeAndRender();
     }, err=>{
-      // v81: đọc phiếu bị TỪ CHỐI = tài khoản chưa được Dũng duyệt cho xem. v90/v91: với 3 email người
-      // nhà (LUÔN được đọc theo luật) đây chỉ là lỗi TẠM (auth chưa sẵn sau tải lại/xoá cache/mạng chập)
-      // → KHÔNG hiện màn "chờ duyệt", mà NỐI LẠI listener (vì Firebase đã hủy nó) — tối đa 10 lần, mỗi 3s.
       if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
-        const _u = (firebase.auth().currentUser && firebase.auth().currentUser.email || '').toLowerCase();
+        const _cu = firebase.auth().currentUser;
+        if(!_cu) return; // chưa/không đăng nhập (VD vừa đăng xuất) → khỏi retry, đăng nhập sẽ tự nối lại
+        const _u = (_cu.email||'').toLowerCase();
         const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
         if(_isPriv){
-          if(_propRetryCount++ < 10) setTimeout(_attachProposalsListener, 3000);
+          // 3 người nhà LUÔN được đọc theo luật → denied chỉ là lỗi tạm (token chưa gắn) → nối lại nhanh
+          if(_propRetryCount++ < 10) setTimeout(_attachGatedListeners, 3000);
           else showToast('⚠️ Không đọc được dữ liệu — vuốt tắt app rồi mở lại giúp.');
         } else {
           showPendingApprovalScreen();
-          // Người thường: vẫn nối lại chậm (30s) để khi Dũng bấm "Cho xem" là dữ liệu tự về, không cần tải lại
-          setTimeout(_attachProposalsListener, 30000);
+          // Người thường: nối lại chậm (30s) để khi Dũng bấm "Cho xem" là dữ liệu tự về, không cần tải lại
+          setTimeout(_attachGatedListeners, 30000);
         }
       }
     });
+
+    // ── plans (Kế hoạch vật tư — tách biệt, lỗi ở đây không đụng luồng duyệt/chuyển) ──
+    db.ref('duyetchi/plans').off('value');
+    db.ref('duyetchi/plans').on('value', snap=>{
+      const raw = snap.val() || {};
+      plans = Object.keys(raw).map(k=>raw[k]);
+      _lastPlanIds = new Set(plans.map(p=>p.id)); // ghi nhận đúng id đang có TRÊN SERVER, để savePlans() xoá đúng
+      try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
+      const pg = document.getElementById('page-plan');
+      if(pg && pg.style.display!=='none'){
+        const activeTab = document.querySelector('#page-plan .report-subtab.active')?.dataset.tab || 'list';
+        if(activeTab==='list') renderPlans(); else renderPlanStats();
+      }
+    }, ()=>{});
+
+    // ── employees (DS nhân viên tab Lương — tách biệt) ──
+    db.ref('duyetchi/employees').off('value');
+    db.ref('duyetchi/employees').on('value', snap=>{
+      const raw = snap.val() || {};
+      employees = Object.keys(raw).map(k=>raw[k]);
+      _lastEmpIds = new Set(employees.map(e=>e.id));
+      try{ localStorage.setItem('dc_employees', JSON.stringify(employees)); }catch(e){}
+      const pg = document.getElementById('page-luong');
+      if(pg && pg.style.display!=='none') renderLuongActive();
+    }, ()=>{});
   }
-  _attachProposalsListener();
+  _dcReattachGated = _attachGatedListeners; // cho onAuthStateChanged gọi nối lại NGAY khi đăng nhập
+  _attachGatedListeners();
   // Ảnh nay tải TRỄ — kích hoạt từ _mergeAndRender sau khi đã hiện phiếu (xem trên),
   // để lúc mở app ưu tiên kết nối + tải phiếu (nhẹ), không bị đống ảnh (nặng) làm chậm.
-
-  // ── KẾ HOẠCH VẬT TƯ — ngăn Firebase RIÊNG, HOÀN TOÀN TÁCH BIỆT khỏi proposals/meta/images ──
-  // Cố ý KHÔNG gọi _mergeAndRender() hay đụng vào _proposalsData/_metaData — lỗi ở đây (nếu có)
-  // không thể làm hỏng luồng duyệt/chuyển tiền đang chạy ổn định.
-  db.ref('duyetchi/plans').on('value', snap=>{
-    const raw = snap.val() || {};
-    plans = Object.keys(raw).map(k=>raw[k]);
-    _lastPlanIds = new Set(plans.map(p=>p.id)); // ghi nhận đúng những id đang có TRÊN SERVER, để savePlans() xoá đúng khi có phiếu bị xoá ở local
-    try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
-    const pg = document.getElementById('page-plan');
-    if(pg && pg.style.display!=='none'){
-      const activeTab = document.querySelector('#page-plan .report-subtab.active')?.dataset.tab || 'list';
-      if(activeTab==='list') renderPlans(); else renderPlanStats();
-    }
-  });
-
-  // ── LƯƠNG — DANH SÁCH NHÂN VIÊN ngăn Firebase riêng. Còn CÁC KHOẢN ỨNG LƯƠNG nay là phiếu 'proposals'
-  //    có kind='salary' (dùng chung bộ máy duyệt/chuyển/ảnh với phiếu chi), nên KHÔNG cần ngăn riêng nữa.
-  db.ref('duyetchi/employees').on('value', snap=>{
-    const raw = snap.val() || {};
-    employees = Object.keys(raw).map(k=>raw[k]);
-    _lastEmpIds = new Set(employees.map(e=>e.id));
-    try{ localStorage.setItem('dc_employees', JSON.stringify(employees)); }catch(e){}
-    const pg = document.getElementById('page-luong');
-    if(pg && pg.style.display!=='none') renderLuongActive();
-  });
 
   // Xử lý dữ liệu cũ (format mảng) — tự migrate lên format mới
   function _handleOldFormat(oldProposals){
@@ -2886,7 +2916,7 @@ function attachThumbLongPress(container){
 
 const _cardCache = new Map();
 function _cardHash(p){
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'');
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'');
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -3012,6 +3042,7 @@ function _buildCard(p){
             ${(p.priority||'normal')==='urgent'?`<span style="font-size:17px;font-weight:900;color:#b00000;letter-spacing:0.5px">🔴 GẤP</span>`:''}
             ${(p.priority||'normal')==='low'?`<span style="font-size:13px;font-weight:700;color:#1a7a3c">🟢 Có thể chờ</span>`:''}
           </div>
+          ${(p.priority||'normal')==='urgent'&&p.urgentReason?`<div style="font-size:12px;font-weight:700;color:#b00000;background:#fdecea;padding:4px 8px;border-radius:6px;margin-top:3px;word-break:break-word">Lý do gấp: ${esc(p.urgentReason)}</div>`:''}
         </div>
         <div class="proposal-badge-area">${badgeHtml}</div>
       </div>
@@ -3749,6 +3780,7 @@ function openEditProposal(id){
   opHel.readOnly = !hEditable; opHel.style.background = hEditable ? '' : '#f1f5f9';
   const epv = p.priority||'normal';
   document.querySelectorAll('input[name="edit-priority"]').forEach(r=>{ r.checked = r.value===epv; });
+  _urgentReason.edit = p.urgentReason||''; // v95: nạp lý do gấp sẵn có (đổi sang Gấp mới sẽ hỏi lý do)
 
   // Nạp ảnh hiện có vào danh sách sửa tạm (sao chép mảng, không sửa thẳng dữ liệu gốc cho tới khi bấm Lưu)
   const existing = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
@@ -3877,6 +3909,9 @@ function saveEditProposal(){
   if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
   if(!desc){ showToast('Vui lòng nhập nội dung'); return; }
   if(!amountRaw){ showToast('Vui lòng nhập số tiền'); return; }
+  // v95: đang chọn GẤP mà chưa có lý do → mở bảng đòi lý do, chặn lưu (kiểm TRƯỚC khi ghi bất kỳ trường nào)
+  const _ePrio = (document.querySelector('input[name="edit-priority"]:checked')||{value:'normal'}).value;
+  if(!ensureUrgentReason('edit', _ePrio)) return;
 
   // v77 BẢO MẬT: phiếu đã có D hoặc H duyệt → NỘI DUNG bị đóng băng ở máy chủ (chống sửa số tài
   // khoản/số tiền sau duyệt). Chặn ngay tại đây cho rõ ràng — nếu để lọt, máy chủ cũng sẽ từ chối
@@ -3897,7 +3932,8 @@ function saveEditProposal(){
   // Lưu ý kiến: chỉ ghi đè ô mà vai trò hiện tại được sửa (ô kia readonly nên giữ nguyên giá trị cũ)
   p.opinionD = document.getElementById('edit-opinion-d').value.trim();
   p.opinionH = document.getElementById('edit-opinion-h').value.trim();
-  p.priority = (document.querySelector('input[name="edit-priority"]:checked')||{value:'normal'}).value;
+  p.priority = _ePrio;
+  p.urgentReason = _ePrio==='urgent' ? _urgentReason.edit : null;
   p.imgImages = editingImages.slice();
   p.imgB64 = editingImages[0] || null; // giữ tương thích phiếu cũ
 
@@ -4278,13 +4314,18 @@ function submitProposal(){
     if(!desc){ showToast('Vui lòng nhập nội dung'); document.getElementById('inp-desc').focus(); return; }
     if(!amountRaw){ showToast('Vui lòng nhập số tiền'); document.getElementById('inp-amount').focus(); return; }
 
+    // v95: chọn GẤP bắt buộc có lý do — không có thì mở bảng đòi lý do và chặn gửi
+    const _prio = (document.querySelector('input[name="inp-priority"]:checked')||{value:'normal'}).value;
+    if(!ensureUrgentReason('add', _prio)) return;
+
     const p={
       id: Date.now().toString(),
       desc, person, site,
       amount: amountRaw,
       amountUnit: 'dong',
       note: document.getElementById('inp-note').value.trim(),
-      priority: (document.querySelector('input[name="inp-priority"]:checked')||{value:'normal'}).value,
+      priority: _prio,
+      urgentReason: _prio==='urgent' ? _urgentReason.add : null,
       status:'pending',
       ts: Date.now(),
       imgB64: uploadedImages[0]||null, // giữ để tương thích phiếu cũ
@@ -4315,6 +4356,8 @@ function submitProposal(){
     document.getElementById('inp-person').value='';
     const _ro = document.getElementById('inp-person-readonly'); if(_ro) _ro.value='';
     document.getElementById('inp-site').value='';
+    _urgentReason.add=''; // dùng xong lý do gấp thì xoá, phiếu sau phải gõ lý do mới
+    const _prioReset=document.querySelector('input[name="inp-priority"][value="normal"]'); if(_prioReset) _prioReset.checked=true;
     removeImg();
     showToast('Đã gửi đề xuất!');
     showPage('home', document.querySelector('.nav-item'));
@@ -5809,6 +5852,48 @@ function _zaloSet(id, status){
 function zaloMarkSent(id){ _zaloSet(id,'sent'); showToast('✅ Đã đánh dấu: gửi Zalo xong'); }
 function zaloMute(id){ if(!confirm('Tắt thông báo món này? (Sẽ không nhắc gửi Zalo nữa, trên MỌI thiết bị.)')) return; _zaloSet(id,'muted'); showToast('🔕 Đã tắt thông báo món này'); }
 function zaloUndo(id){ _zaloSet(id,null); showToast('↩ Đã đưa lại vào danh sách chờ gửi'); }
+
+// ══════════════════════════════════════════════════════════════════════════
+// ── v95 LÝ DO GẤP ── chọn 🔴 Gấp bắt buộc gõ lý do (chống "dùng bừa bãi"). Lưu p.urgentReason
+// (trường tự do, không thuộc phần đóng băng). Không gõ lý do → radio trả về Bình thường.
+// ══════════════════════════════════════════════════════════════════════════
+let _urgentCtx = null;               // 'add' | 'edit' — form nào đang chọn Gấp
+let _urgentReason = { add:'', edit:'' }; // lý do đã xác nhận của từng form
+function onPriorityPick(ctx, radio){
+  if(!radio || !radio.checked || radio.value!=='urgent') return;
+  _urgentCtx = ctx;
+  const inp=document.getElementById('urgent-reason-input');
+  inp.value = _urgentReason[ctx]||'';
+  document.getElementById('urgent-reason-err').textContent='';
+  document.getElementById('urgent-reason-modal').style.display='flex';
+  setTimeout(()=>{ try{ inp.focus(); }catch(e){} }, 100);
+}
+function confirmUrgentReason(){
+  const val=(document.getElementById('urgent-reason-input').value||'').trim();
+  if(!val){ document.getElementById('urgent-reason-err').textContent='Chưa ghi lý do — phải ghi lý do mới chọn được Gấp.'; return; }
+  if(_urgentCtx) _urgentReason[_urgentCtx]=val;
+  document.getElementById('urgent-reason-modal').style.display='none';
+  showToast('🔴 Đã ghi lý do gấp');
+  _urgentCtx=null;
+}
+function cancelUrgentReason(){
+  // Không có lý do → Gấp KHÔNG có tác dụng: trả radio về Bình thường
+  const name = _urgentCtx==='edit' ? 'edit-priority' : 'inp-priority';
+  document.querySelectorAll(`input[name="${name}"]`).forEach(r=>{ r.checked = r.value==='normal'; });
+  if(_urgentCtx) _urgentReason[_urgentCtx]='';
+  document.getElementById('urgent-reason-modal').style.display='none';
+  _urgentCtx=null;
+}
+// Chốt chặn cuối lúc lưu (phòng mọi đường vòng): đang Gấp mà không có lý do → mở modal đòi lý do, chặn lưu.
+function ensureUrgentReason(ctx, priority){
+  if(priority!=='urgent') { _urgentReason[ctx]=''; return true; }
+  if((_urgentReason[ctx]||'').trim()) return true;
+  _urgentCtx=ctx;
+  document.getElementById('urgent-reason-input').value='';
+  document.getElementById('urgent-reason-err').textContent='Phiếu đang chọn GẤP — ghi lý do rồi bấm Xác nhận, sau đó lưu lại.';
+  document.getElementById('urgent-reason-modal').style.display='flex';
+  return false;
+}
 
 // ── TOAST ──
 function showToast(msg){
