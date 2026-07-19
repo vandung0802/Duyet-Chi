@@ -31,7 +31,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .app-header h1{font-size:16px;font-weight:700;letter-spacing:-0.3px}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:10px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:10px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
+/* v96: chấm số đỏ trên nút điều hướng — biết đang có việc chờ duyệt/chuyển ở khu nào */
+.nav-badge{position:absolute;top:2px;left:calc(50% + 6px);background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;box-shadow:0 0 0 2px #fff}
 .nav-item.active{color:var(--blue)}
 .nav-icon{font-size:21px;line-height:1}
 .main{padding:10px 10px 80px}
@@ -1073,6 +1075,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- BOTTOM NAV -->
 <nav class="bottom-nav">
   <button class="nav-item active" onclick="showPage('home',this)">
+    <span class="nav-badge" id="nav-badge-home" style="display:none"></span>
     <span class="nav-icon">📋</span><span>Danh sách</span>
   </button>
   <button class="nav-item" onclick="showPage('add',this)">
@@ -1085,9 +1088,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <span class="nav-icon">⚙️</span><span>Cài đặt</span>
   </button>
   <button class="nav-item" onclick="showPage('plan',this)">
+    <span class="nav-badge" id="nav-badge-plan" style="display:none"></span>
     <span class="nav-icon">📅</span><span>Kế hoạch</span>
   </button>
   <button class="nav-item" onclick="showPage('luong',this)">
+    <span class="nav-badge" id="nav-badge-luong" style="display:none"></span>
     <span class="nav-icon">💵</span><span>Lương</span>
   </button>
 </nav>
@@ -1105,7 +1110,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260719-v95';
+const APP_VERSION = '20260719-v96';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2446,6 +2451,7 @@ function initFirebaseSync(){
         const activeTab = document.querySelector('#page-plan .report-subtab.active')?.dataset.tab || 'list';
         if(activeTab==='list') renderPlans(); else renderPlanStats();
       }
+      try{ updateNavBadges(); }catch(e){} // v96: kế hoạch đổi → cập nhật chấm số nút Kế hoạch
     }, ()=>{});
 
     // ── employees (DS nhân viên tab Lương — tách biệt) ──
@@ -2726,6 +2732,8 @@ function renderAll(){
     if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} }
     // v93: banner gửi ảnh Zalo — bọc try/catch để lỗi (nếu có) KHÔNG thể ảnh hưởng luồng render chính
     try{ renderZaloBanners(); }catch(e){}
+    // v96: chấm số đỏ trên thanh điều hướng
+    try{ updateNavBadges(); }catch(e){}
   }, 80);
 }
 
@@ -5893,6 +5901,39 @@ function ensureUrgentReason(ctx, priority){
   document.getElementById('urgent-reason-err').textContent='Phiếu đang chọn GẤP — ghi lý do rồi bấm Xác nhận, sau đó lưu lại.';
   document.getElementById('urgent-reason-modal').style.display='flex';
   return false;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ── v96 CHẤM SỐ ĐỎ TRÊN THANH ĐIỀU HƯỚNG ── biết đang có việc chờ MÌNH ở khu nào.
+// Đếm theo vai trò: D = số món chờ D duyệt, H = chờ H duyệt, T = chờ chuyển; vai trò khác = 0.
+// Danh sách = phiếu CHI · Lương = phiếu ỨNG LƯƠNG · Kế hoạch = kế hoạch D/H chưa xác nhận.
+// ══════════════════════════════════════════════════════════════════════════
+function _navPendingCount(kindSalary){
+  let n=0;
+  proposals.forEach(p=>{
+    if((p.kind==='salary') !== kindSalary) return;
+    if(p.status==='rejected') return;
+    const total=parseFloat(p.amount)||0;
+    if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && p.status!=='transferred') n++; }
+    else if(currentRole==='hien'){ if(approvedAmtOf(p,'H') < total-0.0001 && p.status!=='transferred') n++; }
+    else if(currentRole==='trang'){ const off=getOfficialApprovedAmount(p)||0; if(off>0 && getTotalTransferred(p) < off-0.0001) n++; }
+  });
+  return n;
+}
+function _navPlanCount(){
+  if(currentRole!=='dung' && currentRole!=='hien') return 0;
+  const f = currentRole==='dung' ? 'confirmedByD' : 'confirmedByH';
+  return plans.filter(p=>(p.status==='pending'||p.status==='ordered') && !p[f]).length;
+}
+function _setNavBadge(id, n){
+  const el=document.getElementById(id); if(!el) return;
+  if(n>0){ el.textContent = n>99?'99+':n; el.style.display='block'; }
+  else el.style.display='none';
+}
+function updateNavBadges(){
+  _setNavBadge('nav-badge-home',  _navPendingCount(false));
+  _setNavBadge('nav-badge-luong', _navPendingCount(true));
+  _setNavBadge('nav-badge-plan',  _navPlanCount());
 }
 
 // ── TOAST ──
