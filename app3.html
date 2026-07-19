@@ -1110,7 +1110,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260719-v96';
+const APP_VERSION = '20260719-v97';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1877,7 +1877,7 @@ async function logoutRole(){
   // được máy không đọc lại được dữ liệu phiếu hay vai trò cũ. (Giữ app_version/dc_notif_seen — vô hại.)
   try{
     Object.keys(localStorage).forEach(k=>{
-      if(k.startsWith('dc_role_') || k==='dc_proposals' || k==='dc_persons' || k==='dc_sites' || k==='dc_plans' || k==='dc_sheetUrl' || k==='dc_role'){
+      if(k.startsWith('dc_role_') || k.startsWith('dc_nav_seen_') || k==='dc_proposals' || k==='dc_persons' || k==='dc_sites' || k==='dc_plans' || k==='dc_sheetUrl' || k==='dc_role'){
         localStorage.removeItem(k);
       }
     });
@@ -2705,6 +2705,8 @@ function showPage(pg, btn){
     const activeTab = document.querySelector('.report-subtab.active')?.dataset.tab || 'summary';
     _renderReportTab(activeTab);
   }
+  // v97: vừa chuyển trang → cập nhật chấm số (vào trang nào thì chấm trang đó tắt = "đã xem")
+  try{ updateNavBadges(); }catch(e){}
 }
 
 // ── RENDER ALL ──
@@ -5908,32 +5910,50 @@ function ensureUrgentReason(ctx, priority){
 // Đếm theo vai trò: D = số món chờ D duyệt, H = chờ H duyệt, T = chờ chuyển; vai trò khác = 0.
 // Danh sách = phiếu CHI · Lương = phiếu ỨNG LƯƠNG · Kế hoạch = kế hoạch D/H chưa xác nhận.
 // ══════════════════════════════════════════════════════════════════════════
-function _navPendingCount(kindSalary){
-  let n=0;
+// v97: cơ chế "ĐÃ XEM" (user chốt) — vào trang nào là chấm trang đó về 0 (các món hiện có được ghi
+// nhớ là đã xem, theo từng tài khoản trên máy này); chỉ MÓN MỚI phát sinh sau đó mới đếm tiếp.
+function _navPendingIds(kindSalary){
+  const ids=[];
   proposals.forEach(p=>{
     if((p.kind==='salary') !== kindSalary) return;
     if(p.status==='rejected') return;
     const total=parseFloat(p.amount)||0;
-    if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && p.status!=='transferred') n++; }
-    else if(currentRole==='hien'){ if(approvedAmtOf(p,'H') < total-0.0001 && p.status!=='transferred') n++; }
-    else if(currentRole==='trang'){ const off=getOfficialApprovedAmount(p)||0; if(off>0 && getTotalTransferred(p) < off-0.0001) n++; }
+    if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
+    else if(currentRole==='hien'){ if(approvedAmtOf(p,'H') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
+    else if(currentRole==='trang'){ const off=getOfficialApprovedAmount(p)||0; if(off>0 && getTotalTransferred(p) < off-0.0001) ids.push(p.id); }
   });
-  return n;
+  return ids;
 }
-function _navPlanCount(){
-  if(currentRole!=='dung' && currentRole!=='hien') return 0;
+function _navPlanIds(){
+  if(currentRole!=='dung' && currentRole!=='hien') return [];
   const f = currentRole==='dung' ? 'confirmedByD' : 'confirmedByH';
-  return plans.filter(p=>(p.status==='pending'||p.status==='ordered') && !p[f]).length;
+  return plans.filter(p=>(p.status==='pending'||p.status==='ordered') && !p[f]).map(p=>p.id);
 }
+function _navSeenKey(sec){ return 'dc_nav_seen_'+sec+'_'+((currentUser&&currentUser.uid)||''); }
+function _navGetSeen(sec){ try{ return new Set(JSON.parse(localStorage.getItem(_navSeenKey(sec))||'[]')); }catch(e){ return new Set(); } }
+function _navMarkSeen(sec, ids){ try{ localStorage.setItem(_navSeenKey(sec), JSON.stringify(ids)); }catch(e){} }
 function _setNavBadge(id, n){
   const el=document.getElementById(id); if(!el) return;
   if(n>0){ el.textContent = n>99?'99+':n; el.style.display='block'; }
   else el.style.display='none';
 }
 function updateNavBadges(){
-  _setNavBadge('nav-badge-home',  _navPendingCount(false));
-  _setNavBadge('nav-badge-luong', _navPendingCount(true));
-  _setNavBadge('nav-badge-plan',  _navPlanCount());
+  const secs=[
+    {sec:'home',  ids:_navPendingIds(false), page:'page-home',  badge:'nav-badge-home'},
+    {sec:'luong', ids:_navPendingIds(true),  page:'page-luong', badge:'nav-badge-luong'},
+    {sec:'plan',  ids:_navPlanIds(),         page:'page-plan',  badge:'nav-badge-plan'}
+  ];
+  secs.forEach(s=>{
+    const pg=document.getElementById(s.page);
+    if(pg && pg.style.display!=='none'){
+      // Đang mở trang này = đã xem hết các món hiện có → ghi nhớ + tắt chấm
+      _navMarkSeen(s.sec, s.ids);
+      _setNavBadge(s.badge, 0);
+      return;
+    }
+    const seen=_navGetSeen(s.sec);
+    _setNavBadge(s.badge, s.ids.filter(id=>!seen.has(id)).length); // chỉ đếm món CHƯA xem
+  });
 }
 
 // ── TOAST ──
