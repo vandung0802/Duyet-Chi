@@ -1110,7 +1110,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260719-v97';
+const APP_VERSION = '20260720-v98';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1826,9 +1826,17 @@ function initAuth(){
         db.ref('duyetchi/userRoles/'+user.uid).get()
       ]);
       if(otpSnap.exists()){
-        const { name } = otpSnap.val();
-        showOtpScreen(user.uid, name);
-        return;
+        // v98: tài khoản ĐÃ ĐƯỢC DUYỆT mà còn OTP treo (đăng ký xưa chưa nhập mã, Dũng đã duyệt tay)
+        // → OTP vô nghĩa, tự xoá và cho vào luôn. Trước đây kẹt vĩnh viễn ở màn "Nhập mã 6 số"
+        // (lỗi thật của Bảo: không đăng nhập được dù tài khoản đã duyệt).
+        const _rv0 = snap.exists() ? snap.val() : null;
+        if(_rv0 && typeof _rv0==='object' && _rv0.approved===true){
+          db.ref('duyetchi/pendingOtp/'+user.uid).remove().catch(()=>{});
+        } else {
+          const { name } = otpSnap.val();
+          showOtpScreen(user.uid, name);
+          return;
+        }
       }
       const role_val = snap.exists() ? snap.val() : null;
       let role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
