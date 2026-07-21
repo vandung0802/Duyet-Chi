@@ -1110,7 +1110,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260720-v98';
+const APP_VERSION = '20260720-v99';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -4823,6 +4823,9 @@ async function renderApproveList(){
     const btn = ok
       ? `<button onclick="revokeUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#fef2f2;color:var(--red);border:none;border-radius:20px;cursor:pointer;flex-shrink:0">Thu hồi</button>`
       : `<button onclick="approveUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:20px;cursor:pointer;flex-shrink:0">✅ Cho xem</button>`;
+    // v99: nút XÓA tài khoản (trừ chính mình) — để dọn tài khoản lạ ngay trong app
+    const delBtn = (currentUser && uid===currentUser.uid) ? '' :
+      `<button onclick="deleteUserAccount('${sid(uid)}')" title="Xóa tài khoản này" style="padding:4px 8px;font-size:12px;background:#fef2f2;color:var(--red);border:1px solid #fecaca;border-radius:20px;cursor:pointer;flex-shrink:0">🗑</button>`;
     return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-border)">
       <div style="flex:1;min-width:0">
         <div style="font-weight:700;font-size:13px">${nm} <span style="font-size:10px;color:var(--text-sub)">(${rl})</span>${strangerFlag}</div>
@@ -4830,7 +4833,7 @@ async function renderApproveList(){
         <div style="font-size:11px;color:var(--text-sub)">🕐 Đăng nhập gần nhất: ${lastLogin}</div>
         <div style="font-size:11px;color:${ok?'#16a34a':'#c2410c'}">${ok?'✅ đang được xem dữ liệu':'⛔ chưa được xem'}</div>
       </div>
-      ${btn}
+      ${btn}${delBtn}
     </div>`;
   }).join('');
 }
@@ -4846,6 +4849,25 @@ async function revokeUser(uid){
   if(!confirm('Thu hồi quyền XEM dữ liệu của tài khoản này? Họ sẽ không xem được phiếu cho tới khi bạn cho xem lại.')) return;
   try{ await db.ref('duyetchi/userRoles/'+uid+'/approved').set(false); showToast('⛔ Đã thu hồi quyền xem'); }
   catch(e){ showToast('❌ Không lưu được: '+e.message); }
+  renderApproveList();
+}
+
+// v99: XÓA hẳn tài khoản khỏi app (dọn tài khoản lạ) — chỉ Dũng. Xóa hồ sơ userRoles + OTP treo (nếu có).
+// Lưu ý: vỏ tài khoản đăng nhập (Firebase Auth) không xóa được từ app; nếu kẻ đó đăng nhập lại, hồ sơ
+// tự tạo lại nhưng ở trạng thái CHƯA DUYỆT → vẫn không xem/ghi được gì (luật chặn). Muốn xóa tận gốc
+// vỏ Auth: Firebase Console → Authentication → Users.
+async function deleteUserAccount(uid){
+  if(currentRole!=='dung') return;
+  if(currentUser && uid===currentUser.uid){ showToast('Không thể tự xóa chính mình'); return; }
+  let nm='', em='';
+  try{ const s=await db.ref('duyetchi/userRoles/'+uid).get(); if(s.exists()){ const v=s.val()||{}; nm=v.name||''; em=v.email||''; } }catch(e){}
+  if(!confirm(`XÓA tài khoản "${nm||'(không tên)'}"${em?' — '+em:''} khỏi app?\n\nHọ sẽ mất hồ sơ và quyền xem. Nếu đăng nhập lại sẽ phải chờ bạn duyệt từ đầu.`)) return;
+  if(!confirm('Chắc chắn XÓA? (Bấm OK để xóa hẳn)')) return;
+  try{
+    await db.ref('duyetchi/userRoles/'+uid).remove();
+    db.ref('duyetchi/pendingOtp/'+uid).remove().catch(()=>{});
+    showToast('🗑 Đã xóa tài khoản khỏi app');
+  }catch(e){ showToast('❌ Không xóa được: '+e.message); }
   renderApproveList();
 }
 
