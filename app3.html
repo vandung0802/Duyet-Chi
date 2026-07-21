@@ -547,7 +547,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 
   <div style="position:relative;margin-bottom:8px">
-    <input id="search-input" type="text" placeholder="🔍 Tìm kiếm đề xuất..." oninput="renderProposals()" style="width:100%;padding:9px 12px 9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit">
+    <input id="search-input" type="text" name="dc-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm kiếm đề xuất..." oninput="renderProposals()" style="width:100%;padding:9px 12px 9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit">
   </div>
   <div id="proposal-list"><div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có đề xuất nào<br><small>Nhấn ➕ để thêm mới</small></div></div>
 </div>
@@ -1110,7 +1110,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260720-v99';
+const APP_VERSION = '20260721-v100';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2887,7 +2887,14 @@ function setFilter(f,el){
 let _renderLimit = 150;
 function renderProposals(){
   const list = document.getElementById('proposal-list');
-  const q = (document.getElementById('search-input')?.value||'').trim().toLowerCase();
+  // v100: Chrome trên máy tính hay TỰ ĐIỀN email đăng nhập vào ô tìm kiếm (autofill) → danh sách bị lọc
+  // thành rỗng "Chưa có đề xuất nào" (lỗi thật của Bảo 21/07). Nếu ô tìm kiếm chứa ĐÚNG email đang đăng
+  // nhập thì chắc chắn là autofill (không ai tìm phiếu bằng email) → tự xoá.
+  const _si = document.getElementById('search-input');
+  if(_si && _si.value && currentUser && _si.value.trim().toLowerCase() === (currentUser.email||'').toLowerCase()){
+    _si.value = '';
+  }
+  const q = (_si?.value||'').trim().toLowerCase();
   let items = proposals.filter(p=>matchFilter(p,filter));
   if(q) items = items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q)||(p.site||'').toLowerCase().includes(q));
   // Phiếu vừa được giục duyệt (lastRemindAt mới) nổi lên đầu cho mọi người thấy
