@@ -1110,7 +1110,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260721-v101';
+const APP_VERSION = '20260721-v102';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6189,21 +6189,11 @@ function renderSalaryAdvances(){
   const sub=document.getElementById('sal-month-sub');
   if(sub) sub.innerHTML = items.length? `Đề xuất ${fmtTr(tDX)} · duyệt ${fmtTr(tDuyet)} · chuyển ${fmtTr(tChuyen)}` : '&nbsp;';
   if(!items.length){ list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có khoản ứng nào trong tháng này<br><small>Nhấn "➕ Đề xuất ứng lương"</small></div>'; return; }
-  const groups={};
-  items.forEach(p=>{ (groups[p.site]=groups[p.site]||[]).push(p); });
-  // v101: nhóm có ĐỀ XUẤT MỚI NHẤT lên TRÊN CÙNG (user chốt: đề xuất mới phải lên đầu) —
-  // trước đây xếp cứng Văn phòng → từng công trình nên phiếu mới bị chìm dưới.
-  const _gNewest = {};
-  Object.keys(groups).forEach(g=>{ _gNewest[g]=Math.max.apply(null, groups[g].map(p=>Math.max(p.ts||0,p.lastRemindAt||0))); });
-  const keys=Object.keys(groups).sort((x,y)=> _gNewest[y]-_gNewest[x]);
-  list.innerHTML=keys.map(g=>{
-    const gItems=groups[g].slice().sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0)-Math.max(a.ts||0,a.lastRemindAt||0));
-    const gSum=gItems.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
-    return `<div style="margin:8px 4px 4px;padding:0 4px;display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:13px;font-weight:800;color:var(--blue)">${gIcon(g)} ${esc(g)} <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${gItems.length} khoản</span></div>
-        <div style="font-size:11px;color:var(--text-sub)">duyệt ${fmtTr(gSum)}</div>
-      </div>` + gItems.map(p=>renderCard(p)).join('');
-  }).join('');
+  // v102: BỎ xếp theo nhóm — user chốt: toàn bộ danh sách xếp THUẦN THEO THỜI GIAN, mới nhất trên cùng
+  // rồi cũ dần cho dễ nhìn. (Nhóm 🏢/🏗 vẫn hiện trên từng thẻ nên không mất thông tin; phiếu bị giục
+  // tính như mới → nổi lên đầu, giống Danh sách chi.)
+  const sorted=items.slice().sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0)-Math.max(a.ts||0,a.lastRemindAt||0));
+  list.innerHTML=sorted.map(p=>renderCard(p)).join('');
   attachThumbLongPress(list);
   try{ if(typeof _observeImageCards==='function') _observeImageCards(); }catch(e){} // ảnh lazy-load cho card ứng lương
 }

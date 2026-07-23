@@ -1,4 +1,4 @@
-const VERSION = '20260721-101';
+const VERSION = '20260721-102';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim().then(() => {
