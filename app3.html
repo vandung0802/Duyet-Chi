@@ -1079,6 +1079,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<!-- v104: modal danh sách khi bấm vào Ô THỐNG KÊ của tab Lương (Đã duyệt / Đã chuyển / Chưa chuyển) -->
+<div class="role-screen" id="sal-stat-modal" style="display:none;z-index:9260;background:rgba(0,0,0,0.55)">
+  <div style="background:#fff;border-radius:18px;padding:18px 14px;width:100%;max-width:420px;max-height:84vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <div style="font-size:16px;font-weight:800;color:var(--text)" id="sal-stat-modal-title">Danh sách</div>
+      <button onclick="closeSalStatModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div id="sal-stat-modal-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:10px"></div>
+    <div id="sal-stat-modal-body"></div>
+  </div>
+</div>
+
 <!-- v95: modal LÝ DO GẤP — chọn 🔴 Gấp phải gõ lý do thì mới có tác dụng (user: "dùng bừa bãi quá") -->
 <div class="role-screen" id="urgent-reason-modal" style="display:none;z-index:9350;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px">
@@ -1139,7 +1151,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260723-v103';
+const APP_VERSION = '20260723-v104';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5318,22 +5330,22 @@ function renderReportSummary(){
   // Thẻ thống kê
   const statCards = `
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px">
-    <div style="background:#eff6ff;border-radius:10px;padding:8px 6px;text-align:center">
+    <div onclick="setReportTab('list', document.querySelector('.report-subtab[data-tab=\\'list\\']'))" style="background:#eff6ff;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
       <div style="font-size:9px;color:#1a56db;font-weight:600">TỔNG ĐỀ XUẤT</div>
       <div style="font-size:15px;font-weight:800;color:#1a56db;white-space:nowrap">${fp.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
       <div style="font-size:9px;color:#1a56db;font-weight:600">${fmtTr(tot)}</div>
     </div>
-    <div style="background:#f0fdf4;border-radius:10px;padding:8px 6px;text-align:center">
+    <div onclick="_rptScrollTo('rpt-sec-done')" style="background:#f0fdf4;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
       <div style="font-size:9px;color:#16a34a;font-weight:600">ĐÃ CHUYỂN</div>
       <div style="font-size:15px;font-weight:800;color:#16a34a;white-space:nowrap">${hasTrans.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
       <div style="font-size:9px;color:#16a34a;font-weight:600">${fmtTr(transTotal)}</div>
     </div>
-    <div style="background:#fffbeb;border-radius:10px;padding:8px 6px;text-align:center">
+    <div onclick="_rptScrollTo('rpt-sec-appd')" style="background:#fffbeb;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
       <div style="font-size:9px;color:#d97706;font-weight:600">DT·CHỜ CK</div>
       <div style="font-size:15px;font-weight:800;color:#d97706;white-space:nowrap">${appd.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
       <div style="font-size:9px;color:#d97706;font-weight:600">${fmtTr(appdAmt)}</div>
     </div>
-    <div style="background:#fdf4ff;border-radius:10px;padding:8px 6px;text-align:center">
+    <div onclick="_rptScrollTo('rpt-sec-pend')" style="background:#fdf4ff;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
       <div style="font-size:9px;color:#9333ea;font-weight:600">CHỜ DUYỆT</div>
       <div style="font-size:15px;font-weight:800;color:#9333ea;white-space:nowrap">${pend.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
       <div style="font-size:9px;color:#9333ea;font-weight:600">${fmtTr(pendAmt)}</div>
@@ -5401,10 +5413,10 @@ function renderReportSummary(){
   };
 
   el.innerHTML = statCards
-    + makeTable('⏳ Chờ duyệt', '#9333ea', '#fdf4ff', pend, false, p=>parseFloat(p.amount)||0)
-    + makeTable('✅ Đã duyệt · chờ chuyển', '#d97706', '#fffbeb', appd, false, p=>(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p))
-    + makeTable('💸 Đã chuyển tiền', '#16a34a', '#f0fdf4', hasTrans, false, p=>getTotalTransferred(p))
-    + makeTable('❌ Từ chối', '#dc2626', '#fff1f2', rej, true);
+    + `<div id="rpt-sec-pend">` + makeTable('⏳ Chờ duyệt', '#9333ea', '#fdf4ff', pend, false, p=>parseFloat(p.amount)||0) + `</div>`
+    + `<div id="rpt-sec-appd">` + makeTable('✅ Đã duyệt · chờ chuyển', '#d97706', '#fffbeb', appd, false, p=>(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)) + `</div>`
+    + `<div id="rpt-sec-done">` + makeTable('💸 Đã chuyển tiền', '#16a34a', '#f0fdf4', hasTrans, false, p=>getTotalTransferred(p)) + `</div>`
+    + `<div id="rpt-sec-rej">` + makeTable('❌ Từ chối', '#dc2626', '#fff1f2', rej, true) + `</div>`;
   attachReportDoubleTap(el);
 }
 
@@ -6360,6 +6372,7 @@ function renderSalaryStats(){
   if(pv.indexOf('Y-')===0) items=items.filter(p=>(p.month||'').indexOf(pv.slice(2)+'-')===0);
   else if(pv.indexOf('M-')===0) items=items.filter(p=>p.month===pv.slice(2));
   if(sv) items=items.filter(p=>p.site===sv);
+  _salStatsScope=items; // v104: nguồn cho modal khi bấm ô thống kê
   if(!items.length){ el.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu ứng lương</div>'; return; }
   const tDuyet=items.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
   const tChuyen=items.reduce((s,p)=>s+getTotalTransferred(p),0);
@@ -6379,11 +6392,11 @@ function renderSalaryStats(){
   el.innerHTML=`
     <div class="card"><div class="card-body" style="padding:12px">
       <div style="display:flex;gap:7px">
-        <div style="flex:1;background:#f8fafc;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:var(--text-sub)">Đã duyệt</div><div style="font-size:16px;font-weight:800">${fmtTr(tDuyet)}</div></div>
-        <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#16a34a">Đã chuyển</div><div style="font-size:16px;font-weight:800;color:#16a34a">${fmtTr(tChuyen)}</div></div>
-        <div style="flex:1;background:#fffbeb;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#d97706">Chưa chuyển</div><div style="font-size:16px;font-weight:800;color:#d97706">${fmtTr(tChoChuyen)}</div></div>
+        <div onclick="showSalaryStatList('duyet','nhom')" style="flex:1;background:#f8fafc;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:var(--text-sub)">Đã duyệt</div><div style="font-size:16px;font-weight:800">${fmtTr(tDuyet)}</div></div>
+        <div onclick="showSalaryStatList('chuyen','nhom')" style="flex:1;background:#f0fdf4;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:#16a34a">Đã chuyển</div><div style="font-size:16px;font-weight:800;color:#16a34a">${fmtTr(tChuyen)}</div></div>
+        <div onclick="showSalaryStatList('chua','nhom')" style="flex:1;background:#fffbeb;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:#d97706">Chưa chuyển</div><div style="font-size:16px;font-weight:800;color:#d97706">${fmtTr(tChoChuyen)}</div></div>
       </div>
-      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Chạm 2 lần vào một khoản để mở phiếu ứng lương</div>
+      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Bấm vào một Ô để xem danh sách của ô đó · Chạm 2 lần vào một khoản để mở phiếu</div>
     </div></div>
     <div style="font-size:13px;font-weight:800;margin:12px 4px 4px;color:#16a34a">💸 Đã chuyển <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${daChuyen.length} khoản · ${fmtTr(tChuyen)}</span></div>
     <div class="card"><div class="card-body" style="padding:2px 0">${daChuyen.length?daChuyen.map(p=>rowH(p,'đã chuyển',getTotalTransferred(p),'#16a34a')).join(''):'<div style="padding:12px 14px;color:var(--text-sub);font-size:12px">Chưa có khoản nào đã chuyển</div>'}</div></div>
@@ -6395,6 +6408,43 @@ function renderSalaryStats(){
     </div></div>
     <div style="font-size:11px;color:var(--text-sub);text-align:center;padding:8px 4px">👤 Lũy kế từng người xem ở tab <b>TK theo tên</b></div>`;
   attachSalaryStatsDoubleTap(el);
+}
+
+// ── v104: BẤM Ô THỐNG KÊ là ra đúng DANH SÁCH của nó (user chốt, áp toàn app) ──
+// Báo cáo Tóm tắt: cuộn tới bảng tương ứng trong cùng trang + nháy sáng cho dễ thấy.
+function _rptScrollTo(id){
+  const el=document.getElementById(id); if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  el.style.transition='outline .2s'; el.style.outline='3px solid #f59e0b'; el.style.borderRadius='10px';
+  setTimeout(()=>{ el.style.outline='none'; }, 1600);
+}
+// Tab Lương: bấm ô (Đã duyệt / Đã chuyển / Chưa chuyển) → modal liệt kê từng khoản, bấm khoản → mở phiếu.
+let _salStatsScope=[], _salSnScope=[];
+function closeSalStatModal(){ document.getElementById('sal-stat-modal').style.display='none'; }
+function showSalaryStatList(which, from){
+  const src = (from==='ten' ? _salSnScope : _salStatsScope) || [];
+  const offOf=p=>getOfficialApprovedAmount(p)||0, trOf=p=>getTotalTransferred(p);
+  let items, title, color, amtOf, lbl;
+  if(which==='duyet'){ items=src.filter(p=>offOf(p)>0); title='✔️ Đã duyệt ứng'; color='#2563eb'; amtOf=offOf; lbl='đã duyệt'; }
+  else if(which==='chuyen'){ items=src.filter(p=>trOf(p)>0); title='💸 Đã chuyển'; color='#16a34a'; amtOf=trOf; lbl='đã chuyển'; }
+  else { items=src.filter(p=>offOf(p)>0 && offOf(p)-trOf(p)>0.001); title='⏳ Chưa chuyển'; color='#d97706'; amtOf=p=>offOf(p)-trOf(p); lbl='còn phải chuyển'; }
+  items=items.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  const sum=items.reduce((s,p)=>s+amtOf(p),0);
+  document.getElementById('sal-stat-modal-title').textContent=title;
+  document.getElementById('sal-stat-modal-sub').textContent = items.length ? `${items.length} khoản · ${fmtTr(sum)} — bấm vào một khoản để mở phiếu` : '';
+  const posOf=p=>(((employees.find(e=>e.id===p.empId))||{}).position || p.position || '');
+  document.getElementById('sal-stat-modal-body').innerHTML = items.length ? items.map(p=>`
+    <div onclick="closeSalStatModal();jumpToSalaryAdvance('${sid(p.id)}')" style="display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--gray-border);cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700">${esc(p.person||'')}${posOf(p)?` <span style="font-size:11px;color:var(--blue);font-weight:600">· ${esc(posOf(p))}</span>`:''}</div>
+        <div style="font-size:11px;color:var(--text-sub)">${gIcon(p.site)} ${esc(p.site||'')} · ${monthLabel(p.month)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-weight:700;color:${color}">${fmtVND(amtOf(p))}</div>
+        <div style="font-size:9px;color:var(--text-sub)">${lbl}</div>
+      </div>
+    </div>`).join('') : '<div style="text-align:center;padding:24px;color:var(--text-sub);font-size:13px">Không có khoản nào</div>';
+  document.getElementById('sal-stat-modal').style.display='flex';
 }
 
 // ── v103 TK THEO TÊN: lũy kế từng nhân viên (tìm + xếp; chạm 2 lần → mở Ứng lương lọc đúng người) ──
@@ -6434,6 +6484,8 @@ function renderSalaryStatsByName(){
     if(!byE[k]) byE[k]={name:p.person,group:p.site,position:posOf(p),duyet:0,chuyen:0,soKhoan:0};
     byE[k].duyet+=off; byE[k].chuyen+=tr; byE[k].soKhoan++; });
   const _q=((document.getElementById('sal-sn-search')||{}).value||'').trim().toLowerCase();
+  // v104: nguồn cho modal khi bấm ô thống kê — theo đúng phạm vi kỳ + ô tìm hiện tại
+  _salSnScope = _q ? items.filter(p=>(p.person||'').toLowerCase().includes(_q) || (posOf(p)||'').toLowerCase().includes(_q)) : items;
   let ekeys=Object.keys(byE).filter(k=>!_q || (byE[k].name||'').toLowerCase().includes(_q) || (byE[k].position||'').toLowerCase().includes(_q));
   const _sm=((document.getElementById('sal-sn-sort')||{}).value)||'sum';
   if(_sm==='name') ekeys.sort((x,y)=>(byE[x].name||'').localeCompare(byE[y].name||'','vi'));
@@ -6443,11 +6495,11 @@ function renderSalaryStatsByName(){
   el.innerHTML=`
     <div class="card"><div class="card-body" style="padding:12px">
       <div style="display:flex;gap:7px">
-        <div style="flex:1;background:#f8fafc;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:var(--text-sub)">Đã duyệt ứng</div><div style="font-size:16px;font-weight:800">${fmtTr(tDuyet)}</div></div>
-        <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#16a34a">Đã chuyển</div><div style="font-size:16px;font-weight:800;color:#16a34a">${fmtTr(tCK)}</div></div>
-        <div style="flex:1;background:#fffbeb;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#d97706">Chưa chuyển</div><div style="font-size:16px;font-weight:800;color:#d97706">${fmtTr(Math.max(0,tDuyet-tCK))}</div></div>
+        <div onclick="showSalaryStatList('duyet','ten')" style="flex:1;background:#f8fafc;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:var(--text-sub)">Đã duyệt ứng</div><div style="font-size:16px;font-weight:800">${fmtTr(tDuyet)}</div></div>
+        <div onclick="showSalaryStatList('chuyen','ten')" style="flex:1;background:#f0fdf4;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:#16a34a">Đã chuyển</div><div style="font-size:16px;font-weight:800;color:#16a34a">${fmtTr(tCK)}</div></div>
+        <div onclick="showSalaryStatList('chua','ten')" style="flex:1;background:#fffbeb;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:#d97706">Chưa chuyển</div><div style="font-size:16px;font-weight:800;color:#d97706">${fmtTr(Math.max(0,tDuyet-tCK))}</div></div>
       </div>
-      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Chạm 2 lần vào một người → mở Ứng lương lọc đúng người đó</div>
+      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Bấm vào một Ô để xem danh sách · Chạm 2 lần vào một người → mở Ứng lương lọc đúng người đó</div>
     </div></div>
     <div class="card"><div class="card-body" style="padding:2px 0">
       ${ekeys.map(k=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);return `<div class="sal-name-row" ondblclick="salNameJump('${esc(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer">
