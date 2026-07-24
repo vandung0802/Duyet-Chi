@@ -878,7 +878,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="report-subtabs" style="padding:0 12px 10px">
         <button class="report-subtab active" data-tab="adv" onclick="setLuongTab('adv',this)">💵 Ứng lương</button>
         <button class="report-subtab" data-tab="emp" onclick="setLuongTab('emp',this)">👥 DS nhân viên</button>
-        <button class="report-subtab" data-tab="stats" onclick="setLuongTab('stats',this)">📊 Thống kê</button>
+        <button class="report-subtab" data-tab="stats" onclick="setLuongTab('stats',this)">📊 TK nhóm</button>
+        <button class="report-subtab" data-tab="statsName" onclick="setLuongTab('statsName',this)">👤 TK theo tên</button>
       </div>
     </div>
   </div>
@@ -895,6 +896,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           </div>
           <button onclick="salaryMonthShift(1)" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--gray-border);background:#fff;font-size:18px;color:var(--text);cursor:pointer">›</button>
         </div>
+        <!-- v103: tìm theo tên + chọn cách xếp + gạt Thẻ/Bảng (PA4 user chốt) -->
+        <input id="sal-adv-search" type="text" name="dc-sal-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm theo tên nhân viên..." oninput="renderSalaryAdvances()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
+        <div style="display:flex;gap:6px;margin-bottom:10px">
+          <select id="sal-adv-sort" onchange="renderSalaryAdvances()" style="flex:1;padding:7px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+            <option value="time">⏱ Mới nhất trên cùng</option>
+            <option value="name">🔤 Tên A→Z</option>
+          </select>
+          <button id="sal-view-card" onclick="salSetView('card')" style="padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer">🗂 Thẻ</button>
+          <button id="sal-view-table" onclick="salSetView('table')" style="padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer">📊 Bảng</button>
+        </div>
         <button class="btn-full btn-primary-full" onclick="openAdvModal()">➕ Đề xuất ứng lương</button>
       </div>
     </div>
@@ -906,13 +917,14 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Danh sách nhân viên hưởng lương. Mỗi người gắn <b>Văn phòng</b> hoặc <b>một công trình</b>, có ô ghi chú (VD: nửa tháng chuyển sang công trình khác). Đề xuất ứng lương sẽ chọn tên từ danh sách này.</p>
+        <input id="sal-emp-search" type="text" name="dc-emp-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm nhân viên..." oninput="renderEmployees()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
         <button class="btn-full btn-primary-full" onclick="openEmpModal()">➕ Thêm nhân viên</button>
       </div>
     </div>
     <div id="sal-emp-list"></div>
   </div>
 
-  <!-- Tab con: Thống kê -->
+  <!-- Tab con: TK NHÓM (tổng quan + theo nhóm + đã/chưa chuyển) -->
   <div id="luong-tab-stats" style="display:none">
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
@@ -923,6 +935,23 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </div>
     </div>
     <div id="sal-stats-content"></div>
+  </div>
+
+  <!-- v103 Tab con: TK THEO TÊN (lũy kế từng nhân viên, tìm + xếp) -->
+  <div id="luong-tab-stats-name" style="display:none">
+    <div class="card">
+      <div class="card-body" style="padding:10px 12px">
+        <input id="sal-sn-search" type="text" name="dc-sn-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm theo tên nhân viên..." oninput="renderSalaryStatsByName()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
+        <div style="display:flex;gap:8px">
+          <select id="sal-sn-period" onchange="renderSalaryStatsByName()" style="flex:1;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff"></select>
+          <select id="sal-sn-sort" onchange="renderSalaryStatsByName()" style="flex:1;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+            <option value="sum">💰 Ứng nhiều → ít</option>
+            <option value="name">🔤 Tên A→Z</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div id="sal-sn-content"></div>
   </div>
 </div>
 
@@ -1110,7 +1139,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260721-v102';
+const APP_VERSION = '20260723-v103';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6029,9 +6058,11 @@ function saveEmployees(){
 function setLuongTab(tab, btn){
   document.querySelectorAll('#page-luong .report-subtab').forEach(t=>t.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  document.getElementById('luong-tab-adv').style.display   = tab==='adv'   ? 'block':'none';
-  document.getElementById('luong-tab-emp').style.display   = tab==='emp'   ? 'block':'none';
-  document.getElementById('luong-tab-stats').style.display = tab==='stats' ? 'block':'none';
+  else { const b=document.querySelector('#page-luong .report-subtab[data-tab="'+tab+'"]'); if(b) b.classList.add('active'); }
+  document.getElementById('luong-tab-adv').style.display        = tab==='adv'       ? 'block':'none';
+  document.getElementById('luong-tab-emp').style.display        = tab==='emp'       ? 'block':'none';
+  document.getElementById('luong-tab-stats').style.display      = tab==='stats'     ? 'block':'none';
+  document.getElementById('luong-tab-stats-name').style.display = tab==='statsName' ? 'block':'none';
   renderLuongActive(tab);
 }
 function renderLuongActive(tab){
@@ -6039,7 +6070,24 @@ function renderLuongActive(tab){
   if(!tab) tab = document.querySelector('#page-luong .report-subtab.active')?.dataset.tab || 'adv';
   if(tab==='adv') renderSalaryAdvances();
   else if(tab==='emp') renderEmployees();
+  else if(tab==='statsName') renderSalaryStatsByName();
   else renderSalaryStats();
+}
+// v103: chế độ hiển thị tab Ứng lương — 'card' (thẻ, mặc định) | 'table' (bảng Excel). Nhớ theo máy.
+let salViewMode = (function(){ try{ return localStorage.getItem('dc_sal_view')==='table' ? 'table':'card'; }catch(e){ return 'card'; } })();
+function _salSyncViewBtns(){
+  const bc=document.getElementById('sal-view-card'), bt=document.getElementById('sal-view-table');
+  if(!bc||!bt) return;
+  const on='padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer';
+  const off='padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer';
+  bc.style.cssText = salViewMode==='card' ? on : off;
+  bt.style.cssText = salViewMode==='table' ? on : off;
+}
+function salSetView(mode){
+  salViewMode = mode==='table' ? 'table':'card';
+  try{ localStorage.setItem('dc_sal_view', salViewMode); }catch(e){}
+  _salSyncViewBtns();
+  renderSalaryAdvances();
 }
 function salaryMonthShift(delta){
   ensureSalaryMonth();
@@ -6090,9 +6138,14 @@ function renderEmployees(){
   const list=document.getElementById('sal-emp-list');
   if(!list) return;
   if(!employees.length){ list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có nhân viên nào<br><small>Nhấn "➕ Thêm nhân viên"</small></div>'; return; }
+  // v103: lọc theo ô tìm + trong mỗi nhóm xếp tên A→Z
+  const _eq=((document.getElementById('sal-emp-search')||{}).value||'').trim().toLowerCase();
+  const shown=_eq ? employees.filter(e=>(e.name||'').toLowerCase().includes(_eq) || (e.position||'').toLowerCase().includes(_eq)) : employees;
+  if(!shown.length){ list.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--text-sub);font-size:13px">Không có nhân viên nào khớp tìm kiếm</div>'; return; }
   const order=['Văn phòng'].concat(sites);
   const groups={};
-  employees.forEach(e=>{ (groups[e.group]=groups[e.group]||[]).push(e); });
+  shown.forEach(e=>{ (groups[e.group]=groups[e.group]||[]).push(e); });
+  Object.keys(groups).forEach(g=>groups[g].sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi')));
   const keys=Object.keys(groups).sort((x,y)=>{ let ix=order.indexOf(x); let iy=order.indexOf(y); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy; });
   list.innerHTML=keys.map(g=>`<div style="margin:8px 4px 4px;font-size:13px;font-weight:800;color:var(--blue)">${gIcon(g)} ${esc(g)} <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${groups[g].length} người</span></div>
     <div class="card"><div class="card-body" style="padding:2px 0">`+
@@ -6189,20 +6242,81 @@ function renderSalaryAdvances(){
   const sub=document.getElementById('sal-month-sub');
   if(sub) sub.innerHTML = items.length? `Đề xuất ${fmtTr(tDX)} · duyệt ${fmtTr(tDuyet)} · chuyển ${fmtTr(tChuyen)}` : '&nbsp;';
   if(!items.length){ list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có khoản ứng nào trong tháng này<br><small>Nhấn "➕ Đề xuất ứng lương"</small></div>'; return; }
-  // v102: BỎ xếp theo nhóm — user chốt: toàn bộ danh sách xếp THUẦN THEO THỜI GIAN, mới nhất trên cùng
-  // rồi cũ dần cho dễ nhìn. (Nhóm 🏢/🏗 vẫn hiện trên từng thẻ nên không mất thông tin; phiếu bị giục
-  // tính như mới → nổi lên đầu, giống Danh sách chi.)
-  const sorted=items.slice().sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0)-Math.max(a.ts||0,a.lastRemindAt||0));
-  list.innerHTML=sorted.map(p=>renderCard(p)).join('');
+  // v103 (PA4): lọc theo TÊN nhân viên + chọn cách xếp + 2 chế độ Thẻ/Bảng.
+  _salSyncViewBtns(); // đồng bộ màu nút Thẻ/Bảng theo chế độ đã lưu trên máy
+  const _q=((document.getElementById('sal-adv-search')||{}).value||'').trim().toLowerCase();
+  let shown=_q ? items.filter(p=>(p.person||'').toLowerCase().includes(_q)) : items.slice();
+  const _sortMode=((document.getElementById('sal-adv-sort')||{}).value)||'time';
+  if(_sortMode==='name') shown.sort((a,b)=> (a.person||'').localeCompare(b.person||'','vi') || (b.ts||0)-(a.ts||0));
+  else shown.sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0)-Math.max(a.ts||0,a.lastRemindAt||0)); // v102: mới nhất trên cùng
+  if(!shown.length){ list.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--text-sub);font-size:13px">Không có khoản ứng nào khớp tìm kiếm</div>'; return; }
+  if(salViewMode==='table'){ _renderSalaryTable(list, shown); return; }
+  list.innerHTML=shown.map(p=>renderCard(p)).join('');
   attachThumbLongPress(list);
   try{ if(typeof _observeImageCards==='function') _observeImageCards(); }catch(e){} // ảnh lazy-load cho card ứng lương
+}
+
+// v103: chế độ BẢNG (kiểu Excel như Báo cáo) — mỗi khoản 1 dòng + dòng Tổng; chạm 2 lần vào dòng → về Thẻ đúng phiếu.
+function _salPosOf(p){ return (((employees.find(e=>e.id===p.empId))||{}).position || p.position || ''); }
+function _salStatusLabel(p){
+  const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p);
+  if(p.status==='rejected') return {label:'❌ Từ chối', color:'#dc2626'};
+  if(off>0 && tr>=off-0.0001) return {label:'✅ xong', color:'#16a34a'};
+  if(approvedAmtOf(p,'H')>0) return {label:'💸 chờ CK', color:'#2563eb'};
+  if(approvedAmtOf(p,'D')>0) return {label:'⏳ chờ H', color:'#d97706'};
+  return {label:'⏳ chờ D', color:'#9333ea'};
+}
+function _renderSalaryTable(list, shown){
+  let tDX2=0,tD2=0,tH2=0,tCK2=0;
+  const rows=shown.map((p,i)=>{
+    const dAmt=approvedAmtOf(p,'D'), hAmt=approvedAmtOf(p,'H'), ck=getTotalTransferred(p);
+    tDX2+=parseFloat(p.amount)||0; tD2+=dAmt; tH2+=hAmt; tCK2+=ck;
+    const st=_salStatusLabel(p);
+    return `<tr class="sal-row-link" ondblclick="jumpToSalaryAdvance('${sid(p.id)}')" style="cursor:pointer">
+      <td style="text-align:center;font-size:10px;color:var(--text-sub);vertical-align:middle">${i+1}</td>
+      <td style="font-weight:700;font-size:11px;vertical-align:middle">${esc(p.person||'')}</td>
+      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${esc(_salPosOf(p)||'—')}</td>
+      <td style="font-size:10px;color:var(--text-sub);vertical-align:middle">${esc(p.site||'')}</td>
+      <td style="text-align:right;font-size:10px;font-weight:700;vertical-align:middle">${fmtTr(p.amount)}</td>
+      <td style="text-align:right;font-size:10px;vertical-align:middle">${dAmt>0?fmtTr(dAmt):'—'}</td>
+      <td style="text-align:right;font-size:10px;vertical-align:middle">${hAmt>0?fmtTr(hAmt):'—'}</td>
+      <td style="text-align:right;font-size:10px;font-weight:700;color:${ck>0?'#16a34a':'#cbd5e1'};vertical-align:middle">${ck>0?fmtTr(ck):'—'}</td>
+      <td style="font-size:10px;font-weight:700;color:${st.color};vertical-align:middle;white-space:nowrap">${st.label}</td>
+    </tr>`;
+  }).join('');
+  const colWidths=[20,66,58,80,52,46,46,50,64];
+  const totalWidth=colWidths.reduce((a,w)=>a+w,0);
+  list.innerHTML=`
+    <div class="card"><div class="card-body" style="padding:0">
+      <div class="excel-table-wrap">
+        <table class="excel-table excel-table-scroll" style="width:${totalWidth}px">
+          <colgroup>${colWidths.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
+          <thead><tr><th style="text-align:center">#</th><th>Nhân viên</th><th>Chức vụ</th><th>Nhóm</th><th style="text-align:right">Đề xuất</th><th style="text-align:right">D</th><th style="text-align:right">H</th><th style="text-align:right">Đã CK</th><th>Trạng thái</th></tr></thead>
+          <tbody>${rows}</tbody>
+          <tfoot><tr style="background:#f8fafc;font-weight:800">
+            <td colspan="4" style="font-size:10px;padding:5px 6px">Tổng · ${shown.length} khoản</td>
+            <td style="text-align:right;font-size:10px">${fmtTr(tDX2)}</td>
+            <td style="text-align:right;font-size:10px">${fmtTr(tD2)}</td>
+            <td style="text-align:right;font-size:10px">${fmtTr(tH2)}</td>
+            <td style="text-align:right;font-size:10px;color:#16a34a">${fmtTr(tCK2)}</td>
+            <td></td>
+          </tr></tfoot>
+        </table>
+      </div>
+      <div style="font-size:10px;color:var(--text-sub);text-align:center;padding:6px">💡 Kéo ngang xem thêm cột · Chạm 2 lần vào dòng → mở thẻ phiếu để duyệt</div>
+    </div></div>`;
+  attachSalaryStatsDoubleTap(list);
 }
 
 // Nhảy từ THỐNG KÊ sang phiếu ứng lương tương ứng (đổi sang tab Ứng lương + đúng tháng + cuộn tới thẻ)
 function jumpToSalaryAdvance(id){
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(p.month) salaryMonth=p.month;
+  // v103: về chế độ THẺ + bỏ lọc tìm kiếm để chắc chắn thấy được phiếu cần tới
+  salViewMode='card'; try{ localStorage.setItem('dc_sal_view','card'); }catch(e){}
+  const _s=document.getElementById('sal-adv-search'); if(_s) _s.value='';
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
+  try{ salSetView('card'); }catch(e){}
   setTimeout(()=>{
     const card=document.getElementById('card-'+id);
     if(!card) return;
@@ -6254,8 +6368,6 @@ function renderSalaryStats(){
   const order=['Văn phòng'].concat(sites);
   const gkeys=Object.keys(byG).sort((x,y)=>{let ix=order.indexOf(x);let iy=order.indexOf(y);if(ix<0)ix=999;if(iy<0)iy=999;return ix-iy;});
   const posOf = p => (((employees.find(e=>e.id===p.empId))||{}).position || p.position || '');
-  const byE={}; items.forEach(p=>{ const k=p.empId||p.person; const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p); if(!byE[k]) byE[k]={name:p.person,group:p.site,position:posOf(p),duyet:0,chuyen:0}; byE[k].duyet+=off; byE[k].chuyen+=tr; });
-  const ekeys=Object.keys(byE).sort((x,y)=>byE[y].duyet-byE[x].duyet);
   // 2 danh sách như bên Sheet báo cáo: ĐÃ CHUYỂN / CHƯA CHUYỂN. Chạm 2 lần 1 dòng → nhảy sang phiếu ứng.
   const remainOf = p => { const off=getOfficialApprovedAmount(p)||0; const base=off>0?off:(parseFloat(p.amount)||0); return base-getTotalTransferred(p); };
   const daChuyen  = items.filter(p=>getTotalTransferred(p)>0).sort((a,b)=>(b.transferredAt||b.ts||0)-(a.transferredAt||a.ts||0));
@@ -6281,11 +6393,69 @@ function renderSalaryStats(){
     <div class="card"><div class="card-body" style="padding:2px 0">
       ${gkeys.map(g=>{const d=byG[g];const con=Math.max(0,d.duyet-d.chuyen);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px"><span>${gIcon(g)} ${esc(g)}</span><span style="text-align:right"><div style="font-weight:700">${fmtVND(d.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(d.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span></div>`}).join('')}
     </div></div>
-    <div style="font-size:13px;font-weight:800;margin:12px 4px 4px">Lũy kế theo nhân viên</div>
-    <div class="card"><div class="card-body" style="padding:2px 0">
-      ${ekeys.map(k=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px"><span>${esc(e.name)}${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''} <span style="font-size:11px;color:var(--text-sub)">· ${esc(e.group)}</span></span><span style="text-align:right"><div style="font-weight:700">${fmtVND(e.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(e.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span></div>`}).join('')}
-    </div></div>`;
+    <div style="font-size:11px;color:var(--text-sub);text-align:center;padding:8px 4px">👤 Lũy kế từng người xem ở tab <b>TK theo tên</b></div>`;
   attachSalaryStatsDoubleTap(el);
+}
+
+// ── v103 TK THEO TÊN: lũy kế từng nhân viên (tìm + xếp; chạm 2 lần → mở Ứng lương lọc đúng người) ──
+function salNameJump(name){
+  const s=document.getElementById('sal-adv-search'); if(s) s.value=name||'';
+  setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
+}
+function attachRowDoubleTap(container, selector){
+  let lastTap=0, lastTarget=null;
+  container.addEventListener('touchend', e=>{
+    const row=e.target.closest(selector); if(!row) return;
+    const now=Date.now();
+    if(now-lastTap<350 && lastTarget===row){ e.preventDefault(); if(typeof row.ondblclick==='function') row.ondblclick.call(row); }
+    lastTap=now; lastTarget=row;
+  }, {passive:false});
+}
+function renderSalaryStatsByName(){
+  const el=document.getElementById('sal-sn-content');
+  if(!el) return;
+  const all=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected');
+  const per=document.getElementById('sal-sn-period');
+  const months=Array.from(new Set(all.map(p=>p.month).filter(Boolean))).sort().reverse();
+  const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
+  if(per){
+    const cur=per.value;
+    per.innerHTML = years.map(y=>`<option value="Y-${y}">Cả năm ${y}</option>`).join('') + months.map(m=>`<option value="M-${m}">${monthLabel(m)}</option>`).join('');
+    if(cur && Array.from(per.options).some(o=>o.value===cur)) per.value=cur;
+    else if(per.options.length) per.value=per.options[0].value;
+  }
+  const pv=per?per.value:'';
+  let items=all;
+  if(pv.indexOf('Y-')===0) items=items.filter(p=>(p.month||'').indexOf(pv.slice(2)+'-')===0);
+  else if(pv.indexOf('M-')===0) items=items.filter(p=>p.month===pv.slice(2));
+  const posOf = p => (((employees.find(e=>e.id===p.empId))||{}).position || p.position || '');
+  const byE={};
+  items.forEach(p=>{ const k=p.empId||p.person; const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p);
+    if(!byE[k]) byE[k]={name:p.person,group:p.site,position:posOf(p),duyet:0,chuyen:0,soKhoan:0};
+    byE[k].duyet+=off; byE[k].chuyen+=tr; byE[k].soKhoan++; });
+  const _q=((document.getElementById('sal-sn-search')||{}).value||'').trim().toLowerCase();
+  let ekeys=Object.keys(byE).filter(k=>!_q || (byE[k].name||'').toLowerCase().includes(_q) || (byE[k].position||'').toLowerCase().includes(_q));
+  const _sm=((document.getElementById('sal-sn-sort')||{}).value)||'sum';
+  if(_sm==='name') ekeys.sort((x,y)=>(byE[x].name||'').localeCompare(byE[y].name||'','vi'));
+  else ekeys.sort((x,y)=>byE[y].duyet-byE[x].duyet);
+  if(!ekeys.length){ el.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu ứng lương khớp tìm kiếm</div>'; return; }
+  const tDuyet=ekeys.reduce((s,k)=>s+byE[k].duyet,0), tCK=ekeys.reduce((s,k)=>s+byE[k].chuyen,0);
+  el.innerHTML=`
+    <div class="card"><div class="card-body" style="padding:12px">
+      <div style="display:flex;gap:7px">
+        <div style="flex:1;background:#f8fafc;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:var(--text-sub)">Đã duyệt ứng</div><div style="font-size:16px;font-weight:800">${fmtTr(tDuyet)}</div></div>
+        <div style="flex:1;background:#f0fdf4;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#16a34a">Đã chuyển</div><div style="font-size:16px;font-weight:800;color:#16a34a">${fmtTr(tCK)}</div></div>
+        <div style="flex:1;background:#fffbeb;border-radius:10px;padding:9px 7px;text-align:center"><div style="font-size:10px;color:#d97706">Chưa chuyển</div><div style="font-size:16px;font-weight:800;color:#d97706">${fmtTr(Math.max(0,tDuyet-tCK))}</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Chạm 2 lần vào một người → mở Ứng lương lọc đúng người đó</div>
+    </div></div>
+    <div class="card"><div class="card-body" style="padding:2px 0">
+      ${ekeys.map(k=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);return `<div class="sal-name-row" ondblclick="salNameJump('${esc(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer">
+        <span style="min-width:0"><span style="font-weight:700">${esc(e.name||'')}</span>${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''}<div style="font-size:10px;color:var(--text-sub)">${gIcon(e.group)} ${esc(e.group||'')} · ${e.soKhoan} khoản</div></span>
+        <span style="text-align:right;flex-shrink:0"><div style="font-weight:700">${fmtVND(e.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(e.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span>
+      </div>`}).join('')}
+    </div></div>`;
+  attachRowDoubleTap(el, '.sal-name-row');
 }
 
 </script>
