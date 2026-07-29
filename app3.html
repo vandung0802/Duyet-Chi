@@ -1151,7 +1151,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260723-v104';
+const APP_VERSION = '20260725-v105';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2873,14 +2873,10 @@ function renderNotifPanel(){
 
 function closeNotifAndGo(id){
   document.getElementById('notif-panel').style.display='none';
-  // Chuyển sang tab Danh sách và scroll đến card
-  showPage('home');
-  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
-  document.querySelector('.nav-btn[data-page="home"]')&&document.querySelector('.nav-btn[data-page="home"]').classList.add('active');
-  setTimeout(()=>{
-    const el = document.getElementById('card-'+id);
-    if(el) el.scrollIntoView({behavior:'smooth', block:'center'});
-  }, 100);
+  // v105: dùng chung jumpToProposal — tự nâng giới hạn vẽ nếu phiếu cũ + xoá ô tìm + highlight
+  const p = proposals.find(x=>x.id===id);
+  if(p && p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); return; }
+  jumpToProposal(id);
 }
 
 // ── STATS ──
@@ -5061,20 +5057,33 @@ function jumpToProposal(id){
   const navHome = document.querySelector('.nav-item');
   showPage('home', navHome);
   filter = 'all';
+  // v105: xoá ô tìm kiếm — đang có chữ thì phiếu cần tới có thể bị lọc mất
+  const _si = document.getElementById('search-input'); if(_si) _si.value='';
   document.querySelectorAll('.stat-box').forEach(b=>b.classList.remove('active'));
   const allBox = document.querySelector('.stat-box[data-f="all"]');
   if(allBox) allBox.classList.add('active');
+  // v105: trang chủ chỉ vẽ _renderLimit (150) phiếu MỚI nhất → phiếu CŨ ngoài mức đó không có thẻ để
+  // cuộn tới ("ấn đúp không nhảy" — lỗi user báo). Tìm vị trí phiếu theo ĐÚNG thứ tự renderProposals,
+  // nếu nằm ngoài thì nâng giới hạn vẽ tới đó.
+  try{
+    const _items = proposals.filter(p=>matchFilter(p,'all'))
+      .sort((a,b)=> Math.max(b.ts||0, b.lastRemindAt||0) - Math.max(a.ts||0, a.lastRemindAt||0));
+    const _idx = _items.findIndex(p=>p.id===id);
+    if(_idx >= _renderLimit) _renderLimit = _idx + 20;
+  }catch(e){}
   renderAll();
-  // Chờ debounce renderAll (80ms) + render xong → scroll & highlight
-  setTimeout(()=>{
+  // Chờ debounce renderAll (80ms) + render xong → scroll & highlight; phiếu cũ vẽ nhiều thẻ nên thử lại 1 nhịp nếu chưa kịp
+  const _scrollTo = ()=>{
     const card = document.getElementById('card-'+id);
-    if(!card) return;
+    if(!card) return false;
     card.scrollIntoView({behavior:'smooth', block:'center'});
     card.classList.remove('card-highlighted');
     void card.offsetWidth;
     card.classList.add('card-highlighted');
     card.addEventListener('animationend', ()=>card.classList.remove('card-highlighted'), {once:true});
-  }, 150);
+    return true;
+  };
+  setTimeout(()=>{ if(!_scrollTo()) setTimeout(_scrollTo, 700); }, 250);
 }
 
 // Double-tap cho mobile trên các hàng report
