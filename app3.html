@@ -496,6 +496,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
   <div style="display:flex;align-items:center;gap:6px">
     <button onclick="location.reload(true)" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:32px;height:32px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Tải lại">🔄</button>
+    <!-- v109: nút CHAT nhóm công ty (user chốt: icon ghi chữ Chat, cạnh chuông, kèm số tin chưa đọc) -->
+    <div style="position:relative;display:inline-flex">
+      <button id="chat-open-btn" onclick="openChatPage()" style="background:rgba(255,255,255,0.15);border:none;border-radius:17px;height:34px;padding:0 10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;gap:4px" title="Chat nhóm công ty">💬 Chat</button>
+      <span id="chat-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
+    </div>
     <div style="position:relative;display:inline-flex">
       <button id="notif-bell" onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative" title="Thông báo">🔔</button>
       <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
@@ -1103,6 +1108,37 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<!-- v109 CHAT NHÓM CÔNG TY: màn toàn màn hình kiểu Zalo (PA2 — có gắn phiếu) -->
+<div id="chat-page" style="display:none;position:fixed;inset:0;z-index:9450;background:#eef2f7;flex-direction:column">
+  <div style="background:var(--blue);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0">
+    <button onclick="closeChatPage()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;color:#fff;cursor:pointer">←</button>
+    <div style="flex:1;min-width:0">
+      <div style="font-size:15px;font-weight:800">💬 Nhóm Phúc Vinh An</div>
+      <div style="font-size:10px;opacity:.85">Chat nội bộ — chỉ thành viên đã duyệt</div>
+    </div>
+  </div>
+  <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:10px 10px 4px"></div>
+  <div id="chat-tag-row" style="display:none;flex-shrink:0;padding:4px 8px;background:#fff;border-top:1px solid var(--gray-border);white-space:nowrap;overflow-x:auto"></div>
+  <div id="chat-attach-preview" style="display:none;flex-shrink:0;padding:6px 8px 0;background:#fff;border-top:1px solid var(--gray-border)"></div>
+  <div style="flex-shrink:0;display:flex;gap:6px;padding:8px;background:#fff;border-top:1px solid var(--gray-border);padding-bottom:calc(8px + env(safe-area-inset-bottom))">
+    <button onclick="openChatPick()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gắn phiếu vào tin">📋</button>
+    <input id="chat-msg-inp" type="text" autocomplete="off" placeholder="Nhắn tin... (gõ @ để tag tên)" oninput="_chatTagHint(this)" onkeydown="if(event.key==='Enter')sendGroupMsg()" style="flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;outline:none;font-family:inherit">
+    <button onclick="sendGroupMsg()" style="flex-shrink:0;padding:9px 16px;font-size:14px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:10px;cursor:pointer">Gửi</button>
+  </div>
+</div>
+
+<!-- v109: khung CHỌN PHIẾU để gắn vào tin chat -->
+<div class="role-screen" id="chat-pick-modal" style="display:none;z-index:9460;background:rgba(0,0,0,0.55)">
+  <div style="background:#fff;border-radius:18px;padding:16px 14px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">📋 Chọn phiếu để gắn</div>
+      <button onclick="closeChatPick()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <input id="chat-pick-search" type="text" autocomplete="off" placeholder="🔍 Tìm theo nội dung / tên người..." oninput="renderChatPick()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;outline:none;font-family:inherit;margin-bottom:8px">
+    <div id="chat-pick-list"></div>
+  </div>
+</div>
+
 <!-- v106 HỎI–ĐÁP: bảng nhắc khi mở app — có tin nhắn/ý kiến mới cho ĐÚNG mình thì mới hiện -->
 <div class="role-screen" id="chat-remind-modal" style="display:none;z-index:9280;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:380px;max-height:80vh;overflow-y:auto">
@@ -1161,7 +1197,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260731-v108';
+const APP_VERSION = '20260801-v109';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2214,6 +2250,8 @@ function pushToFirebase(){
 // Trước đây khai báo bên trong → _observeImageCards luôn văng lỗi (bị try/catch nuốt), lazy-load ảnh chết ngầm.
 let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false, _imagesLoadStarted=false;
 let _dcReattachGated=null; // v95: hàm nối lại 4 kênh dữ liệu gác quyền — gán trong initFirebaseSync, gọi khi đăng nhập
+// v109 CHAT NHÓM: 200 tin gần nhất + mốc đã-đọc của mình
+let groupChatMsgs=[], _chatReadTs=0, _gcQuery=null, _crQuery=null, _chatAttachRef=null;
 let _metaData={}, _proposalsData={}, _imagesData={};
 let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
 let _loadingImages = new Set(); // đang fetch
@@ -2525,6 +2563,23 @@ function initFirebaseSync(){
       const pg = document.getElementById('page-luong');
       if(pg && pg.style.display!=='none') renderLuongActive();
     }, ()=>{});
+
+    // ── v109 CHAT NHÓM: 200 tin gần nhất (query lưu riêng để off() đúng kênh) + mốc đã-đọc của mình ──
+    if(_gcQuery){ try{ _gcQuery.off('value'); }catch(e){} }
+    _gcQuery = db.ref('duyetchi/groupChat').limitToLast(200);
+    _gcQuery.on('value', snap=>{
+      const raw = snap.val() || {};
+      groupChatMsgs = Object.keys(raw).map(k=>Object.assign({_k:k}, raw[k])).sort((a,b)=>(a.ts||0)-(b.ts||0));
+      try{ updateChatBadge(); }catch(e){}
+      const pg = document.getElementById('chat-page');
+      if(pg && pg.style.display==='flex'){ try{ renderChatMsgs(); markGroupChatRead(); }catch(e){} }
+    }, ()=>{ /* bị hủy khi đăng xuất — nối lại lúc đăng nhập */ });
+    if(_crQuery){ try{ _crQuery.off('value'); }catch(e){} }
+    const _crUser = firebase.auth().currentUser;
+    if(_crUser){
+      _crQuery = db.ref('duyetchi/chatRead/'+_crUser.uid);
+      _crQuery.on('value', s=>{ _chatReadTs = s.val()||0; try{ updateChatBadge(); }catch(e){} }, ()=>{});
+    }
   }
   _dcReattachGated = _attachGatedListeners; // cho onAuthStateChanged gọi nối lại NGAY khi đăng nhập
   _attachGatedListeners();
@@ -3166,6 +3221,7 @@ function _buildCard(p){
       ${renderBtnTransfer(p)}
       ${renderBtnShare(p)}
       ${renderBtnRemind(p)}
+      <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openChatWithRef('${sid(p.id)}')" title="Gửi phiếu này vào Chat nhóm">📤</button>
       ${(currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||p.person===getCurrentUserName())
         ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${sid(p.id)}')" title="Sửa đề xuất / ghi ý kiến">✏️</button>`
         : ''}
@@ -6216,6 +6272,166 @@ function chatRemindGo(id){
   const p=proposals.find(x=>x.id===id);
   if(p && p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ── v109 CHAT NHÓM CÔNG TY (PA2) ── màn chat kiểu Zalo: @tag tên, giờ từng tin, số tin chưa đọc
+// (đồng bộ đa thiết bị qua chatRead/uid), và GẮN PHIẾU vào tin — bấm thẻ phiếu là nhảy tới phiếu.
+// Tin bất biến (luật server). Module thêm mới — không đụng luồng duyệt/chuyển.
+// ══════════════════════════════════════════════════════════════════════════
+function _chatMemberNames(){
+  const s=new Set(['Dũng','Hiền','Trang']);
+  try{ persons.forEach(p=>{ if(p&&p.name) s.add(p.name); }); }catch(e){}
+  try{ employees.forEach(e=>{ if(e&&e.name) s.add(e.name); }); }catch(e){}
+  if(getCurrentUserName()) s.delete(getCurrentUserName()); // không tag chính mình
+  return Array.from(s);
+}
+function _chatRefStatus(p){
+  if(p.kind==='salary'){ const st=_salStatusLabel(p); return st.label; }
+  const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p);
+  if(p.status==='rejected') return '❌ từ chối';
+  if(p.status==='transferred') return '💸 đã chuyển';
+  if(off>0 && tr<off-0.0001) return '⏳ chờ chuyển';
+  if(off>0) return '✅ đã duyệt';
+  return '⏳ chờ duyệt';
+}
+function _chatRefChip(refId){
+  const p=proposals.find(x=>x.id===refId);
+  if(!p) return `<div style="border:1px solid var(--gray-border);background:#f8fafc;border-radius:8px;padding:5px 8px;margin-top:4px;font-size:11px;color:var(--text-sub)">📋 (phiếu đã xoá hoặc không còn)</div>`;
+  return `<div onclick="chatOpenRef('${sid(p.id)}')" style="border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-top:4px;cursor:pointer">
+    <div style="font-size:11px;font-weight:700;color:var(--blue-dark);word-break:break-word">📋 ${esc(p.desc||'')}</div>
+    <div style="font-size:10px;color:var(--blue-dark)">${fmtVND(p.amount)} · ${esc(p.person||'')} · ${_chatRefStatus(p)} — bấm mở phiếu ›</div>
+  </div>`;
+}
+function chatOpenRef(id){
+  closeChatPage();
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
+  else jumpToProposal(id);
+}
+function _chatRoleClr(r){ return r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155'; }
+function _chatHighlightTags(escapedText){
+  let h=escapedText;
+  _chatMemberNames().concat([getCurrentUserName()||'']).filter(Boolean)
+    .sort((a,b)=>b.length-a.length)
+    .forEach(n=>{ const en=esc(n); h=h.split('@'+en).join(`<span style="color:var(--blue);font-weight:700">@${en}</span>`); });
+  return h;
+}
+function renderChatMsgs(){
+  const box=document.getElementById('chat-msgs'); if(!box) return;
+  const myUid=(currentUser&&currentUser.uid)||''; const myName=getCurrentUserName();
+  if(!groupChatMsgs.length){ box.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--text-sub);font-size:13px">Chưa có tin nhắn nào.<br><small>Gửi tin đầu tiên cho cả nhóm nhé!</small></div>'; return; }
+  let lastDay='';
+  box.innerHTML=groupChatMsgs.map(m=>{
+    const d=new Date(m.ts||0);
+    const day=d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit'});
+    const sep=day!==lastDay?`<div style="text-align:center;font-size:10px;color:var(--text-sub);margin:10px 0 6px">— ${day} —</div>`:'';
+    lastDay=day;
+    const mine=(m.uid&&m.uid===myUid)||(!m.uid&&m.by===myName);
+    const time=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    const body=(m.text&&m.text!=='📋')?`<div style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_chatHighlightTags(esc(m.text))}</div>`:'';
+    return sep+`<div style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
+      <div style="background:${mine?'#d2e7ff':'#fff'};border:1px solid ${mine?'#b6d7fb':'var(--gray-border)'};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px">
+        ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
+        ${body}
+        ${m.ref?_chatRefChip(m.ref):''}
+        <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${time}</div>
+      </div>
+    </div>`;
+  }).join('');
+  box.scrollTop=box.scrollHeight;
+}
+function updateChatBadge(){
+  const el=document.getElementById('chat-badge'); if(!el) return;
+  const myUid=(currentUser&&currentUser.uid)||''; const myName=getCurrentUserName();
+  const n=groupChatMsgs.filter(m=>(m.ts||0)>_chatReadTs && !((m.uid&&m.uid===myUid)||(!m.uid&&m.by===myName))).length;
+  if(n>0){ el.textContent=n>99?'99+':n; el.style.display='block'; }
+  else el.style.display='none';
+}
+function markGroupChatRead(){
+  if(!currentUser || !groupChatMsgs.length) return;
+  const last=groupChatMsgs[groupChatMsgs.length-1].ts||0;
+  if(last<=_chatReadTs) return;
+  _chatReadTs=last;
+  db.ref('duyetchi/chatRead/'+currentUser.uid).set(last).catch(()=>{});
+  updateChatBadge();
+}
+function openChatPage(){
+  const pg=document.getElementById('chat-page'); if(!pg) return;
+  pg.style.display='flex';
+  renderChatMsgs();
+  _chatRenderAttach();
+  markGroupChatRead();
+}
+function closeChatPage(){
+  const pg=document.getElementById('chat-page'); if(pg) pg.style.display='none';
+  const tr=document.getElementById('chat-tag-row'); if(tr) tr.style.display='none';
+}
+function sendGroupMsg(){
+  if(!currentUser || !getCurrentUserName()){ showToast('Chưa đăng nhập xong — thử lại sau giây lát'); return; }
+  const inp=document.getElementById('chat-msg-inp');
+  const text=((inp&&inp.value)||'').trim();
+  if(!text && !_chatAttachRef){ showToast('Nhập tin nhắn hoặc gắn phiếu trước đã'); return; }
+  const me=getCurrentUserName();
+  const msg={ by:me, role:currentRole||'other', uid:currentUser.uid, text:text||'📋', ts:Date.now() };
+  if(_chatAttachRef) msg.ref=_chatAttachRef;
+  db.ref('duyetchi/groupChat').push(msg).catch(err=>{ showToast('⚠️ Không gửi được — kiểm tra mạng: '+err.message); });
+  groupChatMsgs.push(msg); // hiện ngay, bản server sẽ thay thế khi đồng bộ về
+  if(inp) inp.value='';
+  _chatAttachRef=null; _chatRenderAttach();
+  const tr=document.getElementById('chat-tag-row'); if(tr) tr.style.display='none';
+  renderChatMsgs();
+  markGroupChatRead();
+  try{
+    const roles=['dung','hien','trang','other'].filter(r=>r!==(currentRole||'other'));
+    sendPushNotif('💬 '+me+' (Chat nhóm)', (text||'Đã gửi một phiếu').slice(0,90), roles);
+  }catch(e){}
+}
+// ── gắn phiếu ──
+function _chatRenderAttach(){
+  const wrap=document.getElementById('chat-attach-preview'); if(!wrap) return;
+  if(!_chatAttachRef){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  const p=proposals.find(x=>x.id===_chatAttachRef);
+  if(!p){ _chatAttachRef=null; wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  wrap.innerHTML=`<div style="display:flex;align-items:center;gap:6px;border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px">
+    <div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:var(--blue-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 ${esc(p.desc||'')}</div>
+      <div style="font-size:9px;color:var(--blue-dark)">${fmtVND(p.amount)} · ${_chatRefStatus(p)}</div>
+    </div>
+    <button onclick="clearChatAttach()" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>
+  </div>`;
+}
+function clearChatAttach(){ _chatAttachRef=null; _chatRenderAttach(); }
+function openChatPick(){ document.getElementById('chat-pick-search').value=''; renderChatPick(); document.getElementById('chat-pick-modal').style.display='flex'; }
+function closeChatPick(){ document.getElementById('chat-pick-modal').style.display='none'; }
+function renderChatPick(){
+  const el=document.getElementById('chat-pick-list'); if(!el) return;
+  const q=((document.getElementById('chat-pick-search')||{}).value||'').trim().toLowerCase();
+  let items=proposals.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  if(q) items=items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q));
+  items=items.slice(0,30);
+  if(!items.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Không có phiếu nào khớp</div>'; return; }
+  el.innerHTML=items.map(p=>`<div onclick="pickChatAttach('${sid(p.id)}')" style="border:1px solid var(--gray-border);border-radius:10px;padding:7px 10px;margin-bottom:5px;cursor:pointer">
+    <div style="font-size:12px;font-weight:700;word-break:break-word">${p.kind==='salary'?'💵 ':''}${esc(p.desc||'')} · ${fmtVND(p.amount)}</div>
+    <div style="font-size:10px;color:var(--text-sub)">${esc(p.person||'')} · ${esc(p.site||'')} · ${_chatRefStatus(p)}</div>
+  </div>`).join('');
+}
+function pickChatAttach(id){ _chatAttachRef=id; closeChatPick(); _chatRenderAttach(); }
+function openChatWithRef(id){ _chatAttachRef=id; openChatPage(); }
+// ── gợi ý @tag: gõ '@' ở cuối là hiện dãy tên, bấm tên để chèn ──
+function _chatTagHint(inp){
+  const row=document.getElementById('chat-tag-row'); if(!row) return;
+  if((inp.value||'').endsWith('@')){
+    row.innerHTML=_chatMemberNames().map(n=>`<button onclick="_chatTagPick('${esc(n)}')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
+    row.style.display='block';
+  } else row.style.display='none';
+}
+function _chatTagPick(name){
+  const inp=document.getElementById('chat-msg-inp'); if(!inp) return;
+  inp.value=inp.value+name+' ';
+  document.getElementById('chat-tag-row').style.display='none';
+  inp.focus();
 }
 
 // ── TOAST ──

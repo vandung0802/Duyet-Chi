@@ -145,6 +145,24 @@
         }
       },
 
+      "groupChat": {
+        // v109 CHAT NHÓM CÔNG TY: chỉ tài khoản ĐÃ DUYỆT đọc/gửi. Tin nhắn CHỈ THÊM MỚI,
+        // không sửa/không xoá (bất biến — cùng nguyên tắc hỏi–đáp trên phiếu).
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        "$id": {
+          ".write": "auth != null && !data.exists() && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+          ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('ts').isNumber()"
+        }
+      },
+      "chatRead": {
+        // v109: mốc "đã đọc chat nhóm" của từng người (để đếm số tin chưa xem, đồng bộ đa thiết bị)
+        "$uid": {
+          ".read": "auth != null && auth.uid === $uid",
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.isNumber()"
+        }
+      },
+
       "pendingOtp": {
         "$uid": {
           // Chỉ chính mình hoặc Dũng đọc/xóa OTP
