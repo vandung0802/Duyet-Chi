@@ -1161,7 +1161,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260731-v106';
+const APP_VERSION = '20260731-v107';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3096,7 +3096,8 @@ function _buildCard(p){
   }
   // Đánh dấu phiếu đã bị giục duyệt (chưa duyệt xong) — hiện số lần + thời điểm giục gần nhất
   if((p.remindCount||0) > 1 && canRemind(p)){
-    badgeHtml += `<div style="margin-top:4px;text-align:right"><span class="badge" style="background:var(--blue-light);color:var(--blue-dark)">🔔 Đã giục ${p.remindCount} lần</span>${p.lastRemindAt?`<div class="badge-history" style="color:var(--blue-dark)">${fmtFull(p.lastRemindAt)}</div>`:''}</div>`;
+    // v107: user chốt — chữ "Đã giục" TO GẤP ĐÔI (12→24px) + màu ĐỎ cho nổi bật
+    badgeHtml += `<div style="margin-top:4px;text-align:right"><span class="badge" style="background:#fdecea;color:#dc0000;font-size:24px;font-weight:900;padding:4px 10px;line-height:1.2">🔔 Đã giục ${p.remindCount} lần</span>${p.lastRemindAt?`<div class="badge-history" style="color:#dc0000;font-weight:700">${fmtFull(p.lastRemindAt)}</div>`:''}</div>`;
   }
   const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
   const imgHtml = imgImages.length ? `<div class="proof-grid">${imgImages.map((src,idx)=>`
