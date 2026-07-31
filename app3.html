@@ -1197,7 +1197,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260801-v109';
+const APP_VERSION = '20260801-v110';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3167,11 +3167,15 @@ function _buildCard(p){
   const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${esc(p.note)}</div>` : '';
   // Ứng lương: hiện CHỨC DANH (lấy sống từ DS nhân viên theo empId, không có thì dùng bản lưu lúc tạo)
   const _salPos = p.kind==='salary' ? (((typeof employees!=='undefined' && employees.find(e=>e.id===p.empId))||{}).position || p.position || '') : '';
+  // v110: ý kiến D/H đã ĐỔ VÀO khung Hỏi–Đáp (cầu nối v106) thì ẨN dòng "Ý kiến D/H" cũ — tránh
+  // hiện TRÙNG 2 lần cùng nội dung (user báo). Phiếu cổ có ý kiến nhưng chưa có hỏi–đáp vẫn hiện như cũ.
+  const _chArr = Array.isArray(p.chat) ? p.chat : [];
   const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
-  const opinionHtml = (_opD||_opH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_opD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_opH?`<div${_opD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${esc(_opH)}</div>`:''}</div>` : '';
+  const _showOpD = _opD && !_chArr.some(m=>m.role==='dung' && (m.text||'').trim()===_opD);
+  const _showOpH = _opH && !_chArr.some(m=>m.role==='hien' && (m.text||'').trim()===_opH);
+  const opinionHtml = (_showOpD||_showOpH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_showOpD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_showOpH?`<div${_showOpD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${esc(_opH)}</div>`:''}</div>` : '';
 
   // v106 HỎI–ĐÁP trên phiếu: lịch sử nhắn (bong bóng) + ô trả lời tại chỗ cho người liên quan
-  const _chArr = Array.isArray(p.chat) ? p.chat : [];
   const _chMe = getCurrentUserName();
   const _chCan = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='trang';
   const _chClr = r => r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155';
