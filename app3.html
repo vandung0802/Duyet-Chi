@@ -1103,6 +1103,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<!-- v106 HỎI–ĐÁP: bảng nhắc khi mở app — có tin nhắn/ý kiến mới cho ĐÚNG mình thì mới hiện -->
+<div class="role-screen" id="chat-remind-modal" style="display:none;z-index:9280;background:rgba(0,0,0,0.55)">
+  <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:380px;max-height:80vh;overflow-y:auto">
+    <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px" id="chat-remind-title">💬 Có tin nhắn mới cho bạn</div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:12px">Bấm vào một dòng để mở phiếu và trả lời.</div>
+    <div id="chat-remind-list"></div>
+    <button class="btn-full btn-outline-full" style="margin-top:12px" onclick="closeChatReminder()">Để sau (lần mở tới nhắc lại)</button>
+  </div>
+</div>
+
 <!-- Bảng nhắc Trang lúc mở app: các khoản H đã duyệt đang chờ chuyển (hiện 1 lần mỗi lần mở) -->
 <div class="role-screen" id="transfer-reminder-modal" style="display:none;z-index:9300;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto">
@@ -1151,7 +1161,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260725-v105';
+const APP_VERSION = '20260731-v106';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1962,6 +1972,7 @@ function setRole(role){
   populateSelects();
   // Trang vừa vào app (đã đăng nhập xong) → nhắc các khoản chờ chuyển nếu dữ liệu đã tải xong
   setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
+  setTimeout(function(){ try{ maybeShowChatReminder(); }catch(e){} }, 1100); // v106: bảng nhắc hỏi–đáp
 }
 
 const VAPID_PUBLIC = 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0';
@@ -2413,6 +2424,7 @@ function initFirebaseSync(){
     // Nhắc Trang các khoản chờ chuyển (trường hợp vào app bằng role cache TRƯỚC khi dữ liệu tải xong
     // thì lượt gọi trong setRole bị chặn bởi cờ fbInitialLoadDone — lượt này bù lại; đã có cờ chống hiện lặp)
     if(wasFirst) setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
+    if(wasFirst) setTimeout(function(){ try{ maybeShowChatReminder(); }catch(e){} }, 1100); // v106: bảng nhắc hỏi–đáp (chờ bảng chuyển tiền trước)
 
     // Tải ảnh SAU khi đã kết nối + hiện phiếu xong → lúc mở app không bị đống ảnh tranh băng thông (mở nhanh hơn)
     // ⚠️ CHỈ tải 1 lần (once) — TUYỆT ĐỐI không on() cả node ảnh: mỗi lần mạng nối lại sẽ kéo
@@ -2773,7 +2785,9 @@ let _renderAllPending = false;
 function renderAll(){
   // Nếu modal Sửa đang mở → hoãn render để không lag khi user đang nhập
   const editOpen = document.getElementById('edit-modal')?.style.display !== 'none';
-  if(editOpen){ _renderAllPending = true; return; }
+  // v106: đang gõ ô Hỏi–Đáp trên thẻ cũng hoãn (vẽ lại sẽ xoá mất chữ đang nhập)
+  const chatTyping = document.activeElement && ((document.activeElement.id||'').indexOf('chat-inp-')===0);
+  if(editOpen || chatTyping){ _renderAllPending = true; return; }
   // Debounce 80ms: tránh render liên tục khi Firebase gửi nhiều update liền nhau
   clearTimeout(_renderAllTimer);
   _renderAllTimer = setTimeout(()=>{
@@ -2822,7 +2836,9 @@ function updateNotifBadge(){
   const items = getMyPendingItems();
   const seen = getSeenIds();
   const unread = items.filter(i=>!seen.has(i.id));
-  const n = unread.length;
+  // v106: cộng thêm tin hỏi–đáp chưa đọc của mình
+  let _chatN=0; try{ _chatN=_chatUnreadList().reduce((s,i)=>s+i.count,0); }catch(e){}
+  const n = unread.length + _chatN;
   const badge = document.getElementById('notif-badge');
   if(badge){ badge.textContent = n>99?'99+':n; badge.style.display = n>0?'block':'none'; }
   document.title = n>0 ? `(${n}) Duyệt Chi ${VER_LABEL}` : `Duyệt Chi ${VER_LABEL}`;
@@ -2857,11 +2873,21 @@ function renderNotifPanel(){
   const list = document.getElementById('notif-list');
   if(!list) return;
   const items = getMyPendingItems();
-  if(!items.length){
+  // v106: mục tin hỏi–đáp chưa đọc trong bảng chuông
+  let chatItems=[]; try{ chatItems=_chatUnreadList(); }catch(e){}
+  if(!items.length && !chatItems.length){
     list.innerHTML='<div style="padding:20px;text-align:center;color:#64748b;font-size:13px">✅ Không có việc gì cần xử lý</div>';
     return;
   }
-  list.innerHTML = items.map(it=>`
+  const chatHtml = chatItems.map(it=>`
+    <div onclick="chatRemindGo('${sid(it.p.id)}')" style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">💬 ${esc(it.last.by||'')}: ${esc((it.last.text||'').slice(0,60))}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px">${esc(it.p.desc||'')}${it.count>1?' · +'+(it.count-1)+' tin nữa':''}</div>
+      </div>
+      <div style="color:#cbd5e1;font-size:16px">›</div>
+    </div>`).join('');
+  list.innerHTML = chatHtml + items.map(it=>`
     <div onclick="closeNotifAndGo('${sid(it.id)}')" style="padding:10px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:10px" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background=''">
       <div style="flex:1;min-width:0">
         <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.desc)}</div>
@@ -2978,7 +3004,7 @@ function attachThumbLongPress(container){
 
 const _cardCache = new Map();
 function _cardHash(p){
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'');
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0);
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -3088,6 +3114,25 @@ function _buildCard(p){
   const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
   const opinionHtml = (_opD||_opH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_opD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_opH?`<div${_opD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${esc(_opH)}</div>`:''}</div>` : '';
 
+  // v106 HỎI–ĐÁP trên phiếu: lịch sử nhắn (bong bóng) + ô trả lời tại chỗ cho người liên quan
+  const _chArr = Array.isArray(p.chat) ? p.chat : [];
+  const _chMe = getCurrentUserName();
+  const _chCan = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='trang';
+  const _chClr = r => r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155';
+  const _chMsgs = _chArr.map(m=>{
+    const mine = (m.by||'')===_chMe;
+    return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${mine?'#f1f5f9':'#eff6ff'};border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
+      <div style="font-size:9.5px;font-weight:700;color:${_chClr(m.role)}">${esc(m.by||'')} · ${fmtFull(m.ts)}</div>
+      <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${esc(m.text||'')}</div></div>`;
+  }).join('');
+  const _chInput = `<div style="display:flex;gap:5px;margin-top:5px">
+      <input id="chat-inp-${sid(p.id)}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến..." onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${sid(p.id)}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
+      <button onclick="sendChatMsg('${sid(p.id)}')" style="padding:7px 12px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">Gửi</button>
+    </div>`;
+  let chatHtml = '';
+  if(_chMsgs){ chatHtml = `<div style="margin-top:6px;border-top:1px dashed var(--gray-border);padding-top:4px">${_chMsgs}${_chCan?_chInput:''}</div>`; }
+  else if(_chCan){ chatHtml = `<div id="chat-inpwrap-${sid(p.id)}" style="margin-top:5px"><button onclick="openChatInput('${sid(p.id)}')" style="padding:4px 10px;font-size:11px;font-weight:600;background:#f8fafc;color:var(--text-sub);border:1px dashed var(--gray-border);border-radius:14px;cursor:pointer">💬 Hỏi–đáp về phiếu này</button></div>`; }
+
   return `<div class="proposal status-${esc(p.status||'pending')}" id="card-${sid(p.id)}">
     <div class="proposal-top">
       <div class="proposal-top-row">
@@ -3110,6 +3155,7 @@ function _buildCard(p){
       </div>
       ${noteHtml}
       ${opinionHtml}
+      ${chatHtml}
     </div>
     ${imgHtml}
     <div class="approve-row">
@@ -3992,8 +4038,25 @@ function saveEditProposal(){
   p.amountUnit = 'dong';
   p.note = note;
   // Lưu ý kiến: chỉ ghi đè ô mà vai trò hiện tại được sửa (ô kia readonly nên giữ nguyên giá trị cũ)
+  const _prevOpD = p.opinionD||'', _prevOpH = p.opinionH||'';
   p.opinionD = document.getElementById('edit-opinion-d').value.trim();
   p.opinionH = document.getElementById('edit-opinion-h').value.trim();
+  // v106: ý kiến D/H MỚI/ĐỔI cũng đổ vào khung Hỏi–Đáp (user chốt) → người đề xuất được bảng nhắc khi mở app
+  try{
+    const _chMe2=getCurrentUserName()||'';
+    if(currentRole==='dung' && p.opinionD && p.opinionD!==_prevOpD){
+      if(!Array.isArray(p.chat)) p.chat=[];
+      p.chat.push({ by:_chMe2||'Dũng', role:'dung', text:p.opinionD, ts:Date.now() });
+      if(currentUser){ (p.chatSeen=p.chatSeen||{})[currentUser.uid]=Date.now(); }
+      sendPushNotif('💬 Ý kiến mới của D', (p.desc||'')+': '+p.opinionD.slice(0,90), ['hien','trang']);
+    }
+    if(currentRole==='hien' && p.opinionH && p.opinionH!==_prevOpH){
+      if(!Array.isArray(p.chat)) p.chat=[];
+      p.chat.push({ by:_chMe2||'Hiền', role:'hien', text:p.opinionH, ts:Date.now() });
+      if(currentUser){ (p.chatSeen=p.chatSeen||{})[currentUser.uid]=Date.now(); }
+      sendPushNotif('💬 Ý kiến mới của H', (p.desc||'')+': '+p.opinionH.slice(0,90), ['dung','trang']);
+    }
+  }catch(e){}
   p.priority = _ePrio;
   p.urgentReason = _ePrio==='urgent' ? _urgentReason.edit : null;
   p.imgImages = editingImages.slice();
@@ -6041,6 +6104,117 @@ function updateNavBadges(){
     const seen=_navGetSeen(s.sec);
     _setNavBadge(s.badge, s.ids.filter(id=>!seen.has(id)).length); // chỉ đếm món CHƯA xem
   });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// ── v106 HỎI–ĐÁP TRÊN PHIẾU ── D/H/T và người đề xuất nhắn qua lại ngay trên phiếu; mở app có tin
+// mới cho ĐÚNG mình thì bảng nhắc bật lên. Từng câu bất biến (luật server). Cờ đã-xem `chatSeen[uid]`
+// lưu trên phiếu → đồng bộ mọi thiết bị. Module thêm mới — không đụng luồng duyệt/chuyển.
+// ══════════════════════════════════════════════════════════════════════════
+function _chatProposerOf(p){ return p.kind==='salary' ? (p.createdBy||'') : (p.person||''); }
+function _chatSeenTs(p){ return ((p.chatSeen||{})[(currentUser&&currentUser.uid)||''])||0; }
+// "Liên quan" = người đề xuất, hoặc D/H đã có ý kiến/đã nhắn, hoặc T đã nhắn
+function _chatAmIInvolved(p){
+  const me=getCurrentUserName(); if(!me) return false;
+  if(_chatProposerOf(p)===me) return true;
+  const arr=Array.isArray(p.chat)?p.chat:[];
+  if(currentRole==='dung' && (p.opinionD || arr.some(m=>m.role==='dung'))) return true;
+  if(currentRole==='hien' && (p.opinionH || arr.some(m=>m.role==='hien'))) return true;
+  if(currentRole==='trang' && arr.some(m=>m.role==='trang')) return true;
+  return false;
+}
+function _chatUnreadList(){
+  const me=getCurrentUserName(); if(!me||!currentUser) return [];
+  const out=[];
+  proposals.forEach(p=>{
+    const arr=Array.isArray(p.chat)?p.chat:[]; if(!arr.length) return;
+    if(!_chatAmIInvolved(p)) return;
+    const seen=_chatSeenTs(p);
+    const unread=arr.filter(m=>(m.by||'')!==me && (m.ts||0)>seen);
+    if(unread.length) out.push({p:p, last:unread[unread.length-1], count:unread.length});
+  });
+  out.sort((a,b)=>(b.last.ts||0)-(a.last.ts||0));
+  return out;
+}
+function markChatSeen(id){
+  const p=proposals.find(x=>x.id===id); if(!p||!currentUser) return;
+  if(!p.chatSeen) p.chatSeen={};
+  p.chatSeen[currentUser.uid]=Date.now();
+  save();
+  try{ updateNotifBadge(); }catch(e){}
+}
+function openChatInput(id){
+  const wrap=document.getElementById('chat-inpwrap-'+id); if(!wrap) return;
+  wrap.innerHTML=`<div style="display:flex;gap:5px">
+    <input id="chat-inp-${id}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến..." onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${id}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
+    <button onclick="sendChatMsg('${id}')" style="padding:7px 12px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">Gửi</button>
+  </div>`;
+  try{ document.getElementById('chat-inp-'+id).focus(); }catch(e){}
+}
+function _chatInpBlur(){
+  setTimeout(function(){
+    const aid=(document.activeElement&&document.activeElement.id)||'';
+    if(_renderAllPending && aid.indexOf('chat-inp-')!==0){ _renderAllPending=false; renderAll(); }
+  }, 250);
+}
+function sendChatMsg(id){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  const inp=document.getElementById('chat-inp-'+id);
+  const text=((inp&&inp.value)||'').trim();
+  if(!text){ showToast('Nhập nội dung trước đã'); return; }
+  const me=getCurrentUserName()||'?';
+  if(!Array.isArray(p.chat)) p.chat=[];
+  p.chat.push({ by: me, role: currentRole||'other', text: text, ts: Date.now() });
+  if(currentUser){ if(!p.chatSeen) p.chatSeen={}; p.chatSeen[currentUser.uid]=Date.now(); }
+  if(inp){ inp.value=''; try{ inp.blur(); }catch(e){} }
+  save();
+  _cardCache.delete(p.id);
+  _renderAllPending=false;
+  const pgL=document.getElementById('page-luong');
+  if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} } else { renderProposals(); }
+  try{ updateNotifBadge(); }catch(e){}
+  showToast('💬 Đã gửi');
+  // Báo đẩy cho các vai trò liên quan (trừ mình). Người đề xuất vai 'other' nhận qua bảng nhắc khi mở app.
+  try{
+    const roles=new Set();
+    if(p.opinionD) roles.add('dung');
+    if(p.opinionH) roles.add('hien');
+    (p.chat||[]).forEach(m=>{ if(m.role==='dung'||m.role==='hien'||m.role==='trang') roles.add(m.role); });
+    roles.delete(currentRole);
+    let list=Array.from(roles);
+    if(!list.length) list=['dung','hien'].filter(r=>r!==currentRole);
+    if(list.length) sendPushNotif('💬 '+me+' nhắn hỏi–đáp', (p.desc||'')+': '+text.slice(0,90), list);
+  }catch(e){}
+}
+// ── Bảng nhắc khi mở app ──
+let _chatReminderShown=false;
+function maybeShowChatReminder(){
+  if(_chatReminderShown) return;
+  if(!fbInitialLoadDone || !currentUser || !getCurrentUserName()) return;
+  // Tránh đè bảng nhắc chuyển tiền của Trang — chờ nó đóng rồi hiện
+  const tr=document.getElementById('transfer-reminder-modal');
+  if(tr && tr.style.display==='flex'){ setTimeout(maybeShowChatReminder, 2500); return; }
+  const list=_chatUnreadList();
+  if(!list.length) return;
+  _chatReminderShown=true;
+  const clr=r=> r==='dung'?'var(--blue-dark)': r==='hien'?'#7c3aed': r==='trang'?'#b45309':'#334155';
+  document.getElementById('chat-remind-title').textContent='💬 Có '+list.reduce((s,i)=>s+i.count,0)+' tin nhắn mới cho bạn';
+  document.getElementById('chat-remind-list').innerHTML=list.map(it=>`
+    <div onclick="chatRemindGo('${sid(it.p.id)}')" style="border:1px solid var(--gray-border);border-left:3px solid ${clr(it.last.role)};border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer">
+      <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.p.desc||'')} <span style="color:var(--text-sub);font-weight:600">· ${fmtVND(it.p.amount)}</span></div>
+      <div style="font-size:12px;margin-top:2px"><span style="font-weight:700;color:${clr(it.last.role)}">${esc(it.last.by||'')}:</span> ${esc((it.last.text||'').slice(0,120))}</div>
+      <div style="font-size:10px;color:var(--text-sub)">${fmtFull(it.last.ts)}${it.count>1?' · +'+(it.count-1)+' tin nữa':''} · bấm để mở phiếu ›</div>
+    </div>`).join('');
+  document.getElementById('chat-remind-modal').style.display='flex';
+}
+function closeChatReminder(){ document.getElementById('chat-remind-modal').style.display='none'; }
+function chatRemindGo(id){
+  closeChatReminder();
+  const np=document.getElementById('notif-panel'); if(np) np.style.display='none';
+  markChatSeen(id);
+  const p=proposals.find(x=>x.id===id);
+  if(p && p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
+  else jumpToProposal(id);
 }
 
 // ── TOAST ──

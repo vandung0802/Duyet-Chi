@@ -81,7 +81,13 @@
           "status": { ".validate": "!data.exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang'" },
 
           // ẢNH NỘI DUNG LÚC DUYỆT (contentSnapshot — lớp phát hiện): từng trường chỉ Dũng/Hiền ghi/đổi
-          "contentSnapshot": { "$f": { ".validate": "(data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien'" } }
+          "contentSnapshot": { "$f": { ".validate": "(data.exists() && newData.val() === data.val()) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien'" } },
+
+          // v106 HỎI–ĐÁP trên phiếu: từng câu nhắn BẤT BIẾN sau khi gửi (không sửa/xoá — user chốt);
+          // thêm câu mới: bất kỳ tài khoản đã duyệt (đã gác ở .write), text ≤ 2000 ký tự.
+          "chat": { "$i": { ".validate": "(data.exists() && newData.child('text').val() === data.child('text').val() && newData.child('ts').val() === data.child('ts').val() && newData.child('by').val() === data.child('by').val()) || (!data.exists() && newData.child('text').isString() && newData.child('text').val().length <= 2000)" } },
+          // Dấu ĐÃ XEM hỏi–đáp của từng người (đồng bộ đa thiết bị): chỉ là mốc thời gian
+          "chatSeen": { "$u": { ".validate": "newData.isNumber()" } }
         }
       },
 
