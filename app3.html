@@ -1145,7 +1145,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px" id="chat-remind-title">💬 Có tin nhắn mới cho bạn</div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:12px">Bấm vào một dòng để mở phiếu và trả lời.</div>
     <div id="chat-remind-list"></div>
-    <button class="btn-full btn-outline-full" style="margin-top:12px" onclick="closeChatReminder()">Để sau (lần mở tới nhắc lại)</button>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-full btn-outline-full" style="flex:1;margin:0" onclick="closeChatReminder()">Để sau</button>
+      <button class="btn-full btn-primary-full" style="flex:1;margin:0" onclick="chatRemindDone()">✅ Xong</button>
+    </div>
   </div>
 </div>
 
@@ -1197,7 +1200,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260801-v111';
+const APP_VERSION = '20260801-v112';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6269,6 +6272,19 @@ function maybeShowChatReminder(){
   document.getElementById('chat-remind-modal').style.display='flex';
 }
 function closeChatReminder(){ document.getElementById('chat-remind-modal').style.display='none'; }
+// v112: nút "Xong" — đánh dấu ĐÃ XEM tất cả tin trong bảng nhắc (thôi nhắc, đồng bộ mọi thiết bị)
+function chatRemindDone(){
+  try{
+    const list=_chatUnreadList();
+    if(currentUser && list.length){
+      list.forEach(it=>{ const p=it.p; if(!p.chatSeen) p.chatSeen={}; p.chatSeen[currentUser.uid]=Date.now(); });
+      save();
+    }
+  }catch(e){}
+  closeChatReminder();
+  try{ updateNotifBadge(); }catch(e){}
+  showToast('✅ Đã đánh dấu xem hết — sẽ không nhắc lại các tin này');
+}
 function chatRemindGo(id){
   closeChatReminder();
   const np=document.getElementById('notif-panel'); if(np) np.style.display='none';
