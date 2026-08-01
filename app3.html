@@ -495,12 +495,12 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div style="font-size:10px;opacity:.8;margin-top:1px" id="header-date">Thứ Tư, 17/06/2026</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
-    <button onclick="location.reload(true)" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:32px;height:32px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Tải lại">🔄</button>
-    <!-- v109: nút CHAT nhóm công ty (user chốt: icon ghi chữ Chat, cạnh chuông, kèm số tin chưa đọc) -->
+    <!-- v111: nút CHAT dời sang vị trí user khoanh (trước 🔄), nền TRẮNG chữ xanh cho nét rõ -->
     <div style="position:relative;display:inline-flex">
-      <button id="chat-open-btn" onclick="openChatPage()" style="background:rgba(255,255,255,0.15);border:none;border-radius:17px;height:34px;padding:0 10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;display:flex;align-items:center;gap:4px" title="Chat nhóm công ty">💬 Chat</button>
+      <button id="chat-open-btn" onclick="openChatPage()" style="background:#fff;border:none;border-radius:17px;height:34px;padding:0 12px;font-size:13px;font-weight:800;color:var(--blue);cursor:pointer;display:flex;align-items:center;gap:4px;box-shadow:0 1px 3px rgba(0,0,0,.25)" title="Chat nhóm công ty">💬 Chat</button>
       <span id="chat-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
     </div>
+    <button onclick="location.reload(true)" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:32px;height:32px;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Tải lại">🔄</button>
     <div style="position:relative;display:inline-flex">
       <button id="notif-bell" onclick="toggleNotifPanel()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative" title="Thông báo">🔔</button>
       <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
@@ -1111,9 +1111,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- v109 CHAT NHÓM CÔNG TY: màn toàn màn hình kiểu Zalo (PA2 — có gắn phiếu) -->
 <div id="chat-page" style="display:none;position:fixed;inset:0;z-index:9450;background:#eef2f7;flex-direction:column">
   <div style="background:var(--blue);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0">
-    <button onclick="closeChatPage()" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:32px;height:32px;font-size:16px;color:#fff;cursor:pointer">←</button>
+    <button onclick="closeChatPage()" style="background:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:22px;font-weight:900;color:var(--blue);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Quay lại">←</button>
     <div style="flex:1;min-width:0">
-      <div style="font-size:15px;font-weight:800">💬 Nhóm Phúc Vinh An</div>
+      <div style="font-size:15px;font-weight:800">💬 Nhóm Duyệt Chi</div>
       <div style="font-size:10px;opacity:.85">Chat nội bộ — chỉ thành viên đã duyệt</div>
     </div>
   </div>
@@ -1197,7 +1197,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260801-v110';
+const APP_VERSION = '20260801-v111';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6325,8 +6325,16 @@ function renderChatMsgs(){
   const box=document.getElementById('chat-msgs'); if(!box) return;
   const myUid=(currentUser&&currentUser.uid)||''; const myName=getCurrentUserName();
   if(!groupChatMsgs.length){ box.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--text-sub);font-size:13px">Chưa có tin nhắn nào.<br><small>Gửi tin đầu tiên cho cả nhóm nhé!</small></div>'; return; }
+  // v111: ẨN tin TRÙNG liền kề (cùng người + cùng nội dung + cùng phiếu, cách nhau <60s) — che các
+  // tin gửi đúp đã lỡ nằm trên máy chủ (tin bất biến không xoá được).
+  const _shown=[];
+  groupChatMsgs.forEach(m=>{
+    const pr=_shown[_shown.length-1];
+    if(pr && (pr.uid||pr.by)===(m.uid||m.by) && (pr.text||'')===(m.text||'') && (pr.ref||null)===(m.ref||null) && Math.abs((m.ts||0)-(pr.ts||0))<60000) return;
+    _shown.push(m);
+  });
   let lastDay='';
-  box.innerHTML=groupChatMsgs.map(m=>{
+  box.innerHTML=_shown.map(m=>{
     const d=new Date(m.ts||0);
     const day=d.toLocaleDateString('vi-VN',{weekday:'long',day:'2-digit',month:'2-digit'});
     const sep=day!==lastDay?`<div style="text-align:center;font-size:10px;color:var(--text-sub);margin:10px 0 6px">— ${day} —</div>`:'';
@@ -6376,6 +6384,13 @@ function sendGroupMsg(){
   const inp=document.getElementById('chat-msg-inp');
   const text=((inp&&inp.value)||'').trim();
   if(!text && !_chatAttachRef){ showToast('Nhập tin nhắn hoặc gắn phiếu trước đã'); return; }
+  // v111: CHẶN GỬI ĐÚP (bấm Gửi 2 lần liền lúc mạng chậm → tin trùng 2 lần, mà tin thì bất biến không xoá được)
+  const _dupLast=[...groupChatMsgs].reverse().find(m=>m.uid&&m.uid===currentUser.uid);
+  if(_dupLast && (_dupLast.text||'')===(text||'📋') && (_dupLast.ref||null)===(_chatAttachRef||null) && Date.now()-(_dupLast.ts||0)<5000){
+    if(inp) inp.value='';
+    _chatAttachRef=null; _chatRenderAttach();
+    showToast('Tin này vừa gửi rồi'); return;
+  }
   const me=getCurrentUserName();
   const msg={ by:me, role:currentRole||'other', uid:currentUser.uid, text:text||'📋', ts:Date.now() };
   if(_chatAttachRef) msg.ref=_chatAttachRef;
