@@ -461,6 +461,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="toast" id="toast"></div>
 <div class="img-modal" id="imgModal" onclick="closeImgModal(event)">
   <span class="img-modal-close">✕</span>
+  <!-- v115: chuyển tiếp ảnh đang xem vào Chat nhóm -->
+  <button id="imgModalToChat" onclick="forwardModalImgToChat(event)" style="position:absolute;top:14px;left:14px;z-index:5;background:#fff;color:var(--blue);border:none;border-radius:16px;height:32px;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)">📤 Chat</button>
   <button class="img-modal-nav img-modal-prev" onclick="navModalImg(event,-1)" id="imgModalPrev">‹</button>
   <img id="imgModalSrc" src="" alt="">
   <button class="img-modal-nav img-modal-next" onclick="navModalImg(event,1)" id="imgModalNext">›</button>
@@ -1123,6 +1125,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="chat-tag-row" style="display:none;flex-shrink:0;padding:4px 8px;background:#fff;border-top:1px solid var(--gray-border);white-space:nowrap;overflow-x:auto"></div>
   <div id="chat-attach-preview" style="display:none;flex-shrink:0;padding:6px 8px 0;background:#fff;border-top:1px solid var(--gray-border)"></div>
   <div style="flex-shrink:0;display:flex;gap:6px;padding:8px;background:#fff;border-top:1px solid var(--gray-border);padding-bottom:calc(8px + env(safe-area-inset-bottom))">
+    <button onclick="document.getElementById('chat-img-input').click()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gửi ảnh">📷</button>
+    <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImg(this)">
     <button onclick="openChatPick()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gắn phiếu vào tin">📋</button>
     <input id="chat-msg-inp" type="text" autocomplete="off" placeholder="Nhắn tin... (gõ @ để tag tên)" oninput="_chatTagHint(this)" onkeydown="if(event.key==='Enter')sendGroupMsg()" style="flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;outline:none;font-family:inherit">
     <button onclick="sendGroupMsg()" style="flex-shrink:0;padding:9px 16px;font-size:14px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:10px;cursor:pointer">Gửi</button>
@@ -1202,7 +1206,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260802-v114';
+const APP_VERSION = '20260802-v115';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2256,7 +2260,7 @@ function pushToFirebase(){
 let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false, _imagesLoadStarted=false;
 let _dcReattachGated=null; // v95: hàm nối lại 4 kênh dữ liệu gác quyền — gán trong initFirebaseSync, gọi khi đăng nhập
 // v109 CHAT NHÓM: 200 tin gần nhất + mốc đã-đọc của mình
-let groupChatMsgs=[], _chatReadTs=0, _gcQuery=null, _crQuery=null, _chatAttachRef=null;
+let groupChatMsgs=[], _chatReadTs=0, _gcQuery=null, _crQuery=null, _chatAttachRef=null, _chatAttachImg=null;
 let _metaData={}, _proposalsData={}, _imagesData={};
 let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
 let _loadingImages = new Set(); // đang fetch
@@ -4214,7 +4218,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
     attachLongPress(
       modalImgEl,
       ()=>modalImages[modalIdx],
-      ()=> (()=>{
+      ()=> {
+        if(modalKind==='chat') return null; // v115: ảnh chat xóa bằng nút 🗑 trên tin, không xóa qua modal (tránh gọi nhầm hệ ảnh phiếu)
+        return (()=>{
         const p = proposals.find(x=>x.id===modalProposalId);
         if(modalKind==='proof'){
           removeProofImage(modalProposalId, modalIdx);
@@ -4227,7 +4233,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
           if(arr2.length){ modalImages=arr2; modalIdx=Math.min(modalIdx,arr2.length-1); showModalImg(); }
           else closeImgModal();
         }
-      })
+      });
+      }
     );
     _initModalZoomGestures();
   }
@@ -6348,7 +6355,7 @@ function renderChatMsgs(){
   const _shown=[];
   groupChatMsgs.forEach(m=>{
     const pr=_shown[_shown.length-1];
-    if(pr && (pr.uid||pr.by)===(m.uid||m.by) && (pr.text||'')===(m.text||'') && (pr.ref||null)===(m.ref||null) && Math.abs((m.ts||0)-(pr.ts||0))<60000) return;
+    if(pr && (pr.uid||pr.by)===(m.uid||m.by) && (pr.text||'')===(m.text||'') && (pr.ref||null)===(m.ref||null) && (pr.img||null)===(m.img||null) && Math.abs((m.ts||0)-(pr.ts||0))<60000) return;
     _shown.push(m);
   });
   let lastDay='';
@@ -6367,11 +6374,21 @@ function renderChatMsgs(){
       <div style="background:${mine?'#d2e7ff':'#fff'};border:1px solid ${mine?'#b6d7fb':'var(--gray-border)'};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px">
         ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
         ${body}
+        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(m.img)}" loading="lazy" decoding="async" onclick="openChatImg('${esc(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
         ${m.ref?_chatRefChip(m.ref):''}
         <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${delBtn}${time}</div>
       </div>
     </div>`;
   }).join('');
+  // v115: nhấn giữ ảnh trong chat → menu copy/tải về (+ xóa nếu là tin của mình hoặc là D) — như mọi ảnh khác
+  box.querySelectorAll('.chat-img-el').forEach(im=>{
+    const k=im.dataset.k;
+    const mm=groupChatMsgs.find(x=>x._k===k);
+    if(!mm||!mm.img) return;
+    const mineImg=(mm.uid&&mm.uid===myUid);
+    const canDelImg=(currentRole==='dung'||mineImg)&&!!k;
+    attachLongPress(im, ()=>mm.img, canDelImg?()=>(()=>deleteChatMsg(k)):null);
+  });
   box.scrollTop=box.scrollHeight;
 }
 function updateChatBadge(){
@@ -6427,21 +6444,22 @@ function sendGroupMsg(){
   if(!currentUser || !getCurrentUserName()){ showToast('Chưa đăng nhập xong — thử lại sau giây lát'); return; }
   const inp=document.getElementById('chat-msg-inp');
   const text=((inp&&inp.value)||'').trim();
-  if(!text && !_chatAttachRef){ showToast('Nhập tin nhắn hoặc gắn phiếu trước đã'); return; }
-  // v111: CHẶN GỬI ĐÚP (bấm Gửi 2 lần liền lúc mạng chậm → tin trùng 2 lần, mà tin thì bất biến không xoá được)
+  if(!text && !_chatAttachRef && !_chatAttachImg){ showToast('Nhập tin nhắn, gắn phiếu hoặc chọn ảnh trước đã'); return; }
+  // v111: CHẶN GỬI ĐÚP (bấm Gửi 2 lần liền lúc mạng chậm → tin trùng 2 lần)
   const _dupLast=[...groupChatMsgs].reverse().find(m=>m.uid&&m.uid===currentUser.uid);
-  if(_dupLast && (_dupLast.text||'')===(text||'📋') && (_dupLast.ref||null)===(_chatAttachRef||null) && Date.now()-(_dupLast.ts||0)<5000){
+  if(_dupLast && (_dupLast.text||'')===(text||'📋') && (_dupLast.ref||null)===(_chatAttachRef||null) && (_dupLast.img||null)===(_chatAttachImg||null) && Date.now()-(_dupLast.ts||0)<5000){
     if(inp) inp.value='';
-    _chatAttachRef=null; _chatRenderAttach();
+    _chatAttachRef=null; _chatAttachImg=null; _chatRenderAttach();
     showToast('Tin này vừa gửi rồi'); return;
   }
   const me=getCurrentUserName();
   const msg={ by:me, role:currentRole||'other', uid:currentUser.uid, text:text||'📋', ts:Date.now() };
   if(_chatAttachRef) msg.ref=_chatAttachRef;
+  if(_chatAttachImg) msg.img=_chatAttachImg; // v115
   db.ref('duyetchi/groupChat').push(msg).catch(err=>{ showToast('⚠️ Không gửi được — kiểm tra mạng: '+err.message); });
   groupChatMsgs.push(msg); // hiện ngay, bản server sẽ thay thế khi đồng bộ về
   if(inp) inp.value='';
-  _chatAttachRef=null; _chatRenderAttach();
+  _chatAttachRef=null; _chatAttachImg=null; _chatRenderAttach();
   const tr=document.getElementById('chat-tag-row'); if(tr) tr.style.display='none';
   renderChatMsgs();
   markGroupChatRead();
@@ -6453,19 +6471,70 @@ function sendGroupMsg(){
 // ── gắn phiếu ──
 function _chatRenderAttach(){
   const wrap=document.getElementById('chat-attach-preview'); if(!wrap) return;
-  if(!_chatAttachRef){ wrap.style.display='none'; wrap.innerHTML=''; return; }
-  const p=proposals.find(x=>x.id===_chatAttachRef);
-  if(!p){ _chatAttachRef=null; wrap.style.display='none'; return; }
+  let html='';
+  if(_chatAttachRef){
+    const p=proposals.find(x=>x.id===_chatAttachRef);
+    if(!p) _chatAttachRef=null;
+    else html+=`<div style="display:flex;align-items:center;gap:6px;border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-bottom:4px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-weight:700;color:var(--blue-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 ${esc(p.desc||'')}</div>
+        <div style="font-size:9px;color:var(--blue-dark)">${fmtVND(p.amount)} · ${_chatRefStatus(p)}</div>
+      </div>
+      <button onclick="clearChatAttach()" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>
+    </div>`;
+  }
+  // v115: ảnh chờ gửi
+  if(_chatAttachImg){
+    html+=`<div style="display:flex;align-items:center;gap:8px;border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-bottom:4px">
+      <img src="${esc(_chatAttachImg)}" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0">
+      <div style="flex:1;font-size:11px;font-weight:700;color:var(--blue-dark)">📷 Ảnh sẽ gửi kèm tin</div>
+      <button onclick="clearChatAttachImg()" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>
+    </div>`;
+  }
+  if(!html){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   wrap.style.display='block';
-  wrap.innerHTML=`<div style="display:flex;align-items:center;gap:6px;border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px">
-    <div style="flex:1;min-width:0">
-      <div style="font-size:11px;font-weight:700;color:var(--blue-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📋 ${esc(p.desc||'')}</div>
-      <div style="font-size:9px;color:var(--blue-dark)">${fmtVND(p.amount)} · ${_chatRefStatus(p)}</div>
-    </div>
-    <button onclick="clearChatAttach()" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>
-  </div>`;
+  wrap.innerHTML=html;
 }
 function clearChatAttach(){ _chatAttachRef=null; _chatRenderAttach(); }
+function clearChatAttachImg(){ _chatAttachImg=null; _chatRenderAttach(); }
+// v115: chọn ảnh từ máy → nén → tải lên Kho ảnh (Storage) → gắn chờ gửi
+function handleChatImg(input){
+  const f=(input.files||[])[0];
+  input.value='';
+  if(!f || !f.type || !f.type.startsWith('image/')) return;
+  showToast('⏳ Đang tải ảnh lên...');
+  compressImage(f).then(dataUrl=>
+    uploadToStorage(dataUrl, 'chat/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.jpg')
+  ).then(url=>{
+    _chatAttachImg=url;
+    _chatRenderAttach();
+    showToast('✅ Ảnh sẵn sàng — bấm Gửi');
+  }).catch(err=>showToast('❌ Không tải được ảnh: '+(err.message||'lỗi')));
+}
+// v115: chuyển tiếp ảnh đang xem (từ phiếu đề xuất/chứng từ) sang Chat
+function forwardModalImgToChat(ev){
+  if(ev) ev.stopPropagation();
+  const src=modalImages[modalIdx]; if(!src) return;
+  closeImgModal();
+  if(src.indexOf('data:')===0){
+    showToast('⏳ Đang chuyển ảnh sang Chat...');
+    uploadToStorage(src, 'chat/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.jpg')
+      .then(url=>{ _chatAttachImg=url; openChatPage(); showToast('✅ Ảnh sẵn sàng — bấm Gửi'); })
+      .catch(err=>showToast('❌ Không chuyển được ảnh: '+(err.message||'lỗi')));
+  } else {
+    _chatAttachImg=src;
+    openChatPage();
+    showToast('✅ Ảnh sẵn sàng — bấm Gửi');
+  }
+}
+// v115: mở ảnh trong chat bằng đúng màn xem ảnh lớn (zoom/copy/tải như mọi nơi)
+function openChatImg(k){
+  const m=groupChatMsgs.find(x=>x._k===k); if(!m||!m.img) return;
+  modalProposalId=null; modalKind='chat';
+  modalImages=[m.img]; modalIdx=0;
+  showModalImg();
+  document.getElementById('imgModal').classList.add('open');
+}
 function openChatPick(){ document.getElementById('chat-pick-search').value=''; renderChatPick(); document.getElementById('chat-pick-modal').style.display='flex'; }
 function closeChatPick(){ document.getElementById('chat-pick-modal').style.display='none'; }
 function renderChatPick(){

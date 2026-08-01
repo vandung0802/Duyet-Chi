@@ -153,7 +153,7 @@
         ".write": "auth != null && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'",
         "$id": {
           ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (!data.exists() || (!newData.exists() && data.child('uid').val() === auth.uid))",
-          ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('ts').isNumber()"
+          ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('ts').isNumber() && (!newData.child('img').exists() || (newData.child('img').isString() && newData.child('img').val().length <= 2000))"
         }
       },
       "chatRead": {
