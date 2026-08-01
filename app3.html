@@ -1202,7 +1202,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260802-v113';
+const APP_VERSION = '20260802-v114';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -4708,7 +4708,7 @@ function renderPlanStats(){
     <div class="card">
       <div class="card-body" style="padding:0">
         <div class="excel-table-wrap">
-          <table class="excel-table excel-table-scroll" style="width:${totalWidth}px">
+          <table class="excel-table excel-table-scroll" style="width:100%;min-width:${totalWidth}px">
             ${colgroup}
             <thead><tr>
               <th style="text-align:center">#</th><th>Vật tư</th><th>Khối lượng</th><th>Công trình</th>
@@ -5424,7 +5424,7 @@ function renderExcelTable(containerId, items, kind){
   const colsDone    = `<colgroup><col style="width:18px"><col style="width:auto"><col style="width:56px"><col style="width:40px"><col style="width:52px"><col style="width:28px"></colgroup>`;
   el.innerHTML = `
     <div class="excel-table-wrap">
-      <table class="excel-table ${kind==='pending'?'excel-table-scroll':'excel-table-fixed'}"${kind==='pending'?` style="width:${pendingTotalWidth}px"`:''}>
+      <table class="excel-table ${kind==='pending'?'excel-table-scroll':'excel-table-fixed'}"${kind==='pending'?` style="width:100%;min-width:${pendingTotalWidth}px"`:''}>
         ${kind==='pending'?colsPending:colsDone}
         <thead><tr>
           <th style="text-align:center">#</th><th>Tên đề xuất</th><th style="text-align:right">${kind==='done'?'Đã chuyển':'Còn chuyển'}</th><th style="text-align:center">Người</th><th style="text-align:center">CT</th>
@@ -6764,7 +6764,7 @@ function _renderSalaryTable(list, shown){
   list.innerHTML=`
     <div class="card"><div class="card-body" style="padding:0">
       <div class="excel-table-wrap">
-        <table class="excel-table excel-table-scroll" style="width:${totalWidth}px">
+        <table class="excel-table excel-table-scroll" style="width:100%;min-width:${totalWidth}px">
           <colgroup>${colWidths.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
           <thead><tr><th style="text-align:center">#</th><th>Nhân viên</th><th>Chức vụ</th><th>Nhóm</th><th style="text-align:right">Đề xuất</th><th style="text-align:right">D</th><th style="text-align:right">H</th><th style="text-align:right">Đã CK</th><th>Trạng thái</th></tr></thead>
           <tbody>${rows}</tbody>
