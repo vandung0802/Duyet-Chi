@@ -1116,6 +1116,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div style="font-size:15px;font-weight:800">💬 Nhóm Duyệt Chi</div>
       <div style="font-size:10px;opacity:.85">Chat nội bộ — chỉ thành viên đã duyệt</div>
     </div>
+    <!-- v113: chỉ Dũng thấy — xóa sạch cả nhóm chat -->
+    <button id="chat-clear-btn" onclick="clearAllChat()" style="display:none;background:rgba(255,255,255,0.15);border:none;border-radius:10px;height:32px;padding:0 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0">🗑 Xóa tất cả</button>
   </div>
   <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:10px 10px 4px"></div>
   <div id="chat-tag-row" style="display:none;flex-shrink:0;padding:4px 8px;background:#fff;border-top:1px solid var(--gray-border);white-space:nowrap;overflow-x:auto"></div>
@@ -1200,7 +1202,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260801-v112';
+const APP_VERSION = '20260802-v113';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6358,12 +6360,15 @@ function renderChatMsgs(){
     const mine=(m.uid&&m.uid===myUid)||(!m.uid&&m.by===myName);
     const time=String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
     const body=(m.text&&m.text!=='📋')?`<div style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_chatHighlightTags(esc(m.text))}</div>`:'';
+    // v113: nút thu hồi/xóa — D xóa được mọi tin, người khác chỉ tin của mình (tin vừa gửi chờ đồng bộ xong mới xóa được)
+    const canDel = m._k && (currentRole==='dung' || mine);
+    const delBtn = canDel ? `<span onclick="deleteChatMsg('${esc(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
     return sep+`<div style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
       <div style="background:${mine?'#d2e7ff':'#fff'};border:1px solid ${mine?'#b6d7fb':'var(--gray-border)'};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px">
         ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
         ${body}
         ${m.ref?_chatRefChip(m.ref):''}
-        <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${time}</div>
+        <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${delBtn}${time}</div>
       </div>
     </div>`;
   }).join('');
@@ -6387,9 +6392,32 @@ function markGroupChatRead(){
 function openChatPage(){
   const pg=document.getElementById('chat-page'); if(!pg) return;
   pg.style.display='flex';
+  const cb=document.getElementById('chat-clear-btn'); if(cb) cb.style.display = currentRole==='dung' ? 'block':'none'; // v113
   renderChatMsgs();
   _chatRenderAttach();
   markGroupChatRead();
+}
+// v113: THU HỒI/XÓA tin — D xóa được mọi tin; người khác chỉ tin CHÍNH MÌNH (luật server cũng chặn y vậy)
+function deleteChatMsg(k){
+  const m=groupChatMsgs.find(x=>x._k===k); if(!m) return;
+  const mine = m.uid && currentUser && m.uid===currentUser.uid;
+  if(currentRole!=='dung' && !mine){ showToast('Chỉ xóa được tin của chính mình'); return; }
+  if(!confirm('Thu hồi / xóa tin nhắn này?'+(mine?'':'\n(Tin của '+(m.by||'người khác')+')'))) return;
+  db.ref('duyetchi/groupChat/'+k).remove()
+    .then(()=>showToast('🗑 Đã xóa tin nhắn'))
+    .catch(err=>showToast('❌ Không xóa được: '+err.message));
+  groupChatMsgs=groupChatMsgs.filter(x=>x._k!==k); // ẩn ngay, server sẽ đồng bộ lại
+  renderChatMsgs(); updateChatBadge();
+}
+// v113: chỉ Dũng — xóa SẠCH cả nhóm chat (luật cấp cha chỉ cho role dung)
+function clearAllChat(){
+  if(currentRole!=='dung'){ showToast('Chỉ Dũng xóa được tất cả'); return; }
+  if(!confirm('XÓA TOÀN BỘ tin nhắn của nhóm chat?')) return;
+  if(!confirm('Chắc chắn? Xóa rồi KHÔNG khôi phục được.')) return;
+  db.ref('duyetchi/groupChat').remove()
+    .then(()=>showToast('🗑 Đã xóa toàn bộ tin nhắn'))
+    .catch(err=>showToast('❌ Không xóa được: '+err.message));
+  groupChatMsgs=[]; renderChatMsgs(); updateChatBadge();
 }
 function closeChatPage(){
   const pg=document.getElementById('chat-page'); if(pg) pg.style.display='none';

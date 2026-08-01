@@ -146,11 +146,13 @@
       },
 
       "groupChat": {
-        // v109 CHAT NHÓM CÔNG TY: chỉ tài khoản ĐÃ DUYỆT đọc/gửi. Tin nhắn CHỈ THÊM MỚI,
-        // không sửa/không xoá (bất biến — cùng nguyên tắc hỏi–đáp trên phiếu).
+        // v113 CHAT NHÓM CÔNG TY: chỉ tài khoản ĐÃ DUYỆT đọc/gửi. Tin CHỈ THÊM MỚI hoặc XÓA
+        // (không sửa): DŨNG xóa được mọi tin (kể cả xóa sạch cả nhóm — .write cấp cha);
+        // người khác chỉ xóa tin CHÍNH MÌNH (so uid). User chốt 01/08.
         ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".write": "auth != null && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'",
         "$id": {
-          ".write": "auth != null && !data.exists() && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (!data.exists() || (!newData.exists() && data.child('uid').val() === auth.uid))",
           ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('ts').isNumber()"
         }
       },
