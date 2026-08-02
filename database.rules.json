@@ -156,6 +156,12 @@
           ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('ts').isNumber() && (!newData.child('img').exists() || (newData.child('img').isString() && newData.child('img').val().length <= 2000))"
         }
       },
+      "chatPin": {
+        // v116: TIN GHIM của nhóm chat (1 tin) — thành viên đã duyệt ghim/bỏ ghim
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".validate": "newData.child('k').isString() && newData.child('text').isString() && newData.child('text').val().length <= 300"
+      },
       "chatRead": {
         // v109: mốc "đã đọc chat nhóm" của từng người (để đếm số tin chưa xem, đồng bộ đa thiết bị)
         "$uid": {

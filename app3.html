@@ -1121,8 +1121,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <!-- v113: chỉ Dũng thấy — xóa sạch cả nhóm chat -->
     <button id="chat-clear-btn" onclick="clearAllChat()" style="display:none;background:rgba(255,255,255,0.15);border:none;border-radius:10px;height:32px;padding:0 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0">🗑 Xóa tất cả</button>
   </div>
+  <!-- v116: thanh TIN GHIM (kiểu Zalo) -->
+  <div id="chat-pin-bar" style="display:none;flex-shrink:0;background:#fff7ed;border-bottom:1px solid #fdba74;padding:6px 10px;align-items:center;gap:8px">
+    <div id="chat-pin-content" style="flex:1;min-width:0;font-size:12px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+    <button onclick="unpinChatMsg()" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid #fdba74;background:#fff;cursor:pointer;flex-shrink:0">✕</button>
+  </div>
   <div id="chat-msgs" style="flex:1;overflow-y:auto;padding:10px 10px 4px"></div>
   <div id="chat-tag-row" style="display:none;flex-shrink:0;padding:4px 8px;background:#fff;border-top:1px solid var(--gray-border);white-space:nowrap;overflow-x:auto"></div>
+  <!-- v116: khung "đang trả lời tin..." -->
+  <div id="chat-reply-preview" style="display:none;flex-shrink:0;padding:6px 8px 0;background:#fff;border-top:1px solid var(--gray-border)"></div>
   <div id="chat-attach-preview" style="display:none;flex-shrink:0;padding:6px 8px 0;background:#fff;border-top:1px solid var(--gray-border)"></div>
   <div style="flex-shrink:0;display:flex;gap:6px;padding:8px;background:#fff;border-top:1px solid var(--gray-border);padding-bottom:calc(8px + env(safe-area-inset-bottom))">
     <button onclick="document.getElementById('chat-img-input').click()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gửi ảnh">📷</button>
@@ -1130,6 +1137,19 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <button onclick="openChatPick()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gắn phiếu vào tin">📋</button>
     <input id="chat-msg-inp" type="text" autocomplete="off" placeholder="Nhắn tin... (gõ @ để tag tên)" oninput="_chatTagHint(this)" onkeydown="if(event.key==='Enter')sendGroupMsg()" style="flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;outline:none;font-family:inherit">
     <button onclick="sendGroupMsg()" style="flex-shrink:0;padding:9px 16px;font-size:14px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:10px;cursor:pointer">Gửi</button>
+  </div>
+</div>
+
+<!-- v116: MENU TIN NHẮN (bấm vào 1 tin) — Trả lời / Chia sẻ / Copy / Ghim / Chi tiết / Xóa -->
+<div class="role-screen" id="chat-msg-menu" style="display:none;z-index:9470;background:rgba(0,0,0,0.45)" onclick="closeChatMsgMenu()">
+  <div style="background:#fff;border-radius:16px;width:100%;max-width:300px;overflow:hidden" onclick="event.stopPropagation()">
+    <div id="chat-menu-preview" style="padding:10px 14px;font-size:12px;color:var(--text-sub);border-bottom:1px solid var(--gray-border);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+    <button onclick="chatMenuReply()" style="display:block;width:100%;text-align:left;padding:12px 16px;font-size:14px;font-weight:600;background:none;border:none;border-bottom:1px solid #f1f5f9;cursor:pointer">💬 Trả lời</button>
+    <button onclick="chatMenuShare()" style="display:block;width:100%;text-align:left;padding:12px 16px;font-size:14px;font-weight:600;background:none;border:none;border-bottom:1px solid #f1f5f9;cursor:pointer">↗️ Chia sẻ</button>
+    <button onclick="chatMenuCopy()" style="display:block;width:100%;text-align:left;padding:12px 16px;font-size:14px;font-weight:600;background:none;border:none;border-bottom:1px solid #f1f5f9;cursor:pointer">📄 Copy tin nhắn</button>
+    <button onclick="chatMenuPin()" style="display:block;width:100%;text-align:left;padding:12px 16px;font-size:14px;font-weight:600;background:none;border:none;border-bottom:1px solid #f1f5f9;cursor:pointer">📌 Ghim tin nhắn</button>
+    <button onclick="chatMenuDetail()" style="display:block;width:100%;text-align:left;padding:12px 16px;font-size:14px;font-weight:600;background:none;border:none;border-bottom:1px solid #f1f5f9;cursor:pointer">ℹ️ Xem chi tiết</button>
+    <button id="chat-menu-del" onclick="chatMenuDelete()" style="display:block;width:100%;text-align:left;padding:12px 16px;font-size:14px;font-weight:700;color:var(--red);background:none;border:none;cursor:pointer">🗑 Xóa / thu hồi</button>
   </div>
 </div>
 
@@ -1206,7 +1226,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260802-v115';
+const APP_VERSION = '20260803-v116';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2261,6 +2281,7 @@ let _metaLoaded=false, _proposalsLoaded=false, _imagesLoaded=false, _imagesLoadS
 let _dcReattachGated=null; // v95: hàm nối lại 4 kênh dữ liệu gác quyền — gán trong initFirebaseSync, gọi khi đăng nhập
 // v109 CHAT NHÓM: 200 tin gần nhất + mốc đã-đọc của mình
 let groupChatMsgs=[], _chatReadTs=0, _gcQuery=null, _crQuery=null, _chatAttachRef=null, _chatAttachImg=null;
+let _chatReplyTo=null, _chatPin=null, _chatMenuKey=null; // v116: trả lời trích dẫn + tin ghim + menu tin
 let _metaData={}, _proposalsData={}, _imagesData={};
 let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
 let _loadingImages = new Set(); // đang fetch
@@ -2589,6 +2610,9 @@ function initFirebaseSync(){
       _crQuery = db.ref('duyetchi/chatRead/'+_crUser.uid);
       _crQuery.on('value', s=>{ _chatReadTs = s.val()||0; try{ updateChatBadge(); }catch(e){} }, ()=>{});
     }
+    // v116: tin GHIM của nhóm
+    db.ref('duyetchi/chatPin').off('value');
+    db.ref('duyetchi/chatPin').on('value', s=>{ _chatPin = s.val()||null; try{ renderChatPinBar(); }catch(e){} }, ()=>{});
   }
   _dcReattachGated = _attachGatedListeners; // cho onAuthStateChanged gọi nối lại NGAY khi đăng nhập
   _attachGatedListeners();
@@ -6327,7 +6351,7 @@ function _chatRefStatus(p){
 function _chatRefChip(refId){
   const p=proposals.find(x=>x.id===refId);
   if(!p) return `<div style="border:1px solid var(--gray-border);background:#f8fafc;border-radius:8px;padding:5px 8px;margin-top:4px;font-size:11px;color:var(--text-sub)">📋 (phiếu đã xoá hoặc không còn)</div>`;
-  return `<div onclick="chatOpenRef('${sid(p.id)}')" style="border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-top:4px;cursor:pointer">
+  return `<div onclick="event.stopPropagation();chatOpenRef('${sid(p.id)}')" style="border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-top:4px;cursor:pointer">
     <div style="font-size:11px;font-weight:700;color:var(--blue-dark);word-break:break-word">📋 ${esc(p.desc||'')}</div>
     <div style="font-size:10px;color:var(--blue-dark)">${fmtVND(p.amount)} · ${esc(p.person||'')} · ${_chatRefStatus(p)} — bấm mở phiếu ›</div>
   </div>`;
@@ -6341,6 +6365,8 @@ function chatOpenRef(id){
 function _chatRoleClr(r){ return r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155'; }
 function _chatHighlightTags(escapedText){
   let h=escapedText;
+  // v116: @Tất cả (tag cả nhóm, kiểu Zalo) — tô CAM đậm cho nổi
+  h=h.split('@Tất cả').join('<span style="color:#ea580c;font-weight:800">@Tất cả</span>');
   _chatMemberNames().concat([getCurrentUserName()||'']).filter(Boolean)
     .sort((a,b)=>b.length-a.length)
     .forEach(n=>{ const en=esc(n); h=h.split('@'+en).join(`<span style="color:var(--blue);font-weight:700">@${en}</span>`); });
@@ -6369,12 +6395,15 @@ function renderChatMsgs(){
     const body=(m.text&&m.text!=='📋')?`<div style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_chatHighlightTags(esc(m.text))}</div>`:'';
     // v113: nút thu hồi/xóa — D xóa được mọi tin, người khác chỉ tin của mình (tin vừa gửi chờ đồng bộ xong mới xóa được)
     const canDel = m._k && (currentRole==='dung' || mine);
-    const delBtn = canDel ? `<span onclick="deleteChatMsg('${esc(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
-    return sep+`<div style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
-      <div style="background:${mine?'#d2e7ff':'#fff'};border:1px solid ${mine?'#b6d7fb':'var(--gray-border)'};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px">
+    const delBtn = canDel ? `<span onclick="event.stopPropagation();deleteChatMsg('${esc(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
+    // v116: khung TRÍCH DẪN khi tin là trả lời tin khác — bấm vào cuộn tới tin gốc
+    const reBox = m.re ? `<div onclick="event.stopPropagation();scrollToChatMsg('${esc((m.re.k||''))}')" style="border-left:3px solid var(--blue);background:${mine?'#e2eefc':'#f1f5f9'};border-radius:6px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer"><b style="color:var(--blue-dark)">${esc(m.re.by||'')}</b>: ${esc(m.re.text||'')}</div>` : '';
+    return sep+`<div id="chatmsg-${esc(m._k||'')}" style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
+      <div${m._k?` onclick="openChatMsgMenu('${esc(m._k)}')"`:''} style="background:${mine?'#d2e7ff':'#fff'};border:1px solid ${mine?'#b6d7fb':'var(--gray-border)'};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
         ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
+        ${reBox}
         ${body}
-        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(m.img)}" loading="lazy" decoding="async" onclick="openChatImg('${esc(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
+        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(m.img)}" loading="lazy" decoding="async" onclick="event.stopPropagation();openChatImg('${esc(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
         ${m.ref?_chatRefChip(m.ref):''}
         <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${delBtn}${time}</div>
       </div>
@@ -6412,6 +6441,8 @@ function openChatPage(){
   const cb=document.getElementById('chat-clear-btn'); if(cb) cb.style.display = currentRole==='dung' ? 'block':'none'; // v113
   renderChatMsgs();
   _chatRenderAttach();
+  try{ renderChatPinBar(); }catch(e){} // v116
+  try{ _chatRenderReply(); }catch(e){}
   markGroupChatRead();
 }
 // v113: THU HỒI/XÓA tin — D xóa được mọi tin; người khác chỉ tin CHÍNH MÌNH (luật server cũng chặn y vậy)
@@ -6456,10 +6487,12 @@ function sendGroupMsg(){
   const msg={ by:me, role:currentRole||'other', uid:currentUser.uid, text:text||'📋', ts:Date.now() };
   if(_chatAttachRef) msg.ref=_chatAttachRef;
   if(_chatAttachImg) msg.img=_chatAttachImg; // v115
+  if(_chatReplyTo) msg.re={ by:_chatReplyTo.by, text:_chatReplyTo.text, k:_chatReplyTo.k||'' }; // v116: trích dẫn trả lời
   db.ref('duyetchi/groupChat').push(msg).catch(err=>{ showToast('⚠️ Không gửi được — kiểm tra mạng: '+err.message); });
   groupChatMsgs.push(msg); // hiện ngay, bản server sẽ thay thế khi đồng bộ về
   if(inp) inp.value='';
   _chatAttachRef=null; _chatAttachImg=null; _chatRenderAttach();
+  _chatReplyTo=null; _chatRenderReply(); // v116
   const tr=document.getElementById('chat-tag-row'); if(tr) tr.style.display='none';
   renderChatMsgs();
   markGroupChatRead();
@@ -6535,6 +6568,77 @@ function openChatImg(k){
   showModalImg();
   document.getElementById('imgModal').classList.add('open');
 }
+
+// ══ v116: MENU TIN NHẮN (bấm vào tin) — Trả lời / Chia sẻ / Copy / Ghim / Chi tiết / Xóa ══
+function openChatMsgMenu(k){
+  const m=groupChatMsgs.find(x=>x._k===k); if(!m) return;
+  _chatMenuKey=k;
+  document.getElementById('chat-menu-preview').textContent=(m.by||'')+': '+((m.text&&m.text!=='📋')?m.text:(m.img?'📷 Ảnh':'📋 Phiếu'));
+  const mine=m.uid&&currentUser&&m.uid===currentUser.uid;
+  document.getElementById('chat-menu-del').style.display=(currentRole==='dung'||mine)?'block':'none';
+  document.getElementById('chat-msg-menu').style.display='flex';
+}
+function closeChatMsgMenu(){ document.getElementById('chat-msg-menu').style.display='none'; _chatMenuKey=null; }
+function _chatMenuMsg(){ return groupChatMsgs.find(x=>x._k===_chatMenuKey); }
+function chatMenuReply(){
+  const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
+  _chatReplyTo={ k:m._k, by:m.by||'', text:((m.text&&m.text!=='📋')?m.text:(m.img?'📷 Ảnh':'📋 Phiếu')).slice(0,120) };
+  _chatRenderReply();
+  try{ document.getElementById('chat-msg-inp').focus(); }catch(e){}
+}
+function chatMenuCopy(){
+  const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
+  const t=(m.text&&m.text!=='📋')?m.text:(m.img||'');
+  if(!t){ showToast('Tin này không có chữ để copy'); return; }
+  (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>showToast('📄 Đã copy tin nhắn')).catch(()=>showToast('❌ Không copy được'));
+}
+function chatMenuShare(){
+  const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
+  const t=(m.by||'')+': '+((m.text&&m.text!=='📋')?m.text:'')+(m.img?' '+m.img:'');
+  if(navigator.share){ navigator.share({text:t}).catch(()=>{}); }
+  else (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>showToast('📄 Đã copy để chia sẻ')).catch(()=>showToast('❌ Không chia sẻ được'));
+}
+function chatMenuPin(){
+  const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m||!m._k) return;
+  const text=((m.text&&m.text!=='📋')?m.text:(m.img?'📷 Ảnh':'📋 Phiếu')).slice(0,300);
+  db.ref('duyetchi/chatPin').set({ k:m._k, by:m.by||'', text:text, ts:Date.now() })
+    .then(()=>showToast('📌 Đã ghim tin nhắn')).catch(err=>showToast('❌ Không ghim được: '+err.message));
+  _chatPin={k:m._k,by:m.by||'',text:text,ts:Date.now()}; renderChatPinBar();
+}
+function unpinChatMsg(){
+  if(!confirm('Bỏ ghim tin nhắn này?')) return;
+  db.ref('duyetchi/chatPin').remove().catch(()=>{});
+  _chatPin=null; renderChatPinBar();
+}
+function chatMenuDetail(){
+  const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
+  const roleLbl={dung:'Dũng (D)',hien:'Hiền (H)',trang:'Trang (T)',other:'Thành viên'};
+  alert('ℹ️ Chi tiết tin nhắn\n\nNgười gửi: '+(m.by||'—')+'\nVai trò: '+(roleLbl[m.role]||m.role||'—')+'\nLúc: '+fmtFull(m.ts)+(m.ref?'\nGắn phiếu: có':'')+(m.img?'\nKèm ảnh: có':''));
+}
+function chatMenuDelete(){ const k=_chatMenuKey; closeChatMsgMenu(); if(k) deleteChatMsg(k); }
+function renderChatPinBar(){
+  const bar=document.getElementById('chat-pin-bar'); if(!bar) return;
+  if(!_chatPin || !_chatPin.k){ bar.style.display='none'; return; }
+  document.getElementById('chat-pin-content').innerHTML=`📌 <b>${esc(_chatPin.by||'')}</b>: ${esc(_chatPin.text||'')}`;
+  document.getElementById('chat-pin-content').onclick=()=>scrollToChatMsg(_chatPin.k);
+  bar.style.display='flex';
+}
+function scrollToChatMsg(k){
+  const el=document.getElementById('chatmsg-'+k); if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'center'});
+  el.style.transition='background .3s'; el.style.background='#fff3cd';
+  setTimeout(()=>{ el.style.background=''; }, 1500);
+}
+function _chatRenderReply(){
+  const wrap=document.getElementById('chat-reply-preview'); if(!wrap) return;
+  if(!_chatReplyTo){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='block';
+  wrap.innerHTML=`<div style="display:flex;align-items:center;gap:8px;border-left:3px solid var(--blue);background:#f8fafc;border-radius:6px;padding:5px 8px">
+    <div style="flex:1;min-width:0;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">💬 Trả lời <b style="color:var(--blue-dark)">${esc(_chatReplyTo.by)}</b>: ${esc(_chatReplyTo.text)}</div>
+    <button onclick="clearChatReply()" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>
+  </div>`;
+}
+function clearChatReply(){ _chatReplyTo=null; _chatRenderReply(); }
 function openChatPick(){ document.getElementById('chat-pick-search').value=''; renderChatPick(); document.getElementById('chat-pick-modal').style.display='flex'; }
 function closeChatPick(){ document.getElementById('chat-pick-modal').style.display='none'; }
 function renderChatPick(){
@@ -6555,7 +6659,9 @@ function openChatWithRef(id){ _chatAttachRef=id; openChatPage(); }
 function _chatTagHint(inp){
   const row=document.getElementById('chat-tag-row'); if(!row) return;
   if((inp.value||'').endsWith('@')){
-    row.innerHTML=_chatMemberNames().map(n=>`<button onclick="_chatTagPick('${esc(n)}')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
+    // v116: chip "@Tất cả" đứng đầu (tag cả nhóm, kiểu Zalo)
+    row.innerHTML=`<button onclick="_chatTagPick('Tất cả')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:800;background:#fff7ed;color:#ea580c;border:1px solid #fdba74;border-radius:14px;cursor:pointer">@Tất cả</button>`
+      + _chatMemberNames().map(n=>`<button onclick="_chatTagPick('${esc(n)}')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
     row.style.display='block';
   } else row.style.display='none';
 }
