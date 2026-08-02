@@ -1226,7 +1226,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v116';
+const APP_VERSION = '20260803-v117';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2610,9 +2610,14 @@ function initFirebaseSync(){
       _crQuery = db.ref('duyetchi/chatRead/'+_crUser.uid);
       _crQuery.on('value', s=>{ _chatReadTs = s.val()||0; try{ updateChatBadge(); }catch(e){} }, ()=>{});
     }
-    // v116: tin GHIM của nhóm
+    // v116: tin GHIM của nhóm (v117: đổi ghim → vẽ lại tin để đổi màu đỏ ngay)
     db.ref('duyetchi/chatPin').off('value');
-    db.ref('duyetchi/chatPin').on('value', s=>{ _chatPin = s.val()||null; try{ renderChatPinBar(); }catch(e){} }, ()=>{});
+    db.ref('duyetchi/chatPin').on('value', s=>{
+      _chatPin = s.val()||null;
+      try{ renderChatPinBar(); }catch(e){}
+      const pg=document.getElementById('chat-page');
+      if(pg && pg.style.display==='flex'){ try{ renderChatMsgs(); }catch(e){} }
+    }, ()=>{});
   }
   _dcReattachGated = _attachGatedListeners; // cho onAuthStateChanged gọi nối lại NGAY khi đăng nhập
   _attachGatedListeners();
@@ -6398,8 +6403,11 @@ function renderChatMsgs(){
     const delBtn = canDel ? `<span onclick="event.stopPropagation();deleteChatMsg('${esc(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
     // v116: khung TRÍCH DẪN khi tin là trả lời tin khác — bấm vào cuộn tới tin gốc
     const reBox = m.re ? `<div onclick="event.stopPropagation();scrollToChatMsg('${esc((m.re.k||''))}')" style="border-left:3px solid var(--blue);background:${mine?'#e2eefc':'#f1f5f9'};border-radius:6px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer"><b style="color:var(--blue-dark)">${esc(m.re.by||'')}</b>: ${esc(m.re.text||'')}</div>` : '';
+    // v117: tin ĐANG GHIM → nền/viền ĐỎ + nhãn 📌 cho dễ nhận biết (user chốt)
+    const isPinned = _chatPin && _chatPin.k && _chatPin.k===m._k;
     return sep+`<div id="chatmsg-${esc(m._k||'')}" style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
-      <div${m._k?` onclick="openChatMsgMenu('${esc(m._k)}')"`:''} style="background:${mine?'#d2e7ff':'#fff'};border:1px solid ${mine?'#b6d7fb':'var(--gray-border)'};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
+      <div${m._k?` onclick="openChatMsgMenu('${esc(m._k)}')"`:''} style="background:${isPinned?'#fdecea':(mine?'#d2e7ff':'#fff')};border:1.5px solid ${isPinned?'#e24b4a':(mine?'#b6d7fb':'var(--gray-border)')};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
+        ${isPinned?`<div style="font-size:9.5px;font-weight:800;color:#dc0000">📌 Tin đã ghim</div>`:''}
         ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
         ${reBox}
         ${body}
@@ -6603,12 +6611,12 @@ function chatMenuPin(){
   const text=((m.text&&m.text!=='📋')?m.text:(m.img?'📷 Ảnh':'📋 Phiếu')).slice(0,300);
   db.ref('duyetchi/chatPin').set({ k:m._k, by:m.by||'', text:text, ts:Date.now() })
     .then(()=>showToast('📌 Đã ghim tin nhắn')).catch(err=>showToast('❌ Không ghim được: '+err.message));
-  _chatPin={k:m._k,by:m.by||'',text:text,ts:Date.now()}; renderChatPinBar();
+  _chatPin={k:m._k,by:m.by||'',text:text,ts:Date.now()}; renderChatPinBar(); renderChatMsgs(); // v117: đổi màu đỏ ngay
 }
 function unpinChatMsg(){
   if(!confirm('Bỏ ghim tin nhắn này?')) return;
   db.ref('duyetchi/chatPin').remove().catch(()=>{});
-  _chatPin=null; renderChatPinBar();
+  _chatPin=null; renderChatPinBar(); renderChatMsgs(); // v117: trả màu thường ngay
 }
 function chatMenuDetail(){
   const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
