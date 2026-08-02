@@ -1232,7 +1232,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v118';
+const APP_VERSION = '20260803-v121';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3026,7 +3026,15 @@ function renderStats(){
   const IDMAP={all:'all',pending:'pending',d_only:'d',h_only:'h',approved:'approved',rejected:'rejected',transferred:'done'};
   FILTERS.forEach(f=>{
     const items = proposals.filter(p=>matchFilter(p,f));
-    const sum = items.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+    // v121: mỗi ô cộng ĐÚNG số tiền của giai đoạn đó (trước đây cộng nhầm số ĐỀ XUẤT cho mọi ô):
+    //  • Đã chuyển → số ĐÃ THỰC CHUYỂN   • D duyệt → số D duyệt   • H duyệt / Đã duyệt → số duyệt chính thức
+    //  • Tất cả / Chờ duyệt / Từ chối → số đề xuất (đúng vì chưa/không có số duyệt)
+    const amtOf = p =>
+        f==='transferred' ? getTotalTransferred(p)
+      : f==='d_only'      ? approvedAmtOf(p,'D')
+      : (f==='h_only'||f==='approved') ? getOfficialApprovedAmount(p)
+      : (parseFloat(p.amount)||0);
+    const sum = items.reduce((a,p)=>a+amtOf(p),0);
     const key = IDMAP[f];
     const elVal = document.getElementById('st-'+key);
     const elAmt = document.getElementById('st-'+key+'-amt');
