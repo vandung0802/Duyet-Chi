@@ -5965,10 +5965,32 @@ function getMainSheet(ss){
     sh.insertColumnBefore(1); sh.getRange(1,1).setValue('STT');
   }
   for(var c=0;c<HEADERS.length;c++){ if(sh.getRange(1,c+1).getValue()!==HEADERS[c]) sh.getRange(1,c+1).setValue(HEADERS[c]); }
-  sh.getRange(1,1,1,HEADERS.length).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff');
-  sh.setColumnWidth(4,220);sh.setColumnWidth(9,240);sh.setColumnWidth(10,240);sh.setColumnWidth(17,240);
+  // Style CƠ BẢN: chỉ đặt 1 lần (đánh dấu bằng metadata) → sau đó user tự chỉnh header/độ rộng, app KHÔNG đè
+  try{
+    var styled=false, dm=sh.getDeveloperMetadata();
+    for(var mi=0;mi<dm.length;mi++){ if(dm[mi].getKey()==='dcStyled'){ styled=true; break; } }
+    if(!styled){
+      sh.getRange(1,1,1,HEADERS.length).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff').setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true);
+      sh.setRowHeight(1,36); sh.setFrozenRows(1); sh.setFrozenColumns(1);
+      try{ sh.hideColumns(2); }catch(e2){}
+      sh.setColumnWidth(1,46);sh.setColumnWidth(4,240);sh.setColumnWidth(9,240);sh.setColumnWidth(10,240);sh.setColumnWidth(17,240);
+      sh.addDeveloperMetadata('dcStyled','1');
+    }
+  }catch(e){ sh.getRange(1,1,1,HEADERS.length).setFontWeight('bold').setBackground('#1a56db').setFontColor('#fff'); }
   [7,14,15,16,18].forEach(function(cc){ sh.getRange(2,cc,Math.max(1,sh.getMaxRows()-1),1).setNumberFormat('#,##0" đ"'); });
   return sh;
+}
+// Style THEO NỘI DUNG cho bảng chính (căn lề + viền + sọc xen kẽ) — bọc try/catch để không bao giờ làm hỏng đồng bộ
+function _styleMain(sh){
+  try{
+    var lr=sh.getLastRow(), mc=sh.getLastColumn(); if(lr<2) return;
+    var mn=lr-1;
+    sh.getRange(2,1,mn,1).setHorizontalAlignment('center');
+    [7,14,15,16,18].forEach(function(cc){ if(cc<=mc) sh.getRange(2,cc,mn,1).setHorizontalAlignment('right'); });
+    sh.getRange(1,1,lr,mc).setBorder(true,true,true,true,true,true,'#c7d2fe',SpreadsheetApp.BorderStyle.SOLID);
+    var bs=sh.getBandings(), br=sh.getRange(2,1,mn,mc);
+    if(bs.length>0){ bs[0].setRange(br); } else { br.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY,false,false); }
+  }catch(e){}
 }
 function num_(x){ var n=parseFloat(String(x).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
 function doGet(e){
@@ -6058,6 +6080,7 @@ function doGet(e){
   var lr=sh.getLastRow();
   if(lr>=3){ sh.getRange(2,1,lr-1,sh.getLastColumn()).sort({column:2, ascending:false}); }
   if(lr>=2){ var stt=[]; for(var k=1;k<=lr-1;k++) stt.push([k]); sh.getRange(2,1,lr-1,1).setValues(stt); }
+  _styleMain(sh);
   buildReports(ss, sh);
   return ContentService.createTextOutput('ok');
 }
@@ -6083,9 +6106,23 @@ function buildReports(ss, sh){
 function writeReport_(ss, name, headers, color, rows){
   var s=ss.getSheetByName(name)||ss.insertSheet(name);
   s.clear();
-  s.getRange(1,1,1,headers.length).setValues([headers]).setFontWeight('bold').setBackground(color).setFontColor('#fff');
-  if(rows.length){ s.getRange(2,1,rows.length,headers.length).setValues(rows); s.getRange(2,5,rows.length,2).setNumberFormat('#,##0" đ"'); }
-  s.setColumnWidth(2,240); s.setFrozenRows(1);
+  try{ var obs=s.getBandings(); for(var ob=0;ob<obs.length;ob++) obs[ob].remove(); }catch(e){}
+  s.getRange(1,1,1,headers.length).setValues([headers]).setFontWeight('bold').setBackground(color).setFontColor('#fff').setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true);
+  s.setRowHeight(1,34);
+  if(rows.length){ s.getRange(2,1,rows.length,headers.length).setValues(rows); }
+  // Style (bảng báo cáo tự tạo lại mỗi lần) — bọc try/catch để không làm hỏng đồng bộ
+  try{
+    if(rows.length){
+      s.getRange(2,5,rows.length,2).setNumberFormat('#,##0" đ"');
+      s.getRange(2,1,rows.length,1).setHorizontalAlignment('center');
+      s.getRange(2,5,rows.length,1).setHorizontalAlignment('right');
+      s.getRange(1,1,rows.length+1,headers.length).setBorder(true,true,true,true,true,true,'#d1d5db',SpreadsheetApp.BorderStyle.SOLID);
+      s.getRange(2,1,rows.length,headers.length).applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY,false,false);
+    }
+  }catch(e){}
+  s.setColumnWidth(1,46); s.setColumnWidth(2,240); s.setColumnWidth(3,150); s.setColumnWidth(4,150);
+  s.setColumnWidth(5,120); s.setColumnWidth(6,140); s.setColumnWidth(7,130);
+  s.setFrozenRows(1);
 }`;
   navigator.clipboard?.writeText(code).then(()=>showToast('✅ Đã copy code! Dán vào Apps Script')).catch(()=>showToast('Lỗi copy'));
 }
