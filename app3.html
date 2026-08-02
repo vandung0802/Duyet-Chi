@@ -206,9 +206,21 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .report-box{background:var(--gray-light);border-radius:var(--radius);padding:12px;font-size:12px;line-height:1.8;white-space:pre-wrap;color:var(--text);margin-top:10px;min-height:60px}
 
 /* Report sub-tabs */
-.report-subtabs{display:flex;gap:4px;padding:0 4px 10px;border-bottom:1px solid var(--gray-border)}
-.report-subtab{flex:1;padding:8px 4px;border-radius:8px 8px 0 0;font-size:11px;font-weight:700;border:none;background:none;color:var(--text-sub);cursor:pointer;white-space:nowrap}
-.report-subtab.active{background:var(--blue-light);color:var(--blue-dark)}
+.report-subtabs{display:flex;gap:5px;padding:0 4px 10px}
+/* v122: nút tab có nền + viền nhẹ để nhìn rõ là NÚT BẤM (trước đây trong suốt trông như chữ) */
+.report-subtab{flex:1;padding:8px 4px;border-radius:10px;font-size:11px;font-weight:700;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;cursor:pointer;white-space:nowrap;transition:filter .15s,box-shadow .15s}
+.report-subtab:hover{filter:brightness(.97)}
+.report-subtab.active{background:var(--blue-light);color:var(--blue-dark);border-color:#bfdbfe;box-shadow:0 1px 4px rgba(37,99,235,.18)}
+/* Màu nhẹ theo ý nghĩa cho các tab ở trang Báo cáo (data-tab này chỉ có ở Báo cáo) */
+.report-subtab[data-tab="done"]{background:#ecfdf5;border-color:#bbf7d0;color:#15803d}
+.report-subtab[data-tab="done"].active{background:#d1fae5;color:#166534;border-color:#86efac;box-shadow:0 1px 4px rgba(22,163,74,.2)}
+.report-subtab[data-tab="pending"]{background:#fffbeb;border-color:#fde68a;color:#b45309}
+.report-subtab[data-tab="pending"].active{background:#fef3c7;color:#92400e;border-color:#fcd34d;box-shadow:0 1px 4px rgba(217,119,6,.2)}
+.report-subtab[data-tab="rejected"]{background:#fef2f2;border-color:#fecaca;color:#b91c1c}
+.report-subtab[data-tab="rejected"].active{background:#fee2e2;color:#991b1b;border-color:#fca5a5;box-shadow:0 1px 4px rgba(220,38,38,.2)}
+/* Thanh TỔNG đặt Ở ĐẦU bảng (không phải cuối) để khỏi phải cuộn xuống mới thấy */
+.table-total-top{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 12px;margin:0 0 8px;background:linear-gradient(135deg,#eff6ff,#ecfdf5);border:1px solid #dbeafe;border-radius:10px;font-size:12.5px;font-weight:800;color:#1e40af}
+.table-total-top .ttt-amt{color:#15803d;font-size:13px}
 .person-chip{padding:5px 12px;border-radius:20px;border:2px solid var(--gray-border);background:#fff;font-size:11px;font-weight:700;cursor:pointer;color:var(--text-sub);transition:.15s}
 .person-chip.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 .person-report-header{padding:12px 14px 6px;font-size:13px;font-weight:700;color:var(--blue-dark)}
@@ -1232,7 +1244,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v121';
+const APP_VERSION = '20260803-v122';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -4757,6 +4769,10 @@ function renderPlanStats(){
   el.innerHTML = `
     <div class="card">
       <div class="card-body" style="padding:0">
+        <div class="table-total-top">
+          <span>Tổng cộng: ${items.length} kế hoạch</span>
+          <span class="ttt-amt">${totalAmount>0?fmtTr(totalAmount):'—'}</span>
+        </div>
         <div class="excel-table-wrap">
           <table class="excel-table excel-table-scroll" style="width:100%;min-width:${totalWidth}px">
             ${colgroup}
@@ -4766,10 +4782,6 @@ function renderPlanStats(){
             </tr></thead>
             <tbody>${rows}</tbody>
           </table>
-        </div>
-        <div class="excel-table-footer">
-          <span>Tổng cộng: ${items.length} kế hoạch</span>
-          <span>${totalAmount>0?fmtTr(totalAmount):'—'}</span>
         </div>
       </div>
     </div>`;
@@ -5402,11 +5414,11 @@ function renderReportList(){
   const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const totalTrans = fp.reduce((a,p)=>a+getTotalTransferred(p),0);
   el.innerHTML=`
+  <div class="table-total-top"><span>Tổng ${fp.length} phiếu · ${fmtTr(total)}</span><span class="ttt-amt">Đã chuyển: ${fmtTr(totalTrans)}</span></div>
   <div id="list-scroll-top" style="overflow-x:auto;height:14px;margin-bottom:1px"><div id="list-scroll-spacer" style="height:1px"></div></div>
   <div class="excel-table-wrap" id="list-scroll-main"><table class="excel-table">
     <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
-    <tbody>${rows}</tbody></table></div>
-  <div class="excel-table-footer"><span>Tổng ${fp.length} phiếu · ${fmtTr(total)}</span><span>Đã chuyển: ${fmtTr(totalTrans)}</span></div>`;
+    <tbody>${rows}</tbody></table></div>`;
   // Sync dual scrollbar
   requestAnimationFrame(()=>{
     const top=document.getElementById('list-scroll-top');
@@ -5476,6 +5488,10 @@ function renderExcelTable(containerId, items, kind){
   // "Đã chuyển": tiền đã rút gọn dạng "X tr" nên cột Đã chuyển không cần rộng — nhường cho Tên đề xuất.
   const colsDone    = `<colgroup><col style="width:18px"><col style="width:auto"><col style="width:56px"><col style="width:40px"><col style="width:52px"><col style="width:28px"></colgroup>`;
   el.innerHTML = `
+    <div class="table-total-top">
+      <span>Tổng cộng: ${sorted.length} khoản</span>
+      <span class="ttt-amt">${fmtTr(totalTransferred)}</span>
+    </div>
     <div class="excel-table-wrap">
       <table class="excel-table ${kind==='pending'?'excel-table-scroll':'excel-table-fixed'}"${kind==='pending'?` style="width:100%;min-width:${pendingTotalWidth}px"`:''}>
         ${kind==='pending'?colsPending:colsDone}
@@ -5486,10 +5502,6 @@ function renderExcelTable(containerId, items, kind){
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
-    </div>
-    <div class="excel-table-footer">
-      <span>Tổng cộng: ${sorted.length} khoản</span>
-      <span>${fmtTr(totalTransferred)}</span>
     </div>`;
   attachReportDoubleTap(el);
 }
@@ -7080,19 +7092,16 @@ function _renderSalaryTable(list, shown){
   const totalWidth=colWidths.reduce((a,w)=>a+w,0);
   list.innerHTML=`
     <div class="card"><div class="card-body" style="padding:0">
+      <div class="table-total-top">
+        <span>Tổng · ${shown.length} khoản</span>
+        <span>ĐX ${fmtTr(tDX2)} · D ${fmtTr(tD2)} · H ${fmtTr(tH2)}</span>
+        <span class="ttt-amt">Đã CK ${fmtTr(tCK2)}</span>
+      </div>
       <div class="excel-table-wrap">
         <table class="excel-table excel-table-scroll" style="width:100%;min-width:${totalWidth}px">
           <colgroup>${colWidths.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
           <thead><tr><th style="text-align:center">#</th><th>Nhân viên</th><th>Chức vụ</th><th>Nhóm</th><th style="text-align:right">Đề xuất</th><th style="text-align:right">D</th><th style="text-align:right">H</th><th style="text-align:right">Đã CK</th><th>Trạng thái</th></tr></thead>
           <tbody>${rows}</tbody>
-          <tfoot><tr style="background:#f8fafc;font-weight:800">
-            <td colspan="4" style="font-size:10px;padding:5px 6px">Tổng · ${shown.length} khoản</td>
-            <td style="text-align:right;font-size:10px">${fmtTr(tDX2)}</td>
-            <td style="text-align:right;font-size:10px">${fmtTr(tD2)}</td>
-            <td style="text-align:right;font-size:10px">${fmtTr(tH2)}</td>
-            <td style="text-align:right;font-size:10px;color:#16a34a">${fmtTr(tCK2)}</td>
-            <td></td>
-          </tr></tfoot>
         </table>
       </div>
       <div style="font-size:10px;color:var(--text-sub);text-align:center;padding:6px">💡 Kéo ngang xem thêm cột · Chạm 2 lần vào dòng → mở thẻ phiếu để duyệt</div>
