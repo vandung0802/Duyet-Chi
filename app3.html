@@ -6013,9 +6013,14 @@ function doGet(e){
   } else if(act==='luong'){
     var ls=ss.getSheetByName('Tổng hợp Lương')||ss.insertSheet('Tổng hợp Lương');
     if(ls.getLastRow()===0){
+      // ── Style CƠ BẢN: chỉ đặt 1 lần khi tạo mới → sau đó người dùng tự đổi thoải mái (app không ghi đè) ──
       ls.appendRow(['STT','ID','Tháng','Nhân viên','Chức vụ','Nhóm','Đề xuất','D duyệt','H duyệt','Đã chuyển','Còn lại','Trạng thái','Người ĐX','Ngày CN']);
-      ls.getRange(1,1,1,14).setFontWeight('bold').setBackground('#16a34a').setFontColor('#fff');
-      ls.setFrozenRows(1); ls.setColumnWidth(4,130); ls.setColumnWidth(6,150);
+      ls.getRange(1,1,1,14).setFontWeight('bold').setBackground('#16a34a').setFontColor('#fff').setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true);
+      ls.setRowHeight(1,36);
+      ls.setFrozenRows(1); ls.setFrozenColumns(1);
+      ls.hideColumns(2);
+      var LW=[46,0,86,150,120,170,112,112,112,112,112,108,120,140];
+      for(var wi=0;wi<LW.length;wi++){ if(LW[wi]>0) ls.setColumnWidth(wi+1,LW[wi]); }
     }
     var lv=ls.getDataRange().getValues(); var lrow=-1;
     for(var li=1;li<lv.length;li++){ if(String(lv[li][1])===targetId){ lrow=li+1; break; } }
@@ -6024,7 +6029,19 @@ function doGet(e){
     var llr=ls.getLastRow();
     if(llr>=3) ls.getRange(2,1,llr-1,14).sort([{column:3,ascending:false},{column:4,ascending:true}]);
     if(llr>=2){ var s2=[]; for(var kk=1;kk<=llr-1;kk++) s2.push([kk]); ls.getRange(2,1,llr-1,1).setValues(s2); }
-    for(var cc=7;cc<=11;cc++){ ls.getRange(2,cc,Math.max(1,llr-1),1).setNumberFormat('#,##0" đ"'); }
+    // ── Style THEO NỘI DUNG: chạy mỗi lần để bảng luôn gọn khi thêm dòng (không đụng độ rộng/màu tiêu đề/cột thêm) ──
+    if(llr>=2){
+      var ln=llr-1;
+      for(var cc=7;cc<=11;cc++){ ls.getRange(2,cc,ln,1).setNumberFormat('#,##0" đ"'); }
+      ls.getRange(2,1,ln,1).setHorizontalAlignment('center');   // STT
+      ls.getRange(2,3,ln,1).setHorizontalAlignment('center');   // Tháng
+      ls.getRange(2,7,ln,5).setHorizontalAlignment('right');    // các cột tiền
+      ls.getRange(2,12,ln,1).setHorizontalAlignment('center');  // Trạng thái
+      ls.getRange(1,1,llr,14).setBorder(true,true,true,true,true,true,'#a5d6a7',SpreadsheetApp.BorderStyle.SOLID);
+      // Sọc xen kẽ: nếu người dùng đã tự đặt màu → chỉ nới vùng cho khớp số dòng (GIỮ màu họ chọn); chưa có thì đặt mặc định
+      var lbs=ls.getBandings(); var lbr=ls.getRange(2,1,ln,14);
+      if(lbs.length>0){ lbs[0].setRange(lbr); } else { lbr.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREEN,false,false); }
+    }
     return ContentService.createTextOutput('ok');
   } else if(act==='luongDel'){
     var ls2=ss.getSheetByName('Tổng hợp Lương');
