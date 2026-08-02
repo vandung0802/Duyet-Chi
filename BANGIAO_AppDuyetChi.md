@@ -555,6 +555,21 @@ Sau khi user hỏi "bảo mật cao hơn nữa", đã phân tích mối đe dọ
 - **Giới hạn giá trị (3c) — luật v84:** mỗi field `desc/note/amount/amountUnit/person/site` giờ = `(ĐÓNG BĂNG cũ) && (CAP)`. Cap: desc/note ≤ 5000 ký tự, person/site ≤ 200, amountUnit ≤ 40, amount là số trong [0 ; 100.000.000.000] (100 tỷ). Ngưỡng RẤT RỘNG so với thật (desc dài nhất 158, note 179, amount lớn nhất ~859tr) → không chặn nhầm. Cap chỉ "cắn" đúng kiểu (`!isString||len<=N`, `!isNumber||range`) nên không bao giờ từ chối dữ liệu cũ khi app ghi lại cả phiếu. Đã deploy + xác nhận 6/6 field có cap, 190 phiếu nguyên vẹn.
 - **CÒN LẠI cho user tự làm (mạnh nhất):** bật **2FA** 3 Gmail + **khóa màn hình** mọi điện thoại. Nhóm 3 (App Check theo dõi→siết, xác nhận-lại khi duyệt/chuyển, audit log ghi-một-lần, test luật tự động) — chờ user chọn làm tiếp.
 
+### BQ. 🏢 v124 — BƯỚC 1/5 dự án "P.Kế hoạch" + QUY TRÌNH XEM TRƯỚC (03/08/2026)
+User chốt PA2: luồng đề xuất RIÊNG cho phòng Kế hoạch (kín tuyệt đối ở database, chỉ D/H/Trang + người P.KH thấy; kế toán không thấy P.KH và ngược lại). Kế hoạch 5 bước, mỗi bước deploy + kiểm tra riêng:
+1. ✅ **v124**: trường `dept` ('ketoan' mặc định | 'kehoach') trong userRoles + UI Cài đặt (badge phòng, nút ⇄ đổi phòng `setUserDept`, nút ✏️ sửa tên đầy đủ `editUserName` — cảnh báo khi sửa tên người Kế toán cũ vì p.person khớp theo tên). Biến `currentDept` CHƯA dùng ẩn/hiện gì. Đổi nhãn: chat "Nhóm Kế Toán" (sau này thêm kênh "Nhóm Kế hoạch"), nav "Kế hoạch"→"Vật tư" 📦.
+2. ⬜ Luật Firebase: node mới `khProposals` + `khChat`; **PHẢI khóa `dept` trong self-write của userRoles** (như cờ approved — kẻo người P.KH tự đổi mình thành ketoan để mở khóa đọc ở bước 5).
+3. ⬜ Tab P.KH cho D/H/Trang (tái dùng engine như tab Lương; 2 loại chi: chung / theo công trình).
+4. ⬜ Màn hình rút gọn người P.KH (5 mục: Đề xuất KH · Thêm mới · Vật tư · Chat KH · Cài đặt — user chốt P.KH ĐƯỢC dùng tab Vật tư) + chat 2 kênh có badge riêng.
+5. ⬜ Siết đọc: chặn dept='kehoach' đọc proposals/groupChat/lương kế toán; sheet "Chi Kế hoạch"; test bằng tài khoản thử trước khi áp người thật.
+**QUY TRÌNH PHÁT HÀNH MỚI (user yêu cầu):** deploy ÂM THẦM (bump APP_VERSION trong app3.html, GIỮ NGUYÊN version.txt + sw.js) → D tải lại xem trước → D duyệt mới bump version.txt (+sw.js) để banner báo mọi người. `checkForUpdate` đã đổi sang so sánh **server MỚI HƠN** (`_verNum`: ngày×1000+số bản) thay vì "khác" — máy chạy bản mới hơn server không còn bị banner nhầm.
+
+### BP. 🎨 v119–v123 — sheet đẹp + thống kê đúng + nút có màu (03/08/2026)
+- **v119/v120 (Apps Script phiên bản 29, không đổi link):** TẤT CẢ sheet tự tô đẹp. "Tổng hợp Lương": style cơ bản đặt 1 lần lúc tạo (user chỉnh không bị đè), style nội dung mỗi sync (tiền, căn lề, viền, sọc — banding có sẵn thì chỉ nới vùng GIỮ MÀU user). "Tổng hợp đề xuất": style 1 lần đánh dấu bằng **developer metadata `dcStyled`** + `_styleMain` mỗi sync. 4 bảng báo cáo (bị clear() mỗi lần): style bake trong `writeReport_`, PHẢI remove() banding cũ trước applyRowBanding. Mọi style bọc try/catch — không được làm hỏng đồng bộ.
+- **v121:** ô thống kê dashboard sửa cộng nhầm — mỗi ô cộng đúng loại số (Đã chuyển = tiền THỰC chuyển 10,49 tỷ, không phải số đề xuất 12,8 tỷ...).
+- **v122:** dòng TỔNG chuyển từ cuối lên ĐẦU mọi bảng (`.table-total-top`); nút tab `.report-subtab` có nền+viền màu nhẹ theo nghĩa (Đã chuyển xanh/Chưa chuyển vàng/Từ chối đỏ).
+- **v123:** 6 nút nav dưới cùng có "chip" nền màu nhẹ sau icon, nút active viền xanh.
+
 ### BO. 📊 v118 — sheet "Tổng hợp Lương" trên Google Sheets (03/08/2026)
 User báo trang tính thiếu sheet tổng hợp Lương (v87 cố tình loại salary khỏi sheet chi). Nay:
 - **Apps Script mẫu** (nút copy code trong Cài đặt): thêm action `luong` — upsert theo id vào sheet **"Tổng hợp Lương"** (STT · ID · Tháng · Nhân viên · Chức vụ · Nhóm · Đề xuất · D duyệt · H duyệt · Đã chuyển · Còn lại · Trạng thái · Người ĐX · Ngày CN; sort tháng giảm dần + tên A→Z; định dạng tiền cột 7–11) và `luongDel` (xóa dòng theo id). ⚠️ **User phải DÁN LẠI code Apps Script bản mới** thì sheet mới hoạt động.
