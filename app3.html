@@ -868,7 +868,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- PAGE: KẾ HOẠCH VẬT TƯ — hoàn toàn độc lập với đề xuất chi (dữ liệu, hàm riêng, không đụng luồng duyệt/chuyển) -->
 <div id="page-plan" class="main" style="display:none">
   <div class="card">
-    <div class="card-header">📅 Kế hoạch vật tư</div>
+    <div class="card-header">📦 Kế hoạch vật tư</div>
     <div class="card-body" style="padding:10px 0 0">
       <div class="report-subtabs" style="padding:0 12px 10px">
         <button class="report-subtab active" data-tab="list" onclick="setPlanTab('list',this)">📋 Danh sách</button>
@@ -1142,7 +1142,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div style="background:var(--blue);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0">
     <button onclick="closeChatPage()" style="background:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:22px;font-weight:900;color:var(--blue);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Quay lại">←</button>
     <div style="flex:1;min-width:0">
-      <div style="font-size:15px;font-weight:800">💬 Nhóm Duyệt Chi</div>
+      <div style="font-size:15px;font-weight:800">💬 Nhóm Kế Toán</div>
       <div style="font-size:10px;opacity:.85">Chat nội bộ — chỉ thành viên đã duyệt</div>
     </div>
     <!-- v113: chỉ Dũng thấy — xóa sạch cả nhóm chat -->
@@ -1232,7 +1232,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </button>
   <button class="nav-item" onclick="showPage('plan',this)">
     <span class="nav-badge" id="nav-badge-plan" style="display:none"></span>
-    <span class="nav-icon">📅</span><span>Kế hoạch</span>
+    <span class="nav-icon">📦</span><span>Vật tư</span>
   </button>
   <button class="nav-item" onclick="showPage('luong',this)">
     <span class="nav-badge" id="nav-badge-luong" style="display:none"></span>
@@ -1253,7 +1253,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v123';
+const APP_VERSION = '20260803-v124';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1263,11 +1263,22 @@ if(localStorage.getItem('app_version') !== APP_VERSION){
 // ── KIỂM TRA BẢN MỚI + NÚT CẬP NHẬT ──
 // Có bản mới trên máy chủ → hiện thanh "Cập nhật phần mềm mới" ở đầu màn hình.
 // Người dùng chỉ bấm 1 lần là cập nhật — không phải đóng/mở app thủ công.
+// v124: so sánh "MỚI HƠN" thay vì "KHÁC" — cho phép deploy âm thầm bản mới để D xem trước:
+// máy D chạy v124 trong khi version.txt còn v123 → KHÔNG hiện banner nhầm. Khi D duyệt xong,
+// bump version.txt lên v124 → máy mọi người (đang v123) thấy server mới hơn → banner hiện.
+function _verNum(v){
+  var m = /^(\d{8})-v(\d+)$/.exec(String(v||'').trim());
+  return m ? (parseInt(m[1],10) * 1000 + parseInt(m[2],10)) : 0; // 8 chữ số ngày × 1000 + số bản
+}
 function checkForUpdate(){
   fetch('version.txt?_=' + Date.now(), {cache:'no-store'})
     .then(function(r){ return r.ok ? r.text() : null; })
     .then(function(txt){
-      if(txt && txt.trim() && txt.trim() !== APP_VERSION){
+      if(!txt || !txt.trim()) return;
+      var sv = _verNum(txt), lv = _verNum(APP_VERSION);
+      // Server mới hơn → báo. Nếu 1 trong 2 không đúng định dạng (=0) thì so "khác" như cũ cho an toàn.
+      var hasNew = (sv>0 && lv>0) ? (sv > lv) : (txt.trim() !== APP_VERSION);
+      if(hasNew){
         var b = document.getElementById('update-banner');
         if(b) b.style.display = 'block';
       }
@@ -1897,6 +1908,7 @@ async function verifyOtp(){
   const rv = roleSnap.exists() ? roleSnap.val() : null;
   let role = rv ? (typeof rv==='string'?rv:rv.role) : null;
   currentUserName = (rv && typeof rv==='object' && rv.name) ? rv.name : '';
+  currentDept = (rv && typeof rv==='object' && rv.dept === 'kehoach') ? 'kehoach' : 'ketoan'; // v124
   if(!role){ const em=(user.email||'').toLowerCase(); if(em==='vandung0802@gmail.com') role='dung'; }
   if(role){ setRole(role); trackOnline(user.uid, currentUserName||user.email, role); }
 }
@@ -1942,6 +1954,9 @@ function listenOnlineUsers(){
 
 
 let currentUserName = ''; // tên người dùng theo danh sách persons
+// v124 P.KH: phòng của người đăng nhập — 'ketoan' (mặc định, 8 người hiện tại) | 'kehoach'.
+// Bước 1 CHỈ đọc + hiển thị trong Cài đặt, CHƯA dùng để ẩn/hiện tính năng nào (giữ an toàn app đang chạy).
+let currentDept = 'ketoan';
 
 function initAuth(){
   firebase.auth().onAuthStateChanged(async user=>{
@@ -1984,6 +1999,7 @@ function initAuth(){
       const role_val = snap.exists() ? snap.val() : null;
       let role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
       currentUserName = (role_val && typeof role_val === 'object' && role_val.name) ? role_val.name : '';
+      currentDept = (role_val && typeof role_val === 'object' && role_val.dept === 'kehoach') ? 'kehoach' : 'ketoan'; // v124
       if(!role || role==='other'){
         // v79 BẢO MẬT: suy vai trò theo email CHÍNH XÁC (bỏ 'includes(trang)' cũ — email bất kỳ chứa
         // chữ "trang" sẽ được giao diện role Trang, dù máy chủ vẫn chặn ghi. Khớp đúng luật Firebase.)
@@ -5064,6 +5080,13 @@ async function renderApproveList(){
     const emailColor = !email ? 'var(--text-sub)' : (isKnown ? 'var(--text-sub)' : '#dc2626');
     const strangerFlag = (email && !isKnown) ? ' <span style="color:#dc2626;font-weight:700">⚠️ email lạ</span>' : '';
     const lastLogin = u.lastLogin ? fmtFull(u.lastLogin) : '—';
+    // v124 P.KH: phòng của tài khoản — thiếu trường dept coi như Kế toán (8 người hiện tại không đổi gì)
+    const isKH = u.dept === 'kehoach';
+    const deptBadge = isKH
+      ? '<span style="background:#ede9fe;color:#5b21b6;padding:1px 8px;border-radius:8px;font-size:10px;font-weight:700">📐 P.Kế hoạch</span>'
+      : '<span style="background:#e0edff;color:#1e40af;padding:1px 8px;border-radius:8px;font-size:10px;font-weight:700">💼 Kế toán</span>';
+    const deptBtn = `<button onclick="setUserDept('${sid(uid)}','${isKH?'ketoan':'kehoach'}')" style="padding:2px 8px;font-size:10px;font-weight:700;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer">⇄ Chuyển sang ${isKH?'Kế toán':'P.Kế hoạch'}</button>`;
+    const renameBtn = `<button onclick="editUserName('${sid(uid)}')" style="padding:2px 8px;font-size:10px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:8px;cursor:pointer">✏️ Sửa tên</button>`;
     const btn = ok
       ? `<button onclick="revokeUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#fef2f2;color:var(--red);border:none;border-radius:20px;cursor:pointer;flex-shrink:0">Thu hồi</button>`
       : `<button onclick="approveUser('${sid(uid)}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:20px;cursor:pointer;flex-shrink:0">✅ Cho xem</button>`;
@@ -5076,6 +5099,7 @@ async function renderApproveList(){
         <div style="font-size:11px;color:${emailColor};word-break:break-all">✉️ ${emailShown}</div>
         <div style="font-size:11px;color:var(--text-sub)">🕐 Đăng nhập gần nhất: ${lastLogin}</div>
         <div style="font-size:11px;color:${ok?'#16a34a':'#c2410c'}">${ok?'✅ đang được xem dữ liệu':'⛔ chưa được xem'}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">${deptBadge}${deptBtn}${renameBtn}</div>
       </div>
       ${btn}${delBtn}
     </div>`;
@@ -5092,6 +5116,35 @@ async function revokeUser(uid){
   if(uid===currentUser.uid){ showToast('Không thể thu hồi chính mình'); return; }
   if(!confirm('Thu hồi quyền XEM dữ liệu của tài khoản này? Họ sẽ không xem được phiếu cho tới khi bạn cho xem lại.')) return;
   try{ await db.ref('duyetchi/userRoles/'+uid+'/approved').set(false); showToast('⛔ Đã thu hồi quyền xem'); }
+  catch(e){ showToast('❌ Không lưu được: '+e.message); }
+  renderApproveList();
+}
+
+// v124 P.KH: đổi PHÒNG của tài khoản (chỉ Dũng). Tài khoản thiếu trường dept = Kế toán (8 người cũ giữ nguyên).
+async function setUserDept(uid, dept){
+  if(currentRole!=='dung') return;
+  const lbl = dept==='kehoach' ? 'P.Kế hoạch' : 'Kế toán';
+  if(!confirm('Chuyển tài khoản này sang phòng "'+lbl+'"?')) return;
+  try{ await db.ref('duyetchi/userRoles/'+uid+'/dept').set(dept); showToast('✅ Đã chuyển sang '+lbl); }
+  catch(e){ showToast('❌ Không lưu được: '+e.message); }
+  renderApproveList();
+}
+// v124: sửa TÊN ĐẦY ĐỦ của tài khoản (chỉ Dũng) — dành cho người MỚI để tránh trùng tên.
+// Sửa tên người Kế toán cũ sẽ CẢNH BÁO: tên đang dùng để khớp phiếu cũ (nhắc Zalo, bảng nhắc ý kiến).
+async function editUserName(uid){
+  if(currentRole!=='dung') return;
+  let u={};
+  try{ const s=await db.ref('duyetchi/userRoles/'+uid).get(); if(s.exists()) u=s.val()||{}; }catch(e){}
+  const cur=u.name||'';
+  const nn=prompt('Tên đầy đủ mới cho tài khoản này:', cur);
+  if(nn===null) return;
+  const name=nn.trim();
+  if(!name){ showToast('Tên không được để trống'); return; }
+  if(name===cur) return;
+  if((u.dept||'ketoan')!=='kehoach'){
+    if(!confirm('⚠️ Đây là người phòng KẾ TOÁN.\nĐổi tên có thể làm các phiếu CŨ mang tên "'+(cur||'(chưa đặt)')+'" không còn khớp (nhắc gửi ảnh Zalo, bảng nhắc ý kiến).\n\nVẫn đổi thành "'+name+'"?')) return;
+  }
+  try{ await db.ref('duyetchi/userRoles/'+uid+'/name').set(name); showToast('✅ Đã đổi tên thành '+name); }
   catch(e){ showToast('❌ Không lưu được: '+e.message); }
   renderApproveList();
 }
