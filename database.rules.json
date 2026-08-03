@@ -32,12 +32,12 @@
 
       "proposals": {
         // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được (chống người lạ tự đăng ký xem).
-        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
           // Tạo/sửa: phải là tài khoản ĐÃ DUYỆT (v83 — tài khoản lạ/đã thu hồi không tạo/sửa phiếu được);
           // chi tiết bị siết thêm bằng validate từng trường bên dưới.
           // XÓA CẢ PHIẾU (newData không tồn tại): phiếu ĐÃ có duyệt → chỉ Dũng; phiếu chưa duyệt → tài khoản đã duyệt.
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('approvedDHistory').exists() || data.child('approvedHHistory').exists()))",
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('approvedDHistory').exists() || data.child('approvedHHistory').exists()))",
 
           // CHẶN GỠ DẤU DUYỆT / GỠ LỊCH SỬ (duyệt+chuyển) / GỠ ẢNH NỘI DUNG (v77 + v80):
           // - gỡ approvedD chỉ Dũng; gỡ approvedH chỉ Hiền (bỏ duyệt hợp lệ) — kẻ khác không thể "tự bỏ duyệt để mở khóa sửa"
@@ -95,10 +95,10 @@
 
       "images": {
         // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được.
-        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
           // v83: GHI cũng phải là tài khoản ĐÃ DUYỆT (tài khoản lạ / đã bị thu hồi không ghi/xoá ảnh được).
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
         }
       },
 
@@ -114,9 +114,9 @@
       "employees": {
         // v85: DANH SÁCH NHÂN VIÊN hưởng lương (module Lương, TÁCH BIỆT). Ai đã duyệt cũng đọc/ghi
         // (thêm/sửa nhân viên) — giống persons nhưng riêng cho lương. Không đụng proposals/plans.
-        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
           "name":  { ".validate": "!newData.isString() || newData.val().length <= 200" },
           "group": { ".validate": "!newData.isString() || newData.val().length <= 200" },
           "note":  { ".validate": "!newData.isString() || newData.val().length <= 2000" }
@@ -127,10 +127,10 @@
         // v85: ĐỀ XUẤT ỨNG LƯƠNG (module Lương). Bảo mật mô phỏng proposals nhưng đơn giá 1 giá trị:
         // ai đã duyệt cũng ĐỀ XUẤT được; số D duyệt CHỈ Dũng, số H duyệt CHỈ Hiền, số chuyển CHỈ Trang;
         // nội dung (nhân viên/tháng/số đề xuất) ĐÓNG BĂNG sau khi có duyệt. Hoàn toàn tách proposals.
-        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         "$id": {
           // Tạo/sửa: phải ĐÃ DUYỆT; XÓA phiếu đã có duyệt/chuyển → chỉ Dũng; chưa có gì → ai đã duyệt.
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('transferred').exists()))",
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !(data.child('approvedD').exists() || data.child('approvedH').exists() || data.child('transferred').exists()))",
           // ĐÓNG BĂNG nội dung sau khi có bất kỳ dấu duyệt nào (D hoặc H)
           "amount":  { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists())) && (!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 100000000000))" },
           "empId":   { ".validate": "(newData.val() === data.val() || !(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists())) && (!newData.isString() || newData.val().length <= 200)" },
@@ -151,17 +151,17 @@
         // v113 CHAT NHÓM CÔNG TY: chỉ tài khoản ĐÃ DUYỆT đọc/gửi. Tin CHỈ THÊM MỚI hoặc XÓA
         // (không sửa): DŨNG xóa được mọi tin (kể cả xóa sạch cả nhóm — .write cấp cha);
         // người khác chỉ xóa tin CHÍNH MÌNH (so uid). User chốt 01/08.
-        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         ".write": "auth != null && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'",
         "$id": {
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (!data.exists() || (!newData.exists() && data.child('uid').val() === auth.uid))",
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (!data.exists() || (!newData.exists() && data.child('uid').val() === auth.uid))",
           ".validate": "newData.child('text').isString() && newData.child('text').val().length <= 2000 && newData.child('ts').isNumber() && (!newData.child('img').exists() || (newData.child('img').isString() && newData.child('img').val().length <= 2000))"
         }
       },
       "chatPin": {
         // v116: TIN GHIM của nhóm chat (1 tin) — thành viên đã duyệt ghim/bỏ ghim
-        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
-        ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
         ".validate": "newData.child('k').isString() && newData.child('text').isString() && newData.child('text').val().length <= 300"
       },
       "chatRead": {
@@ -261,6 +261,14 @@
           ".read": "auth != null && auth.uid === $uid",
           ".write": "auth != null && auth.uid === $uid",
           ".validate": "newData.isNumber()"
+        }
+      },
+
+      "khImages": {
+        // v127 P.KH: ẢNH của phiếu P.Kế hoạch — cùng gate với khProposals (kế toán thuần không đọc được)
+        ".read": "auth != null && ((root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang' || root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'kehoach' || root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'both')) || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        "$id": {
+          ".write": "auth != null && ((root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true && (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang' || root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'kehoach' || root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'both')) || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
         }
       },
 

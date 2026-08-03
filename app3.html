@@ -751,6 +751,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">📊 Sheet "Tổng hợp Lương" (chỉ D)</div>
         <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Phiếu ứng lương tự cập nhật sang sheet này mỗi khi có thay đổi. Nút dưới để đồng bộ LẠI toàn bộ (lần đầu, hoặc khi nghi thiếu dòng). Lưu ý: phải dán code Apps Script bản mới nhất trước.</div>
         <button onclick="syncAllLuongToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Lương → Google Sheet</button>
+        <button onclick="syncAllKhToSheet()" style="margin-left:6px;padding:6px 12px;font-size:12px;font-weight:700;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ P.KH → Google Sheet</button>
       </div>
       <details style="margin-bottom:10px">
         <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Cập nhật tên &amp; vai trò</summary>
@@ -1341,7 +1342,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v124';
+const APP_VERSION = '20260803-v125';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6377,6 +6378,40 @@ function doGet(e){
   } else if(act==='luongDel'){
     var ls2=ss.getSheetByName('Tổng hợp Lương');
     if(ls2){ var lv2=ls2.getDataRange().getValues(); for(var lj=lv2.length-1;lj>=1;lj--){ if(String(lv2[lj][1])===targetId){ ls2.deleteRow(lj+1); break; } } }
+    return ContentService.createTextOutput('ok');
+  } else if(act==='khchi'){
+    // ── v127 P.KH: sheet "Chi Kế hoạch" — upsert theo id, style tự đẹp (giống sheet Lương) ──
+    var ks=ss.getSheetByName('Chi Kế hoạch')||ss.insertSheet('Chi Kế hoạch');
+    if(ks.getLastRow()===0){
+      ks.appendRow(['STT','ID','Ngày tạo','Nội dung','Người ĐX','Loại','Công trình','Đề xuất','D duyệt','H duyệt','Đã chuyển','Còn lại','Trạng thái','Ghi chú','Ngày CN']);
+      ks.getRange(1,1,1,15).setFontWeight('bold').setBackground('#7c3aed').setFontColor('#fff').setHorizontalAlignment('center').setVerticalAlignment('middle').setWrap(true);
+      ks.setRowHeight(1,36); ks.setFrozenRows(1); ks.setFrozenColumns(1);
+      ks.hideColumns(2);
+      var KW=[46,0,120,220,110,72,150,112,112,112,112,112,90,140,140];
+      for(var kwi=0;kwi<KW.length;kwi++){ if(KW[kwi]>0) ks.setColumnWidth(kwi+1,KW[kwi]); }
+    }
+    var kv=ks.getDataRange().getValues(); var krow=-1;
+    for(var ki=1;ki<kv.length;ki++){ if(String(kv[ki][1])===targetId){ krow=ki+1; break; } }
+    var kvals=['', "'"+targetId, e.parameter.ts||'', e.parameter.desc||'', e.parameter.by||'', e.parameter.loai||'', e.parameter.ct||'', num_(e.parameter.amount), num_(e.parameter.d), num_(e.parameter.h), num_(e.parameter.ck), num_(e.parameter.conlai), e.parameter.st||'', e.parameter.note||'', now];
+    if(krow>0){ ks.getRange(krow,1,1,15).setValues([kvals]); } else { ks.appendRow(kvals); }
+    var klr=ks.getLastRow();
+    if(klr>=3) ks.getRange(2,1,klr-1,15).sort([{column:2,ascending:false}]); // id = kh+timestamp → mới nhất lên đầu
+    if(klr>=2){ var kst=[]; for(var kk2=1;kk2<=klr-1;kk2++) kst.push([kk2]); ks.getRange(2,1,klr-1,1).setValues(kst); }
+    if(klr>=2){
+      var kn=klr-1;
+      for(var kc=8;kc<=12;kc++){ ks.getRange(2,kc,kn,1).setNumberFormat('#,##0" đ"'); }
+      ks.getRange(2,1,kn,1).setHorizontalAlignment('center');
+      ks.getRange(2,6,kn,1).setHorizontalAlignment('center');
+      ks.getRange(2,8,kn,5).setHorizontalAlignment('right');
+      ks.getRange(2,13,kn,1).setHorizontalAlignment('center');
+      ks.getRange(1,1,klr,15).setBorder(true,true,true,true,true,true,'#ddd6fe',SpreadsheetApp.BorderStyle.SOLID);
+      var kbs=ks.getBandings(); var kbr=ks.getRange(2,1,kn,15);
+      if(kbs.length>0){ kbs[0].setRange(kbr); } else { kbr.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY,false,false); }
+    }
+    return ContentService.createTextOutput('ok');
+  } else if(act==='khchiDel'){
+    var ks3=ss.getSheetByName('Chi Kế hoạch');
+    if(ks3){ var kv3=ks3.getDataRange().getValues(); for(var kj=kv3.length-1;kj>=1;kj--){ if(String(kv3[kj][1])===targetId){ ks3.deleteRow(kj+1); break; } } }
     return ContentService.createTextOutput('ok');
   } else if(act==='reconcile'){
     var keep={}, cnt=0;
