@@ -1303,7 +1303,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <label class="upload-zone" for="kh-file-input" style="display:block;text-align:center;padding:14px;border:1.5px dashed var(--blue);border-radius:10px;background:#eff6ff;cursor:pointer">
         <div style="font-size:22px">📸</div>
         <div style="font-size:13px;font-weight:600;color:var(--blue)">Chọn / Chụp ảnh</div>
-        <div style="font-size:11px;color:var(--text-sub)">Có thể chọn nhiều ảnh</div>
+        <div style="font-size:11px;color:var(--text-sub)">Có thể chọn nhiều ảnh · hoặc dán ảnh (Ctrl+V)</div>
       </label>
       <input type="file" id="kh-file-input" accept="image/*" multiple style="display:none" onchange="handleKhImg(this)">
       <div id="kh-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
@@ -1355,7 +1355,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v134';
+const APP_VERSION = '20260803-v135';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3519,10 +3519,12 @@ function _buildCard(p){
       ${renderBtnShare(p)}
       ${renderBtnRemind(p)}
       <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openChatWithRef('${sid(p.id)}')" title="Gửi phiếu này vào Chat nhóm">📤</button>
-      ${(currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||p.person===getCurrentUserName())
+      ${_canEditDelete(p)
         ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${sid(p.id)}')" title="Sửa đề xuất / ghi ý kiến">✏️</button>`
         : ''}
-      <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="del('${sid(p.id)}')" title="Xóa đề xuất">🗑</button>
+      ${_canEditDelete(p)
+        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="del('${sid(p.id)}')" title="Xóa đề xuất">🗑</button>`
+        : ''}
     </div>
     ${proofHtml}
   </div>`;
@@ -4188,8 +4190,21 @@ function undoReject(id){
   if(who) undoRejectBy(id, who);
 }
 
+// v135: "phiếu của tôi" = do CHÍNH mình tạo (khớp uid người tạo; dự phòng khớp tên cho phiếu cũ chưa có uid).
+// Dùng để CHẶN người khác sửa/xóa đề xuất của nhau (đặc biệt phòng Kế hoạch — user báo).
+function _isMyProposal(p){
+  if(!p) return false;
+  if(p.createdByUid && currentUser && p.createdByUid===currentUser.uid) return true;
+  const me=getCurrentUserName();
+  return !!(me && (p.person===me || p.createdBy===me));
+}
+function _canEditDelete(p){
+  return currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||_isMyProposal(p);
+}
 function del(id){
   const p = proposals.find(x=>x.id===id);
+  // v135: không phải chủ phiếu và không phải D/H/T → KHÔNG được xóa phiếu người khác
+  if(p && !_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu hoặc D/H/T mới xóa được đề xuất này'); return; }
   if(p && p.status==='transferred' && currentRole!=='dung'){ showToast('🔒 Không thể xóa phiếu đã chuyển tiền'); return; }
   // v77 BẢO MẬT: phiếu ĐÃ có D/H duyệt → chỉ Dũng xóa được (máy chủ cũng chặn — khớp luật mới)
   const _frozenDel = p && !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
@@ -4208,6 +4223,8 @@ let editingImages = []; // ảnh đang chỉnh sửa tạm thời trong modal S�
 function openEditProposal(id){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
+  // v135: chỉ người tạo phiếu hoặc D/H/T mới mở sửa được (chống sửa đề xuất của nhau ở phòng Kế hoạch)
+  if(!_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu hoặc D/H/T mới sửa được đề xuất này'); return; }
   if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); return; }
   editingProposalId = id;
 
@@ -4757,6 +4774,21 @@ document.addEventListener('paste', (e)=>{
     addProofImages(pendingUploadProofId, files);
     showToast(`📋 Đã dán ${files.length} ảnh chứng từ`);
   }
+});
+
+// v135: dán ảnh (Ctrl+V) trong modal Đề xuất P.Kế hoạch (user báo "chưa past được ảnh")
+document.addEventListener('paste', (e)=>{
+  const ov=document.getElementById('kh-modal-overlay');
+  if(!ov || ov.style.display==='none') return;
+  const items = (e.clipboardData||window.clipboardData)?.items;
+  if(!items) return;
+  const files=[];
+  for(const item of items){
+    if(item.kind==='file' && item.type.startsWith('image/')){
+      const f = item.getAsFile(); if(f) files.push(f);
+    }
+  }
+  if(files.length){ e.preventDefault(); addKhImages(files); }
 });
 
 function removeProofImage(id, idx){
@@ -6906,7 +6938,7 @@ function saveKhFromModal(){
   // Phiếu P.KH — id có TIỀN TỐ 'kh' để tự định tuyến vào kho riêng khProposals/khImages
   const p={
     id: 'kh'+Date.now(),
-    kind: 'kh', createdBy: me,
+    kind: 'kh', createdBy: me, createdByUid: (currentUser&&currentUser.uid)||'', // v135: khóa chủ phiếu theo uid
     desc, person: me, site,
     amount, amountUnit:'dong', note,
     priority:'normal', status:'pending', ts: Date.now(),
