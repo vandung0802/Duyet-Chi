@@ -1350,7 +1350,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v126';
+const APP_VERSION = '20260803-v127';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3106,6 +3106,10 @@ function renderAll(){
     // Tab Lương đọc từ chính 'proposals' (phiếu kind='salary') → nếu đang mở thì vẽ lại cho đồng bộ
     const pgL = document.getElementById('page-luong');
     if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} }
+    // v127: tab P.KH cũng đọc từ 'proposals' (kind='kh') → đang mở thì vẽ lại ngay (sửa lỗi user:
+    // đứng ở tab P.KH sửa công trình phải F5 mới thấy — renderAll trước đây quên tab này)
+    const pgK = document.getElementById('page-kh');
+    if(pgK && pgK.style.display!=='none'){ try{ renderKhActive(); }catch(e){} }
     // v93: banner gửi ảnh Zalo — bọc try/catch để lỗi (nếu có) KHÔNG thể ảnh hưởng luồng render chính
     try{ renderZaloBanners(); }catch(e){}
     // v96: chấm số đỏ trên thanh điều hướng
