@@ -44,6 +44,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .nav-item:nth-child(4) .nav-icon{background:#eef2f6}
 .nav-item:nth-child(5) .nav-icon{background:#fef3c7}
 .nav-item:nth-child(6) .nav-icon{background:#d1fae5}
+.nav-item:nth-child(7) .nav-icon{background:#f3e8ff} /* v125: nút P.KH tím nhạt */
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
 .main{padding:10px 10px 80px}
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
@@ -1216,6 +1217,83 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 
 <!-- BOTTOM NAV -->
+<!-- ═══ v125 MODULE P.KẾ HOẠCH — phiếu chi phí phòng Kế hoạch, kho riêng khProposals, kín với kế toán ═══ -->
+<div id="page-kh" class="main" style="display:none">
+  <div class="card">
+    <div class="card-header">📐 Phòng Kế hoạch</div>
+    <div class="card-body" style="padding:10px 0 0">
+      <div class="report-subtabs" style="padding:0 12px 10px">
+        <button class="report-subtab active" data-tab="list" onclick="setKhTab('list',this)">📋 Đề xuất KH</button>
+        <button class="report-subtab" data-tab="stats" onclick="setKhTab('stats',this)">📊 Thống kê</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab con: danh sách đề xuất -->
+  <div id="kh-tab-list">
+    <div class="card">
+      <div class="card-body" style="padding:10px 12px">
+        <input id="kh-search" type="text" name="dc-kh-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm theo nội dung / người / công trình..." oninput="renderKhList()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
+        <button class="btn-full btn-primary-full" onclick="openKhModal()">➕ Đề xuất chi phí Kế hoạch</button>
+      </div>
+    </div>
+    <div id="kh-list"></div>
+  </div>
+
+  <!-- Tab con: thống kê theo tháng + công trình -->
+  <div id="kh-tab-stats" style="display:none">
+    <div class="card">
+      <div class="card-body" style="padding:10px 12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px">
+          <button onclick="khMonthShift(-1)" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--gray-border);background:#fff;font-size:18px;color:var(--text);cursor:pointer">‹</button>
+          <div id="kh-month-label" style="flex:1;text-align:center;font-size:15px;font-weight:800;color:var(--text)">Tháng —</div>
+          <button onclick="khMonthShift(1)" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--gray-border);background:#fff;font-size:18px;color:var(--text);cursor:pointer">›</button>
+        </div>
+        <div id="kh-stats-content"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal tạo đề xuất P.KH (mẫu theo modal ứng lương) -->
+<div class="role-screen" id="kh-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">📐 Đề xuất chi phí Kế hoạch</div>
+      <button onclick="closeKhModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Loại chi phí <span class="req">*</span></label>
+      <select class="form-input form-select" id="kh-inp-site"><option value="Chi phí chung">🧾 Chi phí chung</option></select>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chi cho công trình cụ thể thì chọn tên công trình; còn lại để "Chi phí chung".</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nội dung <span class="req">*</span></label>
+      <textarea class="form-input" id="kh-inp-desc" rows="2" placeholder="VD: Công tác Hà Nội — vé tàu xe, khách sạn"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Số tiền (đồng) <span class="req">*</span></label>
+      <input class="form-input" id="kh-inp-amount" type="text" inputmode="numeric" placeholder="VD: 3.500.000" oninput="fmtAmountInput(this)">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ghi chú</label>
+      <textarea class="form-input" id="kh-inp-note" rows="2"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Ảnh đính kèm (giấy tờ, tin nhắn...)</label>
+      <label class="upload-zone" for="kh-file-input" style="display:block;text-align:center;padding:14px;border:1.5px dashed var(--blue);border-radius:10px;background:#eff6ff;cursor:pointer">
+        <div style="font-size:22px">📸</div>
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">Chọn / Chụp ảnh</div>
+        <div style="font-size:11px;color:var(--text-sub)">Có thể chọn nhiều ảnh</div>
+      </label>
+      <input type="file" id="kh-file-input" accept="image/*" multiple style="display:none" onchange="handleKhImg(this)">
+      <div id="kh-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
+    </div>
+    <button class="btn-full btn-primary-full" onclick="saveKhFromModal()">💾 Gửi đề xuất</button>
+    <button class="btn-full btn-outline-full" onclick="closeKhModal()">Hủy</button>
+  </div>
+</div>
+
 <nav class="bottom-nav">
   <button class="nav-item active" onclick="showPage('home',this)">
     <span class="nav-badge" id="nav-badge-home" style="display:none"></span>
@@ -1237,6 +1315,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <button class="nav-item" onclick="showPage('luong',this)">
     <span class="nav-badge" id="nav-badge-luong" style="display:none"></span>
     <span class="nav-icon">💵</span><span>Lương</span>
+  </button>
+  <!-- v125 P.KH: chỉ hiện với D/H/Trang + người phòng Kế hoạch (gắn hiển thị trong _applyDeptView) -->
+  <button class="nav-item" id="nav-kh" style="display:none" onclick="showPage('kh',this)">
+    <span class="nav-badge" id="nav-badge-kh" style="display:none"></span>
+    <span class="nav-icon">📐</span><span>P.KH</span>
   </button>
 </nav>
 
@@ -1908,7 +1991,8 @@ async function verifyOtp(){
   const rv = roleSnap.exists() ? roleSnap.val() : null;
   let role = rv ? (typeof rv==='string'?rv:rv.role) : null;
   currentUserName = (rv && typeof rv==='object' && rv.name) ? rv.name : '';
-  currentDept = (rv && typeof rv==='object' && rv.dept === 'kehoach') ? 'kehoach' : 'ketoan'; // v124
+  currentDept = (rv && typeof rv==='object' && (rv.dept==='kehoach'||rv.dept==='both')) ? rv.dept : 'ketoan'; // v124/v125: nhận cả both
+  try{ _applyKhNav(); }catch(e){}
   if(!role){ const em=(user.email||'').toLowerCase(); if(em==='vandung0802@gmail.com') role='dung'; }
   if(role){ setRole(role); trackOnline(user.uid, currentUserName||user.email, role); }
 }
@@ -1999,7 +2083,8 @@ function initAuth(){
       const role_val = snap.exists() ? snap.val() : null;
       let role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
       currentUserName = (role_val && typeof role_val === 'object' && role_val.name) ? role_val.name : '';
-      currentDept = (role_val && typeof role_val === 'object' && role_val.dept === 'kehoach') ? 'kehoach' : 'ketoan'; // v124
+      currentDept = (role_val && typeof role_val === 'object' && (role_val.dept==='kehoach'||role_val.dept==='both')) ? role_val.dept : 'ketoan'; // v124/v125: nhận cả both
+      try{ _applyKhNav(); }catch(e){}
       if(!role || role==='other'){
         // v79 BẢO MẬT: suy vai trò theo email CHÍNH XÁC (bỏ 'includes(trang)' cũ — email bất kỳ chứa
         // chữ "trang" sẽ được giao diện role Trang, dù máy chủ vẫn chặn ghi. Khớp đúng luật Firebase.)
@@ -2078,6 +2163,7 @@ function setRole(role){
   checkNotifBanner();
   renderAll();
   populateSelects();
+  try{ _applyKhNav(); }catch(e){} // v125: hiện/ẩn nút P.KH theo vai trò + phòng
   // Trang vừa vào app (đã đăng nhập xong) → nhắc các khoản chờ chuyển nếu dữ liệu đã tải xong
   setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
   setTimeout(function(){ try{ maybeShowChatReminder(); }catch(e){} }, 1100); // v106: bảng nhắc hỏi–đáp
@@ -2261,7 +2347,7 @@ function pushToFirebase(){
     const imgJson = JSON.stringify({imgImages, proofImages});
     nowImagesMap[p.id] = imgJson;
     if(prevImagesMap[p.id] !== imgJson){
-      updates['duyetchi/images/'+p.id] = {imgImages, proofImages};
+      updates[_imgNodeFor(p.id)+p.id] = {imgImages, proofImages}; // v125: phiếu P.KH → khImages
       hasChange = true;
       // Đóng dấu "ảnh phiếu này vừa đổi" NGAY TRONG PHIẾU (node phiếu rất nhẹ, đồng bộ realtime)
       // → máy khác thấy dấu mới là tải lại ảnh ĐÚNG PHIẾU ĐÓ, không phải kéo cả kho ảnh (nặng hàng chục MB).
@@ -2275,7 +2361,7 @@ function pushToFirebase(){
   });
   Object.keys(prevImagesMap).forEach(id=>{
     if(!nowImagesMap[id]){
-      updates['duyetchi/images/'+id] = null;
+      updates[_imgNodeFor(id)+id] = null; // v125
       hasChange = true;
     }
   });
@@ -2291,14 +2377,14 @@ function pushToFirebase(){
     const lightJson = JSON.stringify(lightFields);
     nowProposalsMap[p.id] = lightJson;
     if(prevProposalsMap[p.id] !== lightJson){
-      updates['duyetchi/proposals/'+p.id] = lightFields;
+      updates[_propNodeFor(p.id)+p.id] = lightFields; // v125: phiếu P.KH → khProposals
       hasChange = true;
     }
   });
   // Phiếu đã bị xóa ở local thì cũng xóa trên Firebase (set null)
   Object.keys(prevProposalsMap).forEach(id=>{
     if(!nowProposalsMap[id]){
-      updates['duyetchi/proposals/'+id] = null;
+      updates[_propNodeFor(id)+id] = null; // v125
       hasChange = true;
     }
   });
@@ -2326,6 +2412,12 @@ let _dcReattachGated=null; // v95: hàm nối lại 4 kênh dữ liệu gác quy
 let groupChatMsgs=[], _chatReadTs=0, _gcQuery=null, _crQuery=null, _chatAttachRef=null, _chatAttachImg=null;
 let _chatReplyTo=null, _chatPin=null, _chatMenuKey=null; // v116: trả lời trích dẫn + tin ghim + menu tin
 let _metaData={}, _proposalsData={}, _imagesData={};
+// v125 P.KH: phiếu phòng Kế hoạch — kho RIÊNG duyetchi/khProposals (+khImages), nhận diện bằng id
+// bắt đầu bằng 'kh'. Merge vào mảng proposals chung để TÁI DÙNG engine thẻ/duyệt/chuyển y như Lương.
+let _khData={}, _khLoaded=false;
+function _isKhId(id){ return /^kh/.test(String(id||'')); }
+function _propNodeFor(id){ return _isKhId(id) ? 'duyetchi/khProposals/' : 'duyetchi/proposals/'; }
+function _imgNodeFor(id){ return _isKhId(id) ? 'duyetchi/khImages/' : 'duyetchi/images/'; }
 let _hasImagesSet = new Set(); // phiếu nào có ảnh (shallow keys)
 let _loadingImages = new Set(); // đang fetch
 let _imgObserver = null;
@@ -2413,7 +2505,7 @@ async function toggleMigrateOldImages(){
     _migSetStatus('🔄 Đang chuyển phiếu <b>'+(done+1)+'/'+ids.length+'</b>… (xong '+moved+(failed?', lỗi '+failed:'')+')');
     try{
       // Lấy bản ảnh MỚI NHẤT của phiếu từ server — tránh ghi đè thay đổi máy khác vừa làm trong lúc chạy
-      const snap = await db.ref('duyetchi/images/'+pid).get();
+      const snap = await db.ref(_imgNodeFor(pid)+pid).get(); // v125
       if(snap.exists()){
         const val = snap.val();
         const idx = proposals.findIndex(p=>p.id===pid);
@@ -2465,7 +2557,7 @@ function initFirebaseSync(){
   // → khi duyệt phiếu chỉ proposals thay đổi, KHÔNG tải lại ảnh
 
   function _mergeAndRender(){
-    if(!_metaLoaded || !_proposalsLoaded) return;
+    if(!_metaLoaded || !_proposalsLoaded || !_khLoaded) return; // v125: chờ cả kho P.KH (bị chặn quyền thì đã tự đánh dấu loaded-rỗng)
     fbConnected=true; updateFbBadge(true);
     const meta = _metaData;
     persons = meta.persons || [];
@@ -2480,7 +2572,14 @@ function initFirebaseSync(){
       const p = _proposalsData[id];
       const imgs = _imagesData[id] || {};
       return {...p, imgImages: imgs.imgImages||[], proofImages: imgs.proofImages||[]};
-    }).sort((a,b)=>b.ts-a.ts);
+    }).concat(
+      // v125 P.KH: trộn phiếu Kế hoạch (kho riêng) vào danh sách chung — LUÔN đóng dấu kind:'kh'
+      Object.keys(_khData).map(id=>{
+        const p = _khData[id];
+        const imgs = _imagesData[id] || {};
+        return {...p, kind:'kh', imgImages: imgs.imgImages||[], proofImages: imgs.proofImages||[]};
+      })
+    ).sort((a,b)=>b.ts-a.ts);
 
     // Cache CHỈ phần nhẹ (không ảnh) + bọc try/catch: trước đây lưu cả ảnh base64 → khi ảnh nhiều lên
     // thì vượt hạn mức localStorage, văng lỗi NGẦM ngay tại đây làm CHẾT cả phần render phía dưới
@@ -2543,12 +2642,26 @@ function initFirebaseSync(){
     // Ảnh đổi sau đó được đồng bộ NHẸ qua dấu imgStamp trong từng phiếu (xem _refetchImagesFor).
     if(!_imagesLoadStarted){
       _imagesLoadStarted = true;
-      db.ref('duyetchi/images').once('value', s=>{
-        _imagesData = s.val()||{};
+      // v125: sau kho ảnh chính, tải thêm kho ảnh P.KH (khImages) rồi mới chốt "đã tải".
+      const _finishImages = ()=>{
         // Vừa tải trọn kho ảnh → ghi nhận dấu hiện tại của mọi phiếu, khỏi tải lại lần nữa
         proposals.forEach(p=>{ if(p.imgStamp) _imagesStamps[p.id] = p.imgStamp; });
         _imagesLoaded=true; _mergeAndRender();
+      };
+      const _loadKhImages = ()=>{
+        db.ref('duyetchi/khImages').once('value', s2=>{
+          Object.assign(_imagesData, s2.val()||{});
+          _finishImages();
+        }, _finishImages); // không có quyền kho KH (kế toán thuần) → chỉ dùng kho chính
+      };
+      db.ref('duyetchi/images').once('value', s=>{
+        _imagesData = s.val()||{};
+        _loadKhImages();
       }, ()=>{
+        if(currentDept==='kehoach' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){
+          // v127: người P.KH thuần bị chặn kho ảnh kế toán (đúng thiết kế) → chỉ tải kho ảnh KH
+          _imagesData={}; _loadKhImages(); return;
+        }
         // v95: lượt tải chạy đúng lúc CHƯA có quyền (vd vừa đăng xuất/token chưa gắn) → cho phép
         // THỬ LẠI ở lượt _mergeAndRender sau khi đăng nhập, thay vì đánh dấu "đã tải" với kho rỗng
         // (trước đây làm ảnh trống vĩnh viễn tới khi tải lại trang).
@@ -2597,6 +2710,12 @@ function initFirebaseSync(){
       if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
         const _cu = firebase.auth().currentUser;
         if(!_cu) return; // chưa/không đăng nhập (VD vừa đăng xuất) → khỏi retry, đăng nhập sẽ tự nối lại
+        // v125/v127 P.KH: người PHÒNG KẾ HOẠCH thuần bị luật CHẶN đọc kho kế toán là ĐÚNG THIẾT KẾ
+        // → coi kho kế toán như rỗng, app vẫn vào bình thường với kho P.KH của họ.
+        if(currentDept==='kehoach' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){
+          _proposalsData={}; _proposalsLoaded=true;
+          hidePendingApprovalScreen(); _mergeAndRender(); return;
+        }
         const _u = (_cu.email||'').toLowerCase();
         const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
         if(_isPriv){
@@ -2609,6 +2728,19 @@ function initFirebaseSync(){
           setTimeout(_attachGatedListeners, 30000);
         }
       }
+    });
+
+    // ── v125 khProposals (phiếu P.Kế hoạch — kho riêng; kế toán thuần/tài khoản chưa duyệt bị luật
+    //    chặn đọc là BÌNH THƯỜNG → coi như rỗng, tuyệt đối không chặn app) ──
+    db.ref('duyetchi/khProposals').off('value');
+    db.ref('duyetchi/khProposals').on('value', snap=>{
+      _khData = snap.val() || {};
+      _khLoaded = true;
+      _mergeAndRender();
+    }, ()=>{
+      _khData = {};
+      _khLoaded = true;
+      _mergeAndRender();
     });
 
     // ── plans (Kế hoạch vật tư — tách biệt, lỗi ở đây không đụng luồng duyệt/chuyển) ──
@@ -2718,7 +2850,7 @@ async function _loadImagesForProposal(id){
   if(_loadingImages.has(id) || _imagesData[id]) return;
   _loadingImages.add(id);
   try {
-    const snap = await db.ref('duyetchi/images/'+id).get();
+    const snap = await db.ref(_imgNodeFor(id)+id).get(); // v125: phiếu P.KH đọc từ khImages
     if(snap.exists()){
       _imagesData[id] = snap.val();
       _syncSnapshotImages(id, _imagesData[id]);
@@ -2751,7 +2883,7 @@ function _refetchImagesFor(id, stamp){
   if(_loadingImages.has(id)) return;
   _imagesStamps[id] = stamp; // đánh dấu TRƯỚC để không gọi lặp khi merge chạy nhiều lần liên tiếp
   _loadingImages.add(id);
-  db.ref('duyetchi/images/'+id).get().then(snap=>{
+  db.ref(_imgNodeFor(id)+id).get().then(snap=>{ // v125: phiếu P.KH đọc từ khImages
     _loadingImages.delete(id);
     const val = snap.exists() ? snap.val() : {};
     _imagesData[id] = val;
@@ -2882,7 +3014,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ── NAVIGATION ──
 function showPage(pg, btn){
-  ['home','add','report','settings','plan','luong'].forEach(p=>document.getElementById('page-'+p).style.display='none');
+  ['home','add','report','settings','plan','luong','kh'].forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display='none'; });
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+pg).style.display='block';
   if(btn) btn.classList.add('active');
@@ -2896,6 +3028,7 @@ function showPage(pg, btn){
     const activeLuongTab = document.querySelector('#page-luong .report-subtab.active')?.dataset.tab || 'adv';
     renderLuongActive(activeLuongTab);
   }
+  if(pg==='kh'){ try{ renderKhActive(); }catch(e){} } // v125
   if(pg==='report'){
     renderReportFilters();
     // Chỉ render tab đang active, không render tất cả
@@ -2942,6 +3075,7 @@ function getMyPendingItems(){
   const items = [];
   proposals.forEach(p=>{
     if(p.kind==='salary') return; // ứng lương không đẩy vào chuông thông báo chi (có tab Lương riêng)
+    if(p.kind==='kh') return;     // v125: phiếu P.KH có chấm số riêng trên nút P.KH
     if(p.status==='rejected') return;
     const dAmt = approvedAmtOf(p,'D');
     const hAmt = approvedAmtOf(p,'H');
@@ -3037,6 +3171,7 @@ function closeNotifAndGo(id){
   document.getElementById('notif-panel').style.display='none';
   // v105: dùng chung jumpToProposal — tự nâng giới hạn vẽ nếu phiếu cũ + xoá ô tìm + highlight
   const p = proposals.find(x=>x.id===id);
+  if(p && p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); return; } // v125
   if(p && p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); return; }
   jumpToProposal(id);
 }
@@ -3046,6 +3181,7 @@ function closeNotifAndGo(id){
 // Dùng chung cho cả renderStats (đếm số liệu) và renderProposals (lọc danh sách) để đảm bảo số liệu luôn khớp với danh sách hiển thị.
 function matchFilter(p, f){
   if(p && p.kind==='salary') return false; // phiếu ỨNG LƯƠNG chỉ hiện ở tab Lương, KHÔNG lẫn vào Danh sách/Thống kê chi
+  if(p && p.kind==='kh') return false;     // v125: phiếu P.KẾ HOẠCH chỉ hiện ở tab P.KH
   switch(f){
     case 'all': return true;
     case 'pending': return (p.status==='pending')||(p.status==='approved'&&!(!!p.approvedD&&!!p.approvedH));
@@ -4018,6 +4154,13 @@ function openEditProposal(id){
     personSel.innerHTML = `<option value="${esc(p.person||'')}">${esc(p.person||'')}</option>`;
     siteSel.innerHTML = `<option value="${esc(p.site||'')}">${esc(p.site||'')}</option>`;
     personSel.disabled = true; siteSel.disabled = true;
+  } else if(p.kind==='kh'){
+    // v125: phiếu P.KH — người = NGƯỜI TẠO (khóa, không nằm trong danh sách người phiếu chi);
+    // loại chi = Chi phí chung / công trình (đổi được khi CHƯA duyệt — sau duyệt server tự đóng băng).
+    personSel.innerHTML = `<option value="${esc(p.person||'')}">${esc(p.person||'')}</option>`;
+    personSel.disabled = true;
+    siteSel.innerHTML = '<option value="Chi phí chung">🧾 Chi phí chung</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    siteSel.disabled = false;
   } else {
     personSel.innerHTML = '<option value="">— Chọn tên —</option>' + persons.map(pp=>`<option value="${esc(pp.name)}">${esc(pp.name)}${pp.role?' — '+esc(pp.role):''}</option>`).join('');
     siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
@@ -4158,8 +4301,8 @@ function saveEditProposal(){
 
   // v92: phiếu ứng lương — người/nhóm KHÓA theo phiếu (ô select bị disable), lấy thẳng giá trị gốc
   // để chắc chắn không đổi (đổi tên/nhóm là việc của DS nhân viên, và tránh vi phạm đóng băng sau duyệt).
-  const person = p.kind==='salary' ? (p.person||'') : document.getElementById('edit-person').value;
-  const site   = p.kind==='salary' ? (p.site||'')   : document.getElementById('edit-site').value;
+  const person = (p.kind==='salary'||p.kind==='kh') ? (p.person||'') : document.getElementById('edit-person').value; // v125: kh khóa người tạo
+  const site   = p.kind==='salary' ? (p.site||'')   : document.getElementById('edit-site').value; // kh: loại chi lấy từ ô chọn
   const desc = document.getElementById('edit-desc').value.trim();
   const amountRaw = parseAmountInput(document.getElementById('edit-amount'));
   const note = document.getElementById('edit-note').value.trim();
@@ -5375,8 +5518,8 @@ function renderReportFilters(){
 function getFilteredProposals(){
   const p = (document.getElementById('filter-person')||{}).value||'';
   const s = (document.getElementById('filter-site')||{}).value||'';
-  // Loại phiếu ỨNG LƯƠNG khỏi mọi báo cáo/CSV chi phí (chúng có tab Lương riêng)
-  return proposals.filter(x=>x.kind!=='salary' && (!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
+  // Loại phiếu ỨNG LƯƠNG + P.KẾ HOẠCH khỏi mọi báo cáo/CSV chi phí (chúng có tab riêng)
+  return proposals.filter(x=>x.kind!=='salary' && x.kind!=='kh' && (!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
 }
 
 function applyReportFilter(){
@@ -5895,8 +6038,51 @@ function syncAllLuongToSheet(){
   }, i*400));
 }
 
+// ══ v125 P.KH: đồng bộ phiếu Kế hoạch → sheet "Chi Kế hoạch" (upsert theo id, giống cách sheet Lương) ══
+function syncKhToSheet(p){
+  if(!sheetUrl || !p || p.kind!=='kh') return;
+  const d=approvedAmtOf(p,'D'), h=approvedAmtOf(p,'H');
+  const off=getOfficialApprovedAmount(p)||0, ck=getTotalTransferred(p);
+  const st = p.status==='rejected' ? 'Tu choi'
+    : (off>0 && ck>=off-0.0001) ? 'Xong'
+    : h>0 ? 'Cho CK' : d>0 ? 'Cho H' : 'Cho D';
+  const params=new URLSearchParams({
+    action:'khchi', id:p.id,
+    ts: p.ts ? new Date(p.ts).toLocaleString('vi-VN') : '',
+    desc: p.desc||'', by: p.person||'',
+    loai: (p.site==='Chi phí chung'||!p.site) ? 'Chung' : 'Công trình', ct: p.site||'',
+    amount: p.amount||0, d: d||0, h: h||0, ck: ck||0,
+    conlai: Math.max(0, (off>0?off:(parseFloat(p.amount)||0)) - ck),
+    st: st, note: p.note||''
+  });
+  var s=document.createElement('script');
+  s.src=sheetUrl+'?'+params.toString();
+  document.head.appendChild(s);
+  setTimeout(()=>s.remove(),4000);
+}
+function syncKhDeleteToSheet(id){
+  if(!sheetUrl) return;
+  const params=new URLSearchParams({action:'khchiDel', id});
+  var s=document.createElement('script');
+  s.src=sheetUrl+'?'+params.toString();
+  document.head.appendChild(s);
+  setTimeout(()=>s.remove(),4000);
+}
+// Đồng bộ LẠI toàn bộ phiếu P.KH → sheet (nút trong Cài đặt, chỉ D)
+function syncAllKhToSheet(){
+  if(!sheetUrl){ showToast('Chưa cấu hình Google Sheet'); return; }
+  const list=proposals.filter(p=>p.kind==='kh');
+  if(!list.length){ showToast('Chưa có phiếu P.Kế hoạch nào'); return; }
+  showToast('⏳ Đang đồng bộ '+list.length+' phiếu P.KH sang Sheet...');
+  list.forEach((p,i)=>setTimeout(()=>{
+    syncKhToSheet(p);
+    if(i===list.length-1) showToast('✅ Đã gửi '+list.length+' phiếu sang sheet "Chi Kế hoạch"');
+  }, i*400));
+}
+
 function syncToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
   if(p && p.kind==='salary'){ syncLuongToSheet(p); return; } // v118: ứng lương ghi sang sheet Tổng hợp Lương riêng
   const params = new URLSearchParams({
     action:'add',id:p.id,
@@ -5914,6 +6100,7 @@ function syncToSheet(p){
 function syncStatusToSheet(id,status){
   if(!sheetUrl) return;
   const _pS=proposals.find(x=>x.id===id);
+  if(_pS && _pS.kind==='kh'){ syncKhToSheet(_pS); return; } // v125
   if(_pS && _pS.kind==='salary'){ syncLuongToSheet(_pS); return; } // v118
   const lbl={pending:'Chờ duyệt',approved:'Đã duyệt',transferred:'Đã chuyển',rejected:'Từ chối'};
   const params = new URLSearchParams({action:'updateStatus',id,status:lbl[status]||status});
@@ -5925,9 +6112,10 @@ function syncStatusToSheet(id,status){
 
 function syncDeleteToSheet(id){
   if(!sheetUrl) return;
-  // v118: lúc gọi thì phiếu thường đã bị gỡ khỏi bộ nhớ (không biết loại) → gửi lệnh xóa CẢ 2 sheet
-  // (sheet nào không có dòng id đó thì máy chủ tự bỏ qua — vô hại).
+  // v118: lúc gọi thì phiếu thường đã bị gỡ khỏi bộ nhớ (không biết loại) → gửi lệnh xóa CẢ 3 sheet
+  // (sheet nào không có dòng id đó thì máy chủ tự bỏ qua — vô hại). v125: thêm sheet Chi Kế hoạch.
   syncLuongDeleteToSheet(id);
+  syncKhDeleteToSheet(id);
   const params = new URLSearchParams({action:'delete',id});
   var s=document.createElement('script');
   s.src=sheetUrl+'?'+params.toString();
@@ -5938,7 +6126,7 @@ function syncDeleteToSheet(id){
 // Đối chiếu: gửi danh sách ID món hiện có → Sheet tự xoá dòng nào không còn trong app (dọn rác đã xoá)
 function syncReconcileToSheet(){
   if(!sheetUrl) return;
-  const ids = proposals.filter(p=>p.kind!=='salary').map(p=>p.id).filter(Boolean); // sheet chi không gồm ứng lương
+  const ids = proposals.filter(p=>p.kind!=='salary' && p.kind!=='kh').map(p=>p.id).filter(Boolean); // sheet chi không gồm ứng lương + P.KH
   if(!ids.length) return; // an toàn: danh sách rỗng thì không gửi (tránh xoá sạch)
   const params = new URLSearchParams({ action:'reconcile', ids: ids.join(','), total: String(ids.length) });
   var s=document.createElement('script');
@@ -5949,6 +6137,7 @@ function syncReconcileToSheet(){
 
 function syncEditToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
   if(p && p.kind==='salary'){ syncLuongToSheet(p); return; } // v118
   const params = new URLSearchParams({
     action:'edit', id:p.id,
@@ -5963,6 +6152,7 @@ function syncEditToSheet(p){
 
 function syncEditToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
   if(p && p.kind==='salary'){ syncLuongToSheet(p); return; } // v118
   const params = new URLSearchParams({
     action:'edit', id:p.id,
@@ -5978,6 +6168,7 @@ function syncEditToSheet(p){
 function syncApprovalToSheet(id, field, time){
   if(!sheetUrl) return;
   const _pA=proposals.find(x=>x.id===id);
+  if(_pA && _pA.kind==='kh'){ syncKhToSheet(_pA); return; } // v125
   if(_pA && _pA.kind==='salary'){ syncLuongToSheet(_pA); return; } // v118
   const params = new URLSearchParams({
     action:'updateApproval', id,
@@ -5992,6 +6183,7 @@ function syncApprovalToSheet(id, field, time){
 
 function syncApprovalAmountToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
   if(p && p.kind==='salary'){ syncLuongToSheet(p); return; } // v118
   const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
@@ -6009,6 +6201,7 @@ function syncApprovalAmountToSheet(p){
 
 function syncTransferToSheet(p){
   if(!sheetUrl) return;
+  if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
   if(p && p.kind==='salary'){ syncLuongToSheet(p); return; } // v118
   const history = Array.isArray(p.transfers) ? p.transfers.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
   const params = new URLSearchParams({
@@ -6025,6 +6218,7 @@ function syncTransferToSheet(p){
 function syncRejectedByToSheet(id, rejectedBy){
   if(!sheetUrl) return;
   const _pR=proposals.find(x=>x.id===id);
+  if(_pR && _pR.kind==='kh'){ syncKhToSheet(_pR); return; } // v125
   if(_pR && _pR.kind==='salary'){ syncLuongToSheet(_pR); return; } // v118
   const params = new URLSearchParams({action:'updateRejectedBy', id, rejectedBy: rejectedBy||''});
   var s=document.createElement('script');
@@ -6255,6 +6449,7 @@ function _zaloLastTransferTs(p){ const t=Array.isArray(p.transfers)?p.transfers:
 function _zaloJump(id){
   closeZaloListModal();
   const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
   if(p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
@@ -6372,9 +6567,12 @@ function ensureUrgentReason(ctx, priority){
 // v97: cơ chế "ĐÃ XEM" (user chốt) — vào trang nào là chấm trang đó về 0 (các món hiện có được ghi
 // nhớ là đã xem, theo từng tài khoản trên máy này); chỉ MÓN MỚI phát sinh sau đó mới đếm tiếp.
 function _navPendingIds(kindSalary){
+  // v125: tham số nhận false (phiếu chi) | true (ứng lương) | 'kh' (phiếu P.Kế hoạch)
+  const want = kindSalary===true ? 'salary' : (kindSalary==='kh' ? 'kh' : '');
   const ids=[];
   proposals.forEach(p=>{
-    if((p.kind==='salary') !== kindSalary) return;
+    const k = p.kind==='salary' ? 'salary' : (p.kind==='kh' ? 'kh' : '');
+    if(k !== want) return;
     if(p.status==='rejected') return;
     const total=parseFloat(p.amount)||0;
     if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
@@ -6396,10 +6594,163 @@ function _setNavBadge(id, n){
   if(n>0){ el.textContent = n>99?'99+':n; el.style.display='block'; }
   else el.style.display='none';
 }
+// ══════════════════════════════════════════════════════════════════════════
+// ── v125 MODULE P.KẾ HOẠCH ── phiếu chi phí phòng Kế hoạch (kind='kh', kho riêng khProposals).
+// TÁI DÙNG engine thẻ/duyệt/chuyển/ảnh/GẤP/hỏi-đáp y như tab Lương — chỉ thêm view + modal tạo phiếu.
+// ══════════════════════════════════════════════════════════════════════════
+function _khCanSee(){
+  return currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||currentDept==='kehoach'||currentDept==='both';
+}
+let _khRenderLimit=100;
+let _khMonth=''; // 'YYYY-MM' đang xem ở tab Thống kê
+function setKhTab(tab, btn){
+  document.querySelectorAll('#page-kh .report-subtab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  else { const b=document.querySelector('#page-kh .report-subtab[data-tab="'+tab+'"]'); if(b) b.classList.add('active'); }
+  document.getElementById('kh-tab-list').style.display = tab==='list'?'':'none';
+  document.getElementById('kh-tab-stats').style.display = tab==='stats'?'':'none';
+  renderKhActive(tab);
+}
+function renderKhActive(tab){
+  if(!tab) tab = document.querySelector('#page-kh .report-subtab.active')?.dataset.tab || 'list';
+  if(tab==='list') renderKhList(); else renderKhStats();
+}
+function renderKhList(){
+  const el=document.getElementById('kh-list'); if(!el) return;
+  const q=(document.getElementById('kh-search')?.value||'').trim().toLowerCase();
+  let items=proposals.filter(p=>p.kind==='kh');
+  if(q) items=items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q)||(p.site||'').toLowerCase().includes(q));
+  // Phiếu vừa bị giục nổi lên đầu (giống Danh sách chi)
+  items.sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0) - Math.max(a.ts||0,a.lastRemindAt||0));
+  if(!items.length){
+    el.innerHTML='<div style="text-align:center;padding:36px 16px;color:var(--text-sub);font-size:13px">Chưa có đề xuất nào của phòng Kế hoạch.<br><small>Bấm ➕ để tạo đề xuất đầu tiên</small></div>';
+    return;
+  }
+  const hidden=items.length-_khRenderLimit;
+  const moreBtn=hidden>0?`<div style="text-align:center;padding:14px 0 6px"><button onclick="_khRenderLimit+=100;renderKhList()" style="background:var(--blue);color:#fff;border:none;border-radius:12px;padding:11px 22px;font-weight:700;font-size:14px;cursor:pointer">⬇️ Xem thêm ${hidden} phiếu cũ hơn</button></div>`:'';
+  el.innerHTML=items.slice(0,_khRenderLimit).map(p=>renderCard(p)).join('')+moreBtn;
+  attachThumbLongPress(el);
+  try{ if(typeof _observeImageCards==='function') _observeImageCards(); }catch(e){}
+}
+// Nhảy tới 1 phiếu P.KH (từ thông báo / bảng nhắc) — giống jumpToSalaryAdvance
+function jumpToKhProposal(id){
+  const b=document.querySelector('#page-kh .report-subtab[data-tab="list"]');
+  setKhTab('list', b);
+  const s=document.getElementById('kh-search'); if(s) s.value='';
+  const idx=proposals.filter(p=>p.kind==='kh').findIndex(p=>p.id===id);
+  if(idx>=0 && idx+20>_khRenderLimit){ _khRenderLimit=idx+20; }
+  renderKhList();
+  const tryScroll=()=>{ const el=document.getElementById('card-'+id); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.outline='3px solid var(--blue)'; setTimeout(()=>{el.style.outline='';},2500); } };
+  setTimeout(tryScroll,250); setTimeout(tryScroll,700);
+}
+function _khMonthKey(ts){ const d=new Date(ts||0); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function _khEnsureMonth(){ if(!_khMonth) _khMonth=_khMonthKey(Date.now()); }
+function khMonthShift(dir){
+  _khEnsureMonth();
+  const [y,m]=_khMonth.split('-').map(Number);
+  const d=new Date(y, m-1+dir, 1);
+  _khMonth=_khMonthKey(d.getTime());
+  renderKhStats();
+}
+function renderKhStats(){
+  const el=document.getElementById('kh-stats-content'); if(!el) return;
+  _khEnsureMonth();
+  const lbl=document.getElementById('kh-month-label');
+  if(lbl) lbl.textContent=monthLabel(_khMonth);
+  const items=proposals.filter(p=>p.kind==='kh' && _khMonthKey(p.ts)===_khMonth);
+  const sumDX=items.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
+  const sumDuyet=items.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0),0);
+  const sumCK=items.reduce((a,p)=>a+getTotalTransferred(p),0);
+  const choDuyet=items.filter(p=>p.status!=='rejected' && (getOfficialApprovedAmount(p)||0)<=0).length;
+  const tile=(n,lab,color,bg)=>`<div onclick="setKhTab('list',document.querySelector('#page-kh .report-subtab[data-tab=\\'list\\']'))" style="background:${bg};border-radius:10px;padding:10px 6px;text-align:center;cursor:pointer"><div style="font-size:15px;font-weight:800;color:${color}">${n}</div><div style="font-size:10.5px;color:${color};opacity:.8">${lab}</div></div>`;
+  const bySite={};
+  items.forEach(p=>{ const s=p.site||'Chi phí chung'; if(!bySite[s]) bySite[s]={n:0,dx:0,ck:0}; bySite[s].n++; bySite[s].dx+=parseFloat(p.amount)||0; bySite[s].ck+=getTotalTransferred(p); });
+  const siteKeys=Object.keys(bySite).sort((a,b)=> a==='Chi phí chung'?-1 : b==='Chi phí chung'?1 : a.localeCompare(b,'vi'));
+  const rows=siteKeys.map((s,i)=>`<tr${i%2?' style="background:#f8fafc"':''}><td style="padding:6px 8px;font-size:12px">${s==='Chi phí chung'?'🧾 ':'🏗 '}${esc(s)}</td><td style="padding:6px 8px;text-align:center;font-size:12px">${bySite[s].n}</td><td style="padding:6px 8px;text-align:right;font-size:12px">${fmtTr(bySite[s].dx)}</td><td style="padding:6px 8px;text-align:right;font-size:12px;color:#16a34a;font-weight:700">${fmtTr(bySite[s].ck)}</td></tr>`).join('');
+  el.innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
+      ${tile(items.length,'Số phiếu','#1e40af','#e0edff')}
+      ${tile(choDuyet,'Chờ duyệt','#b45309','#fef3c7')}
+      ${tile(fmtTr(sumDuyet),'Đã duyệt','#5b21b6','#ede9fe')}
+      ${tile(fmtTr(sumCK),'Đã chuyển','#166534','#d1fae5')}
+    </div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:6px">Tổng đề xuất tháng: <b style="color:var(--text)">${fmtVND(sumDX)}</b></div>
+    ${items.length ? `<div class="excel-table-wrap"><table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#ede9fe"><th style="padding:6px 8px;text-align:left;font-size:11px;color:#5b21b6">Công trình / Loại</th><th style="padding:6px 8px;font-size:11px;color:#5b21b6">Số phiếu</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#5b21b6">Đề xuất</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#5b21b6">Đã chuyển</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>` : '<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Tháng này chưa có phiếu nào.</div>'}
+    <div style="font-size:10.5px;color:var(--text-sub);text-align:center;margin-top:8px">💡 Bấm ô thống kê để mở danh sách đề xuất</div>`;
+}
+// ── Modal tạo phiếu P.KH (dùng chung mảng uploadedImages như modal ứng lương) ──
+function handleKhImg(input){ const files=Array.from(input.files||[]); if(files.length) addKhImages(files); input.value=''; }
+function addKhImages(files){
+  const valid=files.filter(f=>f.type&&f.type.startsWith('image/'));
+  if(!valid.length) return;
+  showToast('⏳ Đang tải ảnh...');
+  let done=0;
+  valid.forEach(file=>compressImage(file).then(d=>{ uploadedImages.push(d); done++; if(done===valid.length){ renderKhImgPreview(); showToast('✅ Đã thêm '+valid.length+' ảnh'); } })
+    .catch(()=>{ done++; if(done===valid.length) renderKhImgPreview(); }));
+}
+function renderKhImgPreview(){
+  const wrap=document.getElementById('kh-img-preview'); if(!wrap) return;
+  if(!uploadedImages.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(src)}" alt="Ảnh ${idx+1}"></div>`).join('');
+  wrap.querySelectorAll('.img-preview-item').forEach(item=>{ const idx=parseInt(item.dataset.idx,10); const img=item.querySelector('img'); attachLongPress(img, ()=>uploadedImages[idx], ()=>(()=>{ uploadedImages.splice(idx,1); renderKhImgPreview(); })); });
+}
+function _khClearImages(){ uploadedImages=[]; renderKhImgPreview(); const fi=document.getElementById('kh-file-input'); if(fi) fi.value=''; }
+function openKhModal(){
+  _khClearImages();
+  // Nạp danh sách công trình dùng chung của app (Chi phí chung đứng đầu)
+  const sel=document.getElementById('kh-inp-site');
+  sel.innerHTML='<option value="Chi phí chung">🧾 Chi phí chung</option>'+(sites||[]).map(s=>{
+    const nm=typeof s==='string'?s:(s&&s.name)||'';
+    return nm?`<option value="${esc(nm)}">🏗 ${esc(nm)}</option>`:'';
+  }).join('');
+  document.getElementById('kh-inp-desc').value='';
+  document.getElementById('kh-inp-amount').value='';
+  document.getElementById('kh-inp-note').value='';
+  document.getElementById('kh-modal-overlay').style.display='flex';
+}
+function closeKhModal(){ document.getElementById('kh-modal-overlay').style.display='none'; _khClearImages(); }
+function saveKhFromModal(){
+  const site=document.getElementById('kh-inp-site').value||'Chi phí chung';
+  const desc=document.getElementById('kh-inp-desc').value.trim();
+  const amount=parseAmountInput(document.getElementById('kh-inp-amount'));
+  const note=document.getElementById('kh-inp-note').value.trim();
+  if(!desc){ showToast('Nhập nội dung đề xuất'); return; }
+  if(!amount||amount<=0){ showToast('Nhập số tiền hợp lệ'); return; }
+  const me=getCurrentUserName()||((currentUser&&currentUser.email)||'').split('@')[0]||'?';
+  // Phiếu P.KH — id có TIỀN TỐ 'kh' để tự định tuyến vào kho riêng khProposals/khImages
+  const p={
+    id: 'kh'+Date.now(),
+    kind: 'kh', createdBy: me,
+    desc, person: me, site,
+    amount, amountUnit:'dong', note,
+    priority:'normal', status:'pending', ts: Date.now(),
+    imgB64: uploadedImages[0]||null, imgImages: uploadedImages.slice(), proofImages: [],
+    approvedD:null, approvedH:null, approvedDAmount:null, approvedHAmount:null,
+    approvedDHistory:[], approvedHHistory:[], transfers:[]
+  };
+  proposals.unshift(p);
+  save();
+  syncToSheet(p); // tự chuyển hướng sang sheet "Chi Kế hoạch" vì kind='kh'
+  _khClearImages();
+  closeKhModal();
+  setKhTab('list', document.querySelector('#page-kh .report-subtab[data-tab="list"]'));
+  showToast('✅ Đã gửi đề xuất chi phí Kế hoạch');
+  sendPushNotif('📐 Đề xuất P.Kế hoạch mới', me+': '+(desc.length>40?desc.slice(0,40)+'…':desc)+' · '+fmtVND(amount), ['dung','hien','trang']);
+}
+// Hiện/ẩn nút P.KH theo quyền — gọi sau khi biết vai trò/phòng (setRole + sau khi đọc dept)
+function _applyKhNav(){
+  const b=document.getElementById('nav-kh');
+  if(b) b.style.display = _khCanSee() ? '' : 'none';
+}
+
 function updateNavBadges(){
   const secs=[
     {sec:'home',  ids:_navPendingIds(false), page:'page-home',  badge:'nav-badge-home'},
     {sec:'luong', ids:_navPendingIds(true),  page:'page-luong', badge:'nav-badge-luong'},
+    {sec:'kh',    ids:_navPendingIds('kh'),  page:'page-kh',    badge:'nav-badge-kh'}, // v125
     {sec:'plan',  ids:_navPlanIds(),         page:'page-plan',  badge:'nav-badge-plan'}
   ];
   secs.forEach(s=>{
@@ -6535,6 +6886,7 @@ function chatRemindGo(id){
   const np=document.getElementById('notif-panel'); if(np) np.style.display='none';
   markChatSeen(id);
   const p=proposals.find(x=>x.id===id);
+  if(p && p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
   if(p && p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
@@ -6571,6 +6923,7 @@ function _chatRefChip(refId){
 function chatOpenRef(id){
   closeChatPage();
   const p=proposals.find(x=>x.id===id); if(!p) return;
+  if(p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
   if(p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
@@ -6864,7 +7217,7 @@ function renderChatPick(){
   items=items.slice(0,30);
   if(!items.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Không có phiếu nào khớp</div>'; return; }
   el.innerHTML=items.map(p=>`<div onclick="pickChatAttach('${sid(p.id)}')" style="border:1px solid var(--gray-border);border-radius:10px;padding:7px 10px;margin-bottom:5px;cursor:pointer">
-    <div style="font-size:12px;font-weight:700;word-break:break-word">${p.kind==='salary'?'💵 ':''}${esc(p.desc||'')} · ${fmtVND(p.amount)}</div>
+    <div style="font-size:12px;font-weight:700;word-break:break-word">${p.kind==='salary'?'💵 ':p.kind==='kh'?'📐 ':''}${esc(p.desc||'')} · ${fmtVND(p.amount)}</div>
     <div style="font-size:10px;color:var(--text-sub)">${esc(p.person||'')} · ${esc(p.site||'')} · ${_chatRefStatus(p)}</div>
   </div>`).join('');
 }
