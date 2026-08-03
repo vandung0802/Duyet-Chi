@@ -1351,7 +1351,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v128';
+const APP_VERSION = '20260803-v129';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6768,7 +6768,8 @@ function renderKhStats(){
   const bySite={};
   items.forEach(p=>{ const s=p.site||'Chi phí chung'; if(!bySite[s]) bySite[s]={n:0,dx:0,ck:0}; bySite[s].n++; bySite[s].dx+=parseFloat(p.amount)||0; bySite[s].ck+=getTotalTransferred(p); });
   const siteKeys=Object.keys(bySite).sort((a,b)=> a==='Chi phí chung'?-1 : b==='Chi phí chung'?1 : a.localeCompare(b,'vi'));
-  const rows=siteKeys.map((s,i)=>`<tr${i%2?' style="background:#f8fafc"':''}><td style="padding:6px 8px;font-size:12px">${s==='Chi phí chung'?'🧾 ':'🏗 '}${esc(s)}</td><td style="padding:6px 8px;text-align:center;font-size:12px">${bySite[s].n}</td><td style="padding:6px 8px;text-align:right;font-size:12px">${fmtTr(bySite[s].dx)}</td><td style="padding:6px 8px;text-align:right;font-size:12px;color:#16a34a;font-weight:700">${fmtTr(bySite[s].ck)}</td></tr>`).join('');
+  // v129: ấn đúp (máy tính dblclick / điện thoại chạm 2 lần) vào dòng → mở danh sách LỌC đúng công trình đó
+  const rows=siteKeys.map((s,i)=>`<tr class="kh-site-row" data-site="${esc(s)}" ondblclick="khStatsSiteGo(this.dataset.site)" style="cursor:pointer${i%2?';background:#f8fafc':''}"><td style="padding:6px 8px;font-size:12px">${s==='Chi phí chung'?'🧾 ':'🏗 '}${esc(s)}</td><td style="padding:6px 8px;text-align:center;font-size:12px">${bySite[s].n}</td><td style="padding:6px 8px;text-align:right;font-size:12px">${fmtTr(bySite[s].dx)}</td><td style="padding:6px 8px;text-align:right;font-size:12px;color:#16a34a;font-weight:700">${fmtTr(bySite[s].ck)}</td></tr>`).join('');
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
       ${tile(items.length,'Số phiếu','#1e40af','#e0edff')}
@@ -6780,7 +6781,19 @@ function renderKhStats(){
     ${items.length ? `<div class="excel-table-wrap"><table style="width:100%;border-collapse:collapse">
       <thead><tr style="background:#ede9fe"><th style="padding:6px 8px;text-align:left;font-size:11px;color:#5b21b6">Công trình / Loại</th><th style="padding:6px 8px;font-size:11px;color:#5b21b6">Số phiếu</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#5b21b6">Đề xuất</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#5b21b6">Đã chuyển</th></tr></thead>
       <tbody>${rows}</tbody></table></div>` : '<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Tháng này chưa có phiếu nào.</div>'}
-    <div style="font-size:10.5px;color:var(--text-sub);text-align:center;margin-top:8px">💡 Bấm ô thống kê để mở danh sách đề xuất</div>`;
+    <div style="font-size:10.5px;color:var(--text-sub);text-align:center;margin-top:8px">💡 Bấm ô thống kê để mở danh sách · Chạm 2 lần vào dòng công trình → lọc đúng công trình đó</div>`;
+  // v129: chạm 2 lần trên ĐIỆN THOẠI cũng nhảy (máy tính dùng ondblclick sẵn trên dòng).
+  // Gắn 1 lần duy nhất vào container (đánh dấu dataset) — tránh gắn chồng mỗi lần vẽ lại.
+  if(!el.dataset.dtap){ el.dataset.dtap='1'; attachRowDoubleTap(el, '.kh-site-row'); }
+}
+// Ấn đúp dòng thống kê P.KH → mở tab Đề xuất, lọc sẵn đúng công trình đó
+function khStatsSiteGo(site){
+  setKhTab('list', document.querySelector('#page-kh .report-subtab[data-tab="list"]'));
+  const fp=document.getElementById('kh-filter-person'); if(fp) fp.value='';
+  const fs=document.getElementById('kh-filter-site'); if(fs) fs.value=site;
+  renderKhList();
+  const el=document.getElementById('kh-list'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  showToast((site==='Chi phí chung'?'🧾 ':'🏗 ')+'Đang lọc: '+site);
 }
 // ── Modal tạo phiếu P.KH (dùng chung mảng uploadedImages như modal ứng lương) ──
 function handleKhImg(input){ const files=Array.from(input.files||[]); if(files.length) addKhImages(files); input.value=''; }
