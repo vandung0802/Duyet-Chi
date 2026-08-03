@@ -359,11 +359,12 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <input type="password" id="auth-pass" name="password" class="form-input" placeholder="Mật khẩu" autocomplete="current-password" style="font-size:15px;padding-right:40px">
       <button type="button" onclick="toggleAuthPass()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--gray);padding:4px" id="auth-pass-eye">👁</button>
     </div>
-    <!-- Chọn tên — chỉ hiện khi đăng ký -->
+    <!-- Nhập tên — chỉ hiện khi đăng ký. v131: ô GÕ TỰ DO (có gợi ý) thay cho dropdown cứng,
+         vì người mới (VD phòng Kế hoạch) không có sẵn trong danh sách; sếp duyệt sẽ chỉnh tên lại nếu cần. -->
     <div id="auth-name-wrap" style="display:none;margin-bottom:10px">
-      <select id="auth-name" class="form-input" style="font-size:15px">
-        <option value="">-- Chọn tên của bạn --</option>
-      </select>
+      <input id="auth-name" class="form-input" list="auth-name-list" autocomplete="off" placeholder="Họ tên của bạn" style="font-size:15px">
+      <datalist id="auth-name-list"></datalist>
+      <div style="font-size:11px;color:var(--gray);margin-top:3px">Gõ đúng họ tên của bạn. Sếp sẽ duyệt và chỉnh lại nếu cần.</div>
     </div>
     <!-- Ô xác nhận mật khẩu — chỉ hiện khi đăng ký -->
     <div id="auth-confirm-wrap" style="display:none;margin-bottom:10px">
@@ -1351,7 +1352,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v130';
+const APP_VERSION = '20260803-v131';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1852,11 +1853,10 @@ function switchAuthTab(mode){
   document.getElementById('auth-btn').textContent = isReg ? 'Đăng ký' : 'Đăng nhập';
   document.getElementById('auth-btn').onclick = isReg ? doRegister : doLogin;
   document.getElementById('auth-error').textContent = '';
-  // Điền danh sách tên vào dropdown
+  // v131: đổ danh sách tên đã biết vào GỢI Ý (datalist) — người mới vẫn gõ tên tự do được
   if(isReg){
-    const sel = document.getElementById('auth-name');
-    sel.innerHTML = '<option value="">-- Chọn tên của bạn --</option>' +
-      persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
+    const dl = document.getElementById('auth-name-list');
+    if(dl) dl.innerHTML = (persons||[]).map(p=>`<option value="${esc(p.name)}"></option>`).join('');
   }
 }
 
@@ -1879,11 +1879,12 @@ async function doRegister(){
   const email   = document.getElementById('auth-email').value.trim();
   const pass    = document.getElementById('auth-pass').value;
   const confirm = document.getElementById('auth-pass-confirm').value;
-  const name    = document.getElementById('auth-name').value;
+  const name    = (document.getElementById('auth-name').value||'').normalize('NFC').trim().replace(/\s+/g,' '); // v131: gõ tự do → chuẩn hóa
   const errEl   = document.getElementById('auth-error');
   const btn     = document.getElementById('auth-btn');
   errEl.style.color = 'var(--red)'; errEl.textContent = '';
-  if(!name){ errEl.textContent='Vui lòng chọn tên của bạn'; return; }
+  if(!name){ errEl.textContent='Vui lòng nhập họ tên của bạn'; return; }
+  if(name.length < 2){ errEl.textContent='Họ tên quá ngắn'; return; }
   if(!email||!pass){ errEl.textContent='Vui lòng nhập email và mật khẩu'; return; }
   if(pass.length < 6){ errEl.textContent='Mật khẩu tối thiểu 6 ký tự'; return; }
   if(pass !== confirm){ errEl.textContent='Mật khẩu nhập lại không khớp'; return; }
