@@ -1239,7 +1239,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="kh-tab-list">
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
-        <input id="kh-search" type="text" name="dc-kh-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm theo nội dung / người / công trình..." oninput="renderKhList()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
+        <!-- v126: lọc theo NGƯỜI + CÔNG TRÌNH (2 ô chọn, giống tab Báo cáo — user chốt) -->
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <select id="kh-filter-person" onchange="renderKhList()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+            <option value="">👤 Tất cả người</option>
+          </select>
+          <select id="kh-filter-site" onchange="renderKhList()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+            <option value="">🏗 Tất cả CT</option>
+          </select>
+        </div>
         <button class="btn-full btn-primary-full" onclick="openKhModal()">➕ Đề xuất chi phí Kế hoạch</button>
       </div>
     </div>
@@ -1342,7 +1350,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v125';
+const APP_VERSION = '20260803-v126';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3318,7 +3326,9 @@ function attachThumbLongPress(container){
 
 const _cardCache = new Map();
 function _cardHash(p){
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0);
+  // v126: thêm desc/person/site vào hash — trước đây SỬA nội dung/người/công trình mà thẻ vẫn hiện
+  // bản cũ (cache không biết có thay đổi; lỗi user báo trên phiếu P.KH, nhưng ảnh hưởng mọi loại phiếu)
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0)+'|'+(p.desc||'')+'|'+(p.person||'')+'|'+(p.site||'');
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -4389,6 +4399,7 @@ function saveEditProposal(){
   p.imgImages = editingImages.slice();
   p.imgB64 = editingImages[0] || null; // giữ tương thích phiếu cũ
 
+  _cardCache.delete(p.id); // v126: chắc chắn thẻ vẽ lại ngay với nội dung vừa sửa
   save();
   syncEditToSheet(p);
   renderAll();
@@ -6685,9 +6696,25 @@ function renderKhActive(tab){
 }
 function renderKhList(){
   const el=document.getElementById('kh-list'); if(!el) return;
-  const q=(document.getElementById('kh-search')?.value||'').trim().toLowerCase();
-  let items=proposals.filter(p=>p.kind==='kh');
-  if(q) items=items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q)||(p.site||'').toLowerCase().includes(q));
+  const all=proposals.filter(p=>p.kind==='kh');
+  // v126: 2 ô lọc Người + Công trình (giống tab Báo cáo) — nạp danh sách từ phiếu, GIỮ lựa chọn hiện tại
+  const selP=document.getElementById('kh-filter-person'), selS=document.getElementById('kh-filter-site');
+  let fP='', fS='';
+  if(selP){
+    fP=selP.value||'';
+    const people=[...new Set(all.map(p=>p.person||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    selP.innerHTML='<option value="">👤 Tất cả người</option>'+people.map(n=>`<option value="${esc(n)}"${fP===n?' selected':''}>${esc(n)}</option>`).join('');
+    if(fP && !people.includes(fP)) fP='';
+  }
+  if(selS){
+    fS=selS.value||'';
+    const sitesUsed=[...new Set(all.map(p=>p.site||'Chi phí chung'))].sort((a,b)=> a==='Chi phí chung'?-1 : b==='Chi phí chung'?1 : a.localeCompare(b,'vi'));
+    selS.innerHTML='<option value="">🏗 Tất cả CT</option>'+sitesUsed.map(s=>`<option value="${esc(s)}"${fS===s?' selected':''}>${s==='Chi phí chung'?'🧾 ':''}${esc(s)}</option>`).join('');
+    if(fS && !sitesUsed.includes(fS)) fS='';
+  }
+  let items=all;
+  if(fP) items=items.filter(p=>(p.person||'')===fP);
+  if(fS) items=items.filter(p=>(p.site||'Chi phí chung')===fS);
   // Phiếu vừa bị giục nổi lên đầu (giống Danh sách chi)
   items.sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0) - Math.max(a.ts||0,a.lastRemindAt||0));
   if(!items.length){
@@ -6704,7 +6731,9 @@ function renderKhList(){
 function jumpToKhProposal(id){
   const b=document.querySelector('#page-kh .report-subtab[data-tab="list"]');
   setKhTab('list', b);
-  const s=document.getElementById('kh-search'); if(s) s.value='';
+  // v126: bỏ lọc để chắc chắn phiếu cần nhảy tới đang hiển thị
+  const _fp=document.getElementById('kh-filter-person'); if(_fp) _fp.value='';
+  const _fs=document.getElementById('kh-filter-site'); if(_fs) _fs.value='';
   const idx=proposals.filter(p=>p.kind==='kh').findIndex(p=>p.id===id);
   if(idx>=0 && idx+20>_khRenderLimit){ _khRenderLimit=idx+20; }
   renderKhList();
