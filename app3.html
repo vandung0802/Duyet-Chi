@@ -324,7 +324,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div style="font-size:32px;text-align:center;margin-bottom:8px">👤</div>
     <div style="font-size:16px;font-weight:800;text-align:center;color:var(--text);margin-bottom:6px">Bạn tên gì?</div>
     <div style="font-size:12px;color:var(--text-sub);text-align:center;margin-bottom:16px">Chọn tên để app nhận diện quyền của bạn</div>
-    <select id="first-login-name" class="form-input" style="font-size:15px;margin-bottom:10px"></select>
+    <!-- v132: ô GÕ TỰ DO (có gợi ý) — trước là dropdown cứng, người mới không có sẵn trong list nên bị kẹt -->
+    <input id="first-login-name" class="form-input" list="first-login-namelist" autocomplete="off" placeholder="Họ tên của bạn" style="font-size:15px;margin-bottom:6px">
+    <datalist id="first-login-namelist"></datalist>
+    <div style="font-size:11px;color:var(--text-sub);text-align:center;margin-bottom:6px">Gõ đúng họ tên của bạn. Sếp sẽ chỉnh lại nếu cần.</div>
     <div id="first-login-msg" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>
     <button onclick="confirmFirstLogin()" class="btn-full btn-primary-full" style="font-size:15px;padding:12px">Xác nhận</button>
   </div>
@@ -1352,7 +1355,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v131';
+const APP_VERSION = '20260803-v132';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5203,16 +5206,19 @@ function showUpdateRolePrompt(){
   // Hiện modal chặn — bắt buộc chọn tên trước khi dùng app
   const overlay = document.getElementById('first-login-overlay');
   if(!overlay) return;
-  const sel = document.getElementById('first-login-name');
-  sel.innerHTML = '<option value="">-- Chọn tên của bạn --</option>' +
-    persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
+  // v132: gợi ý = danh sách người đã biết (nếu có); điền SẴN tên đã đăng ký để người mới chỉ cần bấm Xác nhận
+  const dl = document.getElementById('first-login-namelist');
+  if(dl) dl.innerHTML = (persons||[]).map(p=>`<option value="${esc(p.name)}"></option>`).join('');
+  const inp = document.getElementById('first-login-name');
+  if(inp && !inp.value) inp.value = currentUserName || '';
   overlay.style.display = 'flex';
 }
 
 async function confirmFirstLogin(){
-  const name = document.getElementById('first-login-name').value;
+  const name = (document.getElementById('first-login-name').value||'').normalize('NFC').trim().replace(/\s+/g,' '); // v132: gõ tự do → chuẩn hóa
   const msg  = document.getElementById('first-login-msg');
-  if(!name){ msg.textContent='Vui lòng chọn tên của bạn'; return; }
+  if(!name){ msg.textContent='Vui lòng nhập họ tên của bạn'; return; }
+  if(name.length < 2){ msg.textContent='Họ tên quá ngắn'; return; }
   if(!currentUser){ return; }
   const role = nameToRole(name);
   currentUserName = name;
