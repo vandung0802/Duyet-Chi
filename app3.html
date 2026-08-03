@@ -1351,7 +1351,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v129';
+const APP_VERSION = '20260803-v130';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6770,6 +6770,23 @@ function renderKhStats(){
   const siteKeys=Object.keys(bySite).sort((a,b)=> a==='Chi phí chung'?-1 : b==='Chi phí chung'?1 : a.localeCompare(b,'vi'));
   // v129: ấn đúp (máy tính dblclick / điện thoại chạm 2 lần) vào dòng → mở danh sách LỌC đúng công trình đó
   const rows=siteKeys.map((s,i)=>`<tr class="kh-site-row" data-site="${esc(s)}" ondblclick="khStatsSiteGo(this.dataset.site)" style="cursor:pointer${i%2?';background:#f8fafc':''}"><td style="padding:6px 8px;font-size:12px">${s==='Chi phí chung'?'🧾 ':'🏗 '}${esc(s)}</td><td style="padding:6px 8px;text-align:center;font-size:12px">${bySite[s].n}</td><td style="padding:6px 8px;text-align:right;font-size:12px">${fmtTr(bySite[s].dx)}</td><td style="padding:6px 8px;text-align:right;font-size:12px;color:#16a34a;font-weight:700">${fmtTr(bySite[s].ck)}</td></tr>`).join('');
+  // v130: BẢNG CHI TIẾT TỪNG PHIẾU — "in đúc" bảng báo cáo kế toán (cùng class report-row-link,
+  // cùng kiểu dòng, ấn đúp nhảy tới ĐÚNG PHIẾU trong danh sách, có tô sáng viền xanh).
+  const detSorted=items.slice().sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0) - Math.max(a.ts||0,a.lastRemindAt||0));
+  const detRows=detSorted.map((p,i)=>{
+    const transferred=getTotalTransferred(p);
+    const d2=new Date(p.ts);
+    const amtLabel=`<span style="white-space:nowrap">${fmtTr(p.amount)}</span>${transferred>0.001?`<br><span style="font-size:9px;color:var(--yellow);font-weight:600;white-space:nowrap">đã ck ${fmtTr(transferred)}</span>`:''}`;
+    return `<tr class="report-row-link" ondblclick="jumpToKhProposal('${sid(p.id)}')">
+      <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${detSorted.length-i}</td>
+      <td style="word-break:break-word;font-weight:600;font-size:9px;line-height:1.3;vertical-align:middle">${esc(p.desc)}</td>
+      <td style="text-align:right;font-size:10px;line-height:1.3;vertical-align:middle">${amtLabel}</td>
+      <td style="font-size:9px;color:var(--text-sub);white-space:normal;word-break:normal;vertical-align:middle">${esc(p.person||'—')}</td>
+      <td style="word-break:normal;font-size:9px;color:var(--text-sub);vertical-align:middle">${esc((p.site||'Chi phí chung').replace('CT ',''))}</td>
+      <td style="font-size:9px;text-align:center;color:var(--text-sub);vertical-align:middle">${d2.getDate()}/${d2.getMonth()+1}</td>
+    </tr>`;
+  }).join('');
+  const colsKh=`<colgroup><col style="width:18px"><col style="width:auto"><col style="width:56px"><col style="width:40px"><col style="width:52px"><col style="width:28px"></colgroup>`;
   el.innerHTML=`
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">
       ${tile(items.length,'Số phiếu','#1e40af','#e0edff')}
@@ -6777,14 +6794,40 @@ function renderKhStats(){
       ${tile(fmtTr(sumDuyet),'Đã duyệt','#5b21b6','#ede9fe')}
       ${tile(fmtTr(sumCK),'Đã chuyển','#166534','#d1fae5')}
     </div>
-    <div style="font-size:12px;color:var(--text-sub);margin-bottom:6px">Tổng đề xuất tháng: <b style="color:var(--text)">${fmtVND(sumDX)}</b></div>
-    ${items.length ? `<div class="excel-table-wrap"><table style="width:100%;border-collapse:collapse">
+    ${items.length ? `<div style="font-size:12px;font-weight:700;color:#5b21b6;margin-bottom:4px">🏗 Theo công trình</div>
+    <div class="excel-table-wrap" style="margin-bottom:12px"><table style="width:100%;border-collapse:collapse">
       <thead><tr style="background:#ede9fe"><th style="padding:6px 8px;text-align:left;font-size:11px;color:#5b21b6">Công trình / Loại</th><th style="padding:6px 8px;font-size:11px;color:#5b21b6">Số phiếu</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#5b21b6">Đề xuất</th><th style="padding:6px 8px;text-align:right;font-size:11px;color:#5b21b6">Đã chuyển</th></tr></thead>
-      <tbody>${rows}</tbody></table></div>` : '<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Tháng này chưa có phiếu nào.</div>'}
-    <div style="font-size:10.5px;color:var(--text-sub);text-align:center;margin-top:8px">💡 Bấm ô thống kê để mở danh sách · Chạm 2 lần vào dòng công trình → lọc đúng công trình đó</div>`;
-  // v129: chạm 2 lần trên ĐIỆN THOẠI cũng nhảy (máy tính dùng ondblclick sẵn trên dòng).
-  // Gắn 1 lần duy nhất vào container (đánh dấu dataset) — tránh gắn chồng mỗi lần vẽ lại.
+      <tbody>${rows}</tbody></table></div>
+    <div class="table-total-top"><span>Tổng cộng: ${items.length} khoản</span><span class="ttt-amt">${fmtTr(sumDX)}</span></div>
+    <div class="excel-table-wrap">
+      <table class="excel-table excel-table-fixed">
+        ${colsKh}
+        <thead><tr>
+          <th style="text-align:center">#</th><th>Tên đề xuất</th><th style="text-align:right">Số tiền</th><th style="text-align:center">Người</th><th style="text-align:center">CT</th><th style="text-align:center">Ngày</th>
+        </tr></thead>
+        <tbody>${detRows}</tbody>
+      </table>
+    </div>` : '<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Tháng này chưa có phiếu nào.</div>'}
+    <div style="font-size:10.5px;color:var(--text-sub);text-align:center;margin-top:8px">💡 Chạm 2 lần vào dòng phiếu → nhảy tới đúng đề xuất · dòng công trình → lọc theo công trình</div>`;
+  // Chạm 2 lần trên ĐIỆN THOẠI: dòng phiếu (report-row-link, "in đúc" báo cáo kế toán) + dòng công trình.
+  // Gắn 1 lần duy nhất vào container — tránh gắn chồng mỗi lần vẽ lại.
   if(!el.dataset.dtap){ el.dataset.dtap='1'; attachRowDoubleTap(el, '.kh-site-row'); }
+  if(!el.dataset.dtap2){ el.dataset.dtap2='1'; attachKhReportDoubleTap(el); }
+}
+// Bản sao y attachReportDoubleTap của kế toán, chỉ khác đích nhảy = jumpToKhProposal
+function attachKhReportDoubleTap(container){
+  let lastTap = 0, lastTarget = null;
+  container.addEventListener('touchend', e=>{
+    const row = e.target.closest('.report-row-link');
+    if(!row) return;
+    const now = Date.now();
+    if(now - lastTap < 350 && lastTarget === row){
+      e.preventDefault();
+      const fn = row.getAttribute('ondblclick');
+      if(fn) { const id = fn.match(/'([^']+)'/)?.[1]; if(id) jumpToKhProposal(id); }
+    }
+    lastTap = now; lastTarget = row;
+  }, {passive:false});
 }
 // Ấn đúp dòng thống kê P.KH → mở tab Đề xuất, lọc sẵn đúng công trình đó
 function khStatsSiteGo(site){
@@ -6793,7 +6836,8 @@ function khStatsSiteGo(site){
   const fs=document.getElementById('kh-filter-site'); if(fs) fs.value=site;
   renderKhList();
   const el=document.getElementById('kh-list'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
-  showToast((site==='Chi phí chung'?'🧾 ':'🏗 ')+'Đang lọc: '+site);
+  // v130: KHÔNG toast — chạm kép trên điện thoại kích hoạt 2 lần (touchend + dblclick) làm toast
+  // hiện 2 lần ("thông báo nhảy 2 lần" user báo). Nhảy trang im lặng giống báo cáo kế toán → kép vô hại.
 }
 // ── Modal tạo phiếu P.KH (dùng chung mảng uploadedImages như modal ứng lương) ──
 function handleKhImg(input){ const files=Array.from(input.files||[]); if(files.length) addKhImages(files); input.value=''; }
