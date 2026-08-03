@@ -1143,11 +1143,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div style="background:var(--blue);color:#fff;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-shrink:0">
     <button onclick="closeChatPage()" style="background:#fff;border:none;border-radius:50%;width:38px;height:38px;font-size:22px;font-weight:900;color:var(--blue);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0" title="Quay lại">←</button>
     <div style="flex:1;min-width:0">
-      <div style="font-size:15px;font-weight:800">💬 Nhóm Kế Toán</div>
+      <div id="chat-title" style="font-size:15px;font-weight:800">💬 Nhóm Kế Toán</div>
       <div style="font-size:10px;opacity:.85">Chat nội bộ — chỉ thành viên đã duyệt</div>
     </div>
     <!-- v113: chỉ Dũng thấy — xóa sạch cả nhóm chat -->
     <button id="chat-clear-btn" onclick="clearAllChat()" style="display:none;background:rgba(255,255,255,0.15);border:none;border-radius:10px;height:32px;padding:0 10px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;flex-shrink:0">🗑 Xóa tất cả</button>
+  </div>
+  <!-- v126: 2 KÊNH chat — chỉ hiện khi được vào cả 2 (D/H/Trang, người "Cả 2 phòng") -->
+  <div id="chat-ch-row" style="display:none;gap:6px;padding:7px 10px;background:var(--blue);flex-shrink:0">
+    <button id="chat-ch-kt" onclick="switchChatChannel('kt')" style="flex:1;padding:7px 6px;border:none;border-radius:10px;font-size:12.5px;font-weight:800;cursor:pointer;background:#fff;color:var(--blue)">💼 Kế Toán <span id="chat-ch-kt-badge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;min-width:17px;padding:0 5px;font-size:10.5px;line-height:17px">0</span></button>
+    <button id="chat-ch-kh" onclick="switchChatChannel('kh')" style="flex:1;padding:7px 6px;border:none;border-radius:10px;font-size:12.5px;font-weight:800;cursor:pointer;background:rgba(255,255,255,0.15);color:#fff">📐 Kế Hoạch <span id="chat-ch-kh-badge" style="display:none;background:#ef4444;color:#fff;border-radius:9px;min-width:17px;padding:0 5px;font-size:10.5px;line-height:17px">0</span></button>
   </div>
   <!-- v116: thanh TIN GHIM (kiểu Zalo) -->
   <div id="chat-pin-bar" style="display:none;flex-shrink:0;background:#fff7ed;border-bottom:1px solid #fdba74;padding:6px 10px;align-items:center;gap:8px">
@@ -1992,7 +1997,7 @@ async function verifyOtp(){
   let role = rv ? (typeof rv==='string'?rv:rv.role) : null;
   currentUserName = (rv && typeof rv==='object' && rv.name) ? rv.name : '';
   currentDept = (rv && typeof rv==='object' && (rv.dept==='kehoach'||rv.dept==='both')) ? rv.dept : 'ketoan'; // v124/v125: nhận cả both
-  try{ _applyKhNav(); }catch(e){}
+  try{ _applyDeptView(); }catch(e){}
   if(!role){ const em=(user.email||'').toLowerCase(); if(em==='vandung0802@gmail.com') role='dung'; }
   if(role){ setRole(role); trackOnline(user.uid, currentUserName||user.email, role); }
 }
@@ -2084,7 +2089,7 @@ function initAuth(){
       let role = role_val ? (typeof role_val === 'string' ? role_val : role_val.role) : null;
       currentUserName = (role_val && typeof role_val === 'object' && role_val.name) ? role_val.name : '';
       currentDept = (role_val && typeof role_val === 'object' && (role_val.dept==='kehoach'||role_val.dept==='both')) ? role_val.dept : 'ketoan'; // v124/v125: nhận cả both
-      try{ _applyKhNav(); }catch(e){}
+      try{ _applyDeptView(); }catch(e){}
       if(!role || role==='other'){
         // v79 BẢO MẬT: suy vai trò theo email CHÍNH XÁC (bỏ 'includes(trang)' cũ — email bất kỳ chứa
         // chữ "trang" sẽ được giao diện role Trang, dù máy chủ vẫn chặn ghi. Khớp đúng luật Firebase.)
@@ -2163,7 +2168,7 @@ function setRole(role){
   checkNotifBanner();
   renderAll();
   populateSelects();
-  try{ _applyKhNav(); }catch(e){} // v125: hiện/ẩn nút P.KH theo vai trò + phòng
+  try{ _applyDeptView(); }catch(e){} // v125: hiện/ẩn nút P.KH theo vai trò + phòng
   // Trang vừa vào app (đã đăng nhập xong) → nhắc các khoản chờ chuyển nếu dữ liệu đã tải xong
   setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
   setTimeout(function(){ try{ maybeShowChatReminder(); }catch(e){} }, 1100); // v106: bảng nhắc hỏi–đáp
@@ -2789,10 +2794,33 @@ function initFirebaseSync(){
     db.ref('duyetchi/chatPin').off('value');
     db.ref('duyetchi/chatPin').on('value', s=>{
       _chatPin = s.val()||null;
-      try{ renderChatPinBar(); }catch(e){}
+      try{ if(chatChannel==='kt') renderChatPinBar(); }catch(e){}
       const pg=document.getElementById('chat-page');
-      if(pg && pg.style.display==='flex'){ try{ renderChatMsgs(); }catch(e){} }
+      if(pg && pg.style.display==='flex' && chatChannel==='kt'){ try{ renderChatMsgs(); }catch(e){} }
     }, ()=>{});
+
+    // ── v126 CHAT KÊNH KẾ HOẠCH (khChat) — bị luật chặn (kế toán thuần/chưa duyệt) thì coi như rỗng ──
+    if(_khGcQuery){ try{ _khGcQuery.off('value'); }catch(e){} }
+    _khGcQuery = db.ref('duyetchi/khChat').limitToLast(200);
+    _khGcQuery.on('value', snap=>{
+      const raw = snap.val() || {};
+      khChatMsgs = Object.keys(raw).map(k=>Object.assign({_k:k}, raw[k])).sort((a,b)=>(a.ts||0)-(b.ts||0));
+      try{ updateChatBadge(); }catch(e){}
+      const pg = document.getElementById('chat-page');
+      if(pg && pg.style.display==='flex' && chatChannel==='kh'){ try{ renderChatMsgs(); markGroupChatRead(); }catch(e){} }
+    }, ()=>{ khChatMsgs=[]; try{ updateChatBadge(); }catch(e){} });
+    if(_khCrQuery){ try{ _khCrQuery.off('value'); }catch(e){} }
+    if(_crUser){
+      _khCrQuery = db.ref('duyetchi/khChatRead/'+_crUser.uid);
+      _khCrQuery.on('value', s=>{ _khChatReadTs = s.val()||0; try{ updateChatBadge(); }catch(e){} }, ()=>{});
+    }
+    db.ref('duyetchi/khChatPin').off('value');
+    db.ref('duyetchi/khChatPin').on('value', s=>{
+      _khChatPin = s.val()||null;
+      try{ if(chatChannel==='kh') renderChatPinBar(); }catch(e){}
+      const pg=document.getElementById('chat-page');
+      if(pg && pg.style.display==='flex' && chatChannel==='kh'){ try{ renderChatMsgs(); }catch(e){} }
+    }, ()=>{ _khChatPin=null; });
   }
   _dcReattachGated = _attachGatedListeners; // cho onAuthStateChanged gọi nối lại NGAY khi đăng nhập
   _attachGatedListeners();
@@ -3014,6 +3042,11 @@ document.addEventListener('DOMContentLoaded',()=>{
 
 // ── NAVIGATION ──
 function showPage(pg, btn){
+  // v126: người P.KH thuần — "Thêm mới" mở phiếu P.KH; các trang kế toán chuyển hướng về tab P.KH
+  if(typeof _isKehoachOnly==='function' && _isKehoachOnly()){
+    if(pg==='add'){ try{ openKhModal(); }catch(e){} return; }
+    if(pg==='home'||pg==='report'||pg==='luong'){ pg='kh'; btn=document.getElementById('nav-kh'); }
+  }
   ['home','add','report','settings','plan','luong','kh'].forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display='none'; });
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+pg).style.display='block';
@@ -6745,6 +6778,27 @@ function _applyKhNav(){
   const b=document.getElementById('nav-kh');
   if(b) b.style.display = _khCanSee() ? '' : 'none';
 }
+// v126: người phòng Kế hoạch THUẦN (không phải D/H/Trang) — dùng app rút gọn
+function _isKehoachOnly(){
+  return currentDept==='kehoach' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang';
+}
+// v126: màn hình theo PHÒNG — người P.KH thuần chỉ thấy: P.KH · Thêm mới · Vật tư · Cài đặt (+ Chat Kế Hoạch).
+// 8 người kế toán + D/H/Trang: KHÔNG đổi gì (only=false → mọi nút hiện như cũ).
+function _applyDeptView(){
+  _applyKhNav();
+  const only=_isKehoachOnly();
+  const items=document.querySelectorAll('.bottom-nav .nav-item');
+  // thứ tự nút: 0 Danh sách · 1 Thêm mới · 2 Báo cáo · 3 Cài đặt · 4 Vật tư · 5 Lương · 6 P.KH
+  if(items.length>=7){
+    items[0].style.display = only?'none':'';
+    items[2].style.display = only?'none':'';
+    items[5].style.display = only?'none':'';
+  }
+  if(only){
+    const home=document.getElementById('page-home');
+    if(home && home.style.display!=='none'){ try{ showPage('kh', document.getElementById('nav-kh')); }catch(e){} }
+  }
+}
 
 function updateNavBadges(){
   const secs=[
@@ -6927,6 +6981,55 @@ function chatOpenRef(id){
   if(p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
+// ══ v126 CHAT 2 KÊNH ══ 'kt' = Nhóm Kế Toán (groupChat — dữ liệu CŨ, giữ nguyên) | 'kh' = Nhóm Kế Hoạch (khChat).
+// Mọi hàm chat bên dưới đọc/ghi qua bộ helper _c* nên tự chạy đúng kênh đang mở.
+let chatChannel='kt';
+let khChatMsgs=[], _khChatReadTs=0, _khChatPin=null, _khGcQuery=null, _khCrQuery=null;
+function _cIsKh(){ return chatChannel==='kh'; }
+function _cMsgs(){ return _cIsKh()?khChatMsgs:groupChatMsgs; }
+function _cSetMsgs(a){ if(_cIsKh()) khChatMsgs=a; else groupChatMsgs=a; }
+function _cChatNode(){ return _cIsKh()?'duyetchi/khChat':'duyetchi/groupChat'; }
+function _cPinNode(){ return _cIsKh()?'duyetchi/khChatPin':'duyetchi/chatPin'; }
+function _cReadNode(){ return _cIsKh()?'duyetchi/khChatRead/':'duyetchi/chatRead/'; }
+function _cPin(){ return _cIsKh()?_khChatPin:_chatPin; }
+function _cSetPin(v){ if(_cIsKh()) _khChatPin=v; else _chatPin=v; }
+function _cReadTs(){ return _cIsKh()?_khChatReadTs:_chatReadTs; }
+function _cSetReadTs(t){ if(_cIsKh()) _khChatReadTs=t; else _chatReadTs=t; }
+// Quyền kênh: Kế Toán = mọi người TRỪ phòng Kế hoạch thuần; Kế Hoạch = D/H/Trang + dept kehoach/both
+function _chatCanKT(){ return currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||currentDept!=='kehoach'; }
+function _chatCanKH(){ return _khCanSee(); }
+function _chatUnreadOf(msgs, readTs){
+  const myUid=(currentUser&&currentUser.uid)||''; const myName=getCurrentUserName();
+  return msgs.filter(m=>(m.ts||0)>readTs && !((m.uid&&m.uid===myUid)||(!m.uid&&m.by===myName))).length;
+}
+function switchChatChannel(ch){
+  if(ch==='kh' && !_chatCanKH()) return;
+  if(ch==='kt' && !_chatCanKT()) return;
+  chatChannel=ch;
+  _chatReplyTo=null; _chatAttachRef=null; _chatAttachImg=null;
+  try{ _chatRenderReply(); _chatRenderAttach(); }catch(e){}
+  _chatSyncHeader();
+  renderChatMsgs();
+  try{ renderChatPinBar(); }catch(e){}
+  markGroupChatRead();
+}
+// Cập nhật tiêu đề + 2 nút kênh (hiện nút nào theo quyền; badge chưa đọc riêng từng kênh)
+function _chatSyncHeader(){
+  const title=document.getElementById('chat-title');
+  if(title) title.textContent = _cIsKh() ? '💬 Nhóm Kế Hoạch' : '💬 Nhóm Kế Toán';
+  const row=document.getElementById('chat-ch-row');
+  if(row){
+    const canKT=_chatCanKT(), canKH=_chatCanKH();
+    row.style.display = (canKT && canKH) ? 'flex' : 'none';
+    const bKT=document.getElementById('chat-ch-kt'), bKH=document.getElementById('chat-ch-kh');
+    if(bKT){ bKT.style.background=_cIsKh()?'rgba(255,255,255,0.15)':'#fff'; bKT.style.color=_cIsKh()?'#fff':'var(--blue)'; }
+    if(bKH){ bKH.style.background=_cIsKh()?'#fff':'rgba(255,255,255,0.15)'; bKH.style.color=_cIsKh()?'#7c3aed':'#fff'; }
+    const nKT=_chatUnreadOf(groupChatMsgs,_chatReadTs), nKH=_chatUnreadOf(khChatMsgs,_khChatReadTs);
+    const eKT=document.getElementById('chat-ch-kt-badge'), eKH=document.getElementById('chat-ch-kh-badge');
+    if(eKT){ eKT.textContent=nKT>99?'99+':nKT; eKT.style.display=nKT>0?'inline-block':'none'; }
+    if(eKH){ eKH.textContent=nKH>99?'99+':nKH; eKH.style.display=nKH>0?'inline-block':'none'; }
+  }
+}
 function _chatRoleClr(r){ return r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155'; }
 function _chatHighlightTags(escapedText){
   let h=escapedText;
@@ -6940,11 +7043,11 @@ function _chatHighlightTags(escapedText){
 function renderChatMsgs(){
   const box=document.getElementById('chat-msgs'); if(!box) return;
   const myUid=(currentUser&&currentUser.uid)||''; const myName=getCurrentUserName();
-  if(!groupChatMsgs.length){ box.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--text-sub);font-size:13px">Chưa có tin nhắn nào.<br><small>Gửi tin đầu tiên cho cả nhóm nhé!</small></div>'; return; }
+  if(!_cMsgs().length){ box.innerHTML='<div style="text-align:center;padding:40px 16px;color:var(--text-sub);font-size:13px">Chưa có tin nhắn nào.<br><small>Gửi tin đầu tiên cho cả nhóm nhé!</small></div>'; return; }
   // v111: ẨN tin TRÙNG liền kề (cùng người + cùng nội dung + cùng phiếu, cách nhau <60s) — che các
   // tin gửi đúp đã lỡ nằm trên máy chủ (tin bất biến không xoá được).
   const _shown=[];
-  groupChatMsgs.forEach(m=>{
+  _cMsgs().forEach(m=>{
     const pr=_shown[_shown.length-1];
     if(pr && (pr.uid||pr.by)===(m.uid||m.by) && (pr.text||'')===(m.text||'') && (pr.ref||null)===(m.ref||null) && (pr.img||null)===(m.img||null) && Math.abs((m.ts||0)-(pr.ts||0))<60000) return;
     _shown.push(m);
@@ -6964,7 +7067,7 @@ function renderChatMsgs(){
     // v116: khung TRÍCH DẪN khi tin là trả lời tin khác — bấm vào cuộn tới tin gốc
     const reBox = m.re ? `<div onclick="event.stopPropagation();scrollToChatMsg('${esc((m.re.k||''))}')" style="border-left:3px solid var(--blue);background:${mine?'#e2eefc':'#f1f5f9'};border-radius:6px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer"><b style="color:var(--blue-dark)">${esc(m.re.by||'')}</b>: ${esc(m.re.text||'')}</div>` : '';
     // v117: tin ĐANG GHIM → nền/viền ĐỎ + nhãn 📌 cho dễ nhận biết (user chốt)
-    const isPinned = _chatPin && _chatPin.k && _chatPin.k===m._k;
+    const isPinned = _cPin() && _cPin().k && _cPin().k===m._k;
     return sep+`<div id="chatmsg-${esc(m._k||'')}" style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
       <div${m._k?` onclick="openChatMsgMenu('${esc(m._k)}')"`:''} style="background:${isPinned?'#fdecea':(mine?'#d2e7ff':'#fff')};border:1.5px solid ${isPinned?'#e24b4a':(mine?'#b6d7fb':'var(--gray-border)')};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
         ${isPinned?`<div style="font-size:9.5px;font-weight:800;color:#dc0000">📌 Tin đã ghim</div>`:''}
@@ -6980,7 +7083,7 @@ function renderChatMsgs(){
   // v115: nhấn giữ ảnh trong chat → menu copy/tải về (+ xóa nếu là tin của mình hoặc là D) — như mọi ảnh khác
   box.querySelectorAll('.chat-img-el').forEach(im=>{
     const k=im.dataset.k;
-    const mm=groupChatMsgs.find(x=>x._k===k);
+    const mm=_cMsgs().find(x=>x._k===k);
     if(!mm||!mm.img) return;
     const mineImg=(mm.uid&&mm.uid===myUid);
     const canDelImg=(currentRole==='dung'||mineImg)&&!!k;
@@ -6990,22 +7093,26 @@ function renderChatMsgs(){
 }
 function updateChatBadge(){
   const el=document.getElementById('chat-badge'); if(!el) return;
-  const myUid=(currentUser&&currentUser.uid)||''; const myName=getCurrentUserName();
-  const n=groupChatMsgs.filter(m=>(m.ts||0)>_chatReadTs && !((m.uid&&m.uid===myUid)||(!m.uid&&m.by===myName))).length;
+  const n=_chatUnreadOf(groupChatMsgs,_chatReadTs)+_chatUnreadOf(khChatMsgs,_khChatReadTs); // v126: tổng 2 kênh
   if(n>0){ el.textContent=n>99?'99+':n; el.style.display='block'; }
   else el.style.display='none';
+  try{ _chatSyncHeader(); }catch(e){}
 }
 function markGroupChatRead(){
-  if(!currentUser || !groupChatMsgs.length) return;
-  const last=groupChatMsgs[groupChatMsgs.length-1].ts||0;
-  if(last<=_chatReadTs) return;
-  _chatReadTs=last;
-  db.ref('duyetchi/chatRead/'+currentUser.uid).set(last).catch(()=>{});
+  if(!currentUser || !_cMsgs().length) return; // v126: theo kênh đang mở
+  const last=_cMsgs()[_cMsgs().length-1].ts||0;
+  if(last<=_cReadTs()) return;
+  _cSetReadTs(last);
+  db.ref(_cReadNode()+currentUser.uid).set(last).catch(()=>{});
   updateChatBadge();
 }
 function openChatPage(){
   const pg=document.getElementById('chat-page'); if(!pg) return;
   pg.style.display='flex';
+  // v126: chọn kênh mặc định theo quyền (người P.KH thuần → thẳng kênh Kế Hoạch)
+  if(!_chatCanKT()) chatChannel='kh';
+  else if(chatChannel==='kh' && !_chatCanKH()) chatChannel='kt';
+  _chatSyncHeader();
   const cb=document.getElementById('chat-clear-btn'); if(cb) cb.style.display = currentRole==='dung' ? 'block':'none'; // v113
   renderChatMsgs();
   _chatRenderAttach();
@@ -7015,25 +7122,25 @@ function openChatPage(){
 }
 // v113: THU HỒI/XÓA tin — D xóa được mọi tin; người khác chỉ tin CHÍNH MÌNH (luật server cũng chặn y vậy)
 function deleteChatMsg(k){
-  const m=groupChatMsgs.find(x=>x._k===k); if(!m) return;
+  const m=_cMsgs().find(x=>x._k===k); if(!m) return;
   const mine = m.uid && currentUser && m.uid===currentUser.uid;
   if(currentRole!=='dung' && !mine){ showToast('Chỉ xóa được tin của chính mình'); return; }
   if(!confirm('Thu hồi / xóa tin nhắn này?'+(mine?'':'\n(Tin của '+(m.by||'người khác')+')'))) return;
-  db.ref('duyetchi/groupChat/'+k).remove()
+  db.ref(_cChatNode()+'/'+k).remove()
     .then(()=>showToast('🗑 Đã xóa tin nhắn'))
     .catch(err=>showToast('❌ Không xóa được: '+err.message));
-  groupChatMsgs=groupChatMsgs.filter(x=>x._k!==k); // ẩn ngay, server sẽ đồng bộ lại
+  _cSetMsgs(_cMsgs().filter(x=>x._k!==k)); // ẩn ngay, server sẽ đồng bộ lại
   renderChatMsgs(); updateChatBadge();
 }
 // v113: chỉ Dũng — xóa SẠCH cả nhóm chat (luật cấp cha chỉ cho role dung)
 function clearAllChat(){
   if(currentRole!=='dung'){ showToast('Chỉ Dũng xóa được tất cả'); return; }
-  if(!confirm('XÓA TOÀN BỘ tin nhắn của nhóm chat?')) return;
+  if(!confirm('XÓA TOÀN BỘ tin nhắn của '+(_cIsKh()?'Nhóm Kế Hoạch':'Nhóm Kế Toán')+'?')) return;
   if(!confirm('Chắc chắn? Xóa rồi KHÔNG khôi phục được.')) return;
-  db.ref('duyetchi/groupChat').remove()
+  db.ref(_cChatNode()).remove()
     .then(()=>showToast('🗑 Đã xóa toàn bộ tin nhắn'))
     .catch(err=>showToast('❌ Không xóa được: '+err.message));
-  groupChatMsgs=[]; renderChatMsgs(); updateChatBadge();
+  _cSetMsgs([]); renderChatMsgs(); updateChatBadge();
 }
 function closeChatPage(){
   const pg=document.getElementById('chat-page'); if(pg) pg.style.display='none';
@@ -7045,7 +7152,7 @@ function sendGroupMsg(){
   const text=((inp&&inp.value)||'').trim();
   if(!text && !_chatAttachRef && !_chatAttachImg){ showToast('Nhập tin nhắn, gắn phiếu hoặc chọn ảnh trước đã'); return; }
   // v111: CHẶN GỬI ĐÚP (bấm Gửi 2 lần liền lúc mạng chậm → tin trùng 2 lần)
-  const _dupLast=[...groupChatMsgs].reverse().find(m=>m.uid&&m.uid===currentUser.uid);
+  const _dupLast=[..._cMsgs()].reverse().find(m=>m.uid&&m.uid===currentUser.uid);
   if(_dupLast && (_dupLast.text||'')===(text||'📋') && (_dupLast.ref||null)===(_chatAttachRef||null) && (_dupLast.img||null)===(_chatAttachImg||null) && Date.now()-(_dupLast.ts||0)<5000){
     if(inp) inp.value='';
     _chatAttachRef=null; _chatAttachImg=null; _chatRenderAttach();
@@ -7056,8 +7163,8 @@ function sendGroupMsg(){
   if(_chatAttachRef) msg.ref=_chatAttachRef;
   if(_chatAttachImg) msg.img=_chatAttachImg; // v115
   if(_chatReplyTo) msg.re={ by:_chatReplyTo.by, text:_chatReplyTo.text, k:_chatReplyTo.k||'' }; // v116: trích dẫn trả lời
-  db.ref('duyetchi/groupChat').push(msg).catch(err=>{ showToast('⚠️ Không gửi được — kiểm tra mạng: '+err.message); });
-  groupChatMsgs.push(msg); // hiện ngay, bản server sẽ thay thế khi đồng bộ về
+  db.ref(_cChatNode()).push(msg).catch(err=>{ showToast('⚠️ Không gửi được — kiểm tra mạng: '+err.message); });
+  _cMsgs().push(msg); // hiện ngay, bản server sẽ thay thế khi đồng bộ về
   if(inp) inp.value='';
   _chatAttachRef=null; _chatAttachImg=null; _chatRenderAttach();
   _chatReplyTo=null; _chatRenderReply(); // v116
@@ -7065,8 +7172,10 @@ function sendGroupMsg(){
   renderChatMsgs();
   markGroupChatRead();
   try{
-    const roles=['dung','hien','trang','other'].filter(r=>r!==(currentRole||'other'));
-    sendPushNotif('💬 '+me+' (Chat nhóm)', (text||'Đã gửi một phiếu').slice(0,90), roles);
+    // v126: kênh Kế Hoạch chỉ đẩy cho D/H/Trang (không đẩy nhóm 'other' — tránh lộ nội dung sang máy
+    // người kế toán thường; thành viên P.KH thấy số tin mới khi mở app)
+    const roles=(_cIsKh()?['dung','hien','trang']:['dung','hien','trang','other']).filter(r=>r!==(currentRole||'other'));
+    sendPushNotif('💬 '+me+' ('+(_cIsKh()?'Nhóm Kế Hoạch':'Nhóm Kế Toán')+')', (text||'Đã gửi một phiếu').slice(0,90), roles);
   }catch(e){}
 }
 // ── gắn phiếu ──
@@ -7130,7 +7239,7 @@ function forwardModalImgToChat(ev){
 }
 // v115: mở ảnh trong chat bằng đúng màn xem ảnh lớn (zoom/copy/tải như mọi nơi)
 function openChatImg(k){
-  const m=groupChatMsgs.find(x=>x._k===k); if(!m||!m.img) return;
+  const m=_cMsgs().find(x=>x._k===k); if(!m||!m.img) return;
   modalProposalId=null; modalKind='chat';
   modalImages=[m.img]; modalIdx=0;
   showModalImg();
@@ -7139,7 +7248,7 @@ function openChatImg(k){
 
 // ══ v116: MENU TIN NHẮN (bấm vào tin) — Trả lời / Chia sẻ / Copy / Ghim / Chi tiết / Xóa ══
 function openChatMsgMenu(k){
-  const m=groupChatMsgs.find(x=>x._k===k); if(!m) return;
+  const m=_cMsgs().find(x=>x._k===k); if(!m) return;
   _chatMenuKey=k;
   document.getElementById('chat-menu-preview').textContent=(m.by||'')+': '+((m.text&&m.text!=='📋')?m.text:(m.img?'📷 Ảnh':'📋 Phiếu'));
   const mine=m.uid&&currentUser&&m.uid===currentUser.uid;
@@ -7147,7 +7256,7 @@ function openChatMsgMenu(k){
   document.getElementById('chat-msg-menu').style.display='flex';
 }
 function closeChatMsgMenu(){ document.getElementById('chat-msg-menu').style.display='none'; _chatMenuKey=null; }
-function _chatMenuMsg(){ return groupChatMsgs.find(x=>x._k===_chatMenuKey); }
+function _chatMenuMsg(){ return _cMsgs().find(x=>x._k===_chatMenuKey); }
 function chatMenuReply(){
   const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
   _chatReplyTo={ k:m._k, by:m.by||'', text:((m.text&&m.text!=='📋')?m.text:(m.img?'📷 Ảnh':'📋 Phiếu')).slice(0,120) };
@@ -7169,14 +7278,14 @@ function chatMenuShare(){
 function chatMenuPin(){
   const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m||!m._k) return;
   const text=((m.text&&m.text!=='📋')?m.text:(m.img?'📷 Ảnh':'📋 Phiếu')).slice(0,300);
-  db.ref('duyetchi/chatPin').set({ k:m._k, by:m.by||'', text:text, ts:Date.now() })
+  db.ref(_cPinNode()).set({ k:m._k, by:m.by||'', text:text, ts:Date.now() })
     .then(()=>showToast('📌 Đã ghim tin nhắn')).catch(err=>showToast('❌ Không ghim được: '+err.message));
-  _chatPin={k:m._k,by:m.by||'',text:text,ts:Date.now()}; renderChatPinBar(); renderChatMsgs(); // v117: đổi màu đỏ ngay
+  _cSetPin({k:m._k,by:m.by||'',text:text,ts:Date.now()}); renderChatPinBar(); renderChatMsgs(); // v117: đổi màu đỏ ngay
 }
 function unpinChatMsg(){
   if(!confirm('Bỏ ghim tin nhắn này?')) return;
-  db.ref('duyetchi/chatPin').remove().catch(()=>{});
-  _chatPin=null; renderChatPinBar(); renderChatMsgs(); // v117: trả màu thường ngay
+  db.ref(_cPinNode()).remove().catch(()=>{});
+  _cSetPin(null); renderChatPinBar(); renderChatMsgs(); // v117: trả màu thường ngay
 }
 function chatMenuDetail(){
   const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
@@ -7186,9 +7295,10 @@ function chatMenuDetail(){
 function chatMenuDelete(){ const k=_chatMenuKey; closeChatMsgMenu(); if(k) deleteChatMsg(k); }
 function renderChatPinBar(){
   const bar=document.getElementById('chat-pin-bar'); if(!bar) return;
-  if(!_chatPin || !_chatPin.k){ bar.style.display='none'; return; }
-  document.getElementById('chat-pin-content').innerHTML=`📌 <b>${esc(_chatPin.by||'')}</b>: ${esc(_chatPin.text||'')}`;
-  document.getElementById('chat-pin-content').onclick=()=>scrollToChatMsg(_chatPin.k);
+  const pv=_cPin(); // v126: ghim theo kênh đang mở
+  if(!pv || !pv.k){ bar.style.display='none'; return; }
+  document.getElementById('chat-pin-content').innerHTML=`📌 <b>${esc(pv.by||'')}</b>: ${esc(pv.text||'')}`;
+  document.getElementById('chat-pin-content').onclick=()=>scrollToChatMsg(pv.k);
   bar.style.display='flex';
 }
 function scrollToChatMsg(k){
@@ -7212,7 +7322,8 @@ function closeChatPick(){ document.getElementById('chat-pick-modal').style.displ
 function renderChatPick(){
   const el=document.getElementById('chat-pick-list'); if(!el) return;
   const q=((document.getElementById('chat-pick-search')||{}).value||'').trim().toLowerCase();
-  let items=proposals.slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  // v126: kênh Kế Hoạch chỉ gắn được phiếu P.KH; kênh Kế Toán không lộ phiếu P.KH
+  let items=proposals.filter(p=>_cIsKh() ? p.kind==='kh' : p.kind!=='kh').sort((a,b)=>(b.ts||0)-(a.ts||0));
   if(q) items=items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q));
   items=items.slice(0,30);
   if(!items.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Không có phiếu nào khớp</div>'; return; }
