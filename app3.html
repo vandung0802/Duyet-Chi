@@ -1355,7 +1355,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v135';
+const APP_VERSION = '20260803-v136';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3661,6 +3661,8 @@ function renderBtnShare(p){
 // Chỉ hiện khi phiếu CHƯA duyệt xong (chưa đủ cả D và H duyệt) và chưa từ chối / chưa chuyển.
 function canRemind(p){
   if(p.status==='rejected' || p.status==='transferred') return false;
+  // v136: chỉ CHỦ phiếu (hoặc D/H/T) mới giục được — chống bấm giục đề xuất của người khác (user báo).
+  if(!_canEditDelete(p)) return false;
   // Chưa duyệt xong → giục duyệt (như cũ). ĐÃ duyệt xong cả D,H nhưng CHƯA chuyển → vẫn cho bấm 🔁
   // để GIỤC CHUYỂN (nhắc Trang) + đẩy phiếu lên đầu — trước đây nút biến mất khi D,H duyệt xong,
   // không có cách nào nhắc T khi T quên chuyển (user yêu cầu 05/07/2026).
