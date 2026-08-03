@@ -1355,7 +1355,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v132';
+const APP_VERSION = '20260803-v133';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5275,10 +5275,12 @@ async function renderApproveList(){
     const rl = esc(u.role || 'other');
     const email = (u.email||'').toLowerCase();
     const emailShown = email ? esc(u.email) : '(chưa ghi email — sẽ hiện sau khi họ mở app bản mới)';
-    const isKnown = email && KNOWN_EMAILS.indexOf(email) >= 0;
-    // Email lạ (không nằm trong danh sách người nhà đã biết) → tô đỏ cảnh báo
-    const emailColor = !email ? 'var(--text-sub)' : (isKnown ? 'var(--text-sub)' : '#dc2626');
-    const strangerFlag = (email && !isKnown) ? ' <span style="color:#dc2626;font-weight:700">⚠️ email lạ</span>' : '';
+    // v133: TIN CẬY = có trong danh sách người nhà cũ HOẶC ĐÃ ĐƯỢC DUYỆT (D bấm "Cho xem" = đã vouch).
+    // Trước đây mọi email mới đều đỏ "email lạ" → thêm người mới thật (VD P.KH) cũng bị báo động giả.
+    // Nay chỉ cảnh báo tài khoản CHƯA duyệt có email lạ (đúng ca cần soi: người ngoài tự đăng ký).
+    const trusted = (email && KNOWN_EMAILS.indexOf(email) >= 0) || ok;
+    const emailColor = !email ? 'var(--text-sub)' : (trusted ? 'var(--text-sub)' : '#dc2626');
+    const strangerFlag = (email && !trusted) ? ' <span style="color:#dc2626;font-weight:700">⚠️ email lạ — chưa duyệt</span>' : '';
     const lastLogin = u.lastLogin ? fmtFull(u.lastLogin) : '—';
     // v124 P.KH: phòng của tài khoản — thiếu trường dept coi như Kế toán (8 người hiện tại không đổi gì)
     const isKH = u.dept === 'kehoach';
