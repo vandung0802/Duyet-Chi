@@ -1355,7 +1355,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v133';
+const APP_VERSION = '20260803-v134';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2077,7 +2077,8 @@ function initAuth(){
       const cached = localStorage.getItem('dc_role_'+user.uid);
       if(cached){
         try {
-          const { role, name } = JSON.parse(cached);
+          const { role, name, dept } = JSON.parse(cached);
+          currentDept = (dept==='kehoach'||dept==='both') ? dept : 'ketoan'; // v134: đặt phòng từ cache NGAY, tránh chớp màn "chờ duyệt"
           if(role){ currentUserName = name||''; setRole(role); trackOnline(user.uid, name||user.email, role); }
         } catch(e){}
       }
@@ -2115,7 +2116,7 @@ function initAuth(){
       document.getElementById('role-screen').style.display='none';
       if(role){
         // Lưu cache
-        localStorage.setItem('dc_role_'+user.uid, JSON.stringify({ role, name: currentUserName }));
+        localStorage.setItem('dc_role_'+user.uid, JSON.stringify({ role, name: currentUserName, dept: currentDept }));
         setRole(role);
         trackOnline(user.uid, currentUserName||user.email, role);
         // v82: ghi EMAIL + LẦN ĐĂNG NHẬP gần nhất vào hồ sơ (để Dũng soi tài khoản lạ ở Cài đặt).
@@ -2729,23 +2730,37 @@ function initFirebaseSync(){
       if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
         const _cu = firebase.auth().currentUser;
         if(!_cu) return; // chưa/không đăng nhập (VD vừa đăng xuất) → khỏi retry, đăng nhập sẽ tự nối lại
-        // v125/v127 P.KH: người PHÒNG KẾ HOẠCH thuần bị luật CHẶN đọc kho kế toán là ĐÚNG THIẾT KẾ
-        // → coi kho kế toán như rỗng, app vẫn vào bình thường với kho P.KH của họ.
-        if(currentDept==='kehoach' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){
-          _proposalsData={}; _proposalsLoaded=true;
-          hidePendingApprovalScreen(); _mergeAndRender(); return;
-        }
-        const _u = (_cu.email||'').toLowerCase();
-        const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
-        if(_isPriv){
-          // 3 người nhà LUÔN được đọc theo luật → denied chỉ là lỗi tạm (token chưa gắn) → nối lại nhanh
-          if(_propRetryCount++ < 10) setTimeout(_attachGatedListeners, 3000);
-          else showToast('⚠️ Không đọc được dữ liệu — vuốt tắt app rồi mở lại giúp.');
-        } else {
-          showPendingApprovalScreen();
-          // Người thường: nối lại chậm (30s) để khi Dũng bấm "Cho xem" là dữ liệu tự về, không cần tải lại
-          setTimeout(_attachGatedListeners, 30000);
-        }
+        // v134: ĐỌC HỒ SƠ CỦA CHÍNH MÌNH (userRoles/$uid — luật cho phép ai đăng nhập cũng đọc) để quyết
+        // định ĐÚNG, tránh ĐUA với biến currentDept chưa kịp cập nhật lúc listener vừa gắn. Trước đây khi
+        // Quy (phòng Kế hoạch) đăng nhập, listener chặn chạy TRƯỚC khi biết Quy là P.KH → tưởng "chưa duyệt"
+        // → hiện màn "chờ được duyệt" (lỗi user báo).
+        db.ref('duyetchi/userRoles/'+_cu.uid).get().then(function(s){
+          const v = (s && s.exists()) ? (s.val()||{}) : {};
+          const _dept = (v.dept==='kehoach'||v.dept==='both') ? v.dept : 'ketoan';
+          const _role = v.role;
+          // Người PHÒNG KẾ HOẠCH thuần: luật CHẶN đọc kho kế toán là ĐÚNG THIẾT KẾ → coi rỗng, vào bình thường.
+          if(_dept==='kehoach' && _role!=='dung' && _role!=='hien' && _role!=='trang'){
+            currentDept='kehoach';
+            _proposalsData={}; _proposalsLoaded=true;
+            hidePendingApprovalScreen(); _mergeAndRender(); return;
+          }
+          const _u = (_cu.email||'').toLowerCase();
+          const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
+          if(_isPriv || v.approved === true){
+            // Người có quyền đọc (3 người nhà) HOẶC đã được duyệt → denied chỉ là lỗi TẠM (token chưa gắn
+            // kịp) → nối lại nhanh, TUYỆT ĐỐI không dọa "chờ duyệt".
+            if(_propRetryCount++ < 10) setTimeout(_attachGatedListeners, 3000);
+            else showToast('⚠️ Không đọc được dữ liệu — vuốt tắt app rồi mở lại giúp.');
+          } else {
+            // Thật sự CHƯA được duyệt (approved !== true) → hiện màn chờ; nối lại chậm để khi D bấm "Cho xem"
+            // là dữ liệu tự về, không cần tải lại trang.
+            showPendingApprovalScreen();
+            setTimeout(_attachGatedListeners, 30000);
+          }
+        }).catch(function(){
+          // Không đọc nổi cả hồ sơ mình (mạng lỗi) → thử nối lại nhẹ, đừng dọa chờ duyệt oan.
+          if(_propRetryCount++ < 10) setTimeout(_attachGatedListeners, 5000);
+        });
       }
     });
 
