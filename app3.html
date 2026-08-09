@@ -757,6 +757,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div id="admin-luongsheet-section" style="display:none;margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px">
         <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">📊 Sheet "Tổng hợp Lương" (chỉ D)</div>
         <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Phiếu ứng lương tự cập nhật sang sheet này mỗi khi có thay đổi. Nút dưới để đồng bộ LẠI toàn bộ (lần đầu, hoặc khi nghi thiếu dòng). Lưu ý: phải dán code Apps Script bản mới nhất trước.</div>
+        <button onclick="syncAllExpenseToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#1a56db;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-bottom:6px">🔄 Đồng bộ lại phiếu chi → Google Sheet</button>
+        <br>
         <button onclick="syncAllLuongToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Lương → Google Sheet</button>
         <button onclick="syncAllKhToSheet()" style="margin-left:6px;padding:6px 12px;font-size:12px;font-weight:700;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ P.KH → Google Sheet</button>
       </div>
@@ -1371,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v143';
+const APP_VERSION = '20260803-v144';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3912,8 +3914,7 @@ function undoTransfer(id){
   // Vẽ lại thẻ NGAY (không chờ debounce)
   _cardCache.delete(id);
   renderProposals(); renderStats(); updateNotifBadge();
-  syncStatusToSheet(id, p.status);
-  syncTransferToSheet(p);
+  syncMainFull(p, false, true); // v144: ghi lại CẢ DÒNG (trạng thái + đã chuyển + mọi cột) → tự vá nếu lần đồng bộ trước bị rớt; withLegacy=tương thích script cũ
   renderAll();
   showToast(`↩ Đã hoàn tác lần chuyển ${fmtVND(removed.amount)}`);
 }
@@ -4182,8 +4183,7 @@ function confirmTransferAmount(){
   // Vẽ lại thẻ NGAY (không chờ debounce) — tránh thẻ hiện số cũ một nhịp sau khi chuyển
   _cardCache.delete(id);
   renderProposals(); renderStats(); updateNotifBadge();
-  syncStatusToSheet(id, p.status);
-  syncTransferToSheet(p);
+  syncMainFull(p, false, true); // v144: ghi lại CẢ DÒNG (trạng thái + đã chuyển + mọi cột) → tự vá nếu lần đồng bộ trước bị rớt; withLegacy=tương thích script cũ
   renderAll();
   closeTransferAmountModal();
   const remaining = officialApproved - totalAfter;
@@ -6284,6 +6284,66 @@ function syncAllKhToSheet(){
   }, i*400));
 }
 
+// ══ v144: đồng bộ TOÀN DÒNG 1 phiếu chi (kế toán) → upsert theo id (không trùng, tự vá dòng thiếu) ══
+// Ghi đủ 18 cột từ trạng thái HIỆN TẠI của phiếu → sheet luôn khớp app dù trước đó có lần đồng bộ nào bị rớt.
+function syncMainFull(p, skipReport, withLegacy){
+  if(!sheetUrl || !p) return;
+  if(p.kind==='kh'){ syncKhToSheet(p); return; }         // phiếu P.KH → sheet "Chi Kế hoạch"
+  if(p.kind==='salary'){ syncLuongToSheet(p); return; }  // ứng lương → sheet "Tổng hợp Lương"
+  const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
+  const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
+  const history  = Array.isArray(p.transfers) ? p.transfers.map((t,i)=>`Lần ${i+1}: ${fmtVND(t.amount)} lúc ${new Date(t.ts).toLocaleString('vi-VN')}`).join(' | ') : '';
+  const off = getOfficialApprovedAmount(p)||0, tr = getTotalTransferred(p);
+  let st;
+  if(p.status==='rejected') st='Từ chối';
+  else if(off>0 && tr>=off-0.0001) st='Đã chuyển';
+  else if(p.approvedH || p.approvedD) st='Đã duyệt';
+  else st='Chờ duyệt';
+  const params = new URLSearchParams({
+    action:'upsertFull', id:p.id,
+    ts: p.ts ? new Date(p.ts).toLocaleString('vi-VN') : '',
+    desc:p.desc||'', person:p.person||'', site:p.site||'',
+    amount:p.amount||'', note:p.note||'',
+    dHistory, hHistory, status:st, rejectedBy:p.rejectedBy||'',
+    dAmount: approvedAmtOf(p,'D')||'', hAmount: approvedAmtOf(p,'H')||'',
+    totalTransferred: tr||'', history,
+    officialAmount: off||''
+  });
+  if(skipReport) params.set('skipReport','1');
+  var s=document.createElement('script');
+  s.src=sheetUrl+'?'+params.toString();
+  document.head.appendChild(s);
+  setTimeout(()=>s.remove(),4000);
+  // TƯƠNG THÍCH NGƯỢC: khi gọi từ luồng chuyển tiền (withLegacy), gửi thêm lệnh CŨ để nếu code Apps
+  // Script CHƯA có upsertFull thì sheet vẫn cập nhật đúng như trước (cùng giá trị → không xung đột).
+  if(withLegacy){
+    var pr2=new URLSearchParams({action:'updateTransfer', id:p.id, totalTransferred: tr||'', history});
+    var s2=document.createElement('script'); s2.src=sheetUrl+'?'+pr2.toString(); document.head.appendChild(s2); setTimeout(()=>s2.remove(),4000);
+    var lbl={pending:'Chờ duyệt',approved:'Đã duyệt',transferred:'Đã chuyển',rejected:'Từ chối'};
+    var pr3=new URLSearchParams({action:'updateStatus', id:p.id, status: lbl[p.status]||st});
+    var s3=document.createElement('script'); s3.src=sheetUrl+'?'+pr3.toString(); document.head.appendChild(s3); setTimeout(()=>s3.remove(),4000);
+  }
+}
+// Nút Cài đặt (chỉ D): đẩy LẠI toàn bộ phiếu chi kế toán để sheet khớp 100% với app (vá các dòng đồng bộ thiếu trước đây)
+function syncAllExpenseToSheet(){
+  if(!sheetUrl){ showToast('Chưa cấu hình Google Sheet'); return; }
+  const list=proposals.filter(p=>p.kind!=='salary' && p.kind!=='kh');
+  if(!list.length){ showToast('Chưa có phiếu chi nào'); return; }
+  const mins = Math.ceil(list.length*0.35/60);
+  if(!confirm('Đồng bộ lại '+list.length+' phiếu chi sang Google Sheet?\n(mất ~'+mins+' phút, KHÔNG làm trùng dòng — giữ app mở tới khi xong)\n\nLưu ý: phải đã dán code Apps Script bản mới nhất (có lệnh upsertFull).')) return;
+  showToast('⏳ Đang đồng bộ '+list.length+' phiếu chi... giữ app mở ~'+mins+' phút');
+  list.forEach((p,i)=>setTimeout(()=>{
+    syncMainFull(p, true); // skipReport: không dựng lại báo cáo mỗi dòng cho nhẹ máy chủ
+    if(i===list.length-1){
+      // dòng cuối đã gửi → chờ chút cho các dòng kịp ghi rồi dựng lại báo cáo 1 lần
+      setTimeout(()=>{
+        var s=document.createElement('script'); s.src=sheetUrl+'?action=resyncReport&id=_'; document.head.appendChild(s); setTimeout(()=>s.remove(),8000);
+        showToast('✅ Đã đẩy '+list.length+' phiếu chi. Đợi ~15s rồi mở sheet kiểm tra báo cáo "Đã chuyển".');
+      }, 2500);
+    }
+  }, i*350));
+}
+
 function syncToSheet(p){
   if(!sheetUrl) return;
   if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
@@ -6484,6 +6544,13 @@ function doGet(e){
   var act=e.parameter.action;
   if(act==='add'){
     sh.appendRow(['', "'"+e.parameter.id, e.parameter.ts, e.parameter.desc, e.parameter.person, e.parameter.site, e.parameter.amount, e.parameter.note, '', '', 'Chờ duyệt', '', '', '', '', '', '', '']);
+  } else if(act==='upsertFull'){
+    // v144: ghi-hoặc-cập-nhật CẢ DÒNG theo id (không trùng, tự vá dòng thiếu). Dùng cho nút "Đồng bộ lại phiếu chi".
+    var fv=['', "'"+e.parameter.id, e.parameter.ts||'', e.parameter.desc||'', e.parameter.person||'', e.parameter.site||'', e.parameter.amount||'', e.parameter.note||'', e.parameter.dHistory||'', e.parameter.hHistory||'', e.parameter.status||'Chờ duyệt', e.parameter.rejectedBy||'', now, e.parameter.dAmount||'', e.parameter.hAmount||'', e.parameter.totalTransferred||'', e.parameter.history||'', e.parameter.officialAmount||''];
+    if(rowIdx>0){ sh.getRange(rowIdx,1,1,18).setValues([fv]); } else { sh.appendRow(fv); }
+    if(e.parameter.skipReport==='1'){ return ContentService.createTextOutput('ok'); } // bỏ dựng báo cáo mỗi dòng cho nhanh; cuối cùng gọi resyncReport 1 lần
+  } else if(act==='resyncReport'){
+    // v144: không đổi dữ liệu, chỉ rơi xuống cuối để sort + đánh STT + dựng lại báo cáo 1 lần (sau khi bulk upsertFull)
   } else if(act==='updateStatus'){
     if(rowIdx>0){ sh.getRange(rowIdx,11).setValue(e.parameter.status); sh.getRange(rowIdx,13).setValue(now); }
   } else if(act==='updateApproval'){
