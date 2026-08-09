@@ -891,9 +891,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="card-body" style="padding:10px 12px">
         <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Ghi trước nhu cầu vật tư sắp tới cho từng công trình (bê tông, thép, cát...) để chủ động chuẩn bị — đây chỉ là kế hoạch nhắc nhở, KHÔNG phải đề xuất chi tiền.</p>
         <button class="btn-full btn-primary-full" onclick="openPlanModal()" style="margin-bottom:10px">➕ Thêm kế hoạch</button>
-        <select id="plan-filter-site" onchange="renderPlans()" style="width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
-          <option value="">🏗 Tất cả công trình</option>
-        </select>
+        <!-- v141: bộ lọc 2 ô Người phụ trách + Công trình (giống tab P.KH) -->
+        <div style="display:flex;gap:6px">
+          <select id="plan-filter-person" onchange="renderPlans()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+            <option value="">👤 Tất cả người</option>
+          </select>
+          <select id="plan-filter-site" onchange="renderPlans()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+            <option value="">🏗 Tất cả CT</option>
+          </select>
+        </div>
       </div>
     </div>
     <div id="plan-list"></div>
@@ -939,8 +945,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           </div>
           <button onclick="salaryMonthShift(1)" style="width:38px;height:38px;border-radius:10px;border:1.5px solid var(--gray-border);background:#fff;font-size:18px;color:var(--text);cursor:pointer">›</button>
         </div>
-        <!-- v103: tìm theo tên + chọn cách xếp + gạt Thẻ/Bảng (PA4 user chốt) -->
-        <input id="sal-adv-search" type="text" name="dc-sal-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm theo tên nhân viên..." oninput="renderSalaryAdvances()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
+        <!-- v141: bộ lọc 2 ô Người + Nhóm (giống tab P.KH) thay ô gõ tìm tên -->
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <select id="sal-filter-person" onchange="renderSalaryAdvances()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+            <option value="">👤 Tất cả người</option>
+          </select>
+          <select id="sal-filter-group" onchange="renderSalaryAdvances()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+            <option value="">🏗 Tất cả nhóm</option>
+          </select>
+        </div>
         <div style="display:flex;gap:6px;margin-bottom:10px">
           <select id="sal-adv-sort" onchange="renderSalaryAdvances()" style="flex:1;padding:7px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
             <option value="time">⏱ Mới nhất trên cùng</option>
@@ -1358,7 +1371,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v140';
+const APP_VERSION = '20260803-v141';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5075,7 +5088,7 @@ function renderPlanStats(){
   const filterSel = document.getElementById('plan-stats-filter-site');
   if(filterSel){
     const cur = filterSel.value;
-    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    filterSel.innerHTML = '<option value="">🏗 Tất cả CT</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     filterSel.value = cur;
   }
   const filterSite = filterSel ? filterSel.value : '';
@@ -5142,11 +5155,20 @@ function renderPlans(){
   const filterSel = document.getElementById('plan-filter-site');
   if(filterSel){
     const cur = filterSel.value;
-    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    filterSel.innerHTML = '<option value="">🏗 Tất cả CT</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     filterSel.value = cur;
   }
   const filterSite = filterSel ? filterSel.value : '';
-  let items = plans.filter(p=>!filterSite || p.site===filterSite);
+  // v141: ô lọc NGƯỜI phụ trách (assignee) — nạp từ danh sách kế hoạch, giữ lựa chọn
+  const perSel=document.getElementById('plan-filter-person');
+  let filterPerson='';
+  if(perSel){
+    filterPerson=perSel.value||'';
+    const people=[...new Set(plans.map(p=>(p.assignee||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    perSel.innerHTML='<option value="">👤 Tất cả người</option>'+people.map(n=>`<option value="${esc(n)}"${filterPerson===n?' selected':''}>${esc(n)}</option>`).join('');
+    if(filterPerson && !people.includes(filterPerson)) filterPerson='';
+  }
+  let items = plans.filter(p=>(!filterSite || p.site===filterSite) && (!filterPerson || (p.assignee||'').trim()===filterPerson));
   if(_planStatFilter) items=items.filter(p=>p.status===_planStatFilter); // v140: lọc theo ô thống kê
   items.sort((a,b)=>(a.neededDate||0)-(b.neededDate||0));
   if(!items.length){
@@ -7844,8 +7866,24 @@ function renderSalaryAdvances(){
   if(!items.length){ list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có khoản ứng nào trong tháng này<br><small>Nhấn "➕ Đề xuất ứng lương"</small></div>'; return; }
   // v103 (PA4): lọc theo TÊN nhân viên + chọn cách xếp + 2 chế độ Thẻ/Bảng.
   _salSyncViewBtns(); // đồng bộ màu nút Thẻ/Bảng theo chế độ đã lưu trên máy
-  const _q=((document.getElementById('sal-adv-search')||{}).value||'').trim().toLowerCase();
-  let shown=_q ? items.filter(p=>(p.person||'').toLowerCase().includes(_q)) : items.slice();
+  // v141: 2 ô lọc Người + Nhóm — nạp từ khoản ứng của THÁNG này, giữ lựa chọn
+  const perSel=document.getElementById('sal-filter-person'), grpSel=document.getElementById('sal-filter-group');
+  let fPer='', fGrp='';
+  if(perSel){
+    fPer=perSel.value||'';
+    const people=[...new Set(items.map(p=>(p.person||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    perSel.innerHTML='<option value="">👤 Tất cả người</option>'+people.map(n=>`<option value="${esc(n)}"${fPer===n?' selected':''}>${esc(n)}</option>`).join('');
+    if(fPer && !people.includes(fPer)) fPer='';
+  }
+  if(grpSel){
+    fGrp=grpSel.value||'';
+    const groups=[...new Set(items.map(p=>(p.site||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    grpSel.innerHTML='<option value="">🏗 Tất cả nhóm</option>'+groups.map(g=>`<option value="${esc(g)}"${fGrp===g?' selected':''}>${esc(g)}</option>`).join('');
+    if(fGrp && !groups.includes(fGrp)) fGrp='';
+  }
+  let shown=items.slice();
+  if(fPer) shown=shown.filter(p=>(p.person||'').trim()===fPer);
+  if(fGrp) shown=shown.filter(p=>(p.site||'').trim()===fGrp);
   if(_lgStatFilter && _lgStatFilter!=='all') shown=shown.filter(p=>_expenseMatch(p,_lgStatFilter)); // v140: lọc theo ô thống kê
   const _sortMode=((document.getElementById('sal-adv-sort')||{}).value)||'time';
   if(_sortMode==='name') shown.sort((a,b)=> (a.person||'').localeCompare(b.person||'','vi') || (b.ts||0)-(a.ts||0));
@@ -7912,7 +7950,10 @@ function jumpToSalaryAdvance(id){
   if(p.month) salaryMonth=p.month;
   // v103: về chế độ THẺ + bỏ lọc tìm kiếm để chắc chắn thấy được phiếu cần tới
   salViewMode='card'; try{ localStorage.setItem('dc_sal_view','card'); }catch(e){}
-  const _s=document.getElementById('sal-adv-search'); if(_s) _s.value='';
+  // v141: bỏ lọc (2 dropdown + ô thống kê) để chắc chắn thấy phiếu cần tới
+  _lgStatFilter='all';
+  const _fp=document.getElementById('sal-filter-person'); if(_fp) _fp.value='';
+  const _fg=document.getElementById('sal-filter-group'); if(_fg) _fg.value='';
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
   try{ salSetView('card'); }catch(e){}
   setTimeout(()=>{
@@ -8035,8 +8076,12 @@ function showSalaryStatList(which, from){
 
 // ── v103 TK THEO TÊN: lũy kế từng nhân viên (tìm + xếp; chạm 2 lần → mở Ứng lương lọc đúng người) ──
 function salNameJump(name){
-  const s=document.getElementById('sal-adv-search'); if(s) s.value=name||'';
+  // v141: đặt SẴN ô lọc Người = tên vừa bấm (thay ô tìm cũ). Dropdown được nạp trong renderSalaryAdvances,
+  // nên đặt value TRƯỚC rồi mở tab (renderSalaryAdvances sẽ giữ đúng lựa chọn nếu tên có trong tháng).
+  _lgStatFilter='all';
+  const g=document.getElementById('sal-filter-group'); if(g) g.value='';
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
+  const s=document.getElementById('sal-filter-person'); if(s && name){ s.value=name; renderSalaryAdvances(); }
 }
 function attachRowDoubleTap(container, selector){
   let lastTap=0, lastTarget=null;
