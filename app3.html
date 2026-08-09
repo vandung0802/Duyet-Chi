@@ -1358,7 +1358,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v139';
+const APP_VERSION = '20260803-v140';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3315,7 +3315,7 @@ function renderStats(){
 
 // v139: DẢI 7 Ô THỐNG KÊ dùng lại cho tab P.KH / Lương (chỉ HIỂN THỊ, không bấm lọc — tránh đụng bộ lọc sẵn có).
 // items = danh sách phiếu ĐÃ lọc đúng loại (kh hoặc salary). Container = 1 div rỗng.
-function renderExpenseStatBar(containerId, items){
+function renderExpenseStatBar(containerId, items, activeF, pickFn){
   const el=document.getElementById(containerId); if(!el) return;
   const TILES=[
     ['all','Tất cả','var(--text)'],
@@ -3329,11 +3329,13 @@ function renderExpenseStatBar(containerId, items){
   el.innerHTML = '<div class="stats-grid">' + TILES.map(([f,lbl,color])=>{
     const it=items.filter(p=>_expenseMatch(p,f));
     const sum=it.reduce((a,p)=>a+_expenseAmt(p,f),0);
-    return `<div class="stat-box" style="cursor:default"><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${esc(lbl)}</div></div><div class="stat-row stat-amt">${it.length?fmtVND(sum):'—'}</div></div>`;
+    const act=(activeF===f)?' active':'';
+    const clk=pickFn?` onclick="${pickFn}('${f}')" style="cursor:pointer"`:' style="cursor:default"';
+    return `<div class="stat-box${act}"${clk}><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${esc(lbl)}</div></div><div class="stat-row stat-amt">${it.length?fmtVND(sum):'—'}</div></div>`;
   }).join('') + '</div>';
 }
 // v139: DẢI Ô cho VẬT TƯ (mô hình khác: theo trạng thái kế hoạch, cộng số dự kiến).
-function renderPlanStatBar(containerId, items){
+function renderPlanStatBar(containerId, items, activeSt, pickFn){
   const el=document.getElementById(containerId); if(!el) return;
   const TILES=[
     ['', 'Tất cả', 'var(--text)'],
@@ -3345,9 +3347,16 @@ function renderPlanStatBar(containerId, items){
   el.innerHTML = '<div class="stats-grid">' + TILES.map(([st,lbl,color])=>{
     const it = st ? items.filter(p=>p.status===st) : items;
     const sum = it.reduce((a,p)=>a+(parseFloat(p.estimatedAmount)||0),0);
-    return `<div class="stat-box" style="cursor:default"><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${lbl}</div></div><div class="stat-row stat-amt">${sum>0?fmtVND(sum):'—'}</div></div>`;
+    const act=((activeSt||'')===st)?' active':'';
+    const clk=pickFn?` onclick="${pickFn}('${st}')" style="cursor:pointer"`:' style="cursor:default"';
+    return `<div class="stat-box${act}"${clk}><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${lbl}</div></div><div class="stat-row stat-amt">${sum>0?fmtVND(sum):'—'}</div></div>`;
   }).join('') + '</div>';
 }
+// v140: bộ lọc theo Ô thống kê cho 3 tab (P.KH / Lương / Vật tư)
+let _khStatFilter='all', _lgStatFilter='all', _planStatFilter='';
+function khStatPick(f){ _khStatFilter=(_khStatFilter===f&&f!=='all')?'all':f; _khRenderLimit=100; renderKhList(); }
+function lgStatPick(f){ _lgStatFilter=(_lgStatFilter===f&&f!=='all')?'all':f; renderSalaryAdvances(); }
+function planStatPick(st){ _planStatFilter=(_planStatFilter===st&&st!=='')?'':st; renderPlans(); }
 
 // ── PROPOSALS ──
 function setFilter(f,el){
@@ -5129,7 +5138,7 @@ function renderPlanStats(){
 function renderPlans(){
   const list = document.getElementById('plan-list');
   if(!list) return;
-  try{ renderPlanStatBar('plan-stats-bar', plans); }catch(e){} // v139: dải ô thống kê đầu tab Vật tư (theo trạng thái)
+  try{ renderPlanStatBar('plan-stats-bar', plans, _planStatFilter, 'planStatPick'); }catch(e){} // v139/v140: dải ô bấm lọc
   const filterSel = document.getElementById('plan-filter-site');
   if(filterSel){
     const cur = filterSel.value;
@@ -5138,6 +5147,7 @@ function renderPlans(){
   }
   const filterSite = filterSel ? filterSel.value : '';
   let items = plans.filter(p=>!filterSite || p.site===filterSite);
+  if(_planStatFilter) items=items.filter(p=>p.status===_planStatFilter); // v140: lọc theo ô thống kê
   items.sort((a,b)=>(a.neededDate||0)-(b.neededDate||0));
   if(!items.length){
     list.innerHTML = '<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có kế hoạch nào<br><small>Nhấn "➕ Thêm kế hoạch" để bắt đầu</small></div>';
@@ -6828,7 +6838,7 @@ function renderKhActive(tab){
 function renderKhList(){
   const el=document.getElementById('kh-list'); if(!el) return;
   const all=proposals.filter(p=>p.kind==='kh');
-  try{ renderExpenseStatBar('kh-stats-bar', all); }catch(e){} // v139: dải 7 ô thống kê đầu tab P.KH
+  try{ renderExpenseStatBar('kh-stats-bar', all, _khStatFilter, 'khStatPick'); }catch(e){} // v139/v140: dải 7 ô bấm lọc
   // v126: 2 ô lọc Người + Công trình (giống tab Báo cáo) — nạp danh sách từ phiếu, GIỮ lựa chọn hiện tại
   const selP=document.getElementById('kh-filter-person'), selS=document.getElementById('kh-filter-site');
   let fP='', fS='';
@@ -6847,6 +6857,7 @@ function renderKhList(){
   let items=all;
   if(fP) items=items.filter(p=>(p.person||'')===fP);
   if(fS) items=items.filter(p=>(p.site||'Chi phí chung')===fS);
+  if(_khStatFilter && _khStatFilter!=='all') items=items.filter(p=>_expenseMatch(p,_khStatFilter)); // v140: lọc theo ô thống kê
   // Phiếu vừa bị giục nổi lên đầu (giống Danh sách chi)
   items.sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0) - Math.max(a.ts||0,a.lastRemindAt||0));
   if(!items.length){
@@ -7819,12 +7830,12 @@ function saveAdvFromModal(){
 // ── RENDER TAB ỨNG LƯƠNG (theo tháng, nhóm Văn phòng + công trình) — dùng ĐÚNG thẻ phiếu chi (renderCard) ──
 function renderSalaryAdvances(){
   ensureSalaryMonth();
-  try{ renderExpenseStatBar('lg-stats-bar', proposals.filter(p=>p.kind==='salary')); }catch(e){} // v139: dải 7 ô thống kê đầu tab Lương (toàn bộ tháng)
   const label=document.getElementById('sal-month-label');
   if(label) label.textContent=monthLabel(salaryMonth);
   const list=document.getElementById('sal-adv-list');
   if(!list) return;
   const items=proposals.filter(p=>p.kind==='salary' && p.month===salaryMonth);
+  try{ renderExpenseStatBar('lg-stats-bar', items, _lgStatFilter, 'lgStatPick'); }catch(e){} // v140: dải 7 ô bấm lọc (theo THÁNG đang xem)
   const tDX=items.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
   const tDuyet=items.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
   const tChuyen=items.reduce((s,p)=>s+getTotalTransferred(p),0);
@@ -7835,6 +7846,7 @@ function renderSalaryAdvances(){
   _salSyncViewBtns(); // đồng bộ màu nút Thẻ/Bảng theo chế độ đã lưu trên máy
   const _q=((document.getElementById('sal-adv-search')||{}).value||'').trim().toLowerCase();
   let shown=_q ? items.filter(p=>(p.person||'').toLowerCase().includes(_q)) : items.slice();
+  if(_lgStatFilter && _lgStatFilter!=='all') shown=shown.filter(p=>_expenseMatch(p,_lgStatFilter)); // v140: lọc theo ô thống kê
   const _sortMode=((document.getElementById('sal-adv-sort')||{}).value)||'time';
   if(_sortMode==='name') shown.sort((a,b)=> (a.person||'').localeCompare(b.person||'','vi') || (b.ts||0)-(a.ts||0));
   else shown.sort((a,b)=> Math.max(b.ts||0,b.lastRemindAt||0)-Math.max(a.ts||0,a.lastRemindAt||0)); // v102: mới nhất trên cùng
