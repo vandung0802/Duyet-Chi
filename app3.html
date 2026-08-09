@@ -38,14 +38,13 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* v123: mỗi nút nav có "chip" nền màu nhẹ sau icon → nhìn rõ là NÚT BẤM; nút đang chọn có viền xanh */
 .nav-icon{font-size:19px;line-height:1;width:40px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#eef2f7;transition:transform .12s,box-shadow .12s}
 .nav-item:active .nav-icon{transform:scale(.9)}
-.nav-item:nth-child(1) .nav-icon{background:#e0edff}
-.nav-item:nth-child(2) .nav-icon{background:#ede9fe}
-.nav-item:nth-child(3) .nav-icon{background:#cffafe}
-/* v128: thứ tự mới (user chốt): Danh sách · Thêm mới · Báo cáo · Vật tư · P.KH · Lương · Cài đặt */
-.nav-item:nth-child(4) .nav-icon{background:#fef3c7} /* Vật tư vàng nhạt */
-.nav-item:nth-child(5) .nav-icon{background:#f3e8ff} /* P.KH tím nhạt */
-.nav-item:nth-child(6) .nav-icon{background:#d1fae5} /* Lương xanh lá nhạt */
-.nav-item:nth-child(7) .nav-icon{background:#eef2f6} /* Cài đặt xám nhạt */
+/* v142: thứ tự: P.Kế toán · Báo cáo · Vật tư · P.Kế Hoạch · Lương · Cài đặt (bỏ Thêm mới) */
+.nav-item:nth-child(1) .nav-icon{background:#e0edff} /* P.Kế toán xanh dương */
+.nav-item:nth-child(2) .nav-icon{background:#cffafe} /* Báo cáo xanh ngọc */
+.nav-item:nth-child(3) .nav-icon{background:#fef3c7} /* Vật tư vàng nhạt */
+.nav-item:nth-child(4) .nav-icon{background:#f3e8ff} /* P.Kế Hoạch tím nhạt */
+.nav-item:nth-child(5) .nav-icon{background:#d1fae5} /* Lương xanh lá nhạt */
+.nav-item:nth-child(6) .nav-icon{background:#eef2f6} /* Cài đặt xám nhạt */
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
 .main{padding:10px 10px 80px}
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
@@ -580,6 +579,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
   </div>
 
+  <!-- v142: nút Thêm mới đưa vào trong tab (bỏ nút Thêm mới ở thanh dưới) -->
+  <button class="btn-full btn-primary-full" onclick="showPage('add', document.getElementById('nav-home'))" style="margin-bottom:8px">➕ Thêm phiếu chi mới</button>
   <div style="position:relative;margin-bottom:8px">
     <input id="search-input" type="text" name="dc-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm kiếm đề xuất..." oninput="renderProposals()" style="width:100%;padding:9px 12px 9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit">
   </div>
@@ -653,6 +654,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </div>
 
       <button class="btn-full btn-primary-full" id="btn-submit-proposal" onclick="submitProposal()">Gửi đề xuất</button>
+      <button class="btn-full btn-outline-full" onclick="showPage('home', document.getElementById('nav-home'))" style="margin-top:8px">← Quay lại danh sách</button>
     </div>
   </div>
 </div>
@@ -1330,30 +1332,28 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 
 <nav class="bottom-nav">
-  <button class="nav-item active" onclick="showPage('home',this)">
+  <!-- v142: bỏ nút "Thêm mới" (đưa vào trong tab Kế toán); "Danh sách"→"P. Kế toán"; "P.KH"→"P. Kế Hoạch" -->
+  <button class="nav-item active" id="nav-home" onclick="showPage('home',this)">
     <span class="nav-badge" id="nav-badge-home" style="display:none"></span>
-    <span class="nav-icon">📋</span><span>Danh sách</span>
+    <span class="nav-icon">📋</span><span>P. Kế toán</span>
   </button>
-  <button class="nav-item" onclick="showPage('add',this)">
-    <span class="nav-icon">➕</span><span>Thêm mới</span>
-  </button>
-  <button class="nav-item" onclick="showPage('report',this)">
+  <button class="nav-item" id="nav-report" onclick="showPage('report',this)">
     <span class="nav-icon">📊</span><span>Báo cáo</span>
   </button>
-  <button class="nav-item" onclick="showPage('plan',this)">
+  <button class="nav-item" id="nav-plan" onclick="showPage('plan',this)">
     <span class="nav-badge" id="nav-badge-plan" style="display:none"></span>
     <span class="nav-icon">📦</span><span>Vật tư</span>
   </button>
   <!-- v125 P.KH: chỉ hiện với D/H/Trang + người phòng Kế hoạch (_applyKhNav) -->
   <button class="nav-item" id="nav-kh" style="display:none" onclick="showPage('kh',this)">
     <span class="nav-badge" id="nav-badge-kh" style="display:none"></span>
-    <span class="nav-icon">📐</span><span>P.KH</span>
+    <span class="nav-icon">📐</span><span>P. Kế Hoạch</span>
   </button>
-  <button class="nav-item" onclick="showPage('luong',this)">
+  <button class="nav-item" id="nav-luong" onclick="showPage('luong',this)">
     <span class="nav-badge" id="nav-badge-luong" style="display:none"></span>
     <span class="nav-icon">💵</span><span>Lương</span>
   </button>
-  <button class="nav-item" onclick="showPage('settings',this)">
+  <button class="nav-item" id="nav-settings" onclick="showPage('settings',this)">
     <span class="nav-icon">⚙️</span><span>Cài đặt</span>
   </button>
 </nav>
@@ -1371,7 +1371,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v141';
+const APP_VERSION = '20260803-v142';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3271,7 +3271,7 @@ function closeNotifAndGo(id){
   // v105: dùng chung jumpToProposal — tự nâng giới hạn vẽ nếu phiếu cũ + xoá ô tìm + highlight
   const p = proposals.find(x=>x.id===id);
   if(p && p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); return; } // v125
-  if(p && p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); return; }
+  if(p && p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); return; }
   jumpToProposal(id);
 }
 
@@ -6692,7 +6692,7 @@ function _zaloJump(id){
   closeZaloListModal();
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
-  if(p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
+  if(p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
 let _zaloModalMode='p';
@@ -7073,13 +7073,9 @@ function _isKehoachOnly(){
 function _applyDeptView(){
   _applyKhNav();
   const only=_isKehoachOnly();
-  const items=document.querySelectorAll('.bottom-nav .nav-item');
-  // thứ tự nút: 0 Danh sách · 1 Thêm mới · 2 Báo cáo · 3 Cài đặt · 4 Vật tư · 5 Lương · 6 P.KH
-  if(items.length>=7){
-    items[0].style.display = only?'none':'';
-    items[2].style.display = only?'none':'';
-    items[5].style.display = only?'none':'';
-  }
+  // v142: ẩn theo ID (không theo chỉ số — bền khi đổi thứ tự/bỏ nút). Người CHỈ phòng Kế hoạch KHÔNG thấy
+  // các mục kế toán: P.Kế toán (home), Báo cáo, Lương. Vẫn thấy Vật tư, P.Kế Hoạch, Cài đặt.
+  ['nav-home','nav-report','nav-luong'].forEach(id=>{ const b=document.getElementById(id); if(b) b.style.display = only?'none':''; });
   if(only){
     const home=document.getElementById('page-home');
     if(home && home.style.display!=='none'){ try{ showPage('kh', document.getElementById('nav-kh')); }catch(e){} }
@@ -7227,7 +7223,7 @@ function chatRemindGo(id){
   markChatSeen(id);
   const p=proposals.find(x=>x.id===id);
   if(p && p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
-  if(p && p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
+  if(p && p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
 
@@ -7264,7 +7260,7 @@ function chatOpenRef(id){
   closeChatPage();
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
-  if(p.kind==='salary'){ showPage('luong', document.querySelectorAll('.nav-item')[5]); jumpToSalaryAdvance(id); }
+  if(p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
 // ══ v126 CHAT 2 KÊNH ══ 'kt' = Nhóm Kế Toán (groupChat — dữ liệu CŨ, giữ nguyên) | 'kh' = Nhóm Kế Hoạch (khChat).
