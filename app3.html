@@ -567,7 +567,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="stat-row stat-amt" id="st-h-amt">—</div>
     </div>
     <div class="stat-box" data-f="approved" onclick="setFilter('approved',this)">
-      <div class="stat-row"><div class="stat-val" style="color:var(--blue-dark)" id="st-approved">0</div><div class="stat-lbl">Đã duyệt</div></div>
+      <div class="stat-row"><div class="stat-val" style="color:var(--blue-dark)" id="st-approved">0</div><div class="stat-lbl">Đã duyệt - chưa chuyển</div></div>
       <div class="stat-row stat-amt" id="st-approved-amt">—</div>
     </div>
     <div class="stat-box" data-f="rejected" onclick="setFilter('rejected',this)">
@@ -575,7 +575,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="stat-row stat-amt" id="st-rejected-amt">—</div>
     </div>
     <div class="stat-box" data-f="transferred" onclick="setFilter('transferred',this)">
-      <div class="stat-row"><div class="stat-val" style="color:var(--green)" id="st-done">0</div><div class="stat-lbl">Đã chuyển</div></div>
+      <div class="stat-row"><div class="stat-val" style="color:var(--green)" id="st-done">0</div><div class="stat-lbl">Đã duyệt - đã chuyển</div></div>
       <div class="stat-row stat-amt" id="st-done-amt">—</div>
     </div>
   </div>
@@ -1355,7 +1355,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v137';
+const APP_VERSION = '20260803-v138';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3270,9 +3270,18 @@ function matchFilter(p, f){
     case 'pending': return (p.status==='pending')||(p.status==='approved'&&!(!!p.approvedD&&!!p.approvedH));
     case 'd_only': return !!p.approvedD && !p.approvedH && p.status!=='rejected';
     case 'h_only': return !!p.approvedH && !p.approvedD && p.status!=='rejected';
-    case 'approved': return !!p.approvedD && !!p.approvedH && p.status!=='rejected'&&p.status!=='transferred';
+    // v138: phân loại theo SỐ TIỀN (không chỉ dựa cờ status) — phiếu đã chuyển ĐỦ số duyệt mà cờ status
+    // chưa kịp thành 'transferred' vẫn được xếp đúng vào "đã chuyển", không lọt vào "đã duyệt".
+    case 'approved': {
+      const _off=getOfficialApprovedAmount(p)||0, _tr=getTotalTransferred(p);
+      const _fullTr = p.status==='transferred' || (_off>0 && _tr>=_off-0.0001);
+      return !!p.approvedD && !!p.approvedH && p.status!=='rejected' && !_fullTr; // đã duyệt CẢ D+H, CHƯA chuyển đủ
+    }
     case 'rejected': return p.status==='rejected';
-    case 'transferred': return p.status==='transferred';
+    case 'transferred': {
+      const _off=getOfficialApprovedAmount(p)||0, _tr=getTotalTransferred(p);
+      return p.status!=='rejected' && (p.status==='transferred' || (_off>0 && _tr>=_off-0.0001)); // đã chuyển ĐỦ số duyệt
+    }
     default: return p.status===f;
   }
 }
