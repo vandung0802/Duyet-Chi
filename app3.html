@@ -886,6 +886,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: Danh sách -->
   <div id="plan-tab-list">
+    <div id="plan-stats-bar"></div>
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Ghi trước nhu cầu vật tư sắp tới cho từng công trình (bê tông, thép, cát...) để chủ động chuẩn bị — đây chỉ là kế hoạch nhắc nhở, KHÔNG phải đề xuất chi tiền.</p>
@@ -927,6 +928,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: Ứng lương (theo tháng) -->
   <div id="luong-tab-adv">
+    <div id="lg-stats-bar"></div>
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px">
@@ -1242,6 +1244,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: danh sách đề xuất -->
   <div id="kh-tab-list">
+    <div id="kh-stats-bar"></div>
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <!-- v126: lọc theo NGƯỜI + CÔNG TRÌNH (2 ô chọn, giống tab Báo cáo — user chốt) -->
@@ -1355,7 +1358,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v138';
+const APP_VERSION = '20260803-v139';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3262,9 +3265,9 @@ function closeNotifAndGo(id){
 // ── STATS ──
 // Hàm dùng chung để xác định 1 phiếu có khớp với 1 loại filter hay không.
 // Dùng chung cho cả renderStats (đếm số liệu) và renderProposals (lọc danh sách) để đảm bảo số liệu luôn khớp với danh sách hiển thị.
-function matchFilter(p, f){
-  if(p && p.kind==='salary') return false; // phiếu ỨNG LƯƠNG chỉ hiện ở tab Lương, KHÔNG lẫn vào Danh sách/Thống kê chi
-  if(p && p.kind==='kh') return false;     // v125: phiếu P.KẾ HOẠCH chỉ hiện ở tab P.KH
+// v139: LÕI phân loại + số tiền của phiếu duyệt-chi — tách riêng để DÙNG CHUNG cho dashboard (phiếu chi),
+// tab P.Kế hoạch (kind='kh') và tab Lương (kind='salary'). Cùng 1 công thức → 3 nơi luôn khớp nhau.
+function _expenseMatch(p, f){
   switch(f){
     case 'all': return true;
     case 'pending': return (p.status==='pending')||(p.status==='approved'&&!(!!p.approvedD&&!!p.approvedH));
@@ -3285,27 +3288,65 @@ function matchFilter(p, f){
     default: return p.status===f;
   }
 }
+function _expenseAmt(p, f){
+  return f==='transferred' ? getTotalTransferred(p)      // đã chuyển → số THỰC chuyển
+    : f==='d_only'         ? approvedAmtOf(p,'D')          // D duyệt → số D duyệt
+    : (f==='h_only'||f==='approved') ? getOfficialApprovedAmount(p) // H/đã duyệt → số duyệt chính thức
+    : (parseFloat(p.amount)||0);                           // còn lại → số đề xuất
+}
+function matchFilter(p, f){
+  if(p && p.kind==='salary') return false; // phiếu ỨNG LƯƠNG chỉ hiện ở tab Lương, KHÔNG lẫn vào Danh sách/Thống kê chi
+  if(p && p.kind==='kh') return false;     // v125: phiếu P.KẾ HOẠCH chỉ hiện ở tab P.KH
+  return _expenseMatch(p, f);
+}
 
 function renderStats(){
-  const FILTERS=['all','pending','d_only','h_only','approved','rejected','transferred'];
   const IDMAP={all:'all',pending:'pending',d_only:'d',h_only:'h',approved:'approved',rejected:'rejected',transferred:'done'};
-  FILTERS.forEach(f=>{
+  Object.keys(IDMAP).forEach(f=>{
     const items = proposals.filter(p=>matchFilter(p,f));
-    // v121: mỗi ô cộng ĐÚNG số tiền của giai đoạn đó (trước đây cộng nhầm số ĐỀ XUẤT cho mọi ô):
-    //  • Đã chuyển → số ĐÃ THỰC CHUYỂN   • D duyệt → số D duyệt   • H duyệt / Đã duyệt → số duyệt chính thức
-    //  • Tất cả / Chờ duyệt / Từ chối → số đề xuất (đúng vì chưa/không có số duyệt)
-    const amtOf = p =>
-        f==='transferred' ? getTotalTransferred(p)
-      : f==='d_only'      ? approvedAmtOf(p,'D')
-      : (f==='h_only'||f==='approved') ? getOfficialApprovedAmount(p)
-      : (parseFloat(p.amount)||0);
-    const sum = items.reduce((a,p)=>a+amtOf(p),0);
+    const sum = items.reduce((a,p)=>a+_expenseAmt(p,f),0);
     const key = IDMAP[f];
     const elVal = document.getElementById('st-'+key);
     const elAmt = document.getElementById('st-'+key+'-amt');
     if(elVal) elVal.textContent = items.length;
     if(elAmt) elAmt.innerHTML = items.length ? fmtVND(sum) : '—';
   });
+}
+
+// v139: DẢI 7 Ô THỐNG KÊ dùng lại cho tab P.KH / Lương (chỉ HIỂN THỊ, không bấm lọc — tránh đụng bộ lọc sẵn có).
+// items = danh sách phiếu ĐÃ lọc đúng loại (kh hoặc salary). Container = 1 div rỗng.
+function renderExpenseStatBar(containerId, items){
+  const el=document.getElementById(containerId); if(!el) return;
+  const TILES=[
+    ['all','Tất cả','var(--text)'],
+    ['pending','Chờ duyệt','var(--yellow)'],
+    ['d_only','D duyệt','var(--blue)'],
+    ['h_only','H duyệt','#7c3aed'],
+    ['approved','Đã duyệt - chưa chuyển','var(--blue-dark)'],
+    ['rejected','Từ chối','var(--red)'],
+    ['transferred','Đã duyệt - đã chuyển','var(--green)']
+  ];
+  el.innerHTML = '<div class="stats-grid">' + TILES.map(([f,lbl,color])=>{
+    const it=items.filter(p=>_expenseMatch(p,f));
+    const sum=it.reduce((a,p)=>a+_expenseAmt(p,f),0);
+    return `<div class="stat-box" style="cursor:default"><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${esc(lbl)}</div></div><div class="stat-row stat-amt">${it.length?fmtVND(sum):'—'}</div></div>`;
+  }).join('') + '</div>';
+}
+// v139: DẢI Ô cho VẬT TƯ (mô hình khác: theo trạng thái kế hoạch, cộng số dự kiến).
+function renderPlanStatBar(containerId, items){
+  const el=document.getElementById(containerId); if(!el) return;
+  const TILES=[
+    ['', 'Tất cả', 'var(--text)'],
+    ['pending','⏳ Đang chờ','#9333ea'],
+    ['ordered','📦 Đã đặt cọc','#d97706'],
+    ['done','✅ Hoàn thành','#16a34a'],
+    ['cancelled','❌ Đã huỷ','#64748b']
+  ];
+  el.innerHTML = '<div class="stats-grid">' + TILES.map(([st,lbl,color])=>{
+    const it = st ? items.filter(p=>p.status===st) : items;
+    const sum = it.reduce((a,p)=>a+(parseFloat(p.estimatedAmount)||0),0);
+    return `<div class="stat-box" style="cursor:default"><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${lbl}</div></div><div class="stat-row stat-amt">${sum>0?fmtVND(sum):'—'}</div></div>`;
+  }).join('') + '</div>';
 }
 
 // ── PROPOSALS ──
@@ -5088,6 +5129,7 @@ function renderPlanStats(){
 function renderPlans(){
   const list = document.getElementById('plan-list');
   if(!list) return;
+  try{ renderPlanStatBar('plan-stats-bar', plans); }catch(e){} // v139: dải ô thống kê đầu tab Vật tư (theo trạng thái)
   const filterSel = document.getElementById('plan-filter-site');
   if(filterSel){
     const cur = filterSel.value;
@@ -6786,6 +6828,7 @@ function renderKhActive(tab){
 function renderKhList(){
   const el=document.getElementById('kh-list'); if(!el) return;
   const all=proposals.filter(p=>p.kind==='kh');
+  try{ renderExpenseStatBar('kh-stats-bar', all); }catch(e){} // v139: dải 7 ô thống kê đầu tab P.KH
   // v126: 2 ô lọc Người + Công trình (giống tab Báo cáo) — nạp danh sách từ phiếu, GIỮ lựa chọn hiện tại
   const selP=document.getElementById('kh-filter-person'), selS=document.getElementById('kh-filter-site');
   let fP='', fS='';
@@ -7776,6 +7819,7 @@ function saveAdvFromModal(){
 // ── RENDER TAB ỨNG LƯƠNG (theo tháng, nhóm Văn phòng + công trình) — dùng ĐÚNG thẻ phiếu chi (renderCard) ──
 function renderSalaryAdvances(){
   ensureSalaryMonth();
+  try{ renderExpenseStatBar('lg-stats-bar', proposals.filter(p=>p.kind==='salary')); }catch(e){} // v139: dải 7 ô thống kê đầu tab Lương (toàn bộ tháng)
   const label=document.getElementById('sal-month-label');
   if(label) label.textContent=monthLabel(salaryMonth);
   const list=document.getElementById('sal-adv-list');
