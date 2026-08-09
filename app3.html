@@ -1355,7 +1355,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v136';
+const APP_VERSION = '20260803-v137';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2212,9 +2212,26 @@ async function fcmRegister(role) {
     }
     const r = role || currentRole || 'other';
     const subKey = btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 80);
-    const subObj = { endpoint: sub.endpoint, keys: { p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')))) } };
-    await db.ref('push-subs/' + r + '/' + subKey).set(subObj);
-    localStorage.setItem('dc_fcm_reg', '✅ ' + sub.endpoint.substring(0, 30) + '...');
+    const uid = (currentUser && currentUser.uid) || '';
+    const subObj = { endpoint: sub.endpoint, keys: { p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')))) }, uid };
+    // v137: KÊNH ĐÍCH theo PHÒNG. D/H/T = kênh theo vai. Vai 'other' → 'kt' (kế toán) / 'kh' (kế hoạch) /
+    // cả hai (both) → thông báo không lẫn giữa 2 phòng.
+    let targets;
+    if(r === 'other'){
+      targets = (currentDept === 'kehoach') ? ['kh']
+              : (currentDept === 'both')    ? ['kt','kh']
+              :                               ['kt'];
+    } else {
+      targets = [r];
+    }
+    for(const t of targets){ await db.ref('push-subs/' + t + '/' + subKey).set(subObj); }
+    // DỌN cùng máy này ở MỌI kênh khác (chống nhận thông báo 2 lần khi 1 máy nằm ở nhiều kênh — VD dung+hien
+    // do đổi vai; hoặc 'other' cũ sau khi chuyển sang kt/kh). Luật chỉ cho xóa nếu uid trùng → an toàn.
+    ['dung','hien','trang','other','kt','kh'].forEach(b=>{
+      if(targets.indexOf(b) >= 0) return;
+      db.ref('push-subs/' + b + '/' + subKey).remove().catch(()=>{});
+    });
+    localStorage.setItem('dc_fcm_reg', '✅ ' + targets.join(',') + ' ' + sub.endpoint.substring(0, 20) + '...');
   } catch(e) {
     localStorage.setItem('dc_fcm_reg', '❌ ' + e.message);
   }
@@ -4886,7 +4903,7 @@ function submitProposal(){
     showToast('Đã gửi đề xuất!');
     showPage('home', document.querySelector('.nav-item'));
     renderAll();
-    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang', 'other']);
+    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang', 'kt']); // v137: kế toán → kênh 'kt' (không lẫn sang P.KH)
   }catch(err){
     // Hiện rõ lỗi thật trên màn hình (kể cả trên điện thoại, không cần mở Console)
     // để dễ chẩn đoán khi có sự cố, thay vì nút bấm im lặng không phản ứng gì.
@@ -5196,7 +5213,7 @@ function confirmPlan(id, who){
 function remindPlan(id){
   const p = plans.find(x=>x.id===id);
   if(!p) return;
-  sendPushNotif('📅 Nhắc kế hoạch vật tư', `${p.material}${p.quantity?' '+p.quantity:''} cho ${p.site} — cần trước ${fmtDateOnly(p.neededDate)}`, ['dung','hien','trang','other']);
+  sendPushNotif('📅 Nhắc kế hoạch vật tư', `${p.material}${p.quantity?' '+p.quantity:''} cho ${p.site} — cần trước ${fmtDateOnly(p.neededDate)}`, ['dung','hien','trang','kt','kh']); // v137: vật tư chung cả 2 phòng
   showToast('🔔 Đã gửi nhắc nhở');
 }
 // Bấm từ 1 kế hoạch → điền sẵn công trình + nội dung sang form "Thêm mới" (chỉ điền hộ, KHÔNG
@@ -6955,7 +6972,7 @@ function saveKhFromModal(){
   closeKhModal();
   setKhTab('list', document.querySelector('#page-kh .report-subtab[data-tab="list"]'));
   showToast('✅ Đã gửi đề xuất chi phí Kế hoạch');
-  sendPushNotif('📐 Đề xuất P.Kế hoạch mới', me+': '+(desc.length>40?desc.slice(0,40)+'…':desc)+' · '+fmtVND(amount), ['dung','hien','trang']);
+  sendPushNotif('📐 Đề xuất P.Kế hoạch mới', me+': '+(desc.length>40?desc.slice(0,40)+'…':desc)+' · '+fmtVND(amount), ['dung','hien','trang','kh']); // v137: P.KH → kênh 'kh' (báo cho người phòng Kế hoạch)
 }
 // Hiện/ẩn nút P.KH theo quyền — gọi sau khi biết vai trò/phòng (setRole + sau khi đọc dept)
 function _applyKhNav(){
@@ -7358,7 +7375,12 @@ function sendGroupMsg(){
   try{
     // v126: kênh Kế Hoạch chỉ đẩy cho D/H/Trang (không đẩy nhóm 'other' — tránh lộ nội dung sang máy
     // người kế toán thường; thành viên P.KH thấy số tin mới khi mở app)
-    const roles=(_cIsKh()?['dung','hien','trang']:['dung','hien','trang','other']).filter(r=>r!==(currentRole||'other'));
+    // v137: chat kênh Kế Hoạch → 'kh' (người phòng KH), kênh Kế Toán → 'kt' (người kế toán); D/H/T luôn nhận.
+    // Loại KÊNH CỦA CHÍNH NGƯỜI GỬI để họ không nhận thông báo tin của mình.
+    const _myChans = (currentRole==='other')
+      ? (currentDept==='kehoach'?['kh']:(currentDept==='both'?['kt','kh']:['kt']))
+      : [currentRole||'other'];
+    const roles=(_cIsKh()?['dung','hien','trang','kh']:['dung','hien','trang','kt']).filter(r=>_myChans.indexOf(r)<0);
     sendPushNotif('💬 '+me+' ('+(_cIsKh()?'Nhóm Kế Hoạch':'Nhóm Kế Toán')+')', (text||'Đã gửi một phiếu').slice(0,90), roles);
   }catch(e){}
 }

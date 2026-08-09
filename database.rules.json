@@ -290,13 +290,16 @@
     },
 
     "push-subs": {
-      // v80 BẢO MẬT: subscription nhóm theo VAI TRÒ (push-subs/{role}/{token}). Trước đây mọi tài khoản
-      // ghi được vào bất kỳ vai trò → kẻ xấu đăng ký dưới 'dung' để NHẬN thông báo của Dũng (gồm cả mã
-      // OTP gửi qua push). Nay chỉ được ghi vào ĐÚNG vai trò server xác nhận của mình.
+      // v80 BẢO MẬT: subscription nhóm theo VAI TRÒ (push-subs/{role}/{token}). Chỉ được ghi vào ĐÚNG
+      // kênh của mình (chống kẻ xấu đăng ký dưới 'dung' để nhận OTP của Dũng).
+      // v137: thêm 2 kênh THEO PHÒNG cho vai 'other': 'kt' (kế toán) / 'kh' (kế hoạch) → thông báo không
+      // lẫn giữa 2 phòng. D/H/T vẫn theo vai (nhận tất cả). Chuyển .write xuống mức con để cho phép DỌN
+      // (xóa) đúng subscription CỦA CHÍNH MÌNH (khớp uid) ở kênh cũ → chống nhận thông báo 2 lần.
       "$role": {
         ".read": false,
-        // v83: thêm điều kiện ĐÃ DUYỆT (tài khoản đã thu hồi không đăng ký nhận push nữa).
-        ".write": "auth != null && $role === root.child('duyetchi/userRoles').child(auth.uid).child('role').val() && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
+        "$sub": {
+          ".write": "auth != null && ( (newData.exists() && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && ( $role === root.child('duyetchi/userRoles').child(auth.uid).child('role').val() || ($role === 'kt' && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'other' && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach') || ($role === 'kh' && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'other' && (root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'kehoach' || root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'both')) )) || (!newData.exists() && data.child('uid').val() === auth.uid) )"
+        }
       }
     },
 
