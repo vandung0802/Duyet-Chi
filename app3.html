@@ -534,7 +534,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
     </div>
     <button class="current-role" id="role-badge" onclick="if(currentRole==='dung') document.getElementById('role-screen').style.display='flex'">👤 Chọn vai trò</button>
-    <span id="fb-badge" class="sheet-badge sheet-none">☁️ Đang cập nhật…</span>
+    <span id="fb-badge" class="sheet-badge sheet-none">☁️</span>
   </div>
 </div>
 <!-- Panel thông báo -->
@@ -1373,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v149';
+const APP_VERSION = '20260803-v150';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
