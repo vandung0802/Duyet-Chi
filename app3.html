@@ -1373,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v147';
+const APP_VERSION = '20260803-v148';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2189,15 +2189,16 @@ function checkNotifBanner() {
   }
 }
 
-function setRole(role){
+function setRole(role, skipFcm){
   currentRole = role;
   _cardCache.clear();
   const r = ROLES[role]||ROLES.other;
   const badgeName = currentUserName || r.label; // hiện tên người (vd Ngọc) thay vì nhãn vai trò chung "Khác"
   document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${badgeName}`;
   document.getElementById('role-screen').style.display='none';
-  // Đăng ký FCM nếu đã có quyền
-  if(typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+  // Đăng ký FCM nếu đã có quyền — BỎ QUA khi gọi lúc mở app từ cache (skipFcm): v147 ghi Firebase TRƯỚC auth
+  // làm nghẽn kết nối → auth chậm hẳn (95-123s). onAuthStateChanged sau sẽ gọi setRole lại (có FCM).
+  if(!skipFcm && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     fcmRegister(role).catch(()=>{});
   }
   checkNotifBanner();
@@ -3102,7 +3103,7 @@ function _showBootTiming(){
     var el=document.createElement('div');
     el.id='__bt_banner';
     el.style.cssText='position:fixed;left:6px;right:6px;bottom:72px;z-index:99999;background:#111;color:#3f6;font:12px/1.55 monospace;padding:9px 11px;border-radius:9px;box-shadow:0 2px 14px rgba(0,0,0,.45);white-space:pre-wrap';
-    el.textContent='⏱ ĐO MỞ APP v147 (bấm để ẩn)\n'
+    el.textContent='⏱ ĐO MỞ APP v148 (bấm để ẩn)\n'
       +'★ App DÙNG ĐƯỢC (cache): '+f(b.cacheReady)+'\n'
       +'1) Tải+chạy JS (→DOM): '+f(b.dom)+'\n'
       +'2) DOM→đăng nhập: '+d('dom','auth')+'\n'
@@ -3135,7 +3136,7 @@ document.addEventListener('DOMContentLoaded',()=>{
       if(_r && _r.role){
         currentDept = (_r.dept==='kehoach'||_r.dept==='both') ? _r.dept : 'ketoan';
         currentUserName = _r.name || '';
-        setRole(_r.role); // an toàn: setRole không cần currentUser
+        setRole(_r.role, true); // an toàn: setRole không cần currentUser; skipFcm=không đụng Firebase trước auth
         try{ if(window.__BT) __BT.cacheReady = performance.now(); }catch(e){}
       }
     }
