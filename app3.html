@@ -534,7 +534,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <span id="notif-badge" style="display:none;position:absolute;top:-4px;right:-4px;background:#e53e3e;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:9px;text-align:center;line-height:18px;padding:0 4px;pointer-events:none"></span>
     </div>
     <button class="current-role" id="role-badge" onclick="if(currentRole==='dung') document.getElementById('role-screen').style.display='flex'">👤 Chọn vai trò</button>
-    <span id="fb-badge" class="sheet-badge sheet-none">☁️ Đang kết nối...</span>
+    <span id="fb-badge" class="sheet-badge sheet-none">☁️ Đang cập nhật…</span>
   </div>
 </div>
 <!-- Panel thông báo -->
@@ -1373,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v148';
+const APP_VERSION = '20260803-v149';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2687,7 +2687,7 @@ function initFirebaseSync(){
     if(wasFirst) setTimeout(function(){ if(typeof syncReconcileToSheet==='function') syncReconcileToSheet(); }, 6000);
     renderStats();
     renderAll();
-    try{ if(window.__BT&&__BT.render==null){ __BT.render=performance.now(); setTimeout(_showBootTiming,350); } }catch(e){}
+    try{ if(window.__BT&&__BT.render==null){ __BT.render=performance.now(); } }catch(e){} // v149: đã gỡ khung đo (giữ mốc, không hiện banner)
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
     if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
     // Nhắc Trang các khoản chờ chuyển (trường hợp vào app bằng role cache TRƯỚC khi dữ liệu tải xong
