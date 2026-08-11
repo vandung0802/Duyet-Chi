@@ -1373,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v144';
+const APP_VERSION = '20260803-v145';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3372,15 +3372,16 @@ function planStatPick(st){ _planStatFilter=(_planStatFilter===st&&st!=='')?'':st
 // ── PROPOSALS ──
 function setFilter(f,el){
   filter=f;
-  _renderLimit = 150; // đổi bộ lọc thì quay về 150 phiếu đầu (nhẹ máy)
+  _renderLimit = 40; // đổi bộ lọc thì quay về 40 phiếu đầu (nhẹ máy — vẽ ít cho nhanh, cũ hơn bấm "Xem thêm")
   document.querySelectorAll('.stat-box').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderProposals();
 }
 
 // Chỉ vẽ tối đa N phiếu mới nhất mỗi lần — khi phiếu lên tới hàng nghìn, vẽ hết một lúc sẽ đơ máy.
+// v145: hạ 150→40 để MỞ APP NHANH HƠN (mỗi lượt Firebase/ảnh cập nhật chỉ dựng 40 thẻ thay vì 150).
 // Tìm kiếm / thống kê / báo cáo vẫn tính trên TOÀN BỘ phiếu, không sót gì; bấm "Xem thêm" để vẽ tiếp.
-let _renderLimit = 150;
+let _renderLimit = 40;
 function renderProposals(){
   const list = document.getElementById('proposal-list');
   // v100: Chrome trên máy tính hay TỰ ĐIỀN email đăng nhập vào ô tìm kiếm (autofill) → danh sách bị lọc
