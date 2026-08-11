@@ -1373,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v146';
+const APP_VERSION = '20260803-v147';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2087,6 +2087,7 @@ function initAuth(){
     try{ hidePendingApprovalScreen(); }catch(e){}
     if(user){
       currentUser = user;
+      try{ localStorage.setItem('dc_last_uid', user.uid); }catch(e){} // v147: nhớ tài khoản gần nhất để lần sau áp cache NGAY lúc mở
       // v95: NỐI LẠI NGAY 4 kênh dữ liệu (bị máy chủ hủy lúc đăng xuất) — trước đây phải chờ vòng
       // 30s của v91 nên D đăng nhập lại mất ~50s mới thấy dữ liệu.
       try{ if(typeof _dcReattachGated==='function') _dcReattachGated(); }catch(e){}
@@ -3101,12 +3102,13 @@ function _showBootTiming(){
     var el=document.createElement('div');
     el.id='__bt_banner';
     el.style.cssText='position:fixed;left:6px;right:6px;bottom:72px;z-index:99999;background:#111;color:#3f6;font:12px/1.55 monospace;padding:9px 11px;border-radius:9px;box-shadow:0 2px 14px rgba(0,0,0,.45);white-space:pre-wrap';
-    el.textContent='⏱ ĐO MỞ APP v146 (bấm để ẩn)\n'
+    el.textContent='⏱ ĐO MỞ APP v147 (bấm để ẩn)\n'
+      +'★ App DÙNG ĐƯỢC (cache): '+f(b.cacheReady)+'\n'
       +'1) Tải+chạy JS (→DOM): '+f(b.dom)+'\n'
       +'2) DOM→đăng nhập: '+d('dom','auth')+'\n'
       +'3) Đăng nhập→tải phiếu: '+d('auth','prop')+'\n'
       +'4) Tải phiếu→vẽ xong: '+d('prop','render')+'\n'
-      +'TỔNG tới lúc thấy phiếu: '+f(b.render);
+      +'TỔNG (dữ liệu mới): '+f(b.render);
     el.onclick=function(){ el.remove(); };
     document.body.appendChild(el);
   }catch(e){}
@@ -3121,6 +3123,23 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Để Firebase auth xác nhận đúng danh tính rồi mới setRole (đúng người đang đăng nhập).
   const hasCachedSession = Object.keys(localStorage).some(k => k.startsWith('dc_role_'));
   if(hasCachedSession) document.getElementById('role-screen').style.display='none';
+
+  // v147 TĂNG TỐC MỞ APP: áp vai trò + dữ liệu từ cache NGAY (~1s), KHÔNG chờ Firebase Auth (5-9s/4G).
+  // Chỉ áp theo dc_last_uid (tài khoản đăng nhập gần nhất trên máy này) → tránh hiện nhầm người.
+  // onAuthStateChanged xong sẽ xác nhận lại: đúng người → giữ nguyên; khác/đăng xuất → tự sửa.
+  try{
+    var _lu = localStorage.getItem('dc_last_uid');
+    var _rc = _lu ? localStorage.getItem('dc_role_'+_lu) : null;
+    if(_rc){
+      var _r = JSON.parse(_rc);
+      if(_r && _r.role){
+        currentDept = (_r.dept==='kehoach'||_r.dept==='both') ? _r.dept : 'ketoan';
+        currentUserName = _r.name || '';
+        setRole(_r.role); // an toàn: setRole không cần currentUser
+        try{ if(window.__BT) __BT.cacheReady = performance.now(); }catch(e){}
+      }
+    }
+  }catch(e){}
 
   showPage('home', document.querySelector('.nav-item'));
   renderAll();
