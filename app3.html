@@ -1373,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v151';
+const APP_VERSION = '20260803-v152';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2687,7 +2687,7 @@ function initFirebaseSync(){
     if(wasFirst) setTimeout(function(){ if(typeof syncReconcileToSheet==='function') syncReconcileToSheet(); }, 6000);
     renderStats();
     renderAll();
-    try{ if(window.__BT&&__BT.render==null){ __BT.render=performance.now(); setTimeout(_showBootTiming,600); } }catch(e){} // v151: bật lại khung đo cho đợt chẩn đoán
+    try{ if(window.__BT&&__BT.render==null){ __BT.render=performance.now(); } }catch(e){} // v152: đã gỡ khung đo
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
     if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
     // Nhắc Trang các khoản chờ chuyển (trường hợp vào app bằng role cache TRƯỚC khi dữ liệu tải xong
@@ -3147,18 +3147,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   initFirebaseSync();
   initAuth();
 
-  // v151 NGHIÊN CỨU (chỉ đọc, không đổi logic): đo currentUser + token sẵn lúc nào so với onAuthStateChanged.
-  try{
-    var _cuStart = performance.now();
-    var _cuPoll = setInterval(function(){
-      var cu = firebase.auth().currentUser;
-      if(cu){
-        clearInterval(_cuPoll);
-        if(window.__BT && __BT.cu==null) __BT.cu = performance.now();
-        try{ cu.getIdToken(false).then(function(){ if(window.__BT&&__BT.tok==null) __BT.tok=performance.now(); }).catch(function(){}); }catch(e){}
-      } else if(performance.now()-_cuStart > 20000){ clearInterval(_cuPoll); }
-    }, 60);
-  }catch(e){}
+  // v152: đã gỡ vòng đo chẩn đoán v151. KẾT LUẬN (11/08): auth chậm tỉ lệ pin thấp/Low Power Mode
+  // (pin 26% → 43s; pin cao → 5-9s) = iOS bóp mạng nền, không phải lỗi app. App vẫn dùng được ~60ms từ cache.
 });
 
 // ── NAVIGATION ──
