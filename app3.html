@@ -1373,7 +1373,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v150';
+const APP_VERSION = '20260803-v151';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2687,7 +2687,7 @@ function initFirebaseSync(){
     if(wasFirst) setTimeout(function(){ if(typeof syncReconcileToSheet==='function') syncReconcileToSheet(); }, 6000);
     renderStats();
     renderAll();
-    try{ if(window.__BT&&__BT.render==null){ __BT.render=performance.now(); } }catch(e){} // v149: đã gỡ khung đo (giữ mốc, không hiện banner)
+    try{ if(window.__BT&&__BT.render==null){ __BT.render=performance.now(); setTimeout(_showBootTiming,600); } }catch(e){} // v151: bật lại khung đo cho đợt chẩn đoán
     if(document.getElementById('page-settings').style.display!=='none') renderSettings();
     if(document.getElementById('page-report').style.display!=='none'){ renderReportFilters(); renderReportSummary(); renderReportTables(); }
     // Nhắc Trang các khoản chờ chuyển (trường hợp vào app bằng role cache TRƯỚC khi dữ liệu tải xong
@@ -3103,13 +3103,13 @@ function _showBootTiming(){
     var el=document.createElement('div');
     el.id='__bt_banner';
     el.style.cssText='position:fixed;left:6px;right:6px;bottom:72px;z-index:99999;background:#111;color:#3f6;font:12px/1.55 monospace;padding:9px 11px;border-radius:9px;box-shadow:0 2px 14px rgba(0,0,0,.45);white-space:pre-wrap';
-    el.textContent='⏱ ĐO MỞ APP v148 (bấm để ẩn)\n'
+    el.textContent='⏱ ĐO MỞ APP v151 (bấm để ẩn)\n'
       +'★ App DÙNG ĐƯỢC (cache): '+f(b.cacheReady)+'\n'
-      +'1) Tải+chạy JS (→DOM): '+f(b.dom)+'\n'
-      +'2) DOM→đăng nhập: '+d('dom','auth')+'\n'
-      +'3) Đăng nhập→tải phiếu: '+d('auth','prop')+'\n'
-      +'4) Tải phiếu→vẽ xong: '+d('prop','render')+'\n'
-      +'TỔNG (dữ liệu mới): '+f(b.render);
+      +'◆ currentUser sẵn: '+f(b.cu)+'\n'
+      +'◆ Token sẵn: '+f(b.tok)+'\n'
+      +'2) onAuthStateChanged: '+f(b.auth)+'\n'
+      +'3) Tải phiếu xong: '+f(b.prop)+'\n'
+      +'TỔNG: '+f(b.render);
     el.onclick=function(){ el.remove(); };
     document.body.appendChild(el);
   }catch(e){}
@@ -3146,6 +3146,19 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderAll();
   initFirebaseSync();
   initAuth();
+
+  // v151 NGHIÊN CỨU (chỉ đọc, không đổi logic): đo currentUser + token sẵn lúc nào so với onAuthStateChanged.
+  try{
+    var _cuStart = performance.now();
+    var _cuPoll = setInterval(function(){
+      var cu = firebase.auth().currentUser;
+      if(cu){
+        clearInterval(_cuPoll);
+        if(window.__BT && __BT.cu==null) __BT.cu = performance.now();
+        try{ cu.getIdToken(false).then(function(){ if(window.__BT&&__BT.tok==null) __BT.tok=performance.now(); }).catch(function(){}); }catch(e){}
+      } else if(performance.now()-_cuStart > 20000){ clearInterval(_cuPoll); }
+    }, 60);
+  }catch(e){}
 });
 
 // ── NAVIGATION ──
