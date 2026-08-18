@@ -557,14 +557,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="stat-row"><div class="stat-val" style="color:var(--yellow)" id="st-pending">0</div><div class="stat-lbl">Chờ duyệt</div></div>
       <div class="stat-row stat-amt" id="st-pending-amt">—</div>
     </div>
-    <div class="stat-box" data-f="d_only" onclick="setFilter('d_only',this)">
-      <div class="stat-row"><div class="stat-val" style="color:var(--blue)" id="st-d">0</div><div class="stat-lbl">D duyệt</div></div>
-      <div class="stat-row stat-amt" id="st-d-amt">—</div>
-    </div>
-    <div class="stat-box" data-f="h_only" onclick="setFilter('h_only',this)">
-      <div class="stat-row"><div class="stat-val" style="color:#7c3aed" id="st-h">0</div><div class="stat-lbl">H duyệt</div></div>
-      <div class="stat-row stat-amt" id="st-h-amt">—</div>
-    </div>
     <div class="stat-box" data-f="approved" onclick="setFilter('approved',this)">
       <div class="stat-row"><div class="stat-val" style="color:var(--blue-dark)" id="st-approved">0</div><div class="stat-lbl">Đã duyệt - chưa chuyển</div></div>
       <div class="stat-row stat-amt" id="st-approved-amt">—</div>
@@ -1373,7 +1365,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v152';
+const APP_VERSION = '20260803-v153';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3359,7 +3351,7 @@ function matchFilter(p, f){
 }
 
 function renderStats(){
-  const IDMAP={all:'all',pending:'pending',d_only:'d',h_only:'h',approved:'approved',rejected:'rejected',transferred:'done'};
+  const IDMAP={all:'all',pending:'pending',approved:'approved',rejected:'rejected',transferred:'done'}; // v153: bo 2 o "D duyet"/"H duyet"
   Object.keys(IDMAP).forEach(f=>{
     const items = proposals.filter(p=>matchFilter(p,f));
     const sum = items.reduce((a,p)=>a+_expenseAmt(p,f),0);
@@ -3378,8 +3370,6 @@ function renderExpenseStatBar(containerId, items, activeF, pickFn){
   const TILES=[
     ['all','Tất cả','var(--text)'],
     ['pending','Chờ duyệt','var(--yellow)'],
-    ['d_only','D duyệt','var(--blue)'],
-    ['h_only','H duyệt','#7c3aed'],
     ['approved','Đã duyệt - chưa chuyển','var(--blue-dark)'],
     ['rejected','Từ chối','var(--red)'],
     ['transferred','Đã duyệt - đã chuyển','var(--green)']
