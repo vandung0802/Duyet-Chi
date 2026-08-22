@@ -1404,7 +1404,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v161';
+const APP_VERSION = '20260803-v162';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6753,6 +6753,8 @@ function doGet(e){
   return ContentService.createTextOutput('ok');
 }
 // v159: xếp A→Z theo TÊN (chữ cuối) rồi họ đệm — đúng thói quen Việt Nam
+// v162: cột Tháng trong sheet có thể bị Google tự đổi thành NGÀY (Date) → chuẩn hoá mọi kiểu về 'yyyy-MM'
+function monthKey_(v){ if(v instanceof Date) return Utilities.formatDate(v,'Asia/Ho_Chi_Minh','yyyy-MM'); var s=String(v||'').trim(); var m=s.match(/^(\d{4})-(\d{1,2})/); if(m) return m[1]+'-'+('0'+m[2]).slice(-2); var d=new Date(s); if(s && !isNaN(d.getTime())) return Utilities.formatDate(d,'Asia/Ho_Chi_Minh','yyyy-MM'); return s; }
 function tenOf_(s){ var core=String(s||'').split(/\s+-\s*|\s*-\s+|\s+-$/)[0]; var p=core.trim().split(/\s+/).filter(function(w){ return /[A-Za-zÀ-ỹ]/.test(w); }); return p[p.length-1]||''; }
 function cmpTen_(a,b){ return tenOf_(a).localeCompare(tenOf_(b),'vi') || String(a||'').localeCompare(String(b||''),'vi'); }
 // v158 PA3: 2 sheet báo cáo lương tự dựng lại mỗi lần đồng bộ — "Lương theo người" (người × tháng) + "Lương theo tháng"
@@ -6761,13 +6763,13 @@ function buildLuongReports_(ss, ls){
     var data=ls.getDataRange().getValues(); if(data.length<2) return;
     var rows=data.slice(1).filter(function(r){ return String(r[1]||'') && String(r[3]||''); });
     var num=function(x){ var n=parseFloat(String(x).replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; };
-    var months={}; rows.forEach(function(r){ var m=String(r[2]||''); if(m) months[m]=1; });
+    var months={}; rows.forEach(function(r){ var m=monthKey_(r[2]); if(m) months[m]=1; });
     var mlist=Object.keys(months).sort();
     var mLabel=function(m){ var p=m.split('-'); return p.length===2 ? ('Tháng '+p[1]+'/'+p[0]) : m; };
     var byP={};
     rows.forEach(function(r){
       var k=String(r[3]).trim(); if(!byP[k]) byP[k]={name:k,pos:String(r[4]||''),grp:String(r[5]||''),dx:0,ck:0,m:{}};
-      var m=String(r[2]||''); byP[k].dx+=num(r[6]); byP[k].ck+=num(r[9]); byP[k].m[m]=(byP[k].m[m]||0)+num(r[9]);
+      var m=monthKey_(r[2]); byP[k].dx+=num(r[6]); byP[k].ck+=num(r[9]); byP[k].m[m]=(byP[k].m[m]||0)+num(r[9]);
       if(!byP[k].pos && r[4]) byP[k].pos=String(r[4]); if(!byP[k].grp && r[5]) byP[k].grp=String(r[5]);
     });
     var names=Object.keys(byP).sort(cmpTen_);
@@ -6792,7 +6794,7 @@ function buildLuongReports_(ss, ls){
     try{ s2.getBandings().forEach(function(b){ b.remove(); }); }catch(e2){}
     var out2=[], hdrRows=[], totRows=[];
     mlist.forEach(function(m){
-      var rs=rows.filter(function(r){ return String(r[2]||'')===m; }).sort(function(a,b){ return cmpTen_(String(a[3]),String(b[3])); });
+      var rs=rows.filter(function(r){ return monthKey_(r[2])===m; }).sort(function(a,b){ return cmpTen_(String(a[3]),String(b[3])); });
       out2.push(['📅 '+mLabel(m),'','','','','','']); hdrRows.push(out2.length);
       out2.push(['STT','Nhân viên','Nhóm','Đề xuất','Đã duyệt','Đã chuyển','Còn lại']); hdrRows.push(out2.length);
       var a=0,b=0,c2=0,d=0;
