@@ -1404,7 +1404,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v160';
+const APP_VERSION = '20260803-v161';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6753,7 +6753,8 @@ function doGet(e){
   return ContentService.createTextOutput('ok');
 }
 // v159: xếp A→Z theo TÊN (chữ cuối) rồi họ đệm — đúng thói quen Việt Nam
-function cmpTen_(a,b){ var pa=String(a||'').trim().split(/\s+/), pb=String(b||'').trim().split(/\s+/); var ta=pa[pa.length-1]||'', tb=pb[pb.length-1]||''; return ta.localeCompare(tb,'vi') || String(a||'').localeCompare(String(b||''),'vi'); }
+function tenOf_(s){ var core=String(s||'').split(/\s+-\s*|\s*-\s+|\s+-$/)[0]; var p=core.trim().split(/\s+/).filter(function(w){ return /[A-Za-zÀ-ỹ]/.test(w); }); return p[p.length-1]||''; }
+function cmpTen_(a,b){ return tenOf_(a).localeCompare(tenOf_(b),'vi') || String(a||'').localeCompare(String(b||''),'vi'); }
 // v158 PA3: 2 sheet báo cáo lương tự dựng lại mỗi lần đồng bộ — "Lương theo người" (người × tháng) + "Lương theo tháng"
 function buildLuongReports_(ss, ls){
   try{
@@ -7997,7 +7998,8 @@ function renderEmployees(){
 let _empSortMode=(function(){ try{ return localStorage.getItem('dc_emp_sort')==='az'?'az':'group'; }catch(e){ return 'group'; } })();
 function setEmpSort(m){ _empSortMode=(m==='az')?'az':'group'; try{ localStorage.setItem('dc_emp_sort',_empSortMode); }catch(e){} _empSyncSortBtns(); renderEmployees(); }
 // v159: xếp A→Z theo TÊN (chữ cuối: An, Ba, Dũng...) rồi mới tới họ đệm — đúng thói quen Việt Nam (không xếp theo họ)
-function _tenOf(s){ const p=String(s||'').trim().split(/\s+/); return p[p.length-1]||''; }
+// v161: bỏ đuôi sau dấu " - " (VD "Nguyễn Thị Đào - PVA", "Lê Văn Hùng -") rồi mới lấy chữ cuối có chữ cái
+function _tenOf(s){ const core=String(s||'').split(/\s+-\s*|\s*-\s+|\s+-$/)[0]; const p=core.trim().split(/\s+/).filter(w=>/[A-Za-zÀ-ỹ]/.test(w)); return p[p.length-1]||''; }
 function _cmpTen(a,b){ return _tenOf(a).localeCompare(_tenOf(b),'vi') || String(a||'').localeCompare(String(b||''),'vi'); }
 function _empSyncSortBtns(){
   [['emp-sort-group','emp-sort-az'],['semp-sort-group','semp-sort-az']].forEach(([g,a])=>{
