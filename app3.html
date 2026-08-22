@@ -959,6 +959,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <button id="sal-view-table" onclick="salSetView('table')" style="padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer">📊 Bảng</button>
         </div>
         <button class="btn-full btn-primary-full" onclick="openAdvModal()">➕ Đề xuất ứng lương</button>
+        <button class="btn-full" onclick="openLuongExcelPick()" style="margin-top:8px;background:#0f766e;color:#fff;border:none;font-weight:800">📥 Nhập nhiều từ Excel</button>
+        <input id="luong-excel-file" type="file" accept=".xlsx,.xls" style="display:none" onchange="onLuongExcelFile(event)">
       </div>
     </div>
     <div id="sal-adv-list"></div>
@@ -1071,6 +1073,23 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <button class="btn-full btn-primary-full" onclick="saveAdvFromModal()">💾 Gửi đề xuất</button>
     <button class="btn-full btn-outline-full" onclick="closeAdvModal()">Hủy</button>
+  </div>
+</div>
+
+<!-- Modal XEM TRƯỚC nhập ứng lương từ Excel (v154) -->
+<div class="role-screen" id="lx-modal-overlay" style="display:none;z-index:9200;background:rgba(0,0,0,0.6);align-items:flex-start;padding-top:0">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:16px 12px 20px;width:100%;max-width:640px;margin-top:auto;max-height:92vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">📥 Nhập ứng lương từ Excel</div>
+      <button onclick="closeLuongExcel()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:6px">Khoản ứng cho <b id="lx-month-label">tháng —</b>. Kiểm tra kỹ tên + số tiền trước khi tạo. Dòng <span style="color:#dc2626;font-weight:700">đỏ</span> = tên chưa có trong danh sách.</div>
+    <div id="lx-summary" style="font-size:12.5px;font-weight:700;margin:6px 0 8px"></div>
+    <div id="lx-rows"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn-full btn-primary-full" style="flex:1" onclick="createLuongFromExcel()"><span id="lx-create-label">Tạo phiếu</span></button>
+      <button class="btn-full btn-outline-full" style="flex:0 0 90px" onclick="closeLuongExcel()">Hủy</button>
+    </div>
   </div>
 </div>
 
@@ -1365,7 +1384,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v153';
+const APP_VERSION = '20260803-v154';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -7914,6 +7933,177 @@ function openAdvModal(){
   const ov=document.getElementById('adv-modal-overlay'); ov.dataset.month=monthUsed; ov.style.display='flex';
 }
 function closeAdvModal(){ document.getElementById('adv-modal-overlay').style.display='none'; _advClearImages(); }
+// ══════════════════════════════════════════════════════════════════════
+// v154: NHẬP NHIỀU ỨNG LƯƠNG TỪ EXCEL (Mẫu 3: Họ tên | Công trình | Số tiền | Số TK | Ghi chú)
+// SheetJS tải LƯỜI (chỉ khi bấm nút) để không làm chậm mở app. Luôn có bảng xem trước, KHÔNG tự tạo tên lạ.
+// ══════════════════════════════════════════════════════════════════════
+let _lxRows = [];            // các dòng đọc từ Excel, sau khi khớp
+let _lxMonth = '';
+function _loadSheetJS(){
+  return new Promise((resolve,reject)=>{
+    if(window.XLSX) return resolve(window.XLSX);
+    const s=document.createElement('script');
+    s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    s.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error('SheetJS lỗi tải'));
+    s.onerror=()=>reject(new Error('Không tải được thư viện đọc Excel (cần mạng)'));
+    document.head.appendChild(s);
+  });
+}
+// Bỏ dấu tiếng Việt + chuẩn hoá để so tên (khoan dung gõ sai dấu/hoa thường/khoảng trắng)
+function _normName(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/đ/g,'d').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+// Đọc số tiền: bỏ mọi ký tự không phải số (dấu chấm nghìn, "đ", khoảng trắng)
+function _parseMoney(v){
+  if(typeof v==='number') return Math.round(v);
+  const n=parseInt(String(v==null?'':v).replace(/[^\d]/g,''),10);
+  return isNaN(n)?0:n;
+}
+function openLuongExcelPick(){
+  ensureSalaryMonth();
+  if(!employees.length){ showToast('Chưa có nhân viên — thêm ở tab 👥 Nhân viên trước'); return; }
+  const fi=document.getElementById('luong-excel-file'); if(fi){ fi.value=''; fi.click(); }
+}
+async function onLuongExcelFile(ev){
+  const file=ev.target.files && ev.target.files[0];
+  if(!file) return;
+  showToast('⏳ Đang đọc file Excel...');
+  let XLSX;
+  try{ XLSX=await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
+  let rowsRaw;
+  try{
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    rowsRaw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''}); // mảng theo hàng
+  }catch(e){ showToast('❌ Không đọc được file: '+e.message); return; }
+  _lxParseMau3(rowsRaw);
+}
+// Mẫu 3: dò hàng tiêu đề (chứa "họ và tên" + "số tiền"), map cột theo tên tiêu đề
+function _lxParseMau3(rows){
+  let hdrIdx=-1, col={};
+  for(let i=0;i<Math.min(rows.length,15);i++){
+    const cells=rows[i].map(x=>_normName(x));
+    const findCol=(keys)=>cells.findIndex(c=>keys.some(k=>c.includes(k)));
+    const cName=findCol(['ho va ten','ho ten','ten']);
+    const cMoney=findCol(['so tien','tien','luong','so tia n']);
+    if(cName>=0 && cMoney>=0){
+      hdrIdx=i;
+      col.name=cName; col.money=cMoney;
+      col.group=findCol(['cong trinh','nhom','cong truong']);
+      col.stk=findCol(['so tai khoan','tai khoan','stk']);
+      col.note=findCol(['ghi chu','chu']);
+      break;
+    }
+  }
+  if(hdrIdx<0){ showToast('❌ Không tìm thấy cột "Họ và tên" và "Số tiền" trong file. Hãy dùng đúng Mẫu 3.'); return; }
+  // Chuẩn hoá danh sách nhân viên để khớp
+  const empNorm=employees.map(e=>({e, n:_normName(e.name)}));
+  const out=[];
+  for(let i=hdrIdx+1;i<rows.length;i++){
+    const r=rows[i];
+    const rawName=String(r[col.name]||'').trim();
+    const money=_parseMoney(r[col.money]);
+    if(!rawName) continue;                 // dòng trống
+    if(money<=0) continue;                 // dòng công trình/tổng/không tiền → bỏ
+    const nn=_normName(rawName);
+    // khớp: trùng chính xác → gần đúng (chứa nhau)
+    let exact=empNorm.filter(x=>x.n===nn);
+    let match=null, kind='red';
+    if(exact.length===1){ match=exact[0].e; kind='green'; }
+    else if(exact.length>1){ match=exact[0].e; kind='yellow'; } // trùng tên → cho chọn lại
+    else{
+      const part=empNorm.filter(x=>x.n.includes(nn)||nn.includes(x.n));
+      if(part.length===1){ match=part[0].e; kind='yellow'; }
+      else if(part.length>1){ match=part[0].e; kind='yellow'; }
+    }
+    out.push({
+      rawName, money,
+      group:col.group>=0?String(r[col.group]||'').trim():'',
+      note:col.note>=0?String(r[col.note]||'').trim():'',
+      empId: match?match.id:'', kind, use:true
+    });
+  }
+  if(!out.length){ showToast('❌ Không có dòng nào hợp lệ (cần tên + số tiền > 0).'); return; }
+  _lxRows=out; _lxMonth=salaryMonth;
+  _lxRender();
+  document.getElementById('lx-month-label').textContent=monthLabel(_lxMonth);
+  document.getElementById('lx-modal-overlay').style.display='flex';
+}
+function _lxRender(){
+  const box=document.getElementById('lx-rows');
+  const empOpts=(sel)=>{
+    const order=['Văn phòng'].concat(sites);
+    const sorted=employees.slice().sort((x,y)=>{let ix=order.indexOf(x.group);let iy=order.indexOf(y.group);if(ix<0)ix=999;if(iy<0)iy=999;return ix-iy||(x.name>y.name?1:-1);});
+    return '<option value="">— chưa khớp —</option>'+sorted.map(e=>`<option value="${esc(e.id)}"${e.id===sel?' selected':''}>${esc(e.name)} — ${esc(e.group)}</option>`).join('');
+  };
+  box.innerHTML=_lxRows.map((row,i)=>{
+    const clr = !row.use?'#9ca3af' : row.empId?(row.kind==='green'?'#16a34a':'#d97706'):'#dc2626';
+    const ic  = !row.use?'⏭️' : row.empId?(row.kind==='green'?'✅':'🟡'):'🔴';
+    return `<div style="border:1px solid var(--gray-border);border-left:4px solid ${clr};border-radius:8px;padding:8px;margin-bottom:6px;${row.use?'':'opacity:.5'}">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+        <div style="font-weight:700;font-size:13px">${ic} ${esc(row.rawName)}${row.group?` · <span style="font-weight:400;color:var(--text-sub)">${esc(row.group)}</span>`:''}</div>
+        <div style="font-weight:800;color:var(--blue);white-space:nowrap">${fmtVND(row.money)}</div>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap">
+        <select onchange="_lxSetEmp(${i},this.value)" style="flex:1;min-width:150px;padding:5px;border:1px solid var(--gray-border);border-radius:7px;font-size:12px">${empOpts(row.empId)}</select>
+        ${!row.empId?`<button onclick="_lxAddEmp(${i})" style="padding:5px 9px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;border:none;border-radius:7px;cursor:pointer">➕ Thêm người này</button>`:''}
+        <button onclick="_lxToggle(${i})" style="padding:5px 9px;font-size:11px;font-weight:700;background:${row.use?'#fee2e2;color:#991b1b':'#e0e7ff;color:#3730a3'};border:none;border-radius:7px;cursor:pointer">${row.use?'⏭️ Bỏ dòng':'↩️ Dùng lại'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  const ok=_lxRows.filter(r=>r.use && r.empId).length;
+  const red=_lxRows.filter(r=>r.use && !r.empId).length;
+  const skip=_lxRows.filter(r=>!r.use).length;
+  const sumOk=_lxRows.filter(r=>r.use&&r.empId).reduce((s,r)=>s+r.money,0);
+  document.getElementById('lx-summary').innerHTML=`Sẽ tạo <b style="color:#16a34a">${ok}</b> phiếu · Tổng <b style="color:var(--blue)">${fmtVND(sumOk)}</b>${red?` · <b style="color:#dc2626">${red}</b> dòng chưa khớp (bỏ qua)`:''}${skip?` · ${skip} bỏ`:''}`;
+  document.getElementById('lx-create-label').textContent=`Tạo ${ok} phiếu đã khớp`;
+}
+function _lxSetEmp(i,v){ _lxRows[i].empId=v; if(v)_lxRows[i].kind='green'; _lxRender(); }
+function _lxToggle(i){ _lxRows[i].use=!_lxRows[i].use; _lxRender(); }
+function _lxAddEmp(i){
+  const row=_lxRows[i];
+  const grp=row.group||'Văn phòng';
+  const finalGrp = (grp==='Văn phòng'||sites.indexOf(grp)>=0) ? grp : (sites.indexOf(grp)>=0?grp:'Văn phòng');
+  const e={ id:'emp_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), name:row.rawName, position:'', group:finalGrp, note:'', active:true, createdBy:getCurrentUserName(), ts:Date.now() };
+  employees.push(e); saveEmployees();
+  row.empId=e.id; row.kind='green';
+  showToast('✅ Đã thêm '+row.rawName+' vào danh sách ('+finalGrp+')');
+  _lxRender();
+}
+function closeLuongExcel(){ document.getElementById('lx-modal-overlay').style.display='none'; _lxRows=[]; }
+function createLuongFromExcel(){
+  const rows=_lxRows.filter(r=>r.use && r.empId);
+  if(!rows.length){ showToast('Chưa có dòng nào khớp để tạo'); return; }
+  if(!confirm('Tạo '+rows.length+' phiếu ứng lương cho tháng '+monthLabel(_lxMonth)+'?')) return;
+  let made=0;
+  rows.forEach((row,idx)=>{
+    const emp=employees.find(e=>e.id===row.empId); if(!emp) return;
+    const p={
+      id:(Date.now()+idx).toString(),
+      kind:'salary', empId:emp.id, month:_lxMonth, position:emp.position||'',
+      desc:'Ứng lương '+monthLabel(_lxMonth),
+      person:emp.name, site:emp.group,
+      amount:row.money, amountUnit:'dong', note:row.note||'',
+      priority:'normal', status:'pending', ts:Date.now(),
+      imgB64:null, imgImages:[], proofImages:[],
+      approvedD:null, approvedH:null, approvedDAmount:null, approvedHAmount:null,
+      approvedDHistory:[], approvedHHistory:[], transfers:[]
+    };
+    proposals.unshift(p); made++;
+  });
+  save();
+  // đồng bộ sang sheet Lương từng phiếu (giãn nhịp cho nhẹ)
+  const created=proposals.filter(p=>p.kind==='salary' && p.month===_lxMonth).slice(0,made);
+  created.forEach((p,i)=>setTimeout(()=>{ try{ syncLuongToSheet(p); }catch(e){} }, i*250));
+  closeLuongExcel();
+  salaryMonth=_lxMonth;
+  setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
+  showToast('✅ Đã tạo '+made+' phiếu ứng lương');
+  sendPushNotif('💵 '+made+' đề xuất ứng lương mới', 'Nhập từ Excel tháng '+monthLabel(_lxMonth), ['dung','hien','trang']);
+}
+
 function saveAdvFromModal(){
   const empId=document.getElementById('adv-inp-emp').value;
   const amount=parseAmountInput(document.getElementById('adv-inp-amount'));
