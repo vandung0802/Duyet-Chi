@@ -1404,7 +1404,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v158';
+const APP_VERSION = '20260803-v159';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6622,7 +6622,7 @@ function doGet(e){
   var targetId=String(e.parameter.id||'');
   var rowIdx=-1;
   for(var i=1;i<v.length;i++){ if(String(v[i][1])===targetId){ rowIdx=i+1; break; } }
-  var now=new Date().toLocaleString('vi-VN');
+  var now=Utilities.formatDate(new Date(),'Asia/Ho_Chi_Minh','HH:mm dd/MM/yyyy'); // v159: giờ VN, định dạng Việt (toLocaleString trên máy chủ ra kiểu Mỹ)
   var act=e.parameter.action;
   if(act==='add'){
     sh.appendRow(['', "'"+e.parameter.id, e.parameter.ts, e.parameter.desc, e.parameter.person, e.parameter.site, e.parameter.amount, e.parameter.note, '', '', 'Chờ duyệt', '', '', '', '', '', '', '']);
@@ -6752,6 +6752,8 @@ function doGet(e){
   buildReports(ss, sh);
   return ContentService.createTextOutput('ok');
 }
+// v159: xếp A→Z theo TÊN (chữ cuối) rồi họ đệm — đúng thói quen Việt Nam
+function cmpTen_(a,b){ var pa=String(a||'').trim().split(/\s+/), pb=String(b||'').trim().split(/\s+/); var ta=pa[pa.length-1]||'', tb=pb[pb.length-1]||''; return ta.localeCompare(tb,'vi') || String(a||'').localeCompare(String(b||''),'vi'); }
 // v158 PA3: 2 sheet báo cáo lương tự dựng lại mỗi lần đồng bộ — "Lương theo người" (người × tháng) + "Lương theo tháng"
 function buildLuongReports_(ss, ls){
   try{
@@ -6767,7 +6769,7 @@ function buildLuongReports_(ss, ls){
       var m=String(r[2]||''); byP[k].dx+=num(r[6]); byP[k].ck+=num(r[9]); byP[k].m[m]=(byP[k].m[m]||0)+num(r[9]);
       if(!byP[k].pos && r[4]) byP[k].pos=String(r[4]); if(!byP[k].grp && r[5]) byP[k].grp=String(r[5]);
     });
-    var names=Object.keys(byP).sort(function(a,b){ return a.localeCompare(b,'vi'); });
+    var names=Object.keys(byP).sort(cmpTen_);
     // ── Sheet 1: Lương theo người ──
     var s1=ss.getSheetByName('Lương theo người')||ss.insertSheet('Lương theo người'); s1.clear();
     try{ s1.getBandings().forEach(function(b){ b.remove(); }); }catch(e1){}
@@ -6789,7 +6791,7 @@ function buildLuongReports_(ss, ls){
     try{ s2.getBandings().forEach(function(b){ b.remove(); }); }catch(e2){}
     var out2=[], hdrRows=[], totRows=[];
     mlist.forEach(function(m){
-      var rs=rows.filter(function(r){ return String(r[2]||'')===m; }).sort(function(a,b){ return String(a[3]).localeCompare(String(b[3]),'vi'); });
+      var rs=rows.filter(function(r){ return String(r[2]||'')===m; }).sort(function(a,b){ return cmpTen_(String(a[3]),String(b[3])); });
       out2.push(['📅 '+mLabel(m),'','','','','','']); hdrRows.push(out2.length);
       out2.push(['STT','Nhân viên','Nhóm','Đề xuất','Đã duyệt','Đã chuyển','Còn lại']); hdrRows.push(out2.length);
       var a=0,b=0,c2=0,d=0;
@@ -7979,14 +7981,14 @@ function renderEmployees(){
     </div>`;
   };
   if(_empSortMode==='az'){
-    const sorted=shown.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
+    const sorted=shown.slice().sort((a,b)=>_cmpTen(a.name,b.name));
     list.innerHTML=`<div style="margin:8px 4px 4px;font-size:13px;font-weight:800;color:var(--blue)">🔤 Tất cả · ${sorted.length} người (A→Z)</div><div class="card"><div class="card-body" style="padding:2px 0">`+sorted.map(e=>rowHtml(e,true)).join('')+`</div></div>`;
     return;
   }
   const order=['Văn phòng'].concat(sites);
   const groups={};
   shown.forEach(e=>{ (groups[e.group]=groups[e.group]||[]).push(e); });
-  Object.keys(groups).forEach(g=>groups[g].sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi')));
+  Object.keys(groups).forEach(g=>groups[g].sort((a,b)=>_cmpTen(a.name,b.name)));
   const keys=Object.keys(groups).sort((x,y)=>{ let ix=order.indexOf(x); let iy=order.indexOf(y); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy; });
   list.innerHTML=keys.map(g=>`<div style="margin:8px 4px 4px;font-size:13px;font-weight:800;color:var(--blue)">${gIcon(g)} ${esc(g)} <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${groups[g].length} người</span></div>
     <div class="card"><div class="card-body" style="padding:2px 0">`+groups[g].map(e=>rowHtml(e,false)).join('')+`</div></div>`).join('');
@@ -7994,6 +7996,9 @@ function renderEmployees(){
 // ── v158 PA3: xếp danh sách nhân viên (nhớ theo máy) + tổng đã ứng theo năm + danh sách trong Cài đặt + xuất Excel ──
 let _empSortMode=(function(){ try{ return localStorage.getItem('dc_emp_sort')==='az'?'az':'group'; }catch(e){ return 'group'; } })();
 function setEmpSort(m){ _empSortMode=(m==='az')?'az':'group'; try{ localStorage.setItem('dc_emp_sort',_empSortMode); }catch(e){} _empSyncSortBtns(); renderEmployees(); }
+// v159: xếp A→Z theo TÊN (chữ cuối: An, Ba, Dũng...) rồi mới tới họ đệm — đúng thói quen Việt Nam (không xếp theo họ)
+function _tenOf(s){ const p=String(s||'').trim().split(/\s+/); return p[p.length-1]||''; }
+function _cmpTen(a,b){ return _tenOf(a).localeCompare(_tenOf(b),'vi') || String(a||'').localeCompare(String(b||''),'vi'); }
 function _empSyncSortBtns(){
   [['emp-sort-group','emp-sort-az'],['semp-sort-group','semp-sort-az']].forEach(([g,a])=>{
     const bg=document.getElementById(g), ba=document.getElementById(a); if(!bg||!ba) return;
@@ -8028,13 +8033,13 @@ function renderSettingsEmpList(){
       <div style="flex:1;min-width:0"><span style="font-weight:700">${esc(e.name)}</span>${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''}${showGroup?`<div style="font-size:11px;color:var(--text-sub)">${gIcon(e.group)} ${esc(e.group||'')}</div>`:''}</div>
     </div>`;
   if(_empSortMode==='az'){
-    const sorted=employees.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
+    const sorted=employees.slice().sort((a,b)=>_cmpTen(a.name,b.name));
     el.innerHTML=sorted.map((e,i)=>`<div style="display:flex;gap:6px;align-items:flex-start"><span style="width:22px;font-size:11px;color:var(--text-sub);padding-top:7px">${i+1}.</span><div style="flex:1">${row(e,true)}</div></div>`).join('');
     return;
   }
   const order=['Văn phòng'].concat(sites); const groups={};
   employees.forEach(e=>{ (groups[e.group]=groups[e.group]||[]).push(e); });
-  Object.keys(groups).forEach(g=>groups[g].sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi')));
+  Object.keys(groups).forEach(g=>groups[g].sort((a,b)=>_cmpTen(a.name,b.name)));
   const keys=Object.keys(groups).sort((x,y)=>{ let ix=order.indexOf(x); let iy=order.indexOf(y); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy; });
   el.innerHTML=keys.map(g=>`<div style="margin:8px 0 2px;font-size:12.5px;font-weight:800;color:var(--blue)">${gIcon(g)} ${esc(g)} <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${groups[g].length} người</span></div>`+groups[g].map(e=>row(e,false)).join('')).join('');
 }
@@ -8044,8 +8049,8 @@ async function exportEmployeesExcel(){
   let XLSX; try{ XLSX=await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
   const order=['Văn phòng'].concat(sites);
   let list=employees.slice();
-  if(_empSortMode==='az') list.sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
-  else list.sort((a,b)=>{ let ia=order.indexOf(a.group), ib=order.indexOf(b.group); if(ia<0)ia=999; if(ib<0)ib=999; return ia-ib || (a.name||'').localeCompare(b.name||'','vi'); });
+  if(_empSortMode==='az') list.sort((a,b)=>_cmpTen(a.name,b.name));
+  else list.sort((a,b)=>{ let ia=order.indexOf(a.group), ib=order.indexOf(b.group); if(ia<0)ia=999; if(ib<0)ib=999; return ia-ib || _cmpTen(a.name,b.name); });
   const yr=String(new Date().getFullYear()); const adv=_empAdvancedMap(yr);
   const aoa=[['STT','Họ và tên','Chức vụ','Nhóm / Công trình','Đã ứng '+yr,'Ghi chú']];
   list.forEach((e,i)=>aoa.push([i+1,e.name||'',e.position||'',e.group||'',adv[e.id]||adv['n:'+_normName(e.name)]||0,e.note||'']));
@@ -8063,7 +8068,7 @@ async function exportSalaryByPersonExcel(){
   all.forEach(p=>{ const k=p.empId||('n:'+_normName(p.person||'')); const e=employees.find(x=>x.id===p.empId);
     if(!byP[k]) byP[k]={name:p.person||'',pos:(e&&e.position)||p.position||'',grp:p.site||'',dx:0,ck:0,m:{}};
     const tr=getTotalTransferred(p); byP[k].dx+=parseFloat(p.amount)||0; byP[k].ck+=tr; byP[k].m[p.month]=(byP[k].m[p.month]||0)+tr; });
-  const keys=Object.keys(byP).sort((a,b)=>byP[a].name.localeCompare(byP[b].name,'vi'));
+  const keys=Object.keys(byP).sort((a,b)=>_cmpTen(byP[a].name,byP[b].name));
   const hdr=['STT','Nhân viên','Chức vụ','Nhóm'].concat(months.map(monthLabel)).concat(['Tổng đề xuất','Tổng đã chuyển','Còn phải chuyển']);
   const aoa=[hdr]; const tot=months.map(()=>0); let tdx=0,tck=0,tcon=0;
   keys.forEach((k,i)=>{ const p=byP[k]; const con=Math.max(0,p.dx-p.ck); tdx+=p.dx; tck+=p.ck; tcon+=con;
@@ -8666,7 +8671,7 @@ function renderSalaryStatsByName(){
   _salSnScope = _q ? items.filter(p=>(p.person||'').toLowerCase().includes(_q) || (posOf(p)||'').toLowerCase().includes(_q)) : items;
   let ekeys=Object.keys(byE).filter(k=>!_q || (byE[k].name||'').toLowerCase().includes(_q) || (byE[k].position||'').toLowerCase().includes(_q));
   const _sm=((document.getElementById('sal-sn-sort')||{}).value)||'sum';
-  if(_sm==='name') ekeys.sort((x,y)=>(byE[x].name||'').localeCompare(byE[y].name||'','vi'));
+  if(_sm==='name') ekeys.sort((x,y)=>_cmpTen(byE[x].name,byE[y].name));
   else ekeys.sort((x,y)=>byE[y].duyet-byE[x].duyet);
   if(!ekeys.length){ el.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu ứng lương khớp tìm kiếm</div>'; return; }
   const tDuyet=ekeys.reduce((s,k)=>s+byE[k].duyet,0), tCK=ekeys.reduce((s,k)=>s+byE[k].chuyen,0);
