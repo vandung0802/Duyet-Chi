@@ -1384,7 +1384,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v156';
+const APP_VERSION = '20260803-v157';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -7978,17 +7978,21 @@ async function onLuongExcelFile(ev){
     wb=XLSX.read(buf,{type:'array'});
   }catch(e){ showToast('❌ Không đọc được file: '+e.message); return; }
   _lxWb=wb; _lxXLSX=XLSX;
-  if(wb.SheetNames.length<=1){ _lxUseSheets([wb.SheetNames[0]]); }
-  else{ _lxShowSheetChooser(); } // file nhiều sheet → cho chọn
+  // Bỏ qua sheet TRỐNG (Excel hay có sẵn Sheet1/Sheet2 rỗng) → chỉ hỏi chọn khi còn >1 sheet có dữ liệu
+  const nonEmpty=wb.SheetNames.filter(n=>wb.Sheets[n] && wb.Sheets[n]['!ref']);
+  if(!nonEmpty.length){ showToast('❌ File không có dữ liệu'); return; }
+  if(nonEmpty.length===1){ _lxUseSheets([nonEmpty[0]]); }
+  else{ _lxShowSheetChooser(nonEmpty); }
 }
 // File nhiều sheet: chọn 1 sheet hoặc đọc TẤT CẢ (gộp)
-function _lxShowSheetChooser(){
-  const names=_lxWb.SheetNames;
+let _lxSheetList=[];
+function _lxShowSheetChooser(names){
+  _lxSheetList=names;
   document.getElementById('lx-month-label').textContent=monthLabel(salaryMonth);
-  document.getElementById('lx-summary').innerHTML='File có <b>'+names.length+' sheet</b> — chọn sheet cần đọc:';
+  document.getElementById('lx-summary').innerHTML='File có <b>'+names.length+' sheet có dữ liệu</b> — chọn sheet cần đọc:';
   document.getElementById('lx-rows').innerHTML =
-    `<button class="btn-full" onclick="_lxUseSheets(_lxWb.SheetNames)" style="background:#1a56db;color:#fff;border:none;font-weight:800;margin-bottom:8px">📚 Đọc TẤT CẢ ${names.length} sheet (gộp chung)</button>`
-    + names.map((n,i)=>`<button class="btn-full btn-outline-full" style="margin-bottom:6px" onclick='_lxUseSheets([_lxWb.SheetNames[${i}]])'>📄 ${esc(n)}</button>`).join('');
+    `<button class="btn-full" onclick="_lxUseSheets(_lxSheetList)" style="background:#1a56db;color:#fff;border:none;font-weight:800;margin-bottom:8px">📚 Đọc TẤT CẢ ${names.length} sheet (gộp chung)</button>`
+    + names.map((n,i)=>`<button class="btn-full btn-outline-full" style="margin-bottom:6px" onclick='_lxUseSheets([_lxSheetList[${i}]])'>📄 ${esc(n)}</button>`).join('');
   document.getElementById('lx-create-label').textContent='—';
   document.getElementById('lx-modal-overlay').style.display='flex';
 }
@@ -8019,8 +8023,9 @@ function _lxParseRows(rows, sheetName){
       hdrIdx=i;
       col.name=cName; col.money=cMoney;
       col.group=findCol(['cong trinh','nhom','cong truong']);
+      col.position=findCol(['chuc vu','chuc danh','vi tri']); // v157: cột Chức vụ
       col.stk=findCol(['so tai khoan','tai khoan','stk']);
-      col.note=findCol(['ghi chu','chu']);
+      col.note=findCol(['ghi chu']); // chỉ 'ghi chu' (từ 'chu' lẻ sẽ dính nhầm "chức vụ")
       break;
     }
   }
@@ -8046,6 +8051,7 @@ function _lxParseRows(rows, sheetName){
     const grpRaw = (col.group>=0?String(r[col.group]||'').trim():'') || (sheetName||'');
     out.push({
       rawName, money, group:grpRaw,
+      position:col.position>=0?String(r[col.position]||'').trim():'',
       note:col.note>=0?String(r[col.note]||'').trim():'',
       empId: match?match.id:'', kind, use:true, addOpen:false
     });
@@ -8087,7 +8093,7 @@ function _lxRender(){
     }
     return `<div style="border:1px solid var(--gray-border);border-left:4px solid ${clr};border-radius:8px;padding:8px;margin-bottom:6px;${row.use?'':'opacity:.5'}">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
-        <div style="font-weight:700;font-size:13px">${ic} ${esc(row.rawName)}${row.group?` · <span style="font-weight:400;color:var(--text-sub)">${esc(row.group)}</span>`:''}</div>
+        <div style="font-weight:700;font-size:13px">${ic} ${esc(row.rawName)}${row.position?` <span style="font-weight:400;color:var(--text-sub)">(${esc(row.position)})</span>`:''}${row.group?` · <span style="font-weight:400;color:var(--text-sub)">${esc(row.group)}</span>`:''}</div>
         <div style="font-weight:800;color:var(--blue);white-space:nowrap">${fmtVND(row.money)}</div>
       </div>${grpWarn}
       <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap">
@@ -8136,7 +8142,7 @@ function _lxAddEmpConfirm(i){
   const row=_lxRows[i];
   const sel=document.getElementById('lx-addgrp-'+i);
   const grp = sel ? (sel.value==='__raw' ? row.group : sel.value) : 'Văn phòng';
-  const e={ id:'emp_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), name:row.rawName, position:'', group:grp, note:'', active:true, createdBy:getCurrentUserName(), ts:Date.now() };
+  const e={ id:'emp_'+Date.now()+'_'+Math.random().toString(36).slice(2,7), name:row.rawName, position:row.position||'', group:grp, note:'', active:true, createdBy:getCurrentUserName(), ts:Date.now() }; // v157: lấy Chức vụ từ Excel
   employees.push(e); saveEmployees();
   row.empId=e.id; row.kind='green'; row.addOpen=false;
   showToast('✅ Đã thêm '+row.rawName+' → '+grp);
@@ -8147,12 +8153,14 @@ function createLuongFromExcel(){
   const rows=_lxRows.filter(r=>r.use && r.empId);
   if(!rows.length){ showToast('Chưa có dòng nào khớp để tạo'); return; }
   if(!confirm('Tạo '+rows.length+' phiếu ứng lương cho tháng '+monthLabel(_lxMonth)+'?')) return;
-  let made=0;
+  let made=0, empTouched=false;
   rows.forEach((row,idx)=>{
     const emp=employees.find(e=>e.id===row.empId); if(!emp) return;
+    // v157: nhân viên chưa có chức vụ mà Excel có → bổ sung luôn vào danh sách
+    if(!emp.position && row.position){ emp.position=row.position; empTouched=true; }
     const p={
       id:(Date.now()+idx).toString(),
-      kind:'salary', empId:emp.id, month:_lxMonth, position:emp.position||'',
+      kind:'salary', empId:emp.id, month:_lxMonth, position:emp.position||row.position||'',
       desc:'Ứng lương '+monthLabel(_lxMonth),
       person:emp.name, site:emp.group,
       amount:row.money, amountUnit:'dong',
@@ -8164,6 +8172,7 @@ function createLuongFromExcel(){
     };
     proposals.unshift(p); made++;
   });
+  if(empTouched) saveEmployees();
   save();
   // đồng bộ sang sheet Lương từng phiếu (giãn nhịp cho nhẹ)
   const created=proposals.filter(p=>p.kind==='salary' && p.month===_lxMonth).slice(0,made);
