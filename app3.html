@@ -1384,7 +1384,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v155';
+const APP_VERSION = '20260803-v156';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -8075,11 +8075,21 @@ function _lxRender(){
   box.innerHTML=_lxRows.map((row,i)=>{
     const clr = !row.use?'#9ca3af' : row.empId?(row.kind==='green'?'#16a34a':'#d97706'):'#dc2626';
     const ic  = !row.use?'⏭️' : row.empId?(row.kind==='green'?'✅':'🟡'):'🔴';
+    // Cảnh báo NHÓM LỆCH: Excel ghi công trình khác với nhóm đang lưu của nhân viên khớp
+    let grpWarn='';
+    if(row.use && row.empId && row.group){
+      const _emp=employees.find(e=>e.id===row.empId);
+      const _guess=_lxGuessSite(row.group);
+      if(_emp && _guess && _emp.group!==_guess){
+        grpWarn=`<div style="margin-top:6px;padding:6px 8px;background:#fef3c7;border-radius:7px;font-size:11.5px;color:#92400e">⚠️ Excel ghi <b>"${esc(row.group)}"</b> nhưng ${esc(_emp.name)} đang ở nhóm <b>${esc(_emp.group)}</b>
+          <button onclick="_lxFixGrp(${i})" style="margin-left:6px;padding:3px 8px;font-size:11px;font-weight:700;background:#d97706;color:#fff;border:none;border-radius:6px;cursor:pointer">🔧 Đổi thành ${esc(_guess)}</button></div>`;
+      }
+    }
     return `<div style="border:1px solid var(--gray-border);border-left:4px solid ${clr};border-radius:8px;padding:8px;margin-bottom:6px;${row.use?'':'opacity:.5'}">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
         <div style="font-weight:700;font-size:13px">${ic} ${esc(row.rawName)}${row.group?` · <span style="font-weight:400;color:var(--text-sub)">${esc(row.group)}</span>`:''}</div>
         <div style="font-weight:800;color:var(--blue);white-space:nowrap">${fmtVND(row.money)}</div>
-      </div>
+      </div>${grpWarn}
       <div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap">
         <select onchange="_lxSetEmp(${i},this.value)" style="flex:1;min-width:150px;padding:5px;border:1px solid var(--gray-border);border-radius:7px;font-size:12px">${empOpts(row.empId)}</select>
         ${!row.empId?`<button onclick="_lxAddEmp(${i})" style="padding:5px 9px;font-size:11px;font-weight:700;background:#dcfce7;color:#166534;border:none;border-radius:7px;cursor:pointer">➕ Thêm người này</button>`:''}
@@ -8100,6 +8110,15 @@ function _lxRender(){
   document.getElementById('lx-create-label').textContent=`Tạo ${ok} phiếu đã khớp`;
 }
 function _lxSetEmp(i,v){ _lxRows[i].empId=v; if(v)_lxRows[i].kind='green'; _lxRender(); }
+// Sửa nhanh nhóm nhân viên theo công trình trong Excel (nút 🔧 ở cảnh báo nhóm lệch)
+function _lxFixGrp(i){
+  const row=_lxRows[i];
+  const emp=employees.find(e=>e.id===row.empId); if(!emp) return;
+  const guess=_lxGuessSite(row.group); if(!guess) return;
+  emp.group=guess; saveEmployees();
+  showToast('🔧 Đã đổi '+emp.name+' → '+guess);
+  _lxRender();
+}
 function _lxToggle(i){ _lxRows[i].use=!_lxRows[i].use; _lxRender(); }
 // Bấm "Thêm người này" → mở ô CHỌN nhóm/công trình (mặc định = tự đoán từ chữ trong Excel), user xác nhận mới thêm
 function _lxAddEmp(i){ _lxRows[i].addOpen=!_lxRows[i].addOpen; _lxRender(); }
@@ -8136,7 +8155,8 @@ function createLuongFromExcel(){
       kind:'salary', empId:emp.id, month:_lxMonth, position:emp.position||'',
       desc:'Ứng lương '+monthLabel(_lxMonth),
       person:emp.name, site:emp.group,
-      amount:row.money, amountUnit:'dong', note:row.note||'',
+      amount:row.money, amountUnit:'dong',
+      note:(row.note?row.note+' · ':'')+'📥 Nhập Excel lúc '+new Date().toLocaleString('vi-VN'),
       priority:'normal', status:'pending', ts:Date.now(),
       imgB64:null, imgImages:[], proofImages:[],
       approvedD:null, approvedH:null, approvedDAmount:null, approvedHAmount:null,
