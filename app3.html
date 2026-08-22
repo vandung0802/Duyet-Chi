@@ -754,6 +754,21 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button onclick="syncAllLuongToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Lương → Google Sheet</button>
         <button onclick="syncAllKhToSheet()" style="margin-left:6px;padding:6px 12px;font-size:12px;font-weight:700;background:#7c3aed;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ P.KH → Google Sheet</button>
       </div>
+      <!-- v158 PA3: danh sách nhân viên trong Cài đặt (xem nhanh, xếp A→Z / theo nhóm, xuất Excel) -->
+      <details id="settings-emp-section" style="display:none;margin-bottom:10px">
+        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">📋 Danh sách nhân viên <span id="settings-emp-count" style="font-size:11px;color:var(--text-sub);font-weight:600"></span></summary>
+        <div style="margin-top:8px">
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button id="semp-sort-group" onclick="setEmpSort('group');renderSettingsEmpList()" style="flex:1;padding:6px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer">🏗 Theo nhóm</button>
+            <button id="semp-sort-az" onclick="setEmpSort('az');renderSettingsEmpList()" style="flex:1;padding:6px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer">🔤 Tên A→Z</button>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+            <button onclick="exportEmployeesExcel()" style="flex:1;padding:6px 8px;font-size:11.5px;font-weight:700;border-radius:8px;border:none;background:#dcfce7;color:#166534;cursor:pointer">📤 Xuất Excel DS nhân viên</button>
+            <button onclick="exportSalaryByPersonExcel()" style="flex:1;padding:6px 8px;font-size:11.5px;font-weight:700;border-radius:8px;border:none;background:#dbeafe;color:#1e40af;cursor:pointer">📤 Xuất Excel Lương theo người</button>
+          </div>
+          <div id="settings-emp-list" style="font-size:13px"></div>
+        </div>
+      </details>
       <details style="margin-bottom:10px">
         <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">Cập nhật tên &amp; vai trò</summary>
         <div style="margin-top:10px">
@@ -972,6 +987,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="card-body" style="padding:10px 12px">
         <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Danh sách nhân viên hưởng lương. Mỗi người gắn <b>Văn phòng</b> hoặc <b>một công trình</b>, có ô ghi chú (VD: nửa tháng chuyển sang công trình khác). Đề xuất ứng lương sẽ chọn tên từ danh sách này.</p>
         <input id="sal-emp-search" type="text" name="dc-emp-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm nhân viên..." oninput="renderEmployees()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
+        <div style="display:flex;gap:6px;margin-bottom:8px">
+          <button id="emp-sort-group" onclick="setEmpSort('group')" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer">🏗 Theo nhóm</button>
+          <button id="emp-sort-az" onclick="setEmpSort('az')" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer">🔤 Tên A→Z</button>
+          <button onclick="exportEmployeesExcel()" style="padding:7px 10px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#166534;cursor:pointer">📤 Excel</button>
+        </div>
         <button class="btn-full btn-primary-full" onclick="openEmpModal()">➕ Thêm nhân viên</button>
       </div>
     </div>
@@ -1384,7 +1404,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v157';
+const APP_VERSION = '20260803-v158';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5642,6 +5662,11 @@ function renderSettings(){
   // v118: mục đồng bộ Lương → Sheet — chỉ D
   const luongSheetSec = document.getElementById('admin-luongsheet-section');
   if(luongSheetSec) luongSheetSec.style.display = currentRole==='dung' ? 'block' : 'none';
+  // v158: danh sách nhân viên trong Cài đặt (ai có dữ liệu nhân viên đều xem được)
+  try{
+    const es=document.getElementById('settings-emp-section');
+    if(es){ es.style.display = employees.length ? 'block' : 'none'; if(employees.length) renderSettingsEmpList(); }
+  }catch(e){}
   updateNotifSettingsStatus();
   const pl=document.getElementById('person-list');
   pl.innerHTML=persons.length
@@ -6668,10 +6693,15 @@ function doGet(e){
       var lbs=ls.getBandings(); var lbr=ls.getRange(2,1,ln,14);
       if(lbs.length>0){ lbs[0].setRange(lbr); } else { lbr.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREEN,false,false); }
     }
+    buildLuongReports_(ss, ls);
     return ContentService.createTextOutput('ok');
   } else if(act==='luongDel'){
     var ls2=ss.getSheetByName('Tổng hợp Lương');
     if(ls2){ var lv2=ls2.getDataRange().getValues(); for(var lj=lv2.length-1;lj>=1;lj--){ if(String(lv2[lj][1])===targetId){ ls2.deleteRow(lj+1); break; } } }
+    if(ls2) buildLuongReports_(ss, ls2);
+    return ContentService.createTextOutput('ok');
+  } else if(act==='luongReport'){
+    var lsR=ss.getSheetByName('Tổng hợp Lương'); if(lsR) buildLuongReports_(ss, lsR);
     return ContentService.createTextOutput('ok');
   } else if(act==='khchi'){
     // ── v127 P.KH: sheet "Chi Kế hoạch" — upsert theo id, style tự đẹp (giống sheet Lương) ──
@@ -6721,6 +6751,59 @@ function doGet(e){
   _styleMain(sh);
   buildReports(ss, sh);
   return ContentService.createTextOutput('ok');
+}
+// v158 PA3: 2 sheet báo cáo lương tự dựng lại mỗi lần đồng bộ — "Lương theo người" (người × tháng) + "Lương theo tháng"
+function buildLuongReports_(ss, ls){
+  try{
+    var data=ls.getDataRange().getValues(); if(data.length<2) return;
+    var rows=data.slice(1).filter(function(r){ return String(r[1]||'') && String(r[3]||''); });
+    var num=function(x){ var n=parseFloat(String(x).replace(/[^0-9.\-]/g,'')); return isNaN(n)?0:n; };
+    var months={}; rows.forEach(function(r){ var m=String(r[2]||''); if(m) months[m]=1; });
+    var mlist=Object.keys(months).sort();
+    var mLabel=function(m){ var p=m.split('-'); return p.length===2 ? ('Tháng '+p[1]+'/'+p[0]) : m; };
+    var byP={};
+    rows.forEach(function(r){
+      var k=String(r[3]).trim(); if(!byP[k]) byP[k]={name:k,pos:String(r[4]||''),grp:String(r[5]||''),dx:0,ck:0,m:{}};
+      var m=String(r[2]||''); byP[k].dx+=num(r[6]); byP[k].ck+=num(r[9]); byP[k].m[m]=(byP[k].m[m]||0)+num(r[9]);
+      if(!byP[k].pos && r[4]) byP[k].pos=String(r[4]); if(!byP[k].grp && r[5]) byP[k].grp=String(r[5]);
+    });
+    var names=Object.keys(byP).sort(function(a,b){ return a.localeCompare(b,'vi'); });
+    // ── Sheet 1: Lương theo người ──
+    var s1=ss.getSheetByName('Lương theo người')||ss.insertSheet('Lương theo người'); s1.clear();
+    try{ s1.getBandings().forEach(function(b){ b.remove(); }); }catch(e1){}
+    var h1=['STT','Nhân viên','Chức vụ','Nhóm'].concat(mlist.map(mLabel)).concat(['Tổng đề xuất','Tổng đã chuyển','Còn phải chuyển']);
+    var out1=[h1]; var totM=mlist.map(function(){ return 0; }); var tDX=0,tCK=0,tCon=0;
+    names.forEach(function(n,i){ var p=byP[n]; var con=Math.max(0,p.dx-p.ck); tDX+=p.dx; tCK+=p.ck; tCon+=con;
+      out1.push([i+1,p.name,p.pos,p.grp].concat(mlist.map(function(m,j){ var v=p.m[m]||0; totM[j]+=v; return v; })).concat([p.dx,p.ck,con])); });
+    out1.push(['','TỔNG','',''].concat(totM).concat([tDX,tCK,tCon]));
+    s1.getRange(1,1,out1.length,h1.length).setValues(out1);
+    s1.getRange(1,1,1,h1.length).setFontWeight('bold').setBackground('#16a34a').setFontColor('#fff').setHorizontalAlignment('center').setWrap(true);
+    s1.setFrozenRows(1); s1.setFrozenColumns(2);
+    if(out1.length>1){ s1.getRange(2,5,out1.length-1,h1.length-4).setNumberFormat('#,##0" đ"'); s1.getRange(out1.length,1,1,h1.length).setFontWeight('bold').setBackground('#fef9c3'); }
+    names.forEach(function(n,i){ var p=byP[n]; if(p.dx-p.ck>0.5) s1.getRange(i+2,1,1,h1.length).setBackground('#fee2e2'); });
+    s1.getRange(1,1,out1.length,h1.length).setBorder(true,true,true,true,true,true,'#d1d5db',SpreadsheetApp.BorderStyle.SOLID);
+    s1.setColumnWidth(1,40); s1.setColumnWidth(2,180); s1.setColumnWidth(3,110); s1.setColumnWidth(4,170);
+    for(var c=5;c<=h1.length;c++) s1.setColumnWidth(c,115);
+    // ── Sheet 2: Lương theo tháng (mỗi tháng 1 khối, có dòng tổng) ──
+    var s2=ss.getSheetByName('Lương theo tháng')||ss.insertSheet('Lương theo tháng'); s2.clear();
+    try{ s2.getBandings().forEach(function(b){ b.remove(); }); }catch(e2){}
+    var out2=[], hdrRows=[], totRows=[];
+    mlist.forEach(function(m){
+      var rs=rows.filter(function(r){ return String(r[2]||'')===m; }).sort(function(a,b){ return String(a[3]).localeCompare(String(b[3]),'vi'); });
+      out2.push(['📅 '+mLabel(m),'','','','','','']); hdrRows.push(out2.length);
+      out2.push(['STT','Nhân viên','Nhóm','Đề xuất','Đã duyệt','Đã chuyển','Còn lại']); hdrRows.push(out2.length);
+      var a=0,b=0,c2=0,d=0;
+      rs.forEach(function(r,i){ var dx=num(r[6]); var dy=num(r[8])>0?num(r[8]):num(r[7]); var ck=num(r[9]); var con=num(r[10]); a+=dx; b+=dy; c2+=ck; d+=con; out2.push([i+1,String(r[3]),String(r[5]||''),dx,dy,ck,con]); });
+      out2.push(['','TỔNG '+mLabel(m),'',a,b,c2,d]); totRows.push(out2.length);
+      out2.push(['','','','','','','']);
+    });
+    if(out2.length){
+      s2.getRange(1,1,out2.length,7).setValues(out2); s2.getRange(1,4,out2.length,4).setNumberFormat('#,##0" đ"');
+      hdrRows.forEach(function(r){ s2.getRange(r,1,1,7).setFontWeight('bold').setBackground('#dbeafe'); });
+      totRows.forEach(function(r){ s2.getRange(r,1,1,7).setFontWeight('bold').setBackground('#fef9c3'); });
+      s2.setColumnWidth(1,40); s2.setColumnWidth(2,180); s2.setColumnWidth(3,170); for(var c3=4;c3<=7;c3++) s2.setColumnWidth(c3,120);
+    }
+  }catch(e){}
 }
 function buildReports(ss, sh){
   var data=sh.getDataRange().getValues();
@@ -7878,21 +7961,118 @@ function renderEmployees(){
   const _eq=((document.getElementById('sal-emp-search')||{}).value||'').trim().toLowerCase();
   const shown=_eq ? employees.filter(e=>(e.name||'').toLowerCase().includes(_eq) || (e.position||'').toLowerCase().includes(_eq)) : employees;
   if(!shown.length){ list.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--text-sub);font-size:13px">Không có nhân viên nào khớp tìm kiếm</div>'; return; }
+  // v158 PA3: "đã ứng năm nay" của từng người (tổng ĐÃ CHUYỂN các phiếu ứng lương năm hiện tại)
+  const _yr=String(new Date().getFullYear());
+  const _adv=_empAdvancedMap(_yr);
+  _empSyncSortBtns();
+  const rowHtml=(e,showGroup)=>{
+    const a=_adv[e.id]||_adv['n:'+_normName(e.name)]||0;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--gray-border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700">${esc(e.name)}${e.position?` <span style="font-size:11px;font-weight:600;color:var(--blue)">· ${esc(e.position)}</span>`:''}</div>
+        ${showGroup?`<div style="font-size:11px;color:var(--text-sub);margin-top:1px">${gIcon(e.group)} ${esc(e.group||'')}</div>`:''}
+        ${e.note?`<div style="font-size:11px;color:#c2410c;margin-top:1px">📝 ${esc(e.note)}</div>`:''}
+        <div onclick="salNameStatsJump('${esc(e.name||'')}')" style="font-size:11px;margin-top:2px;cursor:pointer;color:${a?'#16a34a':'var(--text-sub)'};font-weight:${a?'700':'500'}">💵 Đã ứng ${_yr}: ${a?fmtTr(a):'—'} <span style="color:var(--blue)">· xem lịch sử ›</span></div>
+      </div>
+      <button onclick="openEmpModal('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button>
+      <button onclick="deleteEmp('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>
+    </div>`;
+  };
+  if(_empSortMode==='az'){
+    const sorted=shown.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
+    list.innerHTML=`<div style="margin:8px 4px 4px;font-size:13px;font-weight:800;color:var(--blue)">🔤 Tất cả · ${sorted.length} người (A→Z)</div><div class="card"><div class="card-body" style="padding:2px 0">`+sorted.map(e=>rowHtml(e,true)).join('')+`</div></div>`;
+    return;
+  }
   const order=['Văn phòng'].concat(sites);
   const groups={};
   shown.forEach(e=>{ (groups[e.group]=groups[e.group]||[]).push(e); });
   Object.keys(groups).forEach(g=>groups[g].sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi')));
   const keys=Object.keys(groups).sort((x,y)=>{ let ix=order.indexOf(x); let iy=order.indexOf(y); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy; });
   list.innerHTML=keys.map(g=>`<div style="margin:8px 4px 4px;font-size:13px;font-weight:800;color:var(--blue)">${gIcon(g)} ${esc(g)} <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${groups[g].length} người</span></div>
-    <div class="card"><div class="card-body" style="padding:2px 0">`+
-    groups[g].map(e=>`<div style="display:flex;align-items:center;gap:8px;padding:9px 14px;border-bottom:1px solid var(--gray-border)">
-      <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:700">${esc(e.name)}${e.position?` <span style="font-size:11px;font-weight:600;color:var(--blue)">· ${esc(e.position)}</span>`:''}</div>
-        ${e.note?`<div style="font-size:11px;color:#c2410c;margin-top:1px">📝 ${esc(e.note)}</div>`:''}
-      </div>
-      <button onclick="openEmpModal('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button>
-      <button onclick="deleteEmp('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>
-    </div>`).join('')+`</div></div>`).join('');
+    <div class="card"><div class="card-body" style="padding:2px 0">`+groups[g].map(e=>rowHtml(e,false)).join('')+`</div></div>`).join('');
+}
+// ── v158 PA3: xếp danh sách nhân viên (nhớ theo máy) + tổng đã ứng theo năm + danh sách trong Cài đặt + xuất Excel ──
+let _empSortMode=(function(){ try{ return localStorage.getItem('dc_emp_sort')==='az'?'az':'group'; }catch(e){ return 'group'; } })();
+function setEmpSort(m){ _empSortMode=(m==='az')?'az':'group'; try{ localStorage.setItem('dc_emp_sort',_empSortMode); }catch(e){} _empSyncSortBtns(); renderEmployees(); }
+function _empSyncSortBtns(){
+  [['emp-sort-group','emp-sort-az'],['semp-sort-group','semp-sort-az']].forEach(([g,a])=>{
+    const bg=document.getElementById(g), ba=document.getElementById(a); if(!bg||!ba) return;
+    const on=(b)=>{ b.style.background='var(--blue)'; b.style.color='#fff'; b.style.border='none'; };
+    const off=(b)=>{ b.style.background='#fff'; b.style.color='var(--text-sub)'; b.style.border='1.5px solid var(--gray-border)'; };
+    if(_empSortMode==='az'){ on(ba); off(bg); } else { on(bg); off(ba); }
+  });
+}
+// Tổng ĐÃ CHUYỂN ứng lương theo năm, khoá theo empId và theo tên chuẩn hoá ('n:'+tên) để phiếu cũ không có empId vẫn tính
+function _empAdvancedMap(year){
+  const m={};
+  proposals.forEach(p=>{
+    if(p.kind!=='salary' || p.status==='rejected') return;
+    if(year && String(p.month||'').indexOf(year+'-')!==0) return;
+    const tr=getTotalTransferred(p); if(!tr) return;
+    if(p.empId) m[p.empId]=(m[p.empId]||0)+tr;
+    const nk='n:'+_normName(p.person||''); m[nk]=(m[nk]||0)+tr;
+  });
+  return m;
+}
+// Bấm "xem lịch sử" ở thẻ nhân viên → sang tab TK theo tên, điền sẵn tên + bung bảng theo tháng
+function salNameStatsJump(name){
+  const s=document.getElementById('sal-sn-search'); if(s) s.value=name||'';
+  _snExpandName=_normName(name||'');
+  setLuongTab('statsName', document.querySelector('#page-luong .report-subtab[data-tab="statsName"]'));
+}
+function renderSettingsEmpList(){
+  const el=document.getElementById('settings-emp-list'); if(!el) return;
+  const cnt=document.getElementById('settings-emp-count'); if(cnt) cnt.textContent='· '+employees.length+' người';
+  _empSyncSortBtns();
+  const row=(e,showGroup)=>`<div style="display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--gray-border)">
+      <div style="flex:1;min-width:0"><span style="font-weight:700">${esc(e.name)}</span>${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''}${showGroup?`<div style="font-size:11px;color:var(--text-sub)">${gIcon(e.group)} ${esc(e.group||'')}</div>`:''}</div>
+    </div>`;
+  if(_empSortMode==='az'){
+    const sorted=employees.slice().sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
+    el.innerHTML=sorted.map((e,i)=>`<div style="display:flex;gap:6px;align-items:flex-start"><span style="width:22px;font-size:11px;color:var(--text-sub);padding-top:7px">${i+1}.</span><div style="flex:1">${row(e,true)}</div></div>`).join('');
+    return;
+  }
+  const order=['Văn phòng'].concat(sites); const groups={};
+  employees.forEach(e=>{ (groups[e.group]=groups[e.group]||[]).push(e); });
+  Object.keys(groups).forEach(g=>groups[g].sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi')));
+  const keys=Object.keys(groups).sort((x,y)=>{ let ix=order.indexOf(x); let iy=order.indexOf(y); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy; });
+  el.innerHTML=keys.map(g=>`<div style="margin:8px 0 2px;font-size:12.5px;font-weight:800;color:var(--blue)">${gIcon(g)} ${esc(g)} <span style="font-size:11px;color:var(--text-sub);font-weight:600">· ${groups[g].length} người</span></div>`+groups[g].map(e=>row(e,false)).join('')).join('');
+}
+// Xuất Excel (SheetJS tải lười — dùng chung _loadSheetJS của phần nhập Excel)
+async function exportEmployeesExcel(){
+  if(!employees.length){ showToast('Chưa có nhân viên'); return; }
+  let XLSX; try{ XLSX=await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
+  const order=['Văn phòng'].concat(sites);
+  let list=employees.slice();
+  if(_empSortMode==='az') list.sort((a,b)=>(a.name||'').localeCompare(b.name||'','vi'));
+  else list.sort((a,b)=>{ let ia=order.indexOf(a.group), ib=order.indexOf(b.group); if(ia<0)ia=999; if(ib<0)ib=999; return ia-ib || (a.name||'').localeCompare(b.name||'','vi'); });
+  const yr=String(new Date().getFullYear()); const adv=_empAdvancedMap(yr);
+  const aoa=[['STT','Họ và tên','Chức vụ','Nhóm / Công trình','Đã ứng '+yr,'Ghi chú']];
+  list.forEach((e,i)=>aoa.push([i+1,e.name||'',e.position||'',e.group||'',adv[e.id]||adv['n:'+_normName(e.name)]||0,e.note||'']));
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:5},{wch:26},{wch:16},{wch:26},{wch:14},{wch:24}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'DS nhan vien');
+  XLSX.writeFile(wb,'DS-nhan-vien-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('📤 Đã xuất file Excel danh sách nhân viên');
+}
+async function exportSalaryByPersonExcel(){
+  const all=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected');
+  if(!all.length){ showToast('Chưa có dữ liệu ứng lương'); return; }
+  let XLSX; try{ XLSX=await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
+  const months=Array.from(new Set(all.map(p=>p.month).filter(Boolean))).sort();
+  const byP={};
+  all.forEach(p=>{ const k=p.empId||('n:'+_normName(p.person||'')); const e=employees.find(x=>x.id===p.empId);
+    if(!byP[k]) byP[k]={name:p.person||'',pos:(e&&e.position)||p.position||'',grp:p.site||'',dx:0,ck:0,m:{}};
+    const tr=getTotalTransferred(p); byP[k].dx+=parseFloat(p.amount)||0; byP[k].ck+=tr; byP[k].m[p.month]=(byP[k].m[p.month]||0)+tr; });
+  const keys=Object.keys(byP).sort((a,b)=>byP[a].name.localeCompare(byP[b].name,'vi'));
+  const hdr=['STT','Nhân viên','Chức vụ','Nhóm'].concat(months.map(monthLabel)).concat(['Tổng đề xuất','Tổng đã chuyển','Còn phải chuyển']);
+  const aoa=[hdr]; const tot=months.map(()=>0); let tdx=0,tck=0,tcon=0;
+  keys.forEach((k,i)=>{ const p=byP[k]; const con=Math.max(0,p.dx-p.ck); tdx+=p.dx; tck+=p.ck; tcon+=con;
+    aoa.push([i+1,p.name,p.pos,p.grp].concat(months.map((m,j)=>{ const v=p.m[m]||0; tot[j]+=v; return v; })).concat([p.dx,p.ck,con])); });
+  aoa.push(['','TỔNG','',''].concat(tot).concat([tdx,tck,tcon]));
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:5},{wch:24},{wch:14},{wch:22}].concat(months.map(()=>({wch:13}))).concat([{wch:15},{wch:15},{wch:15}]);
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'Luong theo nguoi');
+  XLSX.writeFile(wb,'Luong-theo-nguoi-'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('📤 Đã xuất file Excel lương theo người');
 }
 
 // ── ĐỀ XUẤT ỨNG LƯƠNG = tạo 1 PHIẾU (proposals) kind='salary'. Sửa/duyệt/chuyển/ảnh chứng từ/chia sẻ/
@@ -8497,16 +8677,47 @@ function renderSalaryStatsByName(){
         <div onclick="showSalaryStatList('chuyen','ten')" style="flex:1;background:#f0fdf4;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:#16a34a">Đã chuyển</div><div style="font-size:16px;font-weight:800;color:#16a34a">${fmtTr(tCK)}</div></div>
         <div onclick="showSalaryStatList('chua','ten')" style="flex:1;background:#fffbeb;border-radius:10px;padding:9px 7px;text-align:center;cursor:pointer"><div style="font-size:10px;color:#d97706">Chưa chuyển</div><div style="font-size:16px;font-weight:800;color:#d97706">${fmtTr(Math.max(0,tDuyet-tCK))}</div></div>
       </div>
-      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Bấm vào một Ô để xem danh sách · Chạm 2 lần vào một người → mở Ứng lương lọc đúng người đó</div>
+      <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Bấm vào một Ô để xem danh sách · Bấm vào một người → bung bảng ứng theo TỪNG THÁNG</div>
     </div></div>
     <div class="card"><div class="card-body" style="padding:2px 0">
-      ${ekeys.map(k=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);return `<div class="sal-name-row" ondblclick="salNameJump('${esc(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer">
-        <span style="min-width:0"><span style="font-weight:700">${esc(e.name||'')}</span>${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''}<div style="font-size:10px;color:var(--text-sub)">${gIcon(e.group)} ${esc(e.group||'')} · ${e.soKhoan} khoản</div></span>
+      ${ekeys.map((k,i)=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);const open=_snExpandName && _normName(e.name||'')===_snExpandName;return `<div class="sal-name-row" onclick="salNameExpand('${esc(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer;${open?'background:#eff6ff':''}">
+        <span style="min-width:0"><span style="font-weight:700">${open?'▾ ':'▸ '}${esc(e.name||'')}</span>${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''}<div style="font-size:10px;color:var(--text-sub)">${gIcon(e.group)} ${esc(e.group||'')} · ${e.soKhoan} khoản</div></span>
         <span style="text-align:right;flex-shrink:0"><div style="font-weight:700">${fmtVND(e.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(e.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span>
-      </div>`}).join('')}
+      </div>${open?_snMonthTable(e.name||''):''}`}).join('')}
     </div></div>`;
-  attachRowDoubleTap(el, '.sal-name-row');
 }
+// ── v158 PA3: bung bảng "ứng theo từng tháng" của 1 người (mọi tháng, không phụ thuộc kỳ đang chọn) ──
+let _snExpandName='';
+function salNameExpand(name){
+  const n=_normName(name||'');
+  _snExpandName = (_snExpandName===n) ? '' : n;
+  renderSalaryStatsByName();
+}
+function _snMonthTable(name){
+  const nn=_normName(name);
+  const items=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected' && _normName(p.person||'')===nn);
+  const byM={};
+  items.forEach(p=>{ const m=p.month||'?'; if(!byM[m]) byM[m]={dx:0,duyet:0,ck:0,n:0}; byM[m].dx+=parseFloat(p.amount)||0; byM[m].duyet+=getOfficialApprovedAmount(p)||0; byM[m].ck+=getTotalTransferred(p); byM[m].n++; });
+  const months=Object.keys(byM).sort();
+  let tdx=0,tdy=0,tck=0;
+  const rows=months.map(m=>{ const r=byM[m]; tdx+=r.dx; tdy+=r.duyet; tck+=r.ck; const con=Math.max(0,r.duyet-r.ck);
+    return `<tr onclick="event.stopPropagation();salMonthJump('${esc(m)}','${esc(name)}')" style="cursor:pointer">
+      <td style="padding:6px 8px;font-weight:700;white-space:nowrap">${esc(monthLabel(m))}<div style="font-size:10px;color:var(--text-sub);font-weight:500">${r.n} khoản ›</div></td>
+      <td style="padding:6px 8px;text-align:right">${fmtTr(r.dx)}</td>
+      <td style="padding:6px 8px;text-align:right">${fmtTr(r.duyet)}</td>
+      <td style="padding:6px 8px;text-align:right;color:#16a34a;font-weight:700">${fmtTr(r.ck)}</td>
+      <td style="padding:6px 8px;text-align:right;color:${con?'#dc2626':'var(--text-sub)'}">${con?fmtTr(con):'—'}</td></tr>`; }).join('');
+  const tcon=Math.max(0,tdy-tck);
+  return `<div style="padding:6px 10px 10px;background:#f8fafc;border-bottom:1px solid var(--gray-border)" onclick="event.stopPropagation()">
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:#e0e7ff;color:#3730a3"><th style="padding:6px 8px;text-align:left">Tháng</th><th style="padding:6px 8px;text-align:right">Đề xuất</th><th style="padding:6px 8px;text-align:right">Duyệt</th><th style="padding:6px 8px;text-align:right">Đã chuyển</th><th style="padding:6px 8px;text-align:right">Còn</th></tr></thead>
+      <tbody>${rows||'<tr><td colspan="5" style="padding:8px;color:var(--text-sub);text-align:center">Chưa có khoản ứng nào</td></tr>'}</tbody>
+      <tfoot><tr style="background:#fef9c3;font-weight:800"><td style="padding:6px 8px">TỔNG</td><td style="padding:6px 8px;text-align:right">${fmtTr(tdx)}</td><td style="padding:6px 8px;text-align:right">${fmtTr(tdy)}</td><td style="padding:6px 8px;text-align:right;color:#16a34a">${fmtTr(tck)}</td><td style="padding:6px 8px;text-align:right;color:${tcon?'#dc2626':'inherit'}">${tcon?fmtTr(tcon):'—'}</td></tr></tfoot>
+    </table></div>
+    <div style="font-size:10px;color:var(--text-sub);margin-top:4px">💡 Bấm vào 1 tháng → mở tab Ứng lương đúng tháng, lọc đúng người</div>
+  </div>`;
+}
+function salMonthJump(month,name){ if(month && month!=='?') salaryMonth=month; salNameJump(name); }
 
 </script>
 
