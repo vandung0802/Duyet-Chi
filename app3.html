@@ -1404,7 +1404,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v159';
+const APP_VERSION = '20260803-v160';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5237,7 +5237,7 @@ function renderPlans(){
   let filterPerson='';
   if(perSel){
     filterPerson=perSel.value||'';
-    const people=[...new Set(plans.map(p=>(p.assignee||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    const people=[...new Set(plans.map(p=>(p.assignee||'').trim()).filter(Boolean))].sort(_cmpTen);
     perSel.innerHTML='<option value="">👤 Tất cả người</option>'+people.map(n=>`<option value="${esc(n)}"${filterPerson===n?' selected':''}>${esc(n)}</option>`).join('');
     if(filterPerson && !people.includes(filterPerson)) filterPerson='';
   }
@@ -5793,7 +5793,7 @@ function renderReportFilters(){
   if(!selP || !selS) return;
   const curP = selP.value, curS = selS.value;
   const _exp = proposals.filter(p=>p.kind!=='salary'); // báo cáo chi không lấy tên/nhóm của ứng lương
-  const names = [...new Set(_exp.map(p=>p.person||'').filter(Boolean))].sort();
+  const names = [...new Set(_exp.map(p=>p.person||'').filter(Boolean))].sort(_cmpTen); // v160: A→Z theo TÊN
   const siteList = [...new Set(_exp.map(p=>p.site||'').filter(Boolean))].sort();
   selP.innerHTML = '<option value="">👤 Tất cả người</option>' +
     names.map(n=>`<option value="${esc(n)}"${curP===n?' selected':''}>${esc(n)}</option>`).join('');
@@ -7071,7 +7071,7 @@ function renderKhList(){
   let fP='', fS='';
   if(selP){
     fP=selP.value||'';
-    const people=[...new Set(all.map(p=>p.person||'').filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    const people=[...new Set(all.map(p=>p.person||'').filter(Boolean))].sort(_cmpTen);
     selP.innerHTML='<option value="">👤 Tất cả người</option>'+people.map(n=>`<option value="${esc(n)}"${fP===n?' selected':''}>${esc(n)}</option>`).join('');
     if(fP && !people.includes(fP)) fP='';
   }
@@ -8110,7 +8110,7 @@ function openAdvModal(){
   document.getElementById('adv-month-label').textContent=monthLabel(monthUsed);
   const sel=document.getElementById('adv-inp-emp');
   const order=['Văn phòng'].concat(sites);
-  const sorted=employees.slice().sort((x,y)=>{ let ix=order.indexOf(x.group); let iy=order.indexOf(y.group); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy || (x.name>y.name?1:-1); });
+  const sorted=employees.slice().sort((x,y)=>{ let ix=order.indexOf(x.group); let iy=order.indexOf(y.group); if(ix<0)ix=999; if(iy<0)iy=999; return ix-iy || _cmpTen(x.name,y.name); });
   sel.innerHTML='<option value="">— Chọn nhân viên —</option>'+sorted.map(e=>`<option value="${esc(e.id)}">${esc(e.name)}${e.position?' ('+esc(e.position)+')':''} — ${esc(e.group)}</option>`).join('');
   sel.value='';
   document.getElementById('adv-inp-amount').value='';
@@ -8260,7 +8260,7 @@ function _lxRender(){
   const box=document.getElementById('lx-rows');
   const empOpts=(sel)=>{
     const order=['Văn phòng'].concat(sites);
-    const sorted=employees.slice().sort((x,y)=>{let ix=order.indexOf(x.group);let iy=order.indexOf(y.group);if(ix<0)ix=999;if(iy<0)iy=999;return ix-iy||(x.name>y.name?1:-1);});
+    const sorted=employees.slice().sort((x,y)=>{let ix=order.indexOf(x.group);let iy=order.indexOf(y.group);if(ix<0)ix=999;if(iy<0)iy=999;return ix-iy||_cmpTen(x.name,y.name);});
     return '<option value="">— chưa khớp —</option>'+sorted.map(e=>`<option value="${esc(e.id)}"${e.id===sel?' selected':''}>${esc(e.name)} — ${esc(e.group)}</option>`).join('');
   };
   box.innerHTML=_lxRows.map((row,i)=>{
@@ -8423,7 +8423,7 @@ function renderSalaryAdvances(){
   let fPer='', fGrp='';
   if(perSel){
     fPer=perSel.value||'';
-    const people=[...new Set(items.map(p=>(p.person||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+    const people=[...new Set(items.map(p=>(p.person||'').trim()).filter(Boolean))].sort(_cmpTen); // v160: A→Z theo TÊN
     perSel.innerHTML='<option value="">👤 Tất cả người</option>'+people.map(n=>`<option value="${esc(n)}"${fPer===n?' selected':''}>${esc(n)}</option>`).join('');
     if(fPer && !people.includes(fPer)) fPer='';
   }
