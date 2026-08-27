@@ -1404,7 +1404,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v163';
+const APP_VERSION = '20260803-v164';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1543,15 +1543,23 @@ function sanitizeSheetUrl(u){
 }
 
 // ── DATA ── (localStorage giữ vai trò cache dự phòng khi mất mạng)
-let proposals = JSON.parse(localStorage.getItem('dc_proposals')||'[]');
-let persons    = JSON.parse(localStorage.getItem('dc_persons')||'[]');
-let sites      = JSON.parse(localStorage.getItem('dc_sites')||'[]');
+// v164 CHỐNG SẬP: 5 dòng dưới trước đây JSON.parse KHÔNG bọc try — cache trong máy hỏng 1 ký tự
+// (sập nguồn giữa lúc ghi, hết bộ nhớ, iOS cắt ngang) là lỗi ném ngay ĐẦU script → cả app trắng
+// màn hình vĩnh viễn tới khi xoá cache tay. Đọc an toàn: lỗi hoặc không phải danh sách → coi như
+// rỗng + xoá cache hỏng (dữ liệu thật vẫn còn nguyên trên Firebase, app tự tải về lại).
+function _safeArr(key){
+  try{ const v=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(v)?v:[]; }
+  catch(e){ try{ localStorage.removeItem(key); }catch(e2){} return []; }
+}
+let proposals = _safeArr('dc_proposals');
+let persons    = _safeArr('dc_persons');
+let sites      = _safeArr('dc_sites');
 let sheetUrl   = sanitizeSheetUrl(localStorage.getItem('dc_sheetUrl')||'');
-let plans      = JSON.parse(localStorage.getItem('dc_plans')||'[]'); // Kế hoạch vật tư — TÁCH BIỆT hoàn toàn khỏi proposals (ngăn Firebase riêng: duyetchi/plans)
+let plans      = _safeArr('dc_plans'); // Kế hoạch vật tư — TÁCH BIỆT hoàn toàn khỏi proposals (ngăn Firebase riêng: duyetchi/plans)
 // ── MODULE LƯƠNG (ứng lương) ── Danh sách NHÂN VIÊN ở ngăn Firebase riêng (duyetchi/employees).
 //    Các KHOẢN ỨNG LƯƠNG nay là phiếu 'proposals' có kind='salary' → dùng CHUNG toàn bộ bộ máy phiếu chi
 //    (ảnh đính kèm, duyệt D/H từng phần, chuyển, chứng từ, chia sẻ, giục, sửa/ý kiến, chống sửa sau duyệt).
-let employees   = JSON.parse(localStorage.getItem('dc_employees')||'[]'); // danh sách nhân viên hưởng lương
+let employees   = _safeArr('dc_employees'); // danh sách nhân viên hưởng lương
 let salaryMonth = ''; // tháng đang xem ở tab Ứng lương, dạng 'YYYY-MM' (đặt ở init)
 let filter     = 'all';
 let uploadedImages = []; // mảng nhiều ảnh Zalo đính kèm (mỗi phần tử là base64 dataURL)
@@ -6508,21 +6516,7 @@ function syncEditToSheet(p){
   document.head.appendChild(s);
   setTimeout(()=>s.remove(),3000);
 }
-
-function syncEditToSheet(p){
-  if(!sheetUrl) return;
-  if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
-  if(p && p.kind==='salary'){ syncLuongToSheet(p); return; } // v118
-  const params = new URLSearchParams({
-    action:'edit', id:p.id,
-    desc:p.desc||'', person:p.person||'',
-    site:p.site||'', amount:p.amount||'', note:p.note||''
-  });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
-}
+// (v164: đã xoá bản sao trùng của syncEditToSheet — trước đây định nghĩa 2 lần y hệt nhau)
 
 function syncApprovalToSheet(id, field, time){
   if(!sheetUrl) return;
