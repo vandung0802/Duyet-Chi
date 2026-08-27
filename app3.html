@@ -1404,7 +1404,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v162';
+const APP_VERSION = '20260803-v163';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2194,6 +2194,19 @@ function initAuth(){
 
 async function logoutRole(){
   if(!confirm('Đăng xuất?')) return;
+  // v163: GỠ đăng ký thông báo của MÁY NÀY khỏi máy chủ TRƯỚC khi đăng xuất — nếu không, người sau
+  // đăng nhập tài khoản khác trên máy này vẫn nhận thông báo (kể cả OTP) của người cũ. Phải chạy
+  // khi CÒN đăng nhập (luật cần auth). Lỗi thì bỏ qua, không chặn đăng xuất.
+  try{
+    if('serviceWorker' in navigator){
+      const _reg = await navigator.serviceWorker.ready;
+      const _sub = await _reg.pushManager.getSubscription();
+      if(_sub){
+        const _sk = btoa(_sub.endpoint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 80);
+        await Promise.all(['dung','hien','trang','other','kt','kh'].map(b=>db.ref('push-subs/'+b+'/'+_sk).remove().catch(()=>{})));
+      }
+    }
+  }catch(e){}
   currentRole = '';
   currentUserName = '';
   // v79 BẢO MẬT (APP3-07): xoá cache nghiệp vụ + vai trò khỏi máy khi đăng xuất, để người mượn/nhặt
