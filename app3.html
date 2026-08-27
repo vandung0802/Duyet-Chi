@@ -54,17 +54,19 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* Stats compact - 7 ô */
 .stats-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
 .stats-grid .stat-box{flex:1 1 calc(25% - 4px);min-width:60px}
-.stat-box{background:#fff;border-radius:8px;padding:4px 3px;text-align:center;box-shadow:var(--shadow);cursor:pointer;border:1.5px solid transparent;display:flex;flex-direction:column;justify-content:center}
+.stat-box{background:#fff;border-radius:8px;padding:6px 4px;text-align:center;box-shadow:var(--shadow);cursor:pointer;border:1.5px solid transparent;display:flex;flex-direction:column;justify-content:center;position:relative}
+/* v165 UX: ô nào BẤM ĐƯỢC thì có mũi tên › góc phải — hết cảnh "bảng tĩnh" không ai biết bấm */
+.stat-box[onclick]::after{content:'›';position:absolute;right:4px;top:1px;font-size:12px;font-weight:900;color:#93b4f0}
 .stat-box.active{border-color:var(--blue);background:var(--blue-light)}
-.stat-row{display:flex;align-items:baseline;justify-content:center;gap:3px;flex-wrap:nowrap;white-space:nowrap;overflow:hidden}
-.stat-val{font-size:13px;font-weight:800;line-height:1.1;white-space:nowrap;flex-shrink:0}
-.stat-lbl{font-size:8px;color:var(--text);font-weight:700;white-space:nowrap}
-.stat-amt{font-size:7px;color:#374151;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-row{display:flex;align-items:baseline;justify-content:center;gap:3px;flex-wrap:wrap;overflow:hidden}
+.stat-val{font-size:15px;font-weight:800;line-height:1.1;white-space:nowrap;flex-shrink:0}
+.stat-lbl{font-size:10.5px;color:var(--text);font-weight:700;white-space:normal;line-height:1.15;text-align:center}
+.stat-amt{font-size:11px;color:#374151;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* Badge */
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
 .badge-stack{display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0}
-.badge-history{font-size:11px;color:var(--text-sub);text-align:right;line-height:1.5;font-weight:600;padding:0 4px}
+.badge-history{font-size:12px;color:var(--text-sub);text-align:right;line-height:1.5;font-weight:600;padding:0 4px}
 .badge-stack .badge{font-size:12px;font-weight:800;padding:2px 7px}
 .badge-wait{background:var(--yellow-light);color:var(--yellow)}
 .badge-approved{background:var(--blue-light);color:var(--blue-dark)}
@@ -89,7 +91,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .proposal-left-col .proposal-meta{margin-top:4px}
 .proposal-left-col .proposal-amount{margin-top:4px}
 .proposal-badge-area .badge-stack,.badge-stack{align-items:flex-end;flex-shrink:0}
-.proposal-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--text-sub)}
+.proposal-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12px;color:var(--text-sub)}
 .proposal-amount{font-size:17px;font-weight:700;color:var(--blue);margin-top:5px}
 .proposal-img{width:100%;max-height:160px;object-fit:cover;border-top:1px solid var(--gray-border);cursor:pointer;display:block}
 .proof-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:4px;padding:6px;border-top:1px solid var(--gray-border);background:#fafafa}
@@ -113,10 +115,15 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .role-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;flex-shrink:0;pointer-events:none}
 .current-role{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.2);color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;border:none}
 /* Approve row — 5 nút, dạng dẹt 1 hàng để tiết kiệm chiều cao */
-.approve-row{display:flex;gap:3px;padding:5px 6px;border-top:1px solid var(--gray-border);background:#f9fafb;align-items:stretch}
+.approve-row{display:flex;gap:6px;padding:8px;border-top:1px solid var(--gray-border);background:#f9fafb;align-items:stretch}
 .approve-row .approve-box{flex:1 1 0%;min-width:0}
-.ab-del-mini{flex:0 0 auto;width:20px;min-width:20px;max-width:20px;padding:0;background:#fff;border:1.5px solid var(--gray-border);border-radius:7px;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-sub);box-sizing:border-box}
-.approve-box{border:1.5px solid var(--gray-border);border-radius:7px;padding:2px;display:flex;align-items:center;justify-content:center;background:#fff;min-height:22px}
+.ab-del-mini{flex:0 0 auto;width:40px;min-width:40px;max-width:40px;padding:0;background:#fff;border:1.5px solid var(--gray-border);border-radius:8px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-sub);box-sizing:border-box}
+.approve-box{border:1.5px solid var(--gray-border);border-radius:8px;padding:3px;display:flex;align-items:center;justify-content:center;background:#fff;min-height:40px}
+/* v165 UX: nút ⋯ (menu thao tác) + nút 🔔 Giục có chữ + mục trong menu thẻ phiếu */
+.ab-menu-btn{flex:0 0 44px !important;min-width:44px;font-size:20px;font-weight:900;background:#fff;border:1.5px solid var(--gray-border);border-radius:8px;color:var(--text-sub);cursor:pointer}
+.ab-remind-btn{flex:0 0 auto !important;padding:0 12px;font-size:13px;font-weight:800;background:#fff7ed;color:#c2410c;border:1.5px solid #fdba74;border-radius:8px;cursor:pointer;white-space:nowrap}
+.card-menu-item{display:block;width:100%;padding:13px 14px;margin-bottom:8px;font-size:14.5px;font-weight:700;text-align:left;background:#f8fafc;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer;color:var(--text)}
+.cmi-danger{background:#fef2f2;color:var(--red);border-color:#fecaca}
 .approve-box.done{border-color:var(--red);background:#fff0f0}
 .approve-avatar{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
 .av-d{background:var(--blue)}
@@ -124,8 +131,8 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .approve-box.done .approve-avatar{background:var(--red)!important}
 .ab-flat{display:flex;align-items:center;gap:4px;width:100%;justify-content:center}
 .ab-flat-locked{color:#d1d5db;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;width:100%}
-.ab-btn{font-size:9.5px;padding:4px 1px;border-radius:5px;border:none;cursor:pointer;font-weight:800;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1px;white-space:nowrap;overflow:hidden}
-.ab-prev-info{font-size:7.2px;font-weight:600;opacity:.85;white-space:normal;line-height:1.15;word-break:break-word}
+.ab-btn{font-size:12px;padding:6px 2px;border-radius:6px;border:none;cursor:pointer;font-weight:800;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:1px;white-space:nowrap;overflow:hidden}
+.ab-prev-info{font-size:10px;font-weight:600;opacity:.85;white-space:normal;line-height:1.15;word-break:break-word}
 .ab-btn-tight{font-size:8px;letter-spacing:-0.2px;white-space:normal;line-height:1.15;word-break:break-word;overflow:visible}
 .ab-btn-approve{background:var(--blue);color:#fff}
 .ab-btn-reject{background:var(--red);color:#fff}
@@ -136,15 +143,15 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .ab-done-box{padding:2px 4px}
 .ab-done-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;background:none;border:none;cursor:pointer;padding:2px;gap:1px;line-height:1.2;margin:0;text-align:center}
 .ab-row-top{display:flex;align-items:baseline;gap:1.5px;justify-content:center;white-space:nowrap;overflow:hidden;max-width:100%}
-.ab-big-letter{font-size:15px;font-weight:900;flex-shrink:0}
-.ab-mid-label{font-size:10px;font-weight:900;letter-spacing:-0.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ab-big-letter{font-size:17px;font-weight:900;flex-shrink:0}
+.ab-mid-label{font-size:12px;font-weight:900;letter-spacing:-0.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .ab-time-sub{font-size:8.2px;font-weight:700;opacity:.85;white-space:normal;line-height:1.2;word-break:break-word}
 .ab-share-stack{display:flex;flex-direction:column;gap:2px;width:100%}
 /* Chữ Đã duyệt chi to hơn */
 .ab-done-txt-big{font-size:12px;color:var(--green);font-weight:800;display:flex;align-items:center;gap:4px;justify-content:center;padding:4px 0}
 
 .proposal-footer{display:flex;gap:5px;padding:5px 10px;border-top:1px solid var(--gray-border);background:#f9fafb}
-.btn-sm{padding:4px 8px;border-radius:6px;font-size:10px;font-weight:600;border:none;cursor:pointer}
+.btn-sm{padding:8px 12px;border-radius:8px;font-size:13px;font-weight:700;border:none;cursor:pointer}
 .btn-danger{background:var(--red);color:#fff}
 .btn-outline{background:#fff;color:var(--text);border:1px solid var(--gray-border)}
 .btn-blue{background:var(--blue);color:#fff}
@@ -1113,6 +1120,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
+<!-- v165 UX: menu ⋯ trên thẻ phiếu (gom các thao tác hiếm: gửi chat, chia sẻ ảnh, sửa, xoá) -->
+<div class="role-screen" id="card-menu-overlay" style="display:none;z-index:9300;background:rgba(0,0,0,0.55);align-items:flex-end" onclick="if(event.target===this)closeCardMenu()">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:16px 14px 20px;width:100%;max-width:480px;margin:0 auto">
+    <div id="card-menu-title" style="font-size:13px;font-weight:700;color:var(--text-sub);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
+    <div id="card-menu-items"></div>
+    <button class="btn-full btn-outline-full" onclick="closeCardMenu()">Đóng</button>
+  </div>
+</div>
+
 <!-- (Ứng lương duyệt/chuyển dùng CHUNG modal của phiếu chi — aa-modal / transfer-amount-modal — nên không cần modal riêng.) -->
 
 <!-- Modal Thêm/Sửa kế hoạch vật tư -->
@@ -1404,7 +1420,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v164';
+const APP_VERSION = '20260803-v165';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3079,6 +3095,14 @@ function fmtAmountInput(el){
   try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
 }
 function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ':'—'}
+// v165 UX: số tiền NGẮN cho ô thống kê ("12,48 tỷ" / "553 tr") — số đầy đủ vẫn ở danh sách & title khi rê chuột
+function fmtShortMoney(n){
+  n=parseFloat(n)||0; if(!n) return '—';
+  const a=Math.abs(n);
+  if(a>=1e9) return (Math.round(n/1e7)/100).toLocaleString('vi-VN')+' tỷ';
+  if(a>=1e6) return (Math.round(n/1e5)/10).toLocaleString('vi-VN')+' tr';
+  return fmtVND(n);
+}
 // v78 BẢO MẬT (chống XSS): lọc ký tự HTML trong MỌI dữ liệu do người dùng nhập trước khi ghép vào
 // innerHTML (nội dung phiếu, ghi chú, tên, công trường, lý do từ chối, kế hoạch vật tư...). Nếu không
 // lọc, kẻ có tài khoản có thể nhập <img onerror=...> vào 1 phiếu → chạy mã trên máy MỌI người khi họ
@@ -3419,7 +3443,7 @@ function renderStats(){
     const elVal = document.getElementById('st-'+key);
     const elAmt = document.getElementById('st-'+key+'-amt');
     if(elVal) elVal.textContent = items.length;
-    if(elAmt) elAmt.innerHTML = items.length ? fmtVND(sum) : '—';
+    if(elAmt){ elAmt.innerHTML = items.length ? fmtShortMoney(sum) : '—'; elAmt.title = items.length ? fmtVND(sum) : ''; } // v165: số ngắn dễ đọc
   });
 }
 
@@ -3439,7 +3463,7 @@ function renderExpenseStatBar(containerId, items, activeF, pickFn){
     const sum=it.reduce((a,p)=>a+_expenseAmt(p,f),0);
     const act=(activeF===f)?' active':'';
     const clk=pickFn?` onclick="${pickFn}('${f}')" style="cursor:pointer"`:' style="cursor:default"';
-    return `<div class="stat-box${act}"${clk}><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${esc(lbl)}</div></div><div class="stat-row stat-amt">${it.length?fmtVND(sum):'—'}</div></div>`;
+    return `<div class="stat-box${act}"${clk}><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${esc(lbl)}</div></div><div class="stat-row stat-amt" title="${it.length?fmtVND(sum):''}">${it.length?fmtShortMoney(sum):'—'}</div></div>`;
   }).join('') + '</div>';
 }
 // v139: DẢI Ô cho VẬT TƯ (mô hình khác: theo trạng thái kế hoạch, cộng số dự kiến).
@@ -3457,7 +3481,7 @@ function renderPlanStatBar(containerId, items, activeSt, pickFn){
     const sum = it.reduce((a,p)=>a+(parseFloat(p.estimatedAmount)||0),0);
     const act=((activeSt||'')===st)?' active':'';
     const clk=pickFn?` onclick="${pickFn}('${st}')" style="cursor:pointer"`:' style="cursor:default"';
-    return `<div class="stat-box${act}"${clk}><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${lbl}</div></div><div class="stat-row stat-amt">${sum>0?fmtVND(sum):'—'}</div></div>`;
+    return `<div class="stat-box${act}"${clk}><div class="stat-row"><div class="stat-val" style="color:${color}">${it.length}</div><div class="stat-lbl">${lbl}</div></div><div class="stat-row stat-amt" title="${sum>0?fmtVND(sum):''}">${sum>0?fmtShortMoney(sum):'—'}</div></div>`;
   }).join('') + '</div>';
 }
 // v140: bộ lọc theo Ô thống kê cho 3 tab (P.KH / Lương / Vật tư)
@@ -3696,27 +3720,44 @@ function _buildCard(p){
       ${chatHtml}
     </div>
     ${imgHtml}
-    <div class="approve-row">
-      ${renderBtnD(p)}
-      ${renderBtnH(p)}
-      ${renderBtnReject(p)}
-      ${renderBtnTransfer(p)}
-      ${renderBtnShare(p)}
-      ${renderBtnRemind(p)}
-      <button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openChatWithRef('${sid(p.id)}')" title="Gửi phiếu này vào Chat nhóm">📤</button>
-      ${_canEditDelete(p)
-        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="openEditProposal('${sid(p.id)}')" title="Sửa đề xuất / ghi ý kiến">✏️</button>`
-        : ''}
-      ${_canEditDelete(p)
-        ? `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="del('${sid(p.id)}')" title="Xóa đề xuất">🗑</button>`
-        : ''}
-    </div>
+    <div class="approve-row">${renderApproveRow(p)}</div>
     ${proofHtml}
   </div>`;
 }
 
 // Hàm cũ đã được thay bằng 5 hàm phân quyền bên trên
 function renderApproveBox(){ return ''; }
+
+// ══ v165 UX: hàng nút thẻ phiếu CHỈ HIỆN NÚT CỦA VAI MÌNH (to, rõ) — việc hiếm gom vào menu ⋯ ══
+// Trạng thái duyệt/chuyển của người khác KHÔNG mất đi: đã hiện đầy đủ ở cột badge bên phải thẻ.
+function renderApproveRow(p){
+  const parts=[];
+  if(currentRole==='dung'){ parts.push(renderBtnD(p)); parts.push(renderBtnReject(p)); }
+  else if(currentRole==='hien'){ parts.push(renderBtnH(p)); parts.push(renderBtnReject(p)); }
+  else if(currentRole==='trang'){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShare(p)); }
+  else {
+    const _prf=Array.isArray(p.proofImages)?p.proofImages:(p.proofB64?[p.proofB64]:[]);
+    if(_prf.length) parts.push(renderBtnShare(p)); // người đề xuất: chia sẻ ảnh chuyển tiền vào Zalo
+  }
+  const _rm=renderBtnRemind(p); if(_rm) parts.push(_rm); // tự gác quyền bên trong
+  parts.push(`<button class="approve-box ab-menu-btn" onclick="openCardMenu('${sid(p.id)}')" title="Thêm thao tác">⋯</button>`);
+  return parts.join('');
+}
+function openCardMenu(id){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  const mk=(icon,label,fn,danger)=>`<button class="card-menu-item${danger?' cmi-danger':''}" onclick="closeCardMenu();${fn}">${icon} ${label}</button>`;
+  const items=[ mk('💬','Gửi phiếu vào Chat nhóm',`openChatWithRef('${sid(id)}')`) ];
+  const _prf=Array.isArray(p.proofImages)?p.proofImages:(p.proofB64?[p.proofB64]:[]);
+  if(_prf.length) items.push(mk('📤','Chia sẻ ảnh chứng từ ('+_prf.length+' ảnh)',`shareProof('${sid(id)}')`));
+  if(_canEditDelete(p)){
+    items.push(mk('✏️','Sửa đề xuất / ghi ý kiến',`openEditProposal('${sid(id)}')`));
+    items.push(mk('🗑','Xoá đề xuất',`del('${sid(id)}')`,true));
+  }
+  document.getElementById('card-menu-items').innerHTML=items.join('');
+  document.getElementById('card-menu-title').textContent=(p.desc||'')+' · '+fmtVND(p.amount);
+  document.getElementById('card-menu-overlay').style.display='flex';
+}
+function closeCardMenu(){ document.getElementById('card-menu-overlay').style.display='none'; }
 
 // ── 5 NÚT PHÂN QUYỀN ──
 function renderBtnD(p){
@@ -3907,8 +3948,8 @@ function opinionReportHtml(p){
 }
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
-  // Nút trắng bình thường như ✏️/🗑; 3 nút 🔁/✏️/🗑 chia đều bằng nhau (flex:0.6). Số lần đã có ở ghi chú + badge.
-  return `<button class="approve-box ab-del-mini" style="flex:0.6 1 0% !important;width:auto !important;min-width:0 !important;max-width:none !important;padding:0;font-size:14px" onclick="remindApprove('${sid(p.id)}')" title="Đề xuất duyệt lại">🔁</button>`;
+  // v165: nút có CHỮ (trước là icon 🔁 trơ trọi không ai hiểu). Số lần giục đã hiện ở badge.
+  return `<button class="approve-box ab-remind-btn" onclick="remindApprove('${sid(p.id)}')" title="Nhắc người duyệt / người chuyển">🔔 Giục</button>`;
 }
 // Bấm "Đề xuất lại": tăng số lần (gốc tính là lần 1 → bắt đầu từ 2), cập nhật đuôi ghi chú,
 // đánh dấu + đẩy phiếu lên đầu, và gửi push tới D, H (chặn lặp 600 giây/phiếu).
