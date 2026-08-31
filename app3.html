@@ -1420,7 +1420,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v165';
+const APP_VERSION = '20260803-v166';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1470,6 +1470,9 @@ function doUpdateNow(){
 setTimeout(checkForUpdate, 4000);                                   // kiểm tra sau khi mở app
 setInterval(checkForUpdate, 3*60*1000);                            // kiểm tra định kỳ mỗi 3 phút
 document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible') checkForUpdate(); }); // mỗi khi quay lại app
+// v166: có mạng lại / quay lại app → gửi nốt thông báo còn nợ trong hộp chờ
+window.addEventListener('online', function(){ setTimeout(function(){ try{ if(typeof currentUser!=='undefined' && currentUser) _pushOutboxFlush(); }catch(e){} }, 2000); });
+document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ setTimeout(function(){ try{ if(typeof currentUser!=='undefined' && currentUser) _pushOutboxFlush(); }catch(e){} }, 2500); } });
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -2143,6 +2146,7 @@ function initAuth(){
     if(user){
       currentUser = user;
       try{ localStorage.setItem('dc_last_uid', user.uid); }catch(e){} // v147: nhớ tài khoản gần nhất để lần sau áp cache NGAY lúc mở
+      setTimeout(function(){ try{ _pushOutboxFlush(); }catch(e){} }, 3000); // v166: gửi nốt thông báo còn nợ trong hộp chờ (cần đã đăng nhập)
       // v95: NỐI LẠI NGAY 4 kênh dữ liệu (bị máy chủ hủy lúc đăng xuất) — trước đây phải chờ vòng
       // 30s của v91 nên D đăng nhập lại mất ~50s mới thấy dữ liệu.
       try{ if(typeof _dcReattachGated==='function') _dcReattachGated(); }catch(e){}
@@ -2407,11 +2411,28 @@ async function sendPushNotif(title, body, targetRoles) {
   const last = parseInt(localStorage.getItem(key) || '0');
   if(Date.now() - last < 10000) return;
   localStorage.setItem(key, Date.now());
-  try {
-    await db.ref('push-queue').push({ title, body, roles: targetRoles, ts: Date.now() });
-  } catch(e) {
-    console.error('Push queue error:', e);
-  }
+  // v166 CHỐNG MẤT THÔNG BÁO: trước đây ghi thẳng lên máy chủ 1 phát — sóng chập đúng lúc đó
+  // rồi đóng app là thông báo MẤT LUÔN (phiếu thì có cơ chế bù, thông báo thì không) →
+  // "thỉnh thoảng không hiện thông báo có đề xuất mới". Nay: bỏ vào HỘP CHỜ trong máy trước,
+  // gửi thành công mới gạch; gửi hụt thì lần mở app sau / lúc có mạng lại tự gửi tiếp.
+  _pushOutboxAdd({ title, body, roles: targetRoles, ts: Date.now() });
+}
+function _pushOutboxLoad(){ try{ const v=JSON.parse(localStorage.getItem('dc_push_outbox')||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function _pushOutboxSave(a){ try{ localStorage.setItem('dc_push_outbox', JSON.stringify(a.slice(-20))); }catch(e){} }
+function _pushOutboxAdd(item){ const box=_pushOutboxLoad(); box.push(item); _pushOutboxSave(box); _pushOutboxFlush(); }
+let _pushFlushing=false;
+async function _pushOutboxFlush(){
+  if(_pushFlushing) return; _pushFlushing=true;
+  try{
+    let box=_pushOutboxLoad();
+    while(box.length){
+      const item=box[0];
+      if(Date.now()-(item.ts||0) > 24*3600*1000){ box.shift(); _pushOutboxSave(box); continue; } // quá 1 ngày = thông báo nguội, bỏ
+      await db.ref('push-queue').push(item); // mất mạng thì lệnh chờ tới khi có mạng mới xong — gửi xong mới gạch
+      box.shift(); _pushOutboxSave(box);
+    }
+  }catch(e){ /* lỗi (VD chưa đăng nhập) — giữ hộp, lần sau gửi tiếp */ }
+  _pushFlushing=false;
 }
 
 const STATUS = {
