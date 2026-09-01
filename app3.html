@@ -1433,7 +1433,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v168';
+const APP_VERSION = '20260803-v169';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -8623,7 +8623,18 @@ function renderSalaryAdvances(){
   const tChuyen=items.reduce((s,p)=>s+getTotalTransferred(p),0);
   const sub=document.getElementById('sal-month-sub');
   if(sub) sub.innerHTML = items.length? `Đề xuất ${fmtTr(tDX)} · duyệt ${fmtTr(tDuyet)} · chuyển ${fmtTr(tChuyen)}` : '&nbsp;';
-  if(!items.length){ list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có khoản ứng nào trong tháng này<br><small>Nhấn "➕ Đề xuất ứng lương"</small></div>'; return; }
+  if(!items.length){
+    // v169: tháng trống (đầu tháng mới) → gợi ý nhảy về tháng gần nhất CÓ dữ liệu, khỏi giật mình "mất hết"
+    let hint='';
+    const prevMonths=[...new Set(proposals.filter(p=>p.kind==='salary'&&p.month&&p.month<salaryMonth).map(p=>p.month))].sort();
+    if(prevMonths.length){
+      const pm=prevMonths[prevMonths.length-1];
+      const n=proposals.filter(p=>p.kind==='salary'&&p.month===pm).length;
+      hint=`<div style="margin-top:14px"><button onclick="salaryMonth='${esc(pm)}';renderSalaryAdvances()" style="padding:10px 16px;font-size:13px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:10px;cursor:pointer">‹ Xem ${esc(monthLabel(pm))} (${n} khoản)</button></div>`;
+    }
+    list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Tháng mới chưa có khoản ứng nào<br><small>Nhấn "➕ Đề xuất ứng lương" để tạo</small>'+hint+'</div>';
+    return;
+  }
   // v103 (PA4): lọc theo TÊN nhân viên + chọn cách xếp + 2 chế độ Thẻ/Bảng.
   _salSyncViewBtns(); // đồng bộ màu nút Thẻ/Bảng theo chế độ đã lưu trên máy
   // v141: 2 ô lọc Người + Nhóm — nạp từ khoản ứng của THÁNG này, giữ lựa chọn
