@@ -1433,7 +1433,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v167';
+const APP_VERSION = '20260803-v168';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6669,10 +6669,11 @@ function syncRejectedByToSheet(id, rejectedBy){
 // (KHÔNG nằm trong file này — repo public). Thư viện PDF tải LƯỜI khi bấm nút.
 // ══════════════════════════════════════════════════════════════════════
 let _tgToken='', _tgChatId='', _tgSending=false;
-function _loadScriptUrl(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('Không tải được thư viện (cần mạng)')); document.head.appendChild(s); }); }
+// v168 BẢO MẬT: khoá mã kiểm tra (SRI) — CDN có bị chiếm cũng KHÔNG chèn nổi mã lạ vào app
+function _loadScriptUrl(src, sri){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; if(sri){ s.integrity=sri; s.crossOrigin='anonymous'; } s.onload=res; s.onerror=()=>rej(new Error('Không tải được thư viện (cần mạng)')); document.head.appendChild(s); }); }
 async function _tgEnsureLibs(){
-  if(!window.html2canvas) await _loadScriptUrl('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-  if(!(window.jspdf && window.jspdf.jsPDF)) await _loadScriptUrl('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  if(!window.html2canvas) await _loadScriptUrl('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js','sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H');
+  if(!(window.jspdf && window.jspdf.jsPDF)) await _loadScriptUrl('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk');
 }
 // "Ngày CN" = hoạt động gần nhất trên phiếu (tạo/duyệt/chuyển) — app không có cột updatedAt riêng
 function _tgLastActivity(p){ let t=p.ts||0; [p.approvedDHistory,p.approvedHHistory,p.transfers].forEach(a=>{ if(Array.isArray(a)&&a.length){ const x=a[a.length-1].ts||0; if(x>t) t=x; } }); return t; }
@@ -6738,6 +6739,8 @@ async function _tgMakePdf(){
 async function sendTelegramReport(){
   if(_tgSending) return;
   if(!_tgToken || !_tgChatId){ showToast('❌ Chưa đọc được mã bot Telegram từ máy chủ — kiểm tra mạng/quyền'); return; }
+  // v168: báo cáo TIỀN phải từ dữ liệu MỚI NHẤT — vừa mở app dữ liệu chưa tải xong thì chưa cho gửi
+  if(!fbInitialLoadDone){ showToast('⏳ Dữ liệu đang tải về — chờ vài giây rồi bấm lại'); return; }
   _tgSending=true;
   try{
     showToast('⏳ Đang tạo PDF báo cáo (2 trang)...');
@@ -8333,6 +8336,7 @@ function _loadSheetJS(){
     if(window.XLSX) return resolve(window.XLSX);
     const s=document.createElement('script');
     s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+    s.integrity='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'; s.crossOrigin='anonymous'; // v168: khoá SRI
     s.onload=()=>window.XLSX?resolve(window.XLSX):reject(new Error('SheetJS lỗi tải'));
     s.onerror=()=>reject(new Error('Không tải được thư viện đọc Excel (cần mạng)'));
     document.head.appendChild(s);
