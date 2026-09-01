@@ -124,6 +124,10 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .ab-remind-btn{flex:0 0 auto !important;padding:0 12px;font-size:13px;font-weight:800;background:#fff7ed;color:#c2410c;border:1.5px solid #fdba74;border-radius:8px;cursor:pointer;white-space:nowrap}
 .card-menu-item{display:block;width:100%;padding:13px 14px;margin-bottom:8px;font-size:14.5px;font-weight:700;text-align:left;background:#f8fafc;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer;color:var(--text)}
 .cmi-danger{background:#fef2f2;color:var(--red);border-color:#fecaca}
+/* v167: bảng trong PDF báo cáo Telegram */
+.tg-rep{width:100%;border-collapse:collapse;font-size:11.5px}
+.tg-rep td,.tg-rep th{border:1px solid #cbd5e1;padding:4px 5px;text-align:center;word-break:break-word}
+.tg-rep th{font-weight:800}
 .approve-box.done{border-color:var(--red);background:#fff0f0}
 .approve-avatar{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
 .av-d{background:var(--blue)}
@@ -322,6 +326,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
 <!-- THANH CẬP NHẬT PHẦN MỀM MỚI (hiện khi có bản mới, bấm để cập nhật) -->
 <div id="update-banner" onclick="doUpdateNow()" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:#16a34a;color:#fff;text-align:center;padding:13px 12px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.35);letter-spacing:0.2px">🔄 Có phần mềm mới — NHẤN VÀO ĐÂY để cập nhật</div>
+
+<!-- v167: dải nhắc gửi báo cáo Telegram (D/H/Trang, mỗi ngày; bấm Để sau = ẩn tới mai) -->
+<div id="tg-remind-banner" style="display:none;background:#eff6ff;border-bottom:1.5px solid #bfdbfe;padding:9px 12px;align-items:center;gap:8px">
+  <span style="flex:1;font-size:13px;font-weight:700;color:#1e40af">📊 Chưa gửi báo cáo Telegram hôm nay</span>
+  <button onclick="sendTelegramReport()" style="padding:8px 14px;font-size:13px;font-weight:800;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer">Gửi ngay</button>
+  <button onclick="_tgDismissToday()" style="padding:8px 10px;font-size:12px;font-weight:700;background:#fff;color:var(--text-sub);border:1.5px solid var(--gray-border);border-radius:8px;cursor:pointer">Để sau</button>
+</div>
 
 <!-- ROLE SCREEN -->
 <!-- FIRST LOGIN MODAL — chọn tên lần đầu -->
@@ -661,7 +672,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- PAGE: REPORT -->
 <div id="page-report" class="main" style="display:none">
   <div class="card">
-    <div class="card-header">📊 Báo cáo</div>
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px">📊 Báo cáo
+      <button onclick="sendTelegramReport()" style="padding:7px 12px;font-size:12.5px;font-weight:800;background:#229ED9;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">📤 Gửi báo cáo Telegram</button>
+    </div>
     <div class="card-body" style="padding:10px 0 0">
       <div class="report-subtabs">
         <button class="report-subtab active" data-tab="summary" onclick="setReportTab('summary',this)">📝 Tóm tắt</button>
@@ -1420,7 +1433,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v166';
+const APP_VERSION = '20260803-v167';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2479,7 +2492,12 @@ function pushToFirebase(){
   // 1) Phần meta gồm người đề xuất, công trình, link Sheets — thường nhỏ và ít đổi, gộp chung 1 node
   const metaNow = JSON.stringify({persons, sites, sheetUrl});
   if(!lastPushedSnapshot || lastPushedSnapshot.meta !== metaNow){
-    updates['duyetchi/meta'] = {persons, sites, sheetUrl, updatedAt: Date.now()};
+    // v167: ghi TỪNG KHÓA thay vì set đè cả nhánh meta — kẻo xoá mất các khóa khác
+    // (telegramBotToken/telegramChatId do D thêm tay trong Firebase Console).
+    updates['duyetchi/meta/persons'] = persons;
+    updates['duyetchi/meta/sites'] = sites;
+    updates['duyetchi/meta/sheetUrl'] = sheetUrl;
+    updates['duyetchi/meta/updatedAt'] = Date.now();
     hasChange = true;
   }
 
@@ -2709,6 +2727,8 @@ function initFirebaseSync(){
     const meta = _metaData;
     persons = meta.persons || [];
     sites   = meta.sites   || [];
+    _tgToken = meta.telegramBotToken || ''; _tgChatId = meta.telegramChatId || ''; // v167: cấu hình bot Telegram (chỉ nằm trong Firebase, không nằm trong file)
+    try{ _tgBannerCheck(); }catch(e){}
     if(meta.sheetUrl){
       sheetUrl = sanitizeSheetUrl(meta.sheetUrl); // v78: chặn URL lạ từ Firebase
       localStorage.setItem('dc_sheetUrl', sheetUrl);
@@ -3313,6 +3333,7 @@ function renderAll(){
     try{ renderZaloBanners(); }catch(e){}
     // v96: chấm số đỏ trên thanh điều hướng
     try{ updateNavBadges(); }catch(e){}
+    try{ _tgBannerCheck(); }catch(e){} // v167: dải nhắc gửi báo cáo Telegram
   }, 80);
 }
 
@@ -6641,6 +6662,116 @@ function syncRejectedByToSheet(id, rejectedBy){
   document.head.appendChild(s);
   setTimeout(()=>s.remove(),3000);
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// v167 BÁO CÁO TELEGRAM: 1 file PDF 2 trang (Chưa chuyển toàn bộ + Đã chuyển 5 ngày),
+// gom theo công trường, gửi vào nhóm qua bot. Mã bot đọc từ Firebase duyetchi/meta
+// (KHÔNG nằm trong file này — repo public). Thư viện PDF tải LƯỜI khi bấm nút.
+// ══════════════════════════════════════════════════════════════════════
+let _tgToken='', _tgChatId='', _tgSending=false;
+function _loadScriptUrl(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('Không tải được thư viện (cần mạng)')); document.head.appendChild(s); }); }
+async function _tgEnsureLibs(){
+  if(!window.html2canvas) await _loadScriptUrl('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  if(!(window.jspdf && window.jspdf.jsPDF)) await _loadScriptUrl('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+}
+// "Ngày CN" = hoạt động gần nhất trên phiếu (tạo/duyệt/chuyển) — app không có cột updatedAt riêng
+function _tgLastActivity(p){ let t=p.ts||0; [p.approvedDHistory,p.approvedHHistory,p.transfers].forEach(a=>{ if(Array.isArray(a)&&a.length){ const x=a[a.length-1].ts||0; if(x>t) t=x; } }); return t; }
+// Dùng đúng logic buildReports: official = số H (ưu tiên) / D; trans = tổng đã chuyển; bỏ phiếu từ chối
+function _tgData(){
+  const exp=proposals.filter(p=>p.kind!=='salary' && p.kind!=='kh');
+  const chua=[], da=[]; const cutoff=Date.now()-5*86400000;
+  exp.forEach(p=>{
+    const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p);
+    if(p.status!=='rejected' && off>0 && off-tr>0.001)
+      chua.push({site:p.site||'Khác', desc:p.desc||'', person:p.person||'', m1:off, m2:off-tr, cn:_tgLastActivity(p)});
+    const trs=Array.isArray(p.transfers)?p.transfers:[]; const lastT=trs.length?(trs[trs.length-1].ts||0):0;
+    if(tr>0.001 && lastT>=cutoff)
+      da.push({site:p.site||'Khác', desc:p.desc||'', person:p.person||'', m1:tr, m2:Math.max(0,off-tr), cn:lastT});
+  });
+  return {chua,da};
+}
+function _tgPageHtml(o){ // o={title,color,sub,rows,col1}
+  const bySite={}; o.rows.forEach(r=>{ (bySite[r.site]=bySite[r.site]||[]).push(r); });
+  const keys=Object.keys(bySite).sort((a,b)=>a.localeCompare(b,'vi'));
+  let stt=0,t1=0,t2=0,body='';
+  keys.forEach(sk=>{
+    const rs=bySite[sk].sort((a,b)=>a.cn-b.cn);
+    body+=`<tr><td colspan="7" style="background:#eef2ff;font-weight:800;text-align:left">🏗 ${esc(sk)}</td></tr>`;
+    let s1=0,s2=0;
+    rs.forEach(r=>{ stt++; s1+=r.m1; s2+=r.m2;
+      body+=`<tr><td>${stt}</td><td style="text-align:left">${esc(r.desc)}</td><td style="text-align:left">${esc(r.person)}</td><td style="text-align:left">${esc(r.site)}</td><td style="text-align:right;white-space:nowrap">${fmtVND(r.m1)}</td><td style="text-align:right;white-space:nowrap">${r.m2>0.001?fmtVND(r.m2):'—'}</td><td style="white-space:nowrap">${fmtFull(r.cn)}</td></tr>`; });
+    t1+=s1; t2+=s2;
+    body+=`<tr style="background:#f8fafc;font-weight:800"><td colspan="4" style="text-align:right">Cộng ${esc(sk)}:</td><td style="text-align:right;white-space:nowrap">${fmtVND(s1)}</td><td style="text-align:right;white-space:nowrap">${s2>0.001?fmtVND(s2):'—'}</td><td></td></tr>`;
+  });
+  body+=`<tr style="background:#fef9c3;font-weight:900"><td colspan="4" style="text-align:right">TỔNG CỘNG:</td><td style="text-align:right;white-space:nowrap">${fmtVND(t1)}</td><td style="text-align:right;white-space:nowrap">${t2>0.001?fmtVND(t2):'—'}</td><td></td></tr>`;
+  if(!o.rows.length) body=`<tr><td colspan="7" style="padding:16px;color:#6b7280">Không có khoản nào 🎉</td></tr>`;
+  return `<div style="width:794px;background:#fff;padding:24px 26px;font-family:'Roboto',Arial,sans-serif;color:#111827;box-sizing:border-box">
+    <div style="text-align:center;font-size:13px;font-weight:700;color:#334155">CÔNG TY PHÚC VINH AN · CÔNG TY 379 VIỆT NAM</div>
+    <div style="text-align:center;font-size:19px;font-weight:900;color:${o.color};margin-top:6px">${o.title}</div>
+    <div style="text-align:center;font-size:12px;color:#475569;margin:4px 0 12px">${o.sub}</div>
+    <table class="tg-rep"><thead><tr style="background:${o.color};color:#fff">
+      <th style="width:34px">STT</th><th>Nội dung</th><th style="width:100px">Người nhận</th><th style="width:120px">Công trường</th><th style="width:106px">${o.col1}</th><th style="width:106px">Còn phải chuyển</th><th style="width:104px">Ngày CN</th>
+    </tr></thead><tbody>${body}</tbody></table></div>`;
+}
+async function _tgMakePdf(){
+  await _tgEnsureLibs();
+  const d=_tgData();
+  const now=new Date(), dstr=now.toLocaleDateString('vi-VN'), tstr=now.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+  const from=new Date(Date.now()-5*86400000).toLocaleDateString('vi-VN');
+  const pages=[
+    _tgPageHtml({title:'BẢNG KÊ CÁC KHOẢN CHƯA CHUYỂN', color:'#d97706', sub:'Toàn bộ tồn đọng · xuất lúc '+tstr+' '+dstr, rows:d.chua, col1:'Số duyệt'}),
+    _tgPageHtml({title:'BẢNG KÊ CÁC KHOẢN ĐÃ CHUYỂN', color:'#16a34a', sub:'5 ngày gần nhất ('+from+' → '+dstr+') · xuất lúc '+tstr+' '+dstr, rows:d.da, col1:'Đã chuyển'})
+  ];
+  const jsPDF=window.jspdf.jsPDF; const pdf=new jsPDF({unit:'mm',format:'a4',orientation:'portrait'});
+  for(let i=0;i<pages.length;i++){
+    const host=document.createElement('div'); host.style.cssText='position:fixed;left:-12000px;top:0;z-index:-1'; host.innerHTML=pages[i]; document.body.appendChild(host);
+    const canvas=await html2canvas(host.firstElementChild,{scale:2,backgroundColor:'#ffffff'});
+    host.remove();
+    const img=canvas.toDataURL('image/jpeg',0.92);
+    let w=210, h=canvas.height*210/canvas.width, x=0;
+    if(h>297){ w=297*canvas.width/canvas.height; h=297; x=(210-w)/2; } // bảng quá dài → thu cho vừa đúng 1 trang A4
+    if(i>0) pdf.addPage();
+    pdf.addImage(img,'JPEG',x,0,w,h);
+  }
+  return {blob:pdf.output('blob'), d};
+}
+async function sendTelegramReport(){
+  if(_tgSending) return;
+  if(!_tgToken || !_tgChatId){ showToast('❌ Chưa đọc được mã bot Telegram từ máy chủ — kiểm tra mạng/quyền'); return; }
+  _tgSending=true;
+  try{
+    showToast('⏳ Đang tạo PDF báo cáo (2 trang)...');
+    const {blob,d}=await _tgMakePdf();
+    const now=new Date(), dstr=now.toLocaleDateString('vi-VN');
+    const sumCon=d.chua.reduce((s,r)=>s+r.m2,0), sumDa=d.da.reduce((s,r)=>s+r.m1,0);
+    const fd=new FormData();
+    fd.append('chat_id', String(_tgChatId));
+    fd.append('document', blob, 'BaoCao-DuyetChi-'+now.toISOString().slice(0,10)+'.pdf');
+    fd.append('caption', '📊 Báo cáo Duyệt chi '+dstr+'\n⏳ Chưa chuyển: '+d.chua.length+' khoản · còn '+fmtVND(sumCon)+'\n✅ Đã chuyển 5 ngày: '+d.da.length+' khoản · '+fmtVND(sumDa));
+    showToast('⏳ Đang gửi sang Telegram...');
+    const r=await fetch('https://api.telegram.org/bot'+_tgToken+'/sendDocument',{method:'POST',body:fd});
+    const j=await r.json().catch(()=>({}));
+    if(j.ok){
+      try{ localStorage.setItem('dc_tg_last_sent', _tgTodayKey()); }catch(e){}
+      _tgBannerCheck();
+      showToast('✅ Đã gửi báo cáo vào nhóm Telegram');
+    } else showToast('❌ Telegram từ chối: '+(j.description||('HTTP '+r.status)));
+  }catch(e){ showToast('❌ Lỗi gửi báo cáo: '+e.message); }
+  _tgSending=false;
+}
+function _tgTodayKey(){ const n=new Date(); return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2); }
+function _tgBannerCheck(){
+  const el=document.getElementById('tg-remind-banner'); if(!el) return;
+  let show=false;
+  try{
+    const okRole=(currentRole==='dung'||currentRole==='hien'||currentRole==='trang');
+    const sent=localStorage.getItem('dc_tg_last_sent')===_tgTodayKey();
+    const dism=localStorage.getItem('dc_tg_dismiss')===_tgTodayKey();
+    show = okRole && !!_tgToken && !sent && !dism;
+  }catch(e){}
+  el.style.display = show ? 'flex' : 'none';
+}
+function _tgDismissToday(){ try{ localStorage.setItem('dc_tg_dismiss', _tgTodayKey()); }catch(e){} _tgBannerCheck(); }
 
 function copyScript(){
   const code=`function onOpen(){SpreadsheetApp.getUi().createMenu('📋 App Duyệt Chi').addItem('🔗 Mở App','openApp').addToUi();}
