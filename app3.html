@@ -1433,7 +1433,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v169';
+const APP_VERSION = '20260803-v170';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -6679,15 +6679,17 @@ async function _tgEnsureLibs(){
 function _tgLastActivity(p){ let t=p.ts||0; [p.approvedDHistory,p.approvedHHistory,p.transfers].forEach(a=>{ if(Array.isArray(a)&&a.length){ const x=a[a.length-1].ts||0; if(x>t) t=x; } }); return t; }
 // Dùng đúng logic buildReports: official = số H (ưu tiên) / D; trans = tổng đã chuyển; bỏ phiếu từ chối
 function _tgData(){
-  const exp=proposals.filter(p=>p.kind!=='salary' && p.kind!=='kh');
+  // v170: gồm CẢ phiếu P.Kế hoạch (kind='kh') — cụm riêng "P.KH — <công trình>" để không lẫn tiền 2 phòng
+  const exp=proposals.filter(p=>p.kind!=='salary');
   const chua=[], da=[]; const cutoff=Date.now()-5*86400000;
   exp.forEach(p=>{
+    const siteLbl = p.kind==='kh' ? ('P.KH — '+(p.site||'Chi phí chung')) : (p.site||'Khác');
     const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p);
     if(p.status!=='rejected' && off>0 && off-tr>0.001)
-      chua.push({site:p.site||'Khác', desc:p.desc||'', person:p.person||'', m1:off, m2:off-tr, cn:_tgLastActivity(p)});
+      chua.push({site:siteLbl, desc:p.desc||'', person:p.person||'', m1:off, m2:off-tr, cn:_tgLastActivity(p)});
     const trs=Array.isArray(p.transfers)?p.transfers:[]; const lastT=trs.length?(trs[trs.length-1].ts||0):0;
     if(tr>0.001 && lastT>=cutoff)
-      da.push({site:p.site||'Khác', desc:p.desc||'', person:p.person||'', m1:tr, m2:Math.max(0,off-tr), cn:lastT});
+      da.push({site:siteLbl, desc:p.desc||'', person:p.person||'', m1:tr, m2:Math.max(0,off-tr), cn:lastT});
   });
   return {chua,da};
 }
@@ -6738,6 +6740,9 @@ async function _tgMakePdf(){
 }
 async function sendTelegramReport(){
   if(_tgSending) return;
+  // v170: chỉ D/H/Trang gửi — kế toán thường KHÔNG đọc được phiếu P.KH (kín 2 chiều),
+  // họ gửi thì báo cáo thiếu phần P.KH mà không ai biết
+  if(currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('Chỉ D / Hiền / Trang gửi được báo cáo này'); return; }
   if(!_tgToken || !_tgChatId){ showToast('❌ Chưa đọc được mã bot Telegram từ máy chủ — kiểm tra mạng/quyền'); return; }
   // v168: báo cáo TIỀN phải từ dữ liệu MỚI NHẤT — vừa mở app dữ liệu chưa tải xong thì chưa cho gửi
   if(!fbInitialLoadDone){ showToast('⏳ Dữ liệu đang tải về — chờ vài giây rồi bấm lại'); return; }
