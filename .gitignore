@@ -1,3 +1,7 @@
 
 # Sao luu DB — CHUA DU LIEU NHAY CAM, KHONG day len repo cong khai
 backups/
+
+# Thu vien cua Cloud Functions — tai lai bang "npm install", khong commit
+functions/node_modules/
+functions/package-lock.json
