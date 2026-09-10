@@ -327,12 +327,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- THANH CẬP NHẬT PHẦN MỀM MỚI (hiện khi có bản mới, bấm để cập nhật) -->
 <div id="update-banner" onclick="doUpdateNow()" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:#16a34a;color:#fff;text-align:center;padding:13px 12px;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,0.35);letter-spacing:0.2px">🔄 Có phần mềm mới — NHẤN VÀO ĐÂY để cập nhật</div>
 
-<!-- v167: dải nhắc gửi báo cáo Telegram (D/H/Trang, mỗi ngày; bấm Để sau = ẩn tới mai) -->
-<div id="tg-remind-banner" style="display:none;background:#eff6ff;border-bottom:1.5px solid #bfdbfe;padding:9px 12px;align-items:center;gap:8px">
-  <span style="flex:1;font-size:13px;font-weight:700;color:#1e40af">📊 Chưa gửi báo cáo Telegram hôm nay</span>
-  <button onclick="sendTelegramReport()" style="padding:8px 14px;font-size:13px;font-weight:800;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer">Gửi ngay</button>
-  <button onclick="_tgDismissToday()" style="padding:8px 10px;font-size:12px;font-weight:700;background:#fff;color:var(--text-sub);border:1.5px solid var(--gray-border);border-radius:8px;cursor:pointer">Để sau</button>
-</div>
+<!-- v171: đã BỎ dải nhắc gửi báo cáo Telegram — từ 06/09/2026 máy chủ tự gửi 6h sáng
+     (Cloud Function baoCaoTelegram6h). Nút gửi PDF tay vẫn còn ở tab Báo cáo. -->
 
 <!-- ROLE SCREEN -->
 <!-- FIRST LOGIN MODAL — chọn tên lần đầu -->
@@ -1433,7 +1429,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v170';
+const APP_VERSION = '20260803-v171';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2728,7 +2724,6 @@ function initFirebaseSync(){
     persons = meta.persons || [];
     sites   = meta.sites   || [];
     _tgToken = meta.telegramBotToken || ''; _tgChatId = meta.telegramChatId || ''; // v167: cấu hình bot Telegram (chỉ nằm trong Firebase, không nằm trong file)
-    try{ _tgBannerCheck(); }catch(e){}
     if(meta.sheetUrl){
       sheetUrl = sanitizeSheetUrl(meta.sheetUrl); // v78: chặn URL lạ từ Firebase
       localStorage.setItem('dc_sheetUrl', sheetUrl);
@@ -3333,7 +3328,6 @@ function renderAll(){
     try{ renderZaloBanners(); }catch(e){}
     // v96: chấm số đỏ trên thanh điều hướng
     try{ updateNavBadges(); }catch(e){}
-    try{ _tgBannerCheck(); }catch(e){} // v167: dải nhắc gửi báo cáo Telegram
   }, 80);
 }
 
@@ -6761,25 +6755,13 @@ async function sendTelegramReport(){
     const j=await r.json().catch(()=>({}));
     if(j.ok){
       try{ localStorage.setItem('dc_tg_last_sent', _tgTodayKey()); }catch(e){}
-      _tgBannerCheck();
       showToast('✅ Đã gửi báo cáo vào nhóm Telegram');
     } else showToast('❌ Telegram từ chối: '+(j.description||('HTTP '+r.status)));
   }catch(e){ showToast('❌ Lỗi gửi báo cáo: '+e.message); }
   _tgSending=false;
 }
 function _tgTodayKey(){ const n=new Date(); return n.getFullYear()+'-'+('0'+(n.getMonth()+1)).slice(-2)+'-'+('0'+n.getDate()).slice(-2); }
-function _tgBannerCheck(){
-  const el=document.getElementById('tg-remind-banner'); if(!el) return;
-  let show=false;
-  try{
-    const okRole=(currentRole==='dung'||currentRole==='hien'||currentRole==='trang');
-    const sent=localStorage.getItem('dc_tg_last_sent')===_tgTodayKey();
-    const dism=localStorage.getItem('dc_tg_dismiss')===_tgTodayKey();
-    show = okRole && !!_tgToken && !sent && !dism;
-  }catch(e){}
-  el.style.display = show ? 'flex' : 'none';
-}
-function _tgDismissToday(){ try{ localStorage.setItem('dc_tg_dismiss', _tgTodayKey()); }catch(e){} _tgBannerCheck(); }
+// v171: bỏ _tgBannerCheck/_tgDismissToday cùng dải nhắc — máy chủ đã tự gửi 6h sáng
 
 function copyScript(){
   const code=`function onOpen(){SpreadsheetApp.getUi().createMenu('📋 App Duyệt Chi').addItem('🔗 Mở App','openApp').addToUi();}
