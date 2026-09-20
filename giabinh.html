@@ -1227,6 +1227,20 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <button onclick="closePlanModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
     </div>
     <div class="form-group">
+      <label class="form-label">Ảnh đính kèm</label>
+      <div>
+        <label class="upload-zone" for="plan-file-input" id="plan-paste-zone" tabindex="0">
+          <div class="upload-icon">📸</div>
+          <div class="upload-txt">Chọn / Chụp ảnh</div>
+          <div class="upload-sub">Có thể chọn nhiều ảnh cùng lúc</div>
+        </label>
+        <button type="button" onclick="pasteImgFromClipboard('plan')" style="margin-top:6px;width:100%;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer">📋 Dán ảnh từ clipboard</button>
+        <input type="file" id="plan-file-input" accept="image/*" multiple style="display:none" onchange="handlePlanImg(this)">
+      </div>
+      <div id="plan-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
+    </div>
+
+    <div class="form-group">
       <label class="form-label">Công trường <span class="req">*</span></label>
       <select class="form-input form-select" id="plan-inp-site"><option value="">— Chọn công trường —</option></select>
     </div>
@@ -1525,7 +1539,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v14';
+const APP_VERSION = '20260920-v15';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4728,7 +4742,16 @@ async function pasteImgFromClipboard(target){
     }
   }
   if(!blobs.length){ showToast('📋 Clipboard không có ảnh — hãy copy ảnh trước'); return; }
-  if(target==='edit'){
+  if(target==='plan'){
+    setZoneLoading('plan-paste-zone', true, blobs.length);
+    let done=0;
+    blobs.forEach(file=>{
+      compressImage(file).then(dataUrl=>{
+        planImages.push(dataUrl); done++;
+        if(done===blobs.length){setZoneLoading('plan-paste-zone',false);renderPlanImgPreview();showToast(`✅ Đã dán ${done} ảnh`);}
+      }).catch(()=>{done++;if(done===blobs.length)setZoneLoading('plan-paste-zone',false);showToast('❌ Xử lý ảnh thất bại');});
+    });
+  } else if(target==='edit'){
     setZoneLoading('edit-paste-zone', true, blobs.length);
     let done=0;
     blobs.forEach(file=>{
@@ -5051,6 +5074,19 @@ function openImg(id, type, idx){
     modalIdx = idx!=null ? idx : 0;
   }
   if(!modalImages.length) return;
+  showModalImg();
+  document.getElementById('imgModal').classList.add('open');
+}
+
+// Ảnh của đề xuất VẬT TƯ nằm trong plans chứ không phải proposals → cần hàm riêng,
+// nếu dùng openImg sẽ không tìm thấy phiếu và bấm vào ảnh không mở gì cả.
+function openPlanImg(id, idx){
+  const pl = plans.find(x=>x.id===id);
+  if(!pl || !Array.isArray(pl.images) || !pl.images.length) return;
+  modalProposalId = null;      // không phải phiếu chi → tắt các nút thao tác theo phiếu
+  modalKind = 'img';
+  modalImages = pl.images;
+  modalIdx = idx!=null ? idx : 0;
   showModalImg();
   document.getElementById('imgModal').classList.add('open');
 }
@@ -5532,6 +5568,8 @@ function buildPlanCard(p){
         <div style="flex-shrink:0">${urgency.badge}</div>
       </div>
       ${p.note?`<div class="proposal-note">${esc(p.note)}</div>`:''}
+      ${(Array.isArray(p.images)&&p.images.length)?`<div class="proof-grid" style="margin-top:8px">${p.images.map((src,idx)=>`
+        <div class="proof-thumb"><img src="${esc(src)}" loading="lazy" decoding="async" onclick="openPlanImg('${sid(p.id)}',${idx})" alt="Ảnh ${idx+1}"></div>`).join('')}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
         <select onchange="setPlanStatus('${sid(p.id)}', this.value)" style="padding:5px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
           <option value="pending" ${p.status==='pending'?'selected':''}>Đang chờ</option>
@@ -5556,6 +5594,38 @@ function buildPlanCard(p){
 let _editingPlanId = null;
 let _pendingPlanLink = null;
 
+// ── ẢNH ĐÍNH KÈM cho đề xuất VẬT TƯ (làm giống hệt bên Đề xuất chi) ──
+let planImages = [];
+function handlePlanImg(input){
+  const files = Array.from(input.files||[]).filter(f=>f.type && f.type.startsWith('image/'));
+  input.value='';
+  if(!files.length) return;
+  setZoneLoading('plan-paste-zone', true, files.length);
+  let done=0;
+  files.forEach(file=>{
+    compressImage(file).then(dataUrl=>{
+      planImages.push(dataUrl); done++;
+      if(done===files.length){ setZoneLoading('plan-paste-zone',false); renderPlanImgPreview(); }
+    }).catch(()=>{ done++; if(done===files.length){ setZoneLoading('plan-paste-zone',false); showToast('❌ Xử lý ảnh thất bại'); } });
+  });
+}
+function renderPlanImgPreview(){
+  const wrap = document.getElementById('plan-img-preview');
+  if(!wrap) return;
+  if(!planImages.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
+  wrap.style.display='flex';
+  wrap.innerHTML = planImages.map((src,idx)=>`
+    <div class="img-preview-item" data-idx="${idx}">
+      <img src="${esc(src)}" alt="Ảnh ${idx+1}">
+    </div>`).join('');
+  wrap.querySelectorAll('.img-preview-item').forEach(item=>{
+    const idx = parseInt(item.dataset.idx, 10);
+    const img = item.querySelector('img');
+    attachLongPress(img, ()=>planImages[idx], ()=>(()=>removePlanImage(idx)));
+  });
+}
+function removePlanImage(idx){ planImages.splice(idx,1); renderPlanImgPreview(); }
+
 function openPlanModal(id){
   _editingPlanId = id || null;
   const p = id ? plans.find(x=>x.id===id) : null;
@@ -5569,6 +5639,8 @@ function openPlanModal(id){
   document.getElementById('plan-inp-date').value = p ? new Date(p.neededDate).toISOString().slice(0,10) : '';
   document.getElementById('plan-inp-assignee').value = p ? (p.assignee||'') : '';
   document.getElementById('plan-inp-note').value = p ? (p.note||'') : '';
+  planImages = (p && Array.isArray(p.images)) ? p.images.slice() : [];
+  renderPlanImgPreview();
   document.getElementById('plan-modal-overlay').style.display = 'flex';
 }
 function closePlanModal(){
@@ -5589,11 +5661,12 @@ function savePlanFromModal(){
   const neededDate = new Date(dateStr+'T00:00:00').getTime();
   if(_editingPlanId){
     const p = plans.find(x=>x.id===_editingPlanId);
-    if(p) Object.assign(p, { site, material, quantity: qty, estimatedAmount, neededDate, assignee, note });
+    if(p) Object.assign(p, { site, material, quantity: qty, estimatedAmount, neededDate, assignee, note, images: planImages.slice() });
   } else {
     plans.unshift({
       id: Date.now().toString(),
       site, material, quantity: qty, estimatedAmount, neededDate, assignee, note,
+      images: planImages.slice(),
       status: 'pending',
       createdBy: getCurrentUserName(),
       createdAt: Date.now(),
