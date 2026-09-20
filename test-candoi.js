@@ -79,5 +79,53 @@ console.log('\n== Khong co du lieu ==');
 setup([],[]);
 check('Con duoc tieu',totals().conDuocTieu,0);
 
+
+console.log('\n== Phieu KY QUY: KHONG duoc tru 2 lan ==');
+// Duyet 100tr ky quy, Toan chuyen 100tr -> app tu sinh khoan dep 100tr.
+// Neu con cong vao daChi nua thi tien trong TK bi tru 2 lan (-200tr thay vi -100tr).
+setup([
+  {id:'a',type:'in',amount:500e6,src:'cdt',date:'2026-01-01'},
+  {id:'p_x_1',type:'dep',amount:100e6,desc:'Ky quy bao lanh',date:'2026-02-01',fromProposal:'x'}
+],[
+  {id:'x',status:'transferred',costType:'kyquy',approvedHHistory:[{amount:100e6}],transfers:[{amount:100e6,ts:Date.now()}]}
+]);
+let k=totals();
+check('Da chi ra (phai = 0)',k.daChi,0);
+check('Dang gui ngoai',k.dangGuiNgoai,100e6);
+check('Tien trong TK',k.tienTrongTk,400e6);
+check('Con duoc tieu',k.conDuocTieu,400e6);
+
+console.log('\n== Ky quy DA DUYET nhung CHUA chuyen ==');
+// Chua chuyen -> chua co khoan dep, nhung van la tien da hua dua di
+setup([{id:'a',type:'in',amount:500e6,src:'cdt',date:'2026-01-01'}],
+      [{id:'y',status:'approved',costType:'kyquy',approvedHHistory:[{amount:80e6}],transfers:[]}]);
+k=totals();
+check('Da chi ra',k.daChi,0);
+check('Da duyet chua chuyen',k.daDuyetChuaChuyen,80e6);
+check('Tien trong TK',k.tienTrongTk,500e6);
+check('Con duoc tieu',k.conDuocTieu,420e6);
+
+console.log('\n== Chi cong truong + noi nghiep van tinh binh thuong ==');
+setup([{id:'a',type:'in',amount:500e6,src:'cdt',date:'2026-01-01'}],[
+  {id:'c1',status:'transferred',costType:'congtruong',approvedHHistory:[{amount:100e6}],transfers:[{amount:100e6,ts:Date.now()}]},
+  {id:'c2',status:'transferred',costType:'noinghiep', approvedHHistory:[{amount:20e6}], transfers:[{amount:20e6,ts:Date.now()}]},
+  {id:'c3',status:'transferred',approvedHHistory:[{amount:30e6}],transfers:[{amount:30e6,ts:Date.now()}]}
+]);
+check('Da chi ra (100+20+30)',totals().daChi,150e6);
+
+console.log('\n== Ky quy chuyen LAM 2 LAN -> 2 khoan rieng ==');
+setup([
+  {id:'a',type:'in',amount:500e6,src:'cdt',date:'2026-01-01'},
+  {id:'p_z_1',type:'dep',amount:60e6,date:'2026-02-01',fromProposal:'z'},
+  {id:'p_z_2',type:'dep',amount:40e6,date:'2026-03-01',fromProposal:'z'}
+],[
+  {id:'z',status:'transferred',costType:'kyquy',approvedHHistory:[{amount:100e6}],
+   transfers:[{amount:60e6,ts:Date.now()},{amount:40e6,ts:Date.now()}]}
+]);
+k=totals();
+check('Dang gui ngoai (60+40)',k.dangGuiNgoai,100e6);
+check('Da chi ra',k.daChi,0);
+check('Tien trong TK',k.tienTrongTk,400e6);
+
 console.log(pass?'\n*** TAT CA DUNG ***':'\n*** CO LOI ***');
 process.exit(pass?0:1);

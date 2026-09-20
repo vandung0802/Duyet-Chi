@@ -638,6 +638,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </div>
 
       <div class="form-group">
+        <label class="form-label">Loại chi phí <span class="req">*</span></label>
+        <select class="form-input form-select" id="inp-costtype">
+          <option value="congtruong">🏗️ Chi phí công trường</option>
+          <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
+          <option value="noinghiep">📋 Chi phí nội nghiệp</option>
+        </select>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chọn <b>đặt cọc / ký quỹ</b> thì khi Toàn chuyển tiền, app tự ghi sang tab Cân đối → Ký quỹ.</div>
+      </div>
+
+      <div class="form-group">
         <label class="form-label">Nội dung đề xuất <span class="req">*</span></label>
         <textarea class="form-input" id="inp-desc" rows="2" placeholder="Vd: Mua cát đổ móng trụ T5..."></textarea>
       </div>
@@ -972,6 +982,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Tab con: TỔNG QUAN -->
   <div id="cash-tab-sum">
     <div id="cash-summary"></div>
+    <div class="card"><div class="card-body" style="padding:10px 12px;display:flex;gap:8px">
+      <button onclick="openCashModal('in')" style="flex:1;padding:12px 8px;font-size:14px;font-weight:700;background:#047857;color:#fff;border:none;border-radius:10px;cursor:pointer">📥 Ghi tiền THU về</button>
+      <button onclick="openCashModal('dep')" style="flex:1;padding:12px 8px;font-size:14px;font-weight:700;background:#b45309;color:#fff;border:none;border-radius:10px;cursor:pointer">🔒 Ghi KÝ QUỸ</button>
+    </div></div>
     <div class="card">
       <div class="card-header">📈 Tiền còn lại theo tháng</div>
       <div class="card-body" style="padding:12px"><div id="cash-chart"></div></div>
@@ -1507,7 +1521,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v8';
+const APP_VERSION = '20260920-v9';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2018,6 +2032,13 @@ let currentUser = null; // Firebase Auth user
 // Gia Bình có 4 vai (379 chỉ có 3): ở 379 chị Trang vừa chuyển tiền vừa đề xuất vật tư,
 // còn ở đây Toàn là THỦ QUỸ (chuyển tiền), Trang chỉ ĐỀ XUẤT vật tư — tách hẳn để
 // không ai bấm nhầm nút chuyển tiền của người khác.
+// Gia Bình: loại chi phí của phiếu. 'kyquy' được app đối xử KHÁC HẲN — khi Toàn
+// chuyển tiền thì tự sinh khoản bên tab Cân đối → Ký quỹ, và KHÔNG tính vào "đã chi".
+const COST_TYPES = {
+  congtruong: {label:'Công trường', icon:'🏗️', color:'#047857'},
+  kyquy:      {label:'Ký quỹ/Cọc',  icon:'🔒', color:'#b45309'},
+  noinghiep:  {label:'Nội nghiệp',  icon:'📋', color:'#0e7490'},
+};
 const ROLES = {
   dung:  {label:'Dũng',  icon:'D', color:'var(--blue)'},
   hien:  {label:'Hiền',  icon:'H', color:'#7c3aed'},
@@ -3863,7 +3884,7 @@ function _buildCard(p){
     <div class="proposal-top">
       <div class="proposal-top-row">
         <div class="proposal-left-col">
-          <div class="proposal-desc">${esc(p.desc)}</div>
+          <div class="proposal-desc">${esc(p.desc)}${(p.costType && p.costType!=='congtruong' && COST_TYPES[p.costType]) ? ` <span style="font-size:10px;font-weight:700;background:${COST_TYPES[p.costType].color}22;color:${COST_TYPES[p.costType].color};padding:1px 7px;border-radius:8px;white-space:nowrap">${COST_TYPES[p.costType].icon} ${COST_TYPES[p.costType].label}</span>` : ''}</div>
           <div class="proposal-meta">
             <span>👤 ${esc(p.person||'—')}</span>
             ${_salPos?`<span>💼 ${esc(_salPos)}</span>`:''}
@@ -4492,6 +4513,8 @@ function confirmTransferAmount(){
   const remaining = officialApproved - totalAfter;
   showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ số đã duyệt)':' — còn '+fmt(remaining)+'tr chưa chuyển'}`);
   sendPushNotif('💸 Toàn đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien']);
+  // Phiếu loại KÝ QUỸ: tiền chuyển đi là tiền GỬI NGOÀI chứ chưa tiêu → ghi sang tab Cân đối
+  try{ autoAddDepositFromProposal(p, val); }catch(e){}
   if(isFullyDone) setTimeout(()=>uploadProof(id),500);
 }
 
@@ -5233,6 +5256,8 @@ function submitProposal(){
     const p={
       id: Date.now().toString(),
       desc, person, site,
+      // Gia Bình: loại chi phí — 'kyquy' sẽ tự ghi sang tab Cân đối khi Toàn chuyển tiền
+      costType: (document.getElementById('inp-costtype')||{}).value || 'congtruong',
       amount: amountRaw,
       amountUnit: 'dong',
       note: document.getElementById('inp-note').value.trim(),
@@ -5263,6 +5288,7 @@ function submitProposal(){
     }
 
     document.getElementById('inp-desc').value='';
+    { const _ct=document.getElementById('inp-costtype'); if(_ct) _ct.value='congtruong'; }
     document.getElementById('inp-amount').value='';
     document.getElementById('inp-note').value='';
     document.getElementById('inp-person').value='';
@@ -8236,6 +8262,33 @@ function syncAllCashToSheet(){
   setTimeout(()=>showToast('✅ Đã gửi xong sang Google Sheet'), cashflow.length*260+800);
 }
 
+// ── PHIẾU CHI loại KÝ QUỸ → tự sinh khoản trong tab Cân đối ──
+// Tiền ký quỹ chuyển đi KHÔNG phải chi phí: nó vẫn là tiền của công trình, chỉ đang
+// gửi chỗ khác. Nếu để nguyên là phiếu chi thì cuối công trình sẽ thấy lỗ oan.
+// Mỗi lần Toàn chuyển tiền ghi 1 khoản, id gắn theo phiếu để không tạo trùng khi
+// chuyển nhiều lần (chuyển làm 2 lần → 2 khoản riêng, đòi về được từng khoản).
+async function autoAddDepositFromProposal(p, amount){
+  if(!p || p.costType !== 'kyquy') return;
+  const amt = parseFloat(amount)||0; if(amt <= 0) return;
+  const id = 'p_' + p.id + '_' + (Array.isArray(p.transfers) ? p.transfers.length : 1);
+  if(cashflow.some(r => r.id === id)) return;   // đã ghi rồi thì thôi
+  const rec = {
+    type: 'dep', amount: amt,
+    desc: p.desc || 'Ký quỹ / cọc',
+    holder: p.person || '',
+    date: new Date().toISOString().slice(0,10),
+    fromProposal: p.id,                          // nhớ nguồn gốc để lần ngược lại phiếu
+    ts: Date.now(),
+    by: (currentUser && currentUser.uid) || '',
+    byName: getCurrentUserName() || ''
+  };
+  try{
+    await db.ref('duyetchi/cashflow/' + id).set(rec);
+    try{ syncCashToSheet({id, ...rec}); }catch(e){}
+    showToast('🔒 Đã ghi ' + fmtVND(amt) + ' vào Cân đối → Ký quỹ');
+  }catch(e){ showToast('⚠️ Chuyển tiền xong nhưng chưa ghi được vào Ký quỹ: ' + (e.message||'')); }
+}
+
 // ── ĐIỀU HƯỚNG TAB CON ──
 function setLuongTab(tab, btn){
   document.querySelectorAll('#page-luong .report-subtab').forEach(t=>t.classList.remove('active'));
@@ -9169,7 +9222,10 @@ function cashTotals(){
     if(p.status==='rejected' || p.kind==='kh') return;
     const off = getOfficialApprovedAmount(p) || 0;
     const tr  = getTotalTransferred(p) || 0;
-    daChi += tr;
+    // Phiếu KÝ QUỸ: tiền chuyển đi đã được ghi thành khoản 'dep' (dangGuiNgoai) rồi.
+    // Cộng tiếp vào "đã chi" nữa là TRỪ HAI LẦN → tiền trong tài khoản báo thiếu.
+    // Phần đã duyệt mà CHƯA chuyển thì vẫn phải giữ: nó vẫn là tiền đã hứa đưa đi.
+    if(p.costType !== 'kyquy') daChi += tr;
     if(off > tr + 0.0001) daDuyetChuaChuyen += (off - tr);
   });
 
