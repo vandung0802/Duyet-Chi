@@ -109,7 +109,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .proposal-timeline{font-size:9.5px;color:var(--text-sub);padding:4px 10px;background:#fafafa;border-top:1px solid var(--gray-border);font-weight:600}
 .proposal-timeline-inline{font-size:9.5px;color:var(--text-sub);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
 
-.role-screen{position:fixed;inset:0;background:#6b3fd4;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;cursor:default}
+.role-screen{position:fixed;inset:0;background:#047857;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;cursor:default}
 .role-screen h2{color:#fff;font-size:22px;font-weight:800;margin-bottom:4px}
 .role-screen p{color:rgba(255,255,255,0.75);font-size:13px;margin-bottom:28px}
 .role-btn{width:100%;max-width:340px;padding:14px 18px;border-radius:14px;border:2px solid rgba(255,255,255,0.2);font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;gap:12px;transition:transform .1s;-webkit-tap-highlight-color:transparent}
@@ -370,7 +370,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="role-screen">
   <div style="font-size:48px;margin-bottom:12px">📋</div>
   <h2>Duyệt Chi Gia Bình</h2>
-  <p style="margin-bottom:20px">PVA - 379</p>
+  <p style="margin-bottom:20px">Công trình Gia Bình</p>
   <form id="auth-form" autocomplete="on" onsubmit="return false" style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
     <!-- Tab switch -->
     <div style="display:flex;border-bottom:2px solid var(--gray-border);margin-bottom:16px">
@@ -1448,7 +1448,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v2';
+const APP_VERSION = '20260920-v3';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Gia Bình ' + VER_LABEL; })();
@@ -2034,10 +2034,14 @@ async function doRegister(){
     showOtpScreen(cred.user.uid, name);
     btn.disabled = false; btn.textContent = 'Đăng ký';
   } catch(e) {
-    let msg = 'Đăng ký thất bại';
-    if(e.code==='auth/email-already-in-use') msg='Email này đã được đăng ký';
+    // Báo RÕ lý do: trước đây mọi lỗi lạ đều ra "Đăng ký thất bại" nên không biết
+    // đường nào mà sửa (lần đầu bật app: Firebase chưa bật Email/Password → chính là lỗi này).
+    let msg = 'Đăng ký thất bại' + (e.code ? ' ('+e.code+')' : '');
+    if(e.code==='auth/email-already-in-use') msg='Email này đã được đăng ký — hãy bấm tab "Đăng nhập"';
     else if(e.code==='auth/invalid-email') msg='Email không hợp lệ';
-    else if(e.code==='auth/weak-password') msg='Mật khẩu quá yếu';
+    else if(e.code==='auth/weak-password') msg='Mật khẩu quá yếu (tối thiểu 6 ký tự)';
+    else if(e.code==='auth/operation-not-allowed') msg='Chưa bật đăng ký bằng email trong Firebase — báo Dũng';
+    else if(e.code==='auth/network-request-failed') msg='Mất mạng — kiểm tra kết nối rồi thử lại';
     errEl.textContent = msg;
     btn.disabled = false; btn.textContent = 'Đăng ký';
   }
