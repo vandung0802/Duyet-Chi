@@ -30,7 +30,10 @@
 body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:18px}
 .app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .app-header h1{font-size:16px;font-weight:700;letter-spacing:-0.3px}
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+/* v173: iOS Safari vẽ lại position:fixed trễ khi cuộn (thanh địa chỉ co giãn làm
+   đổi cỡ màn hình) → thanh menu nhảy ra giữa màn hình. translateZ(0) đẩy thanh menu
+   sang lớp vẽ riêng của GPU nên nó đứng yên, không vẽ lại theo nội dung đang cuộn. */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:10px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
 /* v96: chấm số đỏ trên nút điều hướng — biết đang có việc chờ duyệt/chuyển ở khu nào */
 .nav-badge{position:absolute;top:2px;left:calc(50% + 6px);background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;box-shadow:0 0 0 2px #fff}
@@ -46,7 +49,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .nav-item:nth-child(5) .nav-icon{background:#d1fae5} /* Lương xanh lá nhạt */
 .nav-item:nth-child(6) .nav-icon{background:#eef2f6} /* Cài đặt xám nhạt */
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
-.main{padding:10px 10px 80px}
+/* v173: cộng thêm vạch home iPhone — nav tự đẩy cao lên bằng safe-area nên chỗ chừa
+   phải cộng theo, không thì phần cuối danh sách bị che trên máy có vạch home. */
+.main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
 .card-header{padding:12px 14px 8px;border-bottom:1px solid var(--gray-border);font-size:13px;font-weight:700;color:var(--text)}
 .card-body{padding:10px 14px}
@@ -1429,7 +1434,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v172';
+const APP_VERSION = '20260803-v173';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
