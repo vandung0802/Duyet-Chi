@@ -490,7 +490,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
-<!-- Modal nhập số tiền chuyển (Trang) — cho phép chuyển từng phần, nhiều lần -->
+<!-- Modal nhập số tiền chuyển (Toàn — thủ quỹ) — cho phép chuyển từng phần, nhiều lần -->
 <div class="role-screen" id="transfer-amount-modal" style="display:none;z-index:9500;background:rgba(0,0,0,0.55);pointer-events:none">
   <div style="background:#fff;border-radius:18px;padding:22px 20px;width:100%;max-width:320px">
     <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">💸 Xác nhận chuyển tiền</div>
@@ -1367,7 +1367,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 </div>
 
-<!-- Bảng nhắc Trang lúc mở app: các khoản H đã duyệt đang chờ chuyển (hiện 1 lần mỗi lần mở) -->
+<!-- Bảng nhắc Toàn (thủ quỹ) lúc mở app: các khoản đã duyệt đang chờ chuyển -->
 <div class="role-screen" id="transfer-reminder-modal" style="display:none;z-index:9300;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px;max-height:80vh;overflow-y:auto">
     <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">💸 Các khoản chờ chuyển tiền</div>
@@ -1521,7 +1521,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v10';
+const APP_VERSION = '20260920-v11';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2246,7 +2246,7 @@ async function cancelOtp(){
 // ── ONLINE PRESENCE ──
 function trackOnline(uid, name, role){
   const ref = db.ref('duyetchi/online/'+uid);
-  const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',trang:'Trang',other:'Khác'};
+  const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',toan:'Toàn',trang:'Trang',other:'Khác'};
   const displayName = (name && name !== 'undefined') ? name : (ROLE_LABEL[role] || role || 'Ẩn danh');
   const since = Date.now();
   ref.set({ name: displayName, role: role||'other', since });
@@ -2260,8 +2260,8 @@ function listenOnlineUsers(){
     const el = document.getElementById('online-users-list');
     if(!el) return;
     if(!snap.exists()){ el.innerHTML='<span style="color:var(--text-sub)">Không có ai đang online</span>'; return; }
-    const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',trang:'Trang',other:'Khác'};
-    const ROLE_COLOR = {dung:'var(--blue)',hien:'#7c3aed',trang:'#d97706',other:'var(--gray)'};
+    const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',toan:'Toàn',trang:'Trang',other:'Khác'};
+    const ROLE_COLOR = {dung:'var(--blue)',hien:'#7c3aed',toan:'#0e7490',trang:'#d97706',other:'var(--gray)'};
     const users = Object.values(snap.val()).filter(u=>u && u.role);
     if(!users.length){ el.innerHTML='<span style="color:var(--text-sub)">Không có ai đang online</span>'; return; }
     el.innerHTML = users.map(u=>{
@@ -4159,7 +4159,7 @@ function remindApprove(id){
     if(isTransferRemind){
       const official = getOfficialApprovedAmount(p);
       sendPushNotif('💸 Nhắc chuyển tiền', `${p.desc} — ${fmtVND(official)} đã duyệt, chưa chuyển`, ['toan']);
-      showToast('💸 Đã nhắc Trang chuyển tiền (lần '+p.remindCount+')');
+      showToast('💸 Đã nhắc Toàn chuyển tiền (lần '+p.remindCount+')');
     } else {
       sendPushNotif('🔁 Xin duyệt lại', `${p.desc} — đề xuất ${fmtFull(p.ts)}, chưa duyệt xong`, ['dung','hien']);
       showToast('🔁 Đã giục D và H duyệt lại (lần '+p.remindCount+')');
@@ -4447,7 +4447,7 @@ function doTransfer(id){
   // Phiếu duyệt trước v77 chưa có ảnh nội dung → bỏ qua đối chiếu (sẽ có từ lần duyệt sau).
   const _cs = p.contentSnapshot;
   if(_cs && ((_cs.desc||'') !== (p.desc||'') || (_cs.note||'') !== (p.note||'') || (_cs.amount||0) !== (p.amount||0) || (_cs.person||'') !== (p.person||'') || (_cs.site||'') !== (p.site||''))){
-    alert('⚠️ CẢNH BÁO BẢO MẬT\n\nNội dung phiếu này ĐÃ BỊ THAY ĐỔI sau khi duyệt (khác với bản lúc D/H bấm duyệt).\n\nKHÔNG chuyển tiền — báo ngay cho anh Dũng / chị Hiền kiểm tra. Muốn chuyển được phải bỏ duyệt và duyệt lại nội dung đúng.');
+    alert('⚠️ CẢNH BÁO BẢO MẬT\n\nNội dung phiếu này ĐÃ BỊ THAY ĐỔI sau khi duyệt (khác với bản lúc duyệt).\n\nKHÔNG chuyển tiền — báo ngay cho người duyệt kiểm tra. Muốn chuyển được phải bỏ duyệt và duyệt lại nội dung đúng.');
     return;
   }
   const approvedAmt = getOfficialApprovedAmount(p);
@@ -4617,7 +4617,7 @@ function _canEditDelete(p){
 function del(id){
   const p = proposals.find(x=>x.id===id);
   // v135: không phải chủ phiếu và không phải D/H/T → KHÔNG được xóa phiếu người khác
-  if(p && !_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu hoặc D/H/T mới xóa được đề xuất này'); return; }
+  if(p && !_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu, người duyệt hoặc thủ quỹ mới xóa được đề xuất này'); return; }
   if(p && p.status==='transferred' && currentRole!=='dung'){ showToast('🔒 Không thể xóa phiếu đã chuyển tiền'); return; }
   // v77 BẢO MẬT: phiếu ĐÃ có D/H duyệt → chỉ Dũng xóa được (máy chủ cũng chặn — khớp luật mới)
   const _frozenDel = p && !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
@@ -4637,7 +4637,7 @@ function openEditProposal(id){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
   // v135: chỉ người tạo phiếu hoặc D/H/T mới mở sửa được (chống sửa đề xuất của nhau ở phòng Kế hoạch)
-  if(!_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu hoặc D/H/T mới sửa được đề xuất này'); return; }
+  if(!_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu, người duyệt hoặc thủ quỹ mới sửa được đề xuất này'); return; }
   if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); return; }
   editingProposalId = id;
 
@@ -4818,7 +4818,7 @@ function saveEditProposal(){
   const _frozen = !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
   const _contentChanged = desc !== (p.desc||'') || note !== (p.note||'') || amountRaw !== (p.amount||0) || person !== (p.person||'') || site !== (p.site||'');
   if(_frozen && _contentChanged){
-    showToast('🔒 Phiếu đã được duyệt — không sửa được nội dung/số tiền/người/công trường. Cần D/H bỏ duyệt trước, sửa xong duyệt lại.');
+    showToast('🔒 Phiếu đã được duyệt — không sửa được nội dung/số tiền/người/công trường. Cần người duyệt bỏ duyệt trước, sửa xong duyệt lại.');
     return;
   }
 
@@ -6889,7 +6889,7 @@ async function sendTelegramReport(){
   if(_tgSending) return;
   // v170: chỉ D/H/Trang gửi — kế toán thường KHÔNG đọc được phiếu P.KH (kín 2 chiều),
   // họ gửi thì báo cáo thiếu phần P.KH mà không ai biết
-  if(currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('Chỉ D / Hiền / Toàn / Trang gửi được báo cáo này'); return; }
+  if(currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('Chỉ người duyệt hoặc thủ quỹ gửi được báo cáo này'); return; }
   if(!_tgToken || !_tgChatId){ showToast('❌ Chưa đọc được mã bot Telegram từ máy chủ — kiểm tra mạng/quyền'); return; }
   // v168: báo cáo TIỀN phải từ dữ liệu MỚI NHẤT — vừa mở app dữ liệu chưa tải xong thì chưa cho gửi
   if(!fbInitialLoadDone){ showToast('⏳ Dữ liệu đang tải về — chờ vài giây rồi bấm lại'); return; }
@@ -7294,7 +7294,7 @@ function zaloShowImg(id){
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(!_zaloProofs(p).length){
     if(typeof _imagesLoaded!=='undefined' && !_imagesLoaded){ showToast('⏳ Ảnh đang tải về — chờ vài giây rồi bấm lại'); return; }
-    showToast('Trang chưa upload ảnh chuyển tiền cho món này'); return;
+    showToast('Toàn chưa tải ảnh chuyển tiền cho món này'); return;
   }
   openImg(id,'proof',0); // modal ảnh lớn sẵn có: chụm zoom + nhấn giữ để Copy
 }
@@ -7787,7 +7787,7 @@ function chatRemindGo(id){
 // Tin bất biến (luật server). Module thêm mới — không đụng luồng duyệt/chuyển.
 // ══════════════════════════════════════════════════════════════════════════
 function _chatMemberNames(){
-  const s=new Set(['Dũng','Hiền','Trang']);
+  const s=new Set(['Dũng','Hiền','Lan','Toàn','Trang']);
   try{ persons.forEach(p=>{ if(p&&p.name) s.add(p.name); }); }catch(e){}
   try{ employees.forEach(e=>{ if(e&&e.name) s.add(e.name); }); }catch(e){}
   if(getCurrentUserName()) s.delete(getCurrentUserName()); // không tag chính mình
@@ -8130,7 +8130,7 @@ function unpinChatMsg(){
 }
 function chatMenuDetail(){
   const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
-  const roleLbl={dung:'Dũng (D)',hien:'Hiền (H)',trang:'Trang (T)',other:'Thành viên'};
+  const roleLbl={dung:'Dũng (D)',hien:'Hiền / Lan (H)',toan:'Toàn (thủ quỹ)',trang:'Trang',other:'Thành viên'};
   alert('ℹ️ Chi tiết tin nhắn\n\nNgười gửi: '+(m.by||'—')+'\nVai trò: '+(roleLbl[m.role]||m.role||'—')+'\nLúc: '+fmtFull(m.ts)+(m.ref?'\nGắn phiếu: có':'')+(m.img?'\nKèm ảnh: có':''));
 }
 function chatMenuDelete(){ const k=_chatMenuKey; closeChatMsgMenu(); if(k) deleteChatMsg(k); }
