@@ -110,6 +110,19 @@
         }
       },
 
+      // ══ cashflow — THU + KÝ QUỸ của Gia Bình (app 379 không có nhánh này) ══
+      // Ai đã được duyệt đều ghi được: đây là sổ quỹ chung, không có luồng duyệt
+      // nhiều bước như phiếu chi. Mọi thay đổi đều kèm tên người ghi (byName).
+      "cashflow": {
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+        "$id": {
+          // KHÔNG đặt .validate ở đây: ghi cọc lấy về chỉ đụng $id/returned (không có
+          // type/amount) — validate của cha vẫn chạy khi ghi con nên sẽ chặn nhầm.
+          // Quyền đã được .write gác đủ rồi.
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')"
+        }
+      },
+
       "plans": {
         // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT hoặc 3 email người nhà mới đọc được.
         ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
