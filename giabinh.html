@@ -43,14 +43,17 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* v123: mỗi nút nav có "chip" nền màu nhẹ sau icon → nhìn rõ là NÚT BẤM; nút đang chọn có viền xanh */
 .nav-icon{font-size:19px;line-height:1;width:40px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#eef2f7;transition:transform .12s,box-shadow .12s}
 .nav-item:active .nav-icon{transform:scale(.9)}
-/* v142: thứ tự: P.Kế toán · Báo cáo · Vật tư · P.Kế Hoạch · Lương · Cài đặt (bỏ Thêm mới) */
-.nav-item:nth-child(1) .nav-icon{background:#e0edff} /* P.Kế toán xanh dương */
-.nav-item:nth-child(2) .nav-icon{background:#cffafe} /* Báo cáo xanh ngọc */
-.nav-item:nth-child(3) .nav-icon{background:#fef3c7} /* Vật tư vàng nhạt */
-.nav-item:nth-child(4) .nav-icon{background:#f3e8ff} /* P.Kế Hoạch tím nhạt */
-.nav-item:nth-child(3) .nav-icon{background:#cffafe} /* Cân đối xanh ngọc nhạt */
-.nav-item:nth-child(5) .nav-icon{background:#d1fae5} /* Lương xanh lá nhạt */
-.nav-item:nth-child(6) .nav-icon{background:#eef2f6} /* Cài đặt xám nhạt */
+/* Gia Bình: Đề xuất · Vật tư · Lương · Báo cáo · Cân đối · Cài đặt */
+/* Màu icon gán theo ID (không theo nth-child) — đổi thứ tự nút bao nhiêu lần
+   màu vẫn đúng. Trước đây Vật tư và Cân đối cùng trúng nth-child(3) nên Vật tư
+   bị mất màu vàng. */
+#nav-home     .nav-icon{background:#e0edff} /* Đề xuất  xanh dương */
+#nav-plan     .nav-icon{background:#fef3c7} /* Vật tư    vàng nhạt */
+#nav-luong    .nav-icon{background:#d1fae5} /* Lương     xanh lá nhạt */
+#nav-report   .nav-icon{background:#ede9fe} /* Báo cáo   tím nhạt */
+#nav-cash     .nav-icon{background:#cffafe} /* Cân đối   xanh ngọc */
+#nav-settings .nav-icon{background:#eef2f6} /* Cài đặt   xám nhạt */
+#nav-kh       .nav-icon{background:#f3e8ff} /* P.KH (Gia Bình không dùng) */
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
 /* v173: cộng thêm vạch home iPhone — nav tự đẩy cao lên bằng safe-area nên chỗ chừa
    phải cộng theo, không thì phần cuối danh sách bị che trên máy có vạch home. */
@@ -1466,10 +1469,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 
 <nav class="bottom-nav">
-  <!-- v142: bỏ nút "Thêm mới" (đưa vào trong tab Kế toán); "Danh sách"→"P. Kế toán"; "P.KH"→"P. Kế Hoạch" -->
+  <!-- Thứ tự do D chốt: Đề xuất · Vật tư · Lương · Báo cáo · Cân đối · Cài đặt -->
   <button class="nav-item active" id="nav-home" onclick="showPage('home',this)">
     <span class="nav-badge" id="nav-badge-home" style="display:none"></span>
-    <span class="nav-icon">📋</span><span>P. Kế toán</span>
+    <span class="nav-icon">📋</span><span>Đề xuất</span>
+  </button>
+  <button class="nav-item" id="nav-plan" onclick="showPage('plan',this)">
+    <span class="nav-badge" id="nav-badge-plan" style="display:none"></span>
+    <span class="nav-icon">📦</span><span>Vật tư</span>
+  </button>
+  <button class="nav-item" id="nav-luong" onclick="showPage('luong',this)">
+    <span class="nav-badge" id="nav-badge-luong" style="display:none"></span>
+    <span class="nav-icon">💵</span><span>Lương</span>
   </button>
   <button class="nav-item" id="nav-report" onclick="showPage('report',this)">
     <span class="nav-icon">📊</span><span>Báo cáo</span>
@@ -1478,21 +1489,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <span class="nav-badge" id="nav-badge-cash" style="display:none"></span>
     <span class="nav-icon">⚖️</span><span>Cân đối</span>
   </button>
-  <button class="nav-item" id="nav-plan" onclick="showPage('plan',this)">
-    <span class="nav-badge" id="nav-badge-plan" style="display:none"></span>
-    <span class="nav-icon">📦</span><span>Vật tư</span>
+  <button class="nav-item" id="nav-settings" onclick="showPage('settings',this)">
+    <span class="nav-icon">⚙️</span><span>Cài đặt</span>
   </button>
-  <!-- v125 P.KH: chỉ hiện với D/H/Trang + người phòng Kế hoạch (_applyKhNav) -->
+  <!-- P.Kế hoạch: Gia Bình không dùng (_khCanSee luôn false), giữ nút để file không lệch với 379 -->
   <button class="nav-item" id="nav-kh" style="display:none" onclick="showPage('kh',this)">
     <span class="nav-badge" id="nav-badge-kh" style="display:none"></span>
     <span class="nav-icon">📐</span><span>P. Kế Hoạch</span>
-  </button>
-  <button class="nav-item" id="nav-luong" onclick="showPage('luong',this)">
-    <span class="nav-badge" id="nav-badge-luong" style="display:none"></span>
-    <span class="nav-icon">💵</span><span>Lương</span>
-  </button>
-  <button class="nav-item" id="nav-settings" onclick="showPage('settings',this)">
-    <span class="nav-icon">⚙️</span><span>Cài đặt</span>
   </button>
 </nav>
 
@@ -1522,7 +1525,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v13';
+const APP_VERSION = '20260920-v14';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -7636,7 +7639,7 @@ function _applyDeptView(){
   _applyKhNav();
   const only=_isKehoachOnly();
   // v142: ẩn theo ID (không theo chỉ số — bền khi đổi thứ tự/bỏ nút). Người CHỈ phòng Kế hoạch KHÔNG thấy
-  // các mục kế toán: P.Kế toán (home), Báo cáo, Lương. Vẫn thấy Vật tư, P.Kế Hoạch, Cài đặt.
+  // các mục kế toán: Đề xuất (home), Báo cáo, Lương. Vẫn thấy Vật tư, Cài đặt.
   ['nav-home','nav-report','nav-luong'].forEach(id=>{ const b=document.getElementById(id); if(b) b.style.display = only?'none':''; });
   if(only){
     const home=document.getElementById('page-home');
