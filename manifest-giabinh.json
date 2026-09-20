@@ -1,0 +1,14 @@
+{
+  "id": "gb-v1",
+  "name": "Duyệt Chi Gia Bình",
+  "short_name": "Gia Bình",
+  "start_url": "/Duyet-Chi/giabinh.html?t=pwa",
+  "scope": "/Duyet-Chi/giabinh.html",
+  "display": "standalone",
+  "background_color": "#047857",
+  "theme_color": "#047857",
+  "icons": [
+    {"src": "https://vandung0802.github.io/Duyet-Chi/icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "https://vandung0802.github.io/Duyet-Chi/icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}
