@@ -514,11 +514,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <span class="img-modal-close">✕</span>
   <!-- v115: chuyển tiếp ảnh đang xem vào Chat nhóm -->
   <button id="imgModalToChat" onclick="forwardModalImgToChat(event)" style="position:absolute;top:14px;left:14px;z-index:5;background:#fff;color:var(--blue);border:none;border-radius:16px;height:32px;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)">📤 Chat</button>
+  <!-- Máy tính: Chrome KHÔNG đưa Zalo/Telegram vào bảng "Chia sẻ" dù đã cài (hạn chế của Chrome
+       trên Windows, app không can thiệp được). Nên để sẵn nút Sao chép: bấm rồi Ctrl+V thẳng
+       vào khung chat Zalo/Telegram là xong. Điện thoại thì nút Chia sẻ mới hiện đủ app. -->
+  <button id="imgModalCopy" onclick="modalImgCopy(event)" style="position:absolute;top:14px;left:96px;z-index:5;background:#fff;color:#047857;border:none;border-radius:16px;height:32px;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)">📋 Sao chép</button>
+  <button id="imgModalShare" onclick="modalImgShare(event)" style="position:absolute;top:14px;left:196px;z-index:5;background:#fff;color:#b45309;border:none;border-radius:16px;height:32px;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)">📤 Chia sẻ</button>
   <button class="img-modal-nav img-modal-prev" onclick="navModalImg(event,-1)" id="imgModalPrev">‹</button>
   <img id="imgModalSrc" src="" alt="">
   <button class="img-modal-nav img-modal-next" onclick="navModalImg(event,1)" id="imgModalNext">›</button>
   <div class="img-modal-counter" id="imgModalCounter"></div>
-  <div class="img-modal-hint" id="imgModalHint">🔍 Chụm/nhấn đúp để zoom · Nhấn giữ để copy / tải về / xóa</div>
+  <div class="img-modal-hint" id="imgModalHint">🔍 Chụm/nhấn đúp để zoom · Sao chép rồi Ctrl+V vào Zalo/Telegram</div>
 </div>
 
 <!-- Menu nổi dùng chung: copy / tải về / xóa, hiện khi nhấn giữ vào bất kỳ ảnh nào trong app -->
@@ -1539,7 +1544,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v15';
+const APP_VERSION = '20260920-v16';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -1918,6 +1923,21 @@ async function dataUrlToBlob(src){
       img.src = src + (src.includes('?') ? '&' : '?') + '_t=' + Date.now();
     });
   }
+}
+
+// 2 nút trên màn hình xem ảnh to: dùng lại đúng hàm của menu nhấn-giữ,
+// chỉ cần trỏ imgActionContext vào ảnh đang xem.
+function modalImgCopy(ev){
+  if(ev) ev.stopPropagation();
+  if(!modalImages.length) return;
+  imgActionContext = { src: modalImages[modalIdx], canDelete:false };
+  imgActionCopy();
+}
+function modalImgShare(ev){
+  if(ev) ev.stopPropagation();
+  if(!modalImages.length) return;
+  imgActionContext = { src: modalImages[modalIdx], canDelete:false };
+  imgActionShare();
 }
 
 async function imgActionCopy(){
@@ -5173,7 +5193,7 @@ function closeImgModal(event){
   const counter = document.getElementById('imgModalCounter');
   const prev = document.getElementById('imgModalPrev');
   const next = document.getElementById('imgModalNext');
-  if(hint) hint.textContent = '🔍 Chụm/nhấn đúp để zoom · Nhấn giữ để copy / tải về / xóa';
+  if(hint) hint.textContent = '🔍 Chụm/nhấn đúp để zoom · Sao chép rồi Ctrl+V vào Zalo/Telegram';
   if(counter) counter.style.display='';
   if(prev) prev.style.display='';
   if(next) next.style.display='';
