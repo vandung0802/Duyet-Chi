@@ -179,8 +179,8 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .filter-tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 
 /* Form */
-.form-group{margin-bottom:12px}
-.form-label{font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px;display:block}
+.form-group{margin-bottom:12px;display:block;width:100%;clear:both}
+.form-label{font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px;display:block;width:100%;clear:both;line-height:1.4}
 .req{color:var(--red);margin-left:2px}
 .form-input{width:100%;padding:10px 12px;border:1.5px solid var(--gray-border);border-radius:var(--radius);font-size:14px;color:var(--text);background:#fff;outline:none;transition:border-color .15s;-webkit-appearance:none;font-family:inherit}
 .form-input:focus{border-color:var(--blue)}
@@ -194,7 +194,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* Upload */
 /* display:block BẮT BUỘC: .upload-zone là thẻ <label>, mặc định inline nên khung
    bị co lại và chữ nhãn tràn đè lên nhau (lỗi đã gặp ở form Vật tư). */
-.upload-zone{display:block;border:1.5px dashed #93c5fd;background:#eff6ff;border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer;margin-bottom:10px}
+.upload-zone{display:block;width:100%;clear:both;box-sizing:border-box;border:1.5px dashed #93c5fd;background:#eff6ff;border-radius:var(--radius);padding:18px;text-align:center;cursor:pointer;margin-bottom:10px}
 .upload-icon{font-size:28px;margin-bottom:4px}
 .upload-txt{font-size:13px;font-weight:700;color:var(--blue)}
 .upload-sub{font-size:11px;color:var(--text-sub);margin-top:3px}
@@ -1546,7 +1546,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v17';
+const APP_VERSION = '20260920-v18';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
