@@ -451,8 +451,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <textarea class="form-input" id="edit-opinion-d" rows="2" placeholder="Ý kiến của Dũng…"></textarea>
       </div>
       <div>
-        <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:3px">Ý kiến Hiền (H)</div>
-        <textarea class="form-input" id="edit-opinion-h" rows="2" placeholder="Ý kiến của Hiền…"></textarea>
+        <div style="font-size:12px;font-weight:700;color:#7c3aed;margin-bottom:3px">Ý kiến Hiền / Lan (H&amp;L)</div>
+        <textarea class="form-input" id="edit-opinion-h" rows="2" placeholder="Ý kiến của Hiền hoặc Lan…"></textarea>
       </div>
     </div>
     <div class="form-group">
@@ -1522,7 +1522,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v12';
+const APP_VERSION = '20260920-v13';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -3806,9 +3806,11 @@ function _buildCard(p){
     const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory : [];
     const hHistory = Array.isArray(p.approvedHHistory) ? p.approvedHHistory : [];
     const dHistoryHtml = dHistory.length>=1 ? `<div class="badge-history"${!dFull?' style="color:#ff0000"':''}>${dHistory.map((t,idx)=>
-      `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
+      `${t.by ? esc(t.by)+' · ' : ''}Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
+    // Vai 'hien' dùng chung cho Hiền và Lan → hiện TÊN THẬT người bấm để biết ai duyệt.
+    // Phiếu cũ (trước v13) không có t.by thì bỏ trống như trước.
     const hHistoryHtml = hHistory.length>=1 ? `<div class="badge-history"${!hFull?' style="color:#ff0000"':''}>${hHistory.map((t,idx)=>
-      `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
+      `${t.by ? esc(t.by)+' · ' : ''}Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
     let tRow = '';
     if(transferredAmt>0){
       const tLabel = `T đã chuyển ${tFull ? fmtVND(approvedAmt) : fmtVND(transferredAmt)+'/'+fmtVND(approvedAmt)}`;
@@ -3988,11 +3990,11 @@ function renderBtnH(p){
     const boxClr = done ? 'var(--green)' : 'var(--yellow)';  // nền/viền xanh lá
     const bg  = done ? '#eafff0' : '#fffbeb';
     const lbl = done ? 'Đã duyệt' : 'Chờ duyệt';
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">H</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr};font-size:13px">H&amp;L</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${sid(p.id)}','approvedH')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">H</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626;font-size:13px">H&amp;L</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
     const canUndo = currentRole==='hien' && p.status!=='transferred';
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
@@ -4024,7 +4026,7 @@ function renderBtnReject(p){
     if(canRejectD && !dHasRejected)
       return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${sid(p.id)}','D')"><span style="color:var(--red)">D</span> ✕ Từ chối</button></div>`;
     if(canRejectH && !hHasRejected)
-      return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${sid(p.id)}','H')"><span style="color:#7c3aed">H</span> ✕ Từ chối</button></div>`;
+      return `<div class="approve-box"><button class="ab-btn ab-btn-reject-outline" onclick="rejectBy('${sid(p.id)}','H')"><span style="color:#7c3aed">H&amp;L</span> ✕ Từ chối</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><div class="ab-done-btn" style="color:var(--red)">${inner}</div></div>`;
   }
 
@@ -4033,7 +4035,7 @@ function renderBtnReject(p){
   if(canRejectD)
     return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   if(canRejectH)
-    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed;font-size:13px">H&amp;L</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">—</div></div>`;
 }
 function renderBtnTransfer(p){
@@ -4352,7 +4354,10 @@ function confirmApproveAmount(){
   p[amountField] = newTotal;
   p[timeField] = Date.now();
   if(!Array.isArray(p[historyField])) p[historyField] = [];
-  p[historyField].push({ amount: val, ts: p[timeField] });
+  // Lưu TÊN THẬT người bấm: vai 'hien' dùng chung cho Hiền và Lan nên không có trường
+  // này thì lịch sử chỉ ghi "H duyệt", không biết ai. Rules chỉ khóa amount/ts bất biến,
+  // thêm trường phụ không vi phạm.
+  p[historyField].push({ amount: val, ts: p[timeField], by: getCurrentUserName() || '' });
   if(getOfficialApprovedAmount(p) > 0) p.status = 'approved';
   // v77 BẢO MẬT: chụp "ảnh nội dung" tại thời điểm duyệt — Trang sẽ đối chiếu trước khi chuyển tiền,
   // nếu nội dung/số tài khoản bị sửa sau duyệt (dù bằng cách nào) sẽ bị phát hiện và CHẶN chuyển.
@@ -4370,11 +4375,13 @@ function confirmApproveAmount(){
   renderAll();
   closeApproveAmountModal();
   const full = val >= p.amount;
-  showToast(`✓ ${field==='approvedD'?'Dũng':'Hiền'} đã duyệt ${fmtVND(val)}${full?' (toàn bộ)':' (1 phần)'}`);
+  // Tên THẬT của người vừa bấm (Lan hay Hiền đều mang vai 'hien')
+  const _whoName = getCurrentUserName() || (field==='approvedD' ? 'Dũng' : 'Người duyệt');
+  showToast(`✓ ${_whoName} đã duyệt ${fmtVND(val)}${full?' (toàn bộ)':' (1 phần)'}`);
   if(field === 'approvedD') {
-    sendPushNotif('✅ Dũng đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['hien', 'toan']);
+    sendPushNotif(`✅ ${_whoName} đã duyệt chi`, `${p.desc}: ${fmtVND(val)}`, ['hien', 'toan']);
   } else {
-    sendPushNotif('✅ Hiền đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['dung', 'toan']);
+    sendPushNotif(`✅ ${_whoName} đã duyệt chi`, `${p.desc}: ${fmtVND(val)}`, ['dung', 'toan']);
   }
 }
 
