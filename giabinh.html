@@ -643,6 +643,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <option value="congtruong">🏗️ Chi phí công trường</option>
           <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
           <option value="noinghiep">📋 Chi phí nội nghiệp</option>
+          <option value="khac">📦 Khác</option>
         </select>
         <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chọn <b>đặt cọc / ký quỹ</b> thì khi Toàn chuyển tiền, app tự ghi sang tab Cân đối → Ký quỹ.</div>
       </div>
@@ -1521,7 +1522,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v11';
+const APP_VERSION = '20260920-v12';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2038,6 +2039,7 @@ const COST_TYPES = {
   congtruong: {label:'Công trường', icon:'🏗️', color:'#047857'},
   kyquy:      {label:'Ký quỹ/Cọc',  icon:'🔒', color:'#b45309'},
   noinghiep:  {label:'Nội nghiệp',  icon:'📋', color:'#0e7490'},
+  khac:       {label:'Khác',        icon:'📦', color:'#6b7280'},
 };
 const ROLES = {
   dung:  {label:'Dũng',  icon:'D', color:'var(--blue)'},
