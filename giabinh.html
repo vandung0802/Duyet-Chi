@@ -776,6 +776,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button onclick="syncAllExpenseToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#1a56db;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-bottom:6px">🔄 Đồng bộ lại phiếu chi → Google Sheet</button>
         <br>
         <button onclick="syncAllLuongToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Lương → Google Sheet</button>
+        <button onclick="syncAllCashToSheet()" style="margin-left:6px;padding:6px 12px;font-size:12px;font-weight:700;background:#0e7490;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Thu &amp; Ký quỹ → Google Sheet</button>
       </div>
       <!-- v158 PA3: danh sách nhân viên trong Cài đặt (xem nhanh, xếp A→Z / theo nhóm, xuất Excel) -->
       <details id="settings-emp-section" style="display:none;margin-bottom:10px">
@@ -1500,12 +1501,13 @@ const firebaseConfig = {
 const STORAGE_APP_CONFIG = {
   apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
   authDomain: "duyetchi-pva379.firebaseapp.com",
+  databaseURL: "https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "duyetchi-pva379",
   storageBucket: "duyetchi-pva379.firebasestorage.app",
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v6';
+const APP_VERSION = '20260920-v7';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -1617,6 +1619,13 @@ setInterval(function(){
 // cũng phải đăng nhập bằng chính tài khoản đó thì rules của 379 mới cho ghi (_storageSignIn).
 const _storageApp = firebase.initializeApp(STORAGE_APP_CONFIG, 'storage379');
 const storage = _storageApp.storage();
+// THÔNG BÁO ĐẨY cũng đi nhờ 379: gói Spark của Gia Bình KHÔNG chạy được Cloud Functions,
+// mà 2 hàm gửi push chỉ có bên 379 (Blaze). Chỉ dùng 2 nhánh push-subs / push-queue —
+// dữ liệu tiền của Gia Bình vẫn nằm nguyên ở database riêng, không đụng gì sang 379.
+const db379 = _storageApp.database();
+// Kênh RIÊNG cho Gia Bình: 'gb:' đứng trước để thông báo 2 app KHÔNG lẫn vào nhau
+// (người vừa ở 379 vừa ở Gia Bình sẽ nhận đúng thông báo của từng app).
+const PUSH_NS = 'gb:';
 let _storageAuthed = false;
 async function _storageSignIn(){
   if(_storageAuthed) return;
@@ -2345,7 +2354,7 @@ async function logoutRole(){
       const _sub = await _reg.pushManager.getSubscription();
       if(_sub){
         const _sk = btoa(_sub.endpoint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 80);
-        await Promise.all(['dung','hien','toan','trang','other','kt','kh'].map(b=>db.ref('push-subs/'+b+'/'+_sk).remove().catch(()=>{})));
+        await Promise.all(['dung','hien','toan','trang','other','kt','kh'].map(b=>db379.ref('push-subs/'+PUSH_NS+b+'/'+_sk).remove().catch(()=>{})));
       }
     }
   }catch(e){}
@@ -2431,12 +2440,12 @@ async function fcmRegister(role) {
     } else {
       targets = [r];
     }
-    for(const t of targets){ await db.ref('push-subs/' + t + '/' + subKey).set(subObj); }
+    for(const t of targets){ await db379.ref('push-subs/' + PUSH_NS + t + '/' + subKey).set(subObj); }
     // DỌN cùng máy này ở MỌI kênh khác (chống nhận thông báo 2 lần khi 1 máy nằm ở nhiều kênh — VD dung+hien
     // do đổi vai; hoặc 'other' cũ sau khi chuyển sang kt/kh). Luật chỉ cho xóa nếu uid trùng → an toàn.
     ['dung','hien','toan','trang','other','kt','kh'].forEach(b=>{
       if(targets.indexOf(b) >= 0) return;
-      db.ref('push-subs/' + b + '/' + subKey).remove().catch(()=>{});
+      db379.ref('push-subs/' + PUSH_NS + b + '/' + subKey).remove().catch(()=>{});
     });
     localStorage.setItem('dc_fcm_reg', '✅ ' + targets.join(',') + ' ' + sub.endpoint.substring(0, 20) + '...');
   } catch(e) {
@@ -2542,7 +2551,11 @@ async function _pushOutboxFlush(){
     while(box.length){
       const item=box[0];
       if(Date.now()-(item.ts||0) > 24*3600*1000){ box.shift(); _pushOutboxSave(box); continue; } // quá 1 ngày = thông báo nguội, bỏ
-      await db.ref('push-queue').push(item); // mất mạng thì lệnh chờ tới khi có mạng mới xong — gửi xong mới gạch
+      // Hàm gửi push bên 379 đọc item.roles rồi tìm push-subs/<role>. Vì Gia Bình đăng ký
+      // vào kênh 'gb:<role>' nên phải gắn tiền tố Ở ĐÂY, nếu không thông báo của Gia Bình
+      // sẽ bắn nhầm sang người dùng app 379.
+      const item379 = {...item, roles: (item.roles||[]).map(r => PUSH_NS + r)};
+      await db379.ref('push-queue').push(item379); // mất mạng thì lệnh chờ tới khi có mạng mới xong — gửi xong mới gạch
       box.shift(); _pushOutboxSave(box);
     }
   }catch(e){ /* lỗi (VD chưa đăng nhập) — giữ hộp, lần sau gửi tiếp */ }
@@ -8181,6 +8194,44 @@ function saveEmployees(){
   db.ref().update(updates).catch(err=>{ console.warn('Lỗi ghi nhân viên:',err.message); showToast('⚠️ Không đồng bộ được nhân viên — kiểm tra mạng.'); });
 }
 
+// ── ĐỒNG BỘ Thu / Ký quỹ sang Google Sheet (sheet "Thu & Ký quỹ") ──
+// Gọi qua JSONP giống mọi phần khác của app: nhét thẻ <script>, không chờ kết quả.
+// Sheet chỉ để XEM/in — app vẫn là nguồn chuẩn, nên hỏng mạng cũng không sao.
+function syncCashToSheet(r){
+  if(!sheetUrl || !r) return;
+  const back = cashReturned(r), amt = parseFloat(r.amount)||0;
+  const params = new URLSearchParams({
+    action:'cash', id:r.id,
+    date: r.date||'',
+    loai: r.type==='in' ? 'Thu' : 'Ký quỹ',
+    desc: r.desc||'',
+    src:  r.type==='in' ? ((CASH_SRC[r.src]||CASH_SRC.other).label) : (r.holder||''),
+    amount: amt,
+    back:  r.type==='in' ? 0 : back,
+    left:  r.type==='in' ? 0 : Math.max(0, amt-back),
+    by: r.byName||''
+  });
+  var sc=document.createElement('script');
+  sc.src = sheetUrl+'?'+params.toString();
+  document.head.appendChild(sc);
+  setTimeout(()=>sc.remove(), 4000);
+}
+function syncCashDeleteToSheet(id){
+  if(!sheetUrl) return;
+  var sc=document.createElement('script');
+  sc.src = sheetUrl+'?'+new URLSearchParams({action:'cashDel', id}).toString();
+  document.head.appendChild(sc);
+  setTimeout(()=>sc.remove(), 4000);
+}
+// Đồng bộ LẠI toàn bộ (nút trong Cài đặt / lần đầu nối sheet)
+function syncAllCashToSheet(){
+  if(!sheetUrl){ showToast('⚠️ Chưa nối Google Sheet — vào Cài đặt dán link trước'); return; }
+  if(!cashflow.length){ showToast('Chưa có khoản thu / ký quỹ nào'); return; }
+  showToast('🔄 Đang đồng bộ '+cashflow.length+' khoản...');
+  cashflow.forEach((r,i)=> setTimeout(()=>syncCashToSheet(r), i*260)); // giãn ra để Apps Script không nghẽn
+  setTimeout(()=>showToast('✅ Đã gửi xong sang Google Sheet'), cashflow.length*260+800);
+}
+
 // ── ĐIỀU HƯỚNG TAB CON ──
 function setLuongTab(tab, btn){
   document.querySelectorAll('#page-luong .report-subtab').forEach(t=>t.classList.remove('active'));
@@ -9409,7 +9460,8 @@ async function submitCash(){
   if(_cashModalType==='in') rec.src = document.getElementById('cash-inp-src').value || 'other';
   else rec.holder = (document.getElementById('cash-inp-holder').value||'').trim();
   try{
-    await db.ref('duyetchi/cashflow').push(rec);
+    const ref = await db.ref('duyetchi/cashflow').push(rec);
+    try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
     closeCashModal();
     showToast(_cashModalType==='in' ? '✅ Đã ghi khoản thu' : '✅ Đã ghi khoản ký quỹ');
   }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
@@ -9428,6 +9480,7 @@ async function returnDeposit(id){
   arr.push({amount, date:new Date().toISOString().slice(0,10), ts:Date.now(), by:getCurrentUserName()||''});
   try{
     await db.ref('duyetchi/cashflow/'+id+'/returned').set(arr);
+    try{ syncCashToSheet({...r, returned:arr}); }catch(e){}
     showToast('✅ Đã ghi lấy về '+fmtVND(amount));
   }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
 }
@@ -9437,6 +9490,7 @@ async function deleteCashRec(id){
   if(!confirm('Xóa khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?\n\nXóa rồi là mất hẳn, không lấy lại được.')) return;
   try{
     await db.ref('duyetchi/cashflow/'+id).remove();
+    try{ syncCashDeleteToSheet(id); }catch(e){}
     showToast('🗑 Đã xóa');
   }catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
 }

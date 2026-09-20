@@ -1,4 +1,4 @@
-const VERSION = '20260920-gb6';
+const VERSION = '20260920-gb7';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim().then(() => {
@@ -37,7 +37,9 @@ self.addEventListener('notificationclick', function(event) {
     else { if (navigator.setAppBadge) await navigator.setAppBadge(count); }
     // Thử focus window đang mở, nếu không có thì mở mới
     const allClients = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    const dcClient = allClients.find(c => c.url.includes('/Duyet-Chi/'));
+    // Phải khớp ĐÚNG giabinh.html: cả 2 app cùng nằm trong /Duyet-Chi/ nên nếu chỉ
+    // khớp thư mục thì bấm thông báo Sổ Quỹ sẽ nhảy nhầm vào app 379 đang mở.
+    const dcClient = allClients.find(c => c.url.includes('/Duyet-Chi/giabinh.html'));
     if (dcClient) { await dcClient.focus(); }
     else { await clients.openWindow(targetUrl); }
   })());

@@ -18,6 +18,11 @@ const admin = require('firebase-admin');
 admin.initializeApp();
 
 const DB_URL = 'https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app';
+// App SỔ QUỸ GIA BÌNH dùng database RIÊNG. Gói Spark bên đó không chạy được Cloud
+// Functions nên báo cáo của nó cũng chạy nhờ ở đây — chỉ khác mỗi database đọc vào.
+const DB_URL_GB = 'https://so-quy-gia-binh-default-rtdb.asia-southeast1.firebasedatabase.app';
+// KHÔNG dùng biến toàn cục để chọn database: 2 hàm có thể chạy chồng nhau trong cùng
+// tiến trình → báo cáo đọc nhầm database = báo sai tiền. Truyền thẳng url xuống.
 const TG_LIMIT = 4096;      // giới hạn 1 tin nhắn Telegram
 const SAFE_LIMIT = 3900;    // chừa chỗ cho phần đầu tin khi phải tách
 const NGAY_DA_CHUYEN = 5;   // "đã chuyển" = 5 ngày gần nhất
@@ -25,8 +30,8 @@ const MAX_DESC = 400;       // nội dung dài hơn thì cắt (thực tế dài
 
 // ─────────────────────────── Tiện ích ───────────────────────────
 
-function db(path) {
-  return admin.app().database(DB_URL).ref(path);
+function db(path, url) {
+  return admin.app().database(url || DB_URL).ref(path);
 }
 
 /** Số chính thức = tổng H duyệt (nếu có), không thì tổng D duyệt. Giống app. */
@@ -78,10 +83,11 @@ function ngayDayDu(ts) {
  * Đọc phiếu chi (duyetchi/proposals) + phiếu P.Kế hoạch (duyetchi/khProposals),
  * bỏ phiếu lương, trả về 2 danh sách: chưa chuyển (toàn bộ tồn) và đã chuyển (5 ngày).
  */
-async function layDuLieu() {
+async function layDuLieu(url) {
+  // Gia Bình không có nhánh khProposals (đã bỏ P.Kế hoạch) → đọc hụt thì coi như rỗng
   const [snapChi, snapKh] = await Promise.all([
-    db('duyetchi/proposals').once('value'),
-    db('duyetchi/khProposals').once('value'),
+    db('duyetchi/proposals', url).once('value'),
+    db('duyetchi/khProposals', url).once('value').catch(() => ({ val: () => null })),
   ]);
 
   const tatCa = [];
@@ -271,15 +277,15 @@ async function guiTelegram(token, chatId, text) {
 }
 
 /** Chạy toàn bộ: đọc khoá, gom dữ liệu, dựng tin, gửi lần lượt. */
-async function chayBaoCao(nguon) {
-  const meta = (await db('duyetchi/meta').once('value')).val() || {};
+async function chayBaoCao(nguon, url) {
+  const meta = (await db('duyetchi/meta', url).once('value')).val() || {};
   const token = meta.telegramBotToken;
   const chatId = meta.telegramChatId;
   if (!token || !chatId) {
     throw new Error('Thiếu telegramBotToken / telegramChatId trong duyetchi/meta');
   }
 
-  const d = await layDuLieu();
+  const d = await layDuLieu(url);
   const tins = dungTin(d);
 
   for (let i = 0; i < tins.length; i++) {
@@ -294,7 +300,7 @@ async function chayBaoCao(nguon) {
     chuaChuyen: d.chua.length,
     daChuyen: d.da.length,
   };
-  await db('duyetchi/meta/telegramLastAuto').set(ghi);
+  await db('duyetchi/meta/telegramLastAuto', url).set(ghi);
   functions.logger.info('Đã gửi báo cáo Telegram', ghi);
   return ghi;
 }
@@ -335,6 +341,45 @@ exports.baoCaoTelegramTest = functions
       res.status(200).json(Object.assign({ ok: true }, kq));
     } catch (e) {
       functions.logger.error('Gửi thử lỗi', e);
+      res.status(500).send('Lỗi: ' + e.message);
+    }
+  });
+
+// ══════════════════ SỔ QUỸ GIA BÌNH (database riêng) ══════════════════
+// Cùng logic, chỉ đổi database đọc vào. Token/chatId đọc từ duyetchi/meta
+// của CHÍNH database Gia Bình → 2 app gửi vào 2 nhóm Telegram khác nhau.
+
+/** 6h00 sáng giờ Việt Nam, mỗi ngày — báo cáo Sổ Quỹ Gia Bình. */
+exports.baoCaoTelegram6hGB = functions
+  .region('us-central1')
+  .runWith({ memory: '256MB', timeoutSeconds: 120 })
+  .pubsub.schedule('5 6 * * *')          // 6h05 — lệch 5 phút với 379 để 2 báo cáo không chen nhau
+  .timeZone('Asia/Ho_Chi_Minh')
+  .onRun(async () => {
+    try {
+      await chayBaoCao('hen-gio', DB_URL_GB);
+    } catch (e) {
+      functions.logger.error('Báo cáo Telegram Gia Bình lỗi', e);
+      throw e;
+    }
+    return null;
+  });
+
+/** Gửi thử bằng tay: mở URL kèm ?key=<duyetchi/meta/telegramTestKey của Gia Bình>. */
+exports.baoCaoTelegramTestGB = functions
+  .region('us-central1')
+  .runWith({ memory: '256MB', timeoutSeconds: 120 })
+  .https.onRequest(async (req, res) => {
+    try {
+      const khoa = (await db('duyetchi/meta/telegramTestKey', DB_URL_GB).once('value')).val();
+      if (!khoa || req.query.key !== khoa) {
+        res.status(403).send('Sai khoá');
+        return;
+      }
+      const kq = await chayBaoCao('gui-thu', DB_URL_GB);
+      res.status(200).json(Object.assign({ ok: true }, kq));
+    } catch (e) {
+      functions.logger.error('Gửi thử Gia Bình lỗi', e);
       res.status(500).send('Lỗi: ' + e.message);
     }
   });
