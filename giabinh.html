@@ -1507,7 +1507,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v7';
+const APP_VERSION = '20260920-v8';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -1615,8 +1615,9 @@ setInterval(function(){
 
 // (Đã bỏ tự-reload sau 15 phút — thay bằng thanh "Cập nhật phần mềm mới" để người dùng chủ động, không bị gián đoạn)
 // Storage lấy từ app PHỤ (kho của 379) chứ không phải app chính — xem STORAGE_APP_CONFIG ở trên.
-// Đăng nhập Google của Gia Bình không tự có quyền ghi vào kho 379, nên app phụ
-// cũng phải đăng nhập bằng chính tài khoản đó thì rules của 379 mới cho ghi (_storageSignIn).
+// Đăng nhập Google của Gia Bình không tự có quyền ghi sang 379, nên app phụ cũng phải
+// đăng nhập bằng CHÍNH tài khoản đó thì rules của 379 mới cho ghi. Cần cho CẢ 2 việc:
+// tải ảnh lên kho 379 VÀ ghi push-subs/push-queue (nếu không sẽ permission_denied).
 const _storageApp = firebase.initializeApp(STORAGE_APP_CONFIG, 'storage379');
 const storage = _storageApp.storage();
 // THÔNG BÁO ĐẨY cũng đi nhờ 379: gói Spark của Gia Bình KHÔNG chạy được Cloud Functions,
@@ -1627,7 +1628,7 @@ const db379 = _storageApp.database();
 // (người vừa ở 379 vừa ở Gia Bình sẽ nhận đúng thông báo của từng app).
 const PUSH_NS = 'gb:';
 let _storageAuthed = false;
-async function _storageSignIn(){
+async function _app379SignIn(){
   if(_storageAuthed) return;
   const u = firebase.auth().currentUser;
   if(!u) throw new Error('Chưa đăng nhập');
@@ -1640,7 +1641,7 @@ async function _storageSignIn(){
 
 // Upload ảnh (dataUrl) lên Firebase Storage, trả về download URL
 async function uploadToStorage(dataUrl, storagePath){
-  await _storageSignIn();
+  await _app379SignIn();
   // Ảnh Gia Bình để riêng thư mục giabinh/ trong kho 379 — không lẫn với ảnh của 379
   const ref = storage.ref('giabinh/' + String(storagePath).replace(/^\/+/,''));
   // Chuyển base64 → binary blob để upload nhanh hơn ~33%
@@ -2354,6 +2355,7 @@ async function logoutRole(){
       const _sub = await _reg.pushManager.getSubscription();
       if(_sub){
         const _sk = btoa(_sub.endpoint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 80);
+        await _app379SignIn();
         await Promise.all(['dung','hien','toan','trang','other','kt','kh'].map(b=>db379.ref('push-subs/'+PUSH_NS+b+'/'+_sk).remove().catch(()=>{})));
       }
     }
@@ -2440,6 +2442,7 @@ async function fcmRegister(role) {
     } else {
       targets = [r];
     }
+    await _app379SignIn();   // không có bước này thì rules 379 chặn → permission_denied
     for(const t of targets){ await db379.ref('push-subs/' + PUSH_NS + t + '/' + subKey).set(subObj); }
     // DỌN cùng máy này ở MỌI kênh khác (chống nhận thông báo 2 lần khi 1 máy nằm ở nhiều kênh — VD dung+hien
     // do đổi vai; hoặc 'other' cũ sau khi chuyển sang kt/kh). Luật chỉ cho xóa nếu uid trùng → an toàn.
@@ -2555,6 +2558,7 @@ async function _pushOutboxFlush(){
       // vào kênh 'gb:<role>' nên phải gắn tiền tố Ở ĐÂY, nếu không thông báo của Gia Bình
       // sẽ bắn nhầm sang người dùng app 379.
       const item379 = {...item, roles: (item.roles||[]).map(r => PUSH_NS + r)};
+      await _app379SignIn();
       await db379.ref('push-queue').push(item379); // mất mạng thì lệnh chờ tới khi có mạng mới xong — gửi xong mới gạch
       box.shift(); _pushOutboxSave(box);
     }
