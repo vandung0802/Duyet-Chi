@@ -1286,7 +1286,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="urgent-reason-modal" style="display:none;z-index:9350;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px">
     <div style="font-size:16px;font-weight:800;color:#c0392b;margin-bottom:4px">🔴 Lý do GẤP?</div>
-    <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Phải ghi rõ lý do vì sao khoản này gấp thì mới chọn được mức "Gấp". Lý do sẽ hiện ngay trên phiếu cho D/H thấy.</div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Phải ghi rõ lý do vì sao khoản này gấp thì mới chọn được mức "Gấp". Lý do sẽ hiện ngay trên phiếu cho mọi người thấy.</div>
     <textarea class="form-input" id="urgent-reason-input" rows="3" placeholder="VD: 8h sáng mai đổ bê tông, thiếu xi măng là dừng cả đội..."></textarea>
     <div id="urgent-reason-err" style="color:var(--red);font-size:12px;min-height:16px;margin:4px 0 6px"></div>
     <button class="btn-full btn-primary-full" style="background:#e74c3c" onclick="confirmUrgentReason()">Xác nhận GẤP</button>
@@ -1521,7 +1521,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v9';
+const APP_VERSION = '20260920-v10';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
