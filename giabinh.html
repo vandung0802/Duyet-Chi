@@ -5,10 +5,10 @@
 <meta name="theme-color" content="#047857">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="GB">
+<meta name="apple-mobile-web-app-title" content="SQ">
 <link rel="manifest" href="manifest-giabinh.json">
 <link rel="apple-touch-icon" href="icon-192.svg">
-<title>Duyệt Chi Gia Bình</title>
+<title>Sổ Quỹ Gia Bình</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Firebase SDK (compat, dùng được trực tiếp qua thẻ script, không cần build tool) -->
@@ -370,7 +370,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- LOGIN SCREEN — Firebase Auth -->
 <div class="role-screen" id="role-screen">
   <div style="font-size:48px;margin-bottom:12px">📋</div>
-  <h2>Duyệt Chi Gia Bình</h2>
+  <h2>Sổ Quỹ Gia Bình</h2>
   <p style="margin-bottom:20px">Công trình Gia Bình</p>
   <form id="auth-form" autocomplete="on" onsubmit="return false" style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
     <!-- Tab switch -->
@@ -541,7 +541,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 <div class="app-header">
   <div>
-    <h1>Duyệt Chi Gia Bình <span id="ver-label" style="font-size:9px;opacity:.6;font-weight:400"></span></h1>
+    <h1>Sổ Quỹ Gia Bình <span id="ver-label" style="font-size:9px;opacity:.6;font-weight:400"></span></h1>
     <div style="font-size:10px;opacity:.8;margin-top:1px" id="header-date">Thứ Tư, 17/06/2026</div>
   </div>
   <div style="display:flex;align-items:center;gap:6px">
@@ -863,7 +863,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div class="step-num">1</div>
         <div class="step-body">
           <div class="step-title">Tạo Google Sheet mới</div>
-          <div class="step-desc">Mở <strong>sheets.google.com</strong> → Tạo mới → Đặt tên "Duyệt Chi Phúc Vinh An"</div>
+          <div class="step-desc">Mở <strong>sheets.google.com</strong> → Tạo mới → Đặt tên "Sổ Quỹ Gia Bình"</div>
         </div>
       </div>
       <div class="setup-step">
@@ -892,7 +892,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="install-box">
         <strong>iPhone:</strong> Mở Safari → biểu tượng Chia sẻ → "Thêm vào màn hình chính"<br>
         <strong>Android:</strong> Mở Chrome → menu ⋮ → "Thêm vào màn hình chính"<br><br>
-        App sẽ có icon <strong>DC</strong> và tên <strong>Duyệt Chi</strong> trên màn hình — mở như app thật.
+        App sẽ có icon <strong>SQ</strong> và tên <strong>Sổ Quỹ GB</strong> trên màn hình — mở như app thật.
       </div>
     </div>
   </div>
@@ -1505,10 +1505,10 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v5';
+const APP_VERSION = '20260920-v6';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
-(function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Gia Bình ' + VER_LABEL; })();
+(function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
 if(localStorage.getItem('app_version') !== APP_VERSION){
   localStorage.setItem('app_version', APP_VERSION);
 }
@@ -3480,7 +3480,7 @@ function updateNotifBadge(){
   const n = unread.length + _chatN;
   const badge = document.getElementById('notif-badge');
   if(badge){ badge.textContent = n>99?'99+':n; badge.style.display = n>0?'block':'none'; }
-  document.title = n>0 ? `(${n}) Gia Bình ${VER_LABEL}` : `Gia Bình ${VER_LABEL}`;
+  document.title = n>0 ? `(${n}) Sổ Quỹ ${VER_LABEL}` : `Sổ Quỹ ${VER_LABEL}`;
   if(navigator.setAppBadge){ n>0 ? navigator.setAppBadge(n) : navigator.clearAppBadge(); }
 }
 
@@ -6874,8 +6874,8 @@ function _tgTodayKey(){ const n=new Date(); return n.getFullYear()+'-'+('0'+(n.g
 // v171: bỏ _tgBannerCheck/_tgDismissToday cùng dải nhắc — máy chủ đã tự gửi 6h sáng
 
 function copyScript(){
-  const code=`function onOpen(){SpreadsheetApp.getUi().createMenu('📋 App Duyệt Chi').addItem('🔗 Mở App','openApp').addToUi();}
-function openApp(){var html=HtmlService.createHtmlOutput('<div style="font-family:Arial;padding:20px;text-align:center"><a href="https://vandung0802.github.io/Duyet-Chi" target="_blank" style="background:#1a56db;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold">👉 Mở App Duyệt Chi</a></div>').setWidth(350).setHeight(100);SpreadsheetApp.getUi().showModalDialog(html,'App Duyệt Chi');}
+  const code=`function onOpen(){SpreadsheetApp.getUi().createMenu('📋 Sổ Quỹ Gia Bình').addItem('🔗 Mở App','openApp').addToUi();}
+function openApp(){var html=HtmlService.createHtmlOutput('<div style="font-family:Arial;padding:20px;text-align:center"><a href="https://vandung0802.github.io/Duyet-Chi/giabinh.html" target="_blank" style="background:#047857;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:bold">👉 Mở Sổ Quỹ Gia Bình</a></div>').setWidth(350).setHeight(100);SpreadsheetApp.getUi().showModalDialog(html,'Sổ Quỹ Gia Bình');}
 var HEADERS=['STT','ID','Thời gian tạo','Nội dung','Người đề xuất','Công trường','Số tiền ĐX','Ghi chú','D duyệt - lịch sử','H duyệt - lịch sử','Trạng thái','Lý do từ chối','Ngày cập nhật','D tổng duyệt','H tổng duyệt','Tổng đã chuyển','T chuyển - lịch sử','Số tiền duyệt chính thức'];
 function getMainSheet(ss){
   var sh=ss.getSheetByName('Tổng hợp đề xuất')||ss.getSheetByName('Đề xuất');

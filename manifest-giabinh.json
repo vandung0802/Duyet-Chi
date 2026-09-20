@@ -1,7 +1,7 @@
 {
   "id": "gb-v1",
-  "name": "Duyệt Chi Gia Bình",
-  "short_name": "Gia Bình",
+  "name": "Sổ Quỹ Gia Bình",
+  "short_name": "Sổ Quỹ GB",
   "start_url": "/Duyet-Chi/giabinh.html?t=pwa",
   "scope": "/Duyet-Chi/giabinh.html",
   "display": "standalone",

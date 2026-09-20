@@ -1,4 +1,4 @@
-const VERSION = '20260920-gb5';
+const VERSION = '20260920-gb6';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim().then(() => {
@@ -11,7 +11,7 @@ self.addEventListener('activate', event => {
 self.addEventListener('push', function(event) {
   let data = {};
   try { data = event.data ? event.data.json() : {}; } catch(e) {}
-  const title = data.title || 'Gia Bình';
+  const title = data.title || 'Sổ Quỹ Gia Bình';
   const body = data.body || '';
   event.waitUntil((async () => {
     const notifications = await self.registration.getNotifications();
