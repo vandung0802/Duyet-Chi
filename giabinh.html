@@ -1448,7 +1448,7 @@ const STORAGE_APP_CONFIG = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260920-v1';
+const APP_VERSION = '20260920-v2';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Gia Bình ' + VER_LABEL; })();
@@ -1948,9 +1948,13 @@ function imgActionDelete(){
 let currentRole = '';
 let currentUser = null; // Firebase Auth user
 
+// Gia Bình có 4 vai (379 chỉ có 3): ở 379 chị Trang vừa chuyển tiền vừa đề xuất vật tư,
+// còn ở đây Toàn là THỦ QUỸ (chuyển tiền), Trang chỉ ĐỀ XUẤT vật tư — tách hẳn để
+// không ai bấm nhầm nút chuyển tiền của người khác.
 const ROLES = {
   dung:  {label:'Dũng',  icon:'D', color:'var(--blue)'},
   hien:  {label:'Hiền',  icon:'H', color:'#7c3aed'},
+  toan:  {label:'Toàn',  icon:'To',color:'#0e7490'},
   trang: {label:'Trang', icon:'T', color:'var(--yellow)'},
   other: {label:'Khác',  icon:'👤',color:'var(--gray)'},
 };
@@ -1959,6 +1963,7 @@ function getCurrentUserName(){
   if(currentUserName) return currentUserName;
   if(currentRole==='dung') return 'Dũng';
   if(currentRole==='hien') return 'Hiền';
+  if(currentRole==='toan') return 'Toàn';
   if(currentRole==='trang') return 'Trang';
   return '';
 }
@@ -1991,10 +1996,13 @@ function toggleAuthPass(){
   else { inp.type='password'; eye.textContent='👁'; }
 }
 
+// Vai suy ra từ TÊN người dùng tự gõ lúc đăng ký. Gia Bình: Lan (đại diện cty 134)
+// duyệt NGANG Hiền nên cùng vai 'hien' — ai duyệt thì phiếu ghi tên thật người đó.
 function nameToRole(name){
   const n=(name||'').normalize('NFC').trim();
   if(n==='Dũng') return 'dung';
-  if(n==='Hiền') return 'hien';
+  if(n==='Hiền'||n==='Lan') return 'hien';
+  if(n==='Toàn') return 'toan';
   if(n==='Trang') return 'trang';
   return 'other';
 }
@@ -2276,7 +2284,7 @@ async function logoutRole(){
       const _sub = await _reg.pushManager.getSubscription();
       if(_sub){
         const _sk = btoa(_sub.endpoint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 80);
-        await Promise.all(['dung','hien','trang','other','kt','kh'].map(b=>db.ref('push-subs/'+b+'/'+_sk).remove().catch(()=>{})));
+        await Promise.all(['dung','hien','toan','trang','other','kt','kh'].map(b=>db.ref('push-subs/'+b+'/'+_sk).remove().catch(()=>{})));
       }
     }
   }catch(e){}
@@ -2365,7 +2373,7 @@ async function fcmRegister(role) {
     for(const t of targets){ await db.ref('push-subs/' + t + '/' + subKey).set(subObj); }
     // DỌN cùng máy này ở MỌI kênh khác (chống nhận thông báo 2 lần khi 1 máy nằm ở nhiều kênh — VD dung+hien
     // do đổi vai; hoặc 'other' cũ sau khi chuyển sang kt/kh). Luật chỉ cho xóa nếu uid trùng → an toàn.
-    ['dung','hien','trang','other','kt','kh'].forEach(b=>{
+    ['dung','hien','toan','trang','other','kt','kh'].forEach(b=>{
       if(targets.indexOf(b) >= 0) return;
       db.ref('push-subs/' + b + '/' + subKey).remove().catch(()=>{});
     });
@@ -3383,7 +3391,7 @@ function getMyPendingItems(){
     } else if(currentRole==='hien'){
       if(hAmt < total - 0.0001 && p.status!=='transferred')
         items.push({desc:p.desc, note:'Chờ H duyệt', person:p.person, id:p.id});
-    } else if(currentRole==='trang'){
+    } else if(currentRole==='toan'){
       const official = getOfficialApprovedAmount(p)||0;
       if(official > 0 && transferred < official - 0.0001)
         items.push({desc:p.desc, note:'Chờ chuyển tiền', person:p.person, id:p.id});
@@ -3753,8 +3761,8 @@ function _buildCard(p){
 
   // v106 HỎI–ĐÁP trên phiếu: lịch sử nhắn (bong bóng) + ô trả lời tại chỗ cho người liên quan
   const _chMe = getCurrentUserName();
-  const _chCan = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='trang';
-  const _chClr = r => r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155';
+  const _chCan = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='toan' || currentRole==='trang';
+  const _chClr = r => r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='toan' ? '#0e7490' : r==='trang' ? '#b45309' : '#334155';
   const _chMsgs = _chArr.map(m=>{
     const mine = (m.by||'')===_chMe;
     return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${mine?'#f1f5f9':'#eff6ff'};border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
@@ -3808,7 +3816,7 @@ function renderApproveRow(p){
   const parts=[];
   if(currentRole==='dung'){ parts.push(renderBtnD(p)); parts.push(renderBtnReject(p)); }
   else if(currentRole==='hien'){ parts.push(renderBtnH(p)); parts.push(renderBtnReject(p)); }
-  else if(currentRole==='trang'){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShare(p)); }
+  else if(currentRole==='toan'){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShare(p)); }
   else {
     const _prf=Array.isArray(p.proofImages)?p.proofImages:(p.proofB64?[p.proofB64]:[]);
     if(_prf.length) parts.push(renderBtnShare(p)); // người đề xuất: chia sẻ ảnh chuyển tiền vào Zalo
@@ -3927,8 +3935,8 @@ function renderBtnTransfer(p){
   const approvedAmt = getOfficialApprovedAmount(p);
   const transferred = getTotalTransferred(p);
   const isFullyTransferred = p.status==='transferred';
-  const canPress = currentRole==='trang' && approvedAmt>0 && transferred < approvedAmt - 0.0001 && p.status!=='rejected';
-  const canUndo = currentRole==='trang' && transferred>0;
+  const canPress = currentRole==='toan' && approvedAmt>0 && transferred < approvedAmt - 0.0001 && p.status!=='rejected';
+  const canUndo = currentRole==='toan' && transferred>0;
   if(canPress){
     const mainLabel = transferred>0 ? `${fmt(transferred)}/${fmtVND(approvedAmt)}` : 'Chờ chuyển';
     const prevInfo = transferred>0 ? `<span class="ab-prev-info">${p.transferredAt?fmtFull(p.transferredAt):''}</span>` : '';
@@ -3946,7 +3954,7 @@ function renderBtnShare(p){
   const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64 ? [p.proofB64] : []);
   const hasProof=proofImages.length>0;
   const done=p.status==='transferred';
-  const canUpload=currentRole==='trang'&&(done||p.status==='approved');
+  const canUpload=currentRole==='toan'&&(done||p.status==='approved');
   if(hasProof && canUpload) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)">
     <div class="ab-share-stack">
       <button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${sid(p.id)}')">📤 ${proofImages.length} ảnh</button>
@@ -3978,7 +3986,7 @@ function isAwaitingTransferRemind(p){
 let _transferReminderShown = false;
 function maybeShowTransferReminder(){
   if(_transferReminderShown) return;
-  if(currentRole !== 'trang') return;
+  if(currentRole !== 'toan') return;
   if(!fbInitialLoadDone) return;
   const items = proposals.filter(p =>
     p.kind!=='salary' && p.status!=='rejected' && approvedAmtOf(p,'H') > 0 &&
@@ -4047,7 +4055,7 @@ function remindApprove(id){
     localStorage.setItem(pushKey, String(Date.now()));
     if(isTransferRemind){
       const official = getOfficialApprovedAmount(p);
-      sendPushNotif('💸 Nhắc chuyển tiền', `${p.desc} — ${fmtVND(official)} đã duyệt, chưa chuyển`, ['trang']);
+      sendPushNotif('💸 Nhắc chuyển tiền', `${p.desc} — ${fmtVND(official)} đã duyệt, chưa chuyển`, ['toan']);
       showToast('💸 Đã nhắc Trang chuyển tiền (lần '+p.remindCount+')');
     } else {
       sendPushNotif('🔁 Xin duyệt lại', `${p.desc} — đề xuất ${fmtFull(p.ts)}, chưa duyệt xong`, ['dung','hien']);
@@ -4259,9 +4267,9 @@ function confirmApproveAmount(){
   const full = val >= p.amount;
   showToast(`✓ ${field==='approvedD'?'Dũng':'Hiền'} đã duyệt ${fmtVND(val)}${full?' (toàn bộ)':' (1 phần)'}`);
   if(field === 'approvedD') {
-    sendPushNotif('✅ Dũng đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['hien', 'trang']);
+    sendPushNotif('✅ Dũng đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['hien', 'toan']);
   } else {
-    sendPushNotif('✅ Hiền đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['dung', 'trang']);
+    sendPushNotif('✅ Hiền đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['dung', 'toan']);
   }
 }
 
@@ -4401,7 +4409,7 @@ function confirmTransferAmount(){
   closeTransferAmountModal();
   const remaining = officialApproved - totalAfter;
   showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ số đã duyệt)':' — còn '+fmt(remaining)+'tr chưa chuyển'}`);
-  sendPushNotif('💸 Trang đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien']);
+  sendPushNotif('💸 Toàn đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien']);
   if(isFullyDone) setTimeout(()=>uploadProof(id),500);
 }
 
@@ -4499,7 +4507,7 @@ function _isMyProposal(p){
   return !!(me && (p.person===me || p.createdBy===me));
 }
 function _canEditDelete(p){
-  return currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||_isMyProposal(p);
+  return currentRole==='dung'||currentRole==='hien'||currentRole==='toan'||currentRole==='trang'||_isMyProposal(p);
 }
 function del(id){
   const p = proposals.find(x=>x.id===id);
@@ -4525,7 +4533,7 @@ function openEditProposal(id){
   if(!p) return;
   // v135: chỉ người tạo phiếu hoặc D/H/T mới mở sửa được (chống sửa đề xuất của nhau ở phòng Kế hoạch)
   if(!_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu hoặc D/H/T mới sửa được đề xuất này'); return; }
-  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); return; }
+  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); return; }
   editingProposalId = id;
 
   // Đổ danh sách người đề xuất / công trường vào 2 ô select (giống màn Thêm mới)
@@ -4682,7 +4690,7 @@ function removeEditImage(idx){
 function saveEditProposal(){
   const p = proposals.find(x=>x.id===editingProposalId);
   if(!p){ closeEditModal(); return; }
-  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
+  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
 
   // v92: phiếu ứng lương — người/nhóm KHÓA theo phiếu (ô select bị disable), lấy thẳng giá trị gốc
   // để chắc chắn không đổi (đổi tên/nhóm là việc của DS nhân viên, và tránh vi phạm đóng băng sau duyệt).
@@ -4726,13 +4734,13 @@ function saveEditProposal(){
       if(!Array.isArray(p.chat)) p.chat=[];
       p.chat.push({ by:_chMe2||'Dũng', role:'dung', text:p.opinionD, ts:Date.now() });
       if(currentUser){ (p.chatSeen=p.chatSeen||{})[currentUser.uid]=Date.now(); }
-      sendPushNotif('💬 Ý kiến mới của D', (p.desc||'')+': '+p.opinionD.slice(0,90), ['hien','trang']);
+      sendPushNotif('💬 Ý kiến mới của D', (p.desc||'')+': '+p.opinionD.slice(0,90), ['hien','toan','trang']);
     }
     if(currentRole==='hien' && p.opinionH && p.opinionH!==_prevOpH){
       if(!Array.isArray(p.chat)) p.chat=[];
       p.chat.push({ by:_chMe2||'Hiền', role:'hien', text:p.opinionH, ts:Date.now() });
       if(currentUser){ (p.chatSeen=p.chatSeen||{})[currentUser.uid]=Date.now(); }
-      sendPushNotif('💬 Ý kiến mới của H', (p.desc||'')+': '+p.opinionH.slice(0,90), ['dung','trang']);
+      sendPushNotif('💬 Ý kiến mới của H', (p.desc||'')+': '+p.opinionH.slice(0,90), ['dung','toan','trang']);
     }
   }catch(e){}
   p.priority = _ePrio;
@@ -5126,7 +5134,7 @@ function submitProposal(){
     const amountRaw=parseAmountInput(document.getElementById('inp-amount'));
     if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
     // Kiểm tra tên đúng với tài khoản đang đăng nhập
-    const roleName = currentRole==='hien'?'Hiền': currentRole==='trang'?'Trang': '';
+    const roleName = currentRole==='hien'?'Hiền': currentRole==='toan'?'Toàn': currentRole==='trang'?'Trang': '';
     const lockedName = currentUserName || roleName;
     if(currentRole !== 'dung' && lockedName && person !== lockedName){
       showToast('⛔ Bạn chỉ được đề xuất với tên của mình: '+lockedName);
@@ -5184,7 +5192,7 @@ function submitProposal(){
     showToast('Đã gửi đề xuất!');
     showPage('home', document.querySelector('.nav-item'));
     renderAll();
-    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang', 'kt']); // v137: kế toán → kênh 'kt' (không lẫn sang P.KH)
+    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'toan', 'trang', 'kt']); // v137: kế toán → kênh 'kt' (không lẫn sang P.KH)
   }catch(err){
     // Hiện rõ lỗi thật trên màn hình (kể cả trên điện thoại, không cần mở Console)
     // để dễ chẩn đoán khi có sự cố, thay vì nút bấm im lặng không phản ứng gì.
@@ -5200,7 +5208,7 @@ function submitProposal(){
 function populateSelects(){
   const ps=document.getElementById('inp-person');
   const ss=document.getElementById('inp-site');
-  const roleName = currentRole==='hien'?'Hiền': currentRole==='trang'?'Trang': '';
+  const roleName = currentRole==='hien'?'Hiền': currentRole==='toan'?'Toàn': currentRole==='trang'?'Trang': '';
   const lockedName = currentUserName || roleName;
   const roInput = document.getElementById('inp-person-readonly');
   if(currentRole !== 'dung' && lockedName){
@@ -6774,7 +6782,7 @@ async function sendTelegramReport(){
   if(_tgSending) return;
   // v170: chỉ D/H/Trang gửi — kế toán thường KHÔNG đọc được phiếu P.KH (kín 2 chiều),
   // họ gửi thì báo cáo thiếu phần P.KH mà không ai biết
-  if(currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('Chỉ D / Hiền / Trang gửi được báo cáo này'); return; }
+  if(currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('Chỉ D / Hiền / Toàn / Trang gửi được báo cáo này'); return; }
   if(!_tgToken || !_tgChatId){ showToast('❌ Chưa đọc được mã bot Telegram từ máy chủ — kiểm tra mạng/quyền'); return; }
   // v168: báo cáo TIỀN phải từ dữ liệu MỚI NHẤT — vừa mở app dữ liệu chưa tải xong thì chưa cho gửi
   if(!fbInitialLoadDone){ showToast('⏳ Dữ liệu đang tải về — chờ vài giây rồi bấm lại'); return; }
@@ -7108,7 +7116,7 @@ function _zaloDoneForMe(){
 // ⚠️ Ảnh được tải TRỄ sau khi mở app (_imagesLoaded) — chưa tải xong mà đã so proofImages sẽ báo
 // "thiếu ảnh" SAI hàng loạt trong vài giây đầu → chờ kho ảnh tải xong mới tính.
 function _zaloTMissing(){
-  if(currentRole!=='trang') return [];
+  if(currentRole!=='toan') return [];
   if(typeof _imagesLoaded!=='undefined' && !_imagesLoaded) return [];
   return proposals.filter(p=>p.status!=='rejected' && getTotalTransferred(p)>0 && _zaloLastTransferTs(p)>=ZALO_REMIND_SINCE && _zaloProofs(p).length===0);
 }
@@ -7255,7 +7263,7 @@ function _navPendingIds(kindSalary){
     const total=parseFloat(p.amount)||0;
     if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
     else if(currentRole==='hien'){ if(approvedAmtOf(p,'H') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
-    else if(currentRole==='trang'){ const off=getOfficialApprovedAmount(p)||0; if(off>0 && getTotalTransferred(p) < off-0.0001) ids.push(p.id); }
+    else if(currentRole==='toan'){ const off=getOfficialApprovedAmount(p)||0; if(off>0 && getTotalTransferred(p) < off-0.0001) ids.push(p.id); }
   });
   return ids;
 }
@@ -7554,6 +7562,7 @@ function _chatAmIInvolved(p){
   const arr=Array.isArray(p.chat)?p.chat:[];
   if(currentRole==='dung' && (p.opinionD || arr.some(m=>m.role==='dung'))) return true;
   if(currentRole==='hien' && (p.opinionH || arr.some(m=>m.role==='hien'))) return true;
+  if(currentRole==='toan' && arr.some(m=>m.role==='toan')) return true;
   if(currentRole==='trang' && arr.some(m=>m.role==='trang')) return true;
   return false;
 }
@@ -7613,7 +7622,7 @@ function sendChatMsg(id){
     const roles=new Set();
     if(p.opinionD) roles.add('dung');
     if(p.opinionH) roles.add('hien');
-    (p.chat||[]).forEach(m=>{ if(m.role==='dung'||m.role==='hien'||m.role==='trang') roles.add(m.role); });
+    (p.chat||[]).forEach(m=>{ if(m.role==='dung'||m.role==='hien'||m.role==='toan'||m.role==='trang') roles.add(m.role); });
     roles.delete(currentRole);
     let list=Array.from(roles);
     if(!list.length) list=['dung','hien'].filter(r=>r!==currentRole);
@@ -7631,7 +7640,7 @@ function maybeShowChatReminder(){
   const list=_chatUnreadList();
   if(!list.length) return;
   _chatReminderShown=true;
-  const clr=r=> r==='dung'?'var(--blue-dark)': r==='hien'?'#7c3aed': r==='trang'?'#b45309':'#334155';
+  const clr=r=> r==='dung'?'var(--blue-dark)': r==='hien'?'#7c3aed': r==='toan'?'#0e7490': r==='trang'?'#b45309':'#334155';
   document.getElementById('chat-remind-title').textContent='💬 Có '+list.reduce((s,i)=>s+i.count,0)+' tin nhắn mới cho bạn';
   document.getElementById('chat-remind-list').innerHTML=list.map(it=>`
     <div onclick="chatRemindGo('${sid(it.p.id)}')" style="border:1px solid var(--gray-border);border-left:3px solid ${clr(it.last.role)};border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer">
@@ -7716,7 +7725,7 @@ function _cSetPin(v){ if(_cIsKh()) _khChatPin=v; else _chatPin=v; }
 function _cReadTs(){ return _cIsKh()?_khChatReadTs:_chatReadTs; }
 function _cSetReadTs(t){ if(_cIsKh()) _khChatReadTs=t; else _chatReadTs=t; }
 // Quyền kênh: Kế Toán = mọi người TRỪ phòng Kế hoạch thuần; Kế Hoạch = D/H/Trang + dept kehoach/both
-function _chatCanKT(){ return currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||currentDept!=='kehoach'; }
+function _chatCanKT(){ return currentRole==='dung'||currentRole==='hien'||currentRole==='toan'||currentRole==='trang'||currentDept!=='kehoach'; }
 function _chatCanKH(){ return _khCanSee(); }
 function _chatUnreadOf(msgs, readTs){
   const myUid=(currentUser&&currentUser.uid)||''; const myName=getCurrentUserName();
@@ -7750,7 +7759,7 @@ function _chatSyncHeader(){
     if(eKH){ eKH.textContent=nKH>99?'99+':nKH; eKH.style.display=nKH>0?'inline-block':'none'; }
   }
 }
-function _chatRoleClr(r){ return r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155'; }
+function _chatRoleClr(r){ return r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='toan' ? '#0e7490' : r==='trang' ? '#b45309' : '#334155'; }
 function _chatHighlightTags(escapedText){
   let h=escapedText;
   // v116: @Tất cả (tag cả nhóm, kiểu Zalo) — tô CAM đậm cho nổi
@@ -8601,7 +8610,7 @@ function createLuongFromExcel(){
   salaryMonth=_lxMonth;
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
   showToast('✅ Đã tạo '+made+' phiếu ứng lương');
-  sendPushNotif('💵 '+made+' đề xuất ứng lương mới', 'Nhập từ Excel tháng '+monthLabel(_lxMonth), ['dung','hien','trang']);
+  sendPushNotif('💵 '+made+' đề xuất ứng lương mới', 'Nhập từ Excel tháng '+monthLabel(_lxMonth), ['dung','hien','toan','trang']);
 }
 
 function saveAdvFromModal(){
@@ -8633,7 +8642,7 @@ function saveAdvFromModal(){
   salaryMonth=month;
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
   showToast('✅ Đã gửi đề xuất ứng lương');
-  sendPushNotif('💵 Đề xuất ứng lương mới', emp.name+': '+fmtVND(amount), ['dung','hien','trang']);
+  sendPushNotif('💵 Đề xuất ứng lương mới', emp.name+': '+fmtVND(amount), ['dung','hien','toan','trang']);
 }
 
 // ── RENDER TAB ỨNG LƯƠNG (theo tháng, nhóm Văn phòng + công trình) — dùng ĐÚNG thẻ phiếu chi (renderCard) ──
