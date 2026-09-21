@@ -1,11 +1,14 @@
 {
   "name": "duyetchi-functions",
   "description": "Cloud Functions app Duyet Chi PVA 379",
-  "engines": { "node": "20" },
+  "engines": {
+    "node": "20"
+  },
   "main": "index.js",
   "dependencies": {
     "firebase-admin": "^12.7.0",
-    "firebase-functions": "^5.1.1"
+    "firebase-functions": "^5.1.1",
+    "web-push": "^3.6.7"
   },
   "private": true
 }

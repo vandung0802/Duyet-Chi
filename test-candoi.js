@@ -127,5 +127,44 @@ check('Dang gui ngoai (60+40)',k.dangGuiNgoai,100e6);
 check('Da chi ra',k.daChi,0);
 check('Tien trong TK',k.tienTrongTk,400e6);
 
+
+// ── SO QUY phai KHOP voi bang Tong quan: so du dong cuoi = "Tien trong tai khoan" ──
+// (loi da gap: bang Tong quan da loai phieu ky quy khoi "da chi" nhung So quy van liet ke
+//  lan chuyen cua no -> tru 2 lan, so du cuoi lech dung bang so ky quy)
+{
+  const c=L.findIndex(x=>x.startsWith('function cashBookRows('));
+  const d=L.findIndex(x=>x.startsWith('function renderCashBook('));
+  if(c<0||d<0){ console.log('Khong tim thay cashBookRows'); process.exit(1); }
+  vm.runInContext(L.slice(c,d).join(os.EOL), ctx);
+}
+const soDuCuoi=()=>{ const r=vm.runInContext('cashBookRows()',ctx); return r.length? r[r.length-1].bal : 0; };
+
+console.log('\n== So quy KHOP Tong quan (co ky quy tu phieu chi + ky quy nhap tay + doi ve) ==');
+setup([
+  {id:'a',type:'in',amount:1000e6,src:'cdt',date:'2026-01-05'},
+  {id:'b',type:'in',amount:200e6,src:'134',date:'2026-01-20'},
+  {id:'p_x_1',type:'dep',amount:100e6,desc:'Ky quy bao lanh',date:'2026-02-01',fromProposal:'x'},
+  {id:'m1',type:'dep',amount:20e6,desc:'Coc gian giao',date:'2026-02-10',returned:[{amount:5e6,date:'2026-03-01',ts:1}]}
+],[
+  {id:'x',status:'transferred',costType:'kyquy',approvedHHistory:[{amount:100e6}],transfers:[{amount:100e6,ts:Date.UTC(2026,1,1,5)}]},
+  {id:'c1',status:'transferred',costType:'congtruong',approvedHHistory:[{amount:300e6}],transfers:[{amount:300e6,ts:Date.UTC(2026,1,3,5)}]},
+  {id:'c2',status:'approved',costType:'noinghiep',approvedHHistory:[{amount:50e6}],transfers:[{amount:10e6,ts:Date.UTC(2026,1,4,5)}]},
+  {id:'s1',status:'transferred',kind:'salary',approvedHHistory:[{amount:15e6}],transfers:[{amount:15e6,ts:Date.UTC(2026,1,5,5)}]}
+]);
+k=totals();
+// thu 1200 - chi (300+10+15=325) - dang gui ngoai (100 + 15 = 115) = 760
+check('Tien trong TK',k.tienTrongTk,760e6);
+check('So du cuoi SO QUY',soDuCuoi(),760e6);
+check('Da duyet chua chuyen',k.daDuyetChuaChuyen,40e6);
+check('Con duoc tieu',k.conDuocTieu,720e6);
+
+console.log('\n== ymdLocal: khong lui ngay vi mui gio ==');
+{
+  const d=new Date(2026,8,21,6,30);   // 06:30 sang 21/09 theo gio may
+  const got=vm.runInContext('ymdLocal('+d.getTime()+')',ctx);
+  const ok=(got==='2026-09-21'); if(!ok) pass=false;
+  console.log((ok?'  OK  ':'  SAI ')+'06:30 ngay 21/09 -> '+got);
+}
+
 console.log(pass?'\n*** TAT CA DUNG ***':'\n*** CO LOI ***');
 process.exit(pass?0:1);

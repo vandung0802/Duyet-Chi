@@ -383,3 +383,7 @@ exports.baoCaoTelegramTestGB = functions
       res.status(500).send('Lỗi: ' + e.message);
     }
   });
+
+// ══════════════════ TRẠM TRUNG CHUYỂN cho SỔ QUỸ GIA BÌNH ══════════════════
+// Thông báo đẩy + kho ảnh của app Gia Bình đi qua hàm này (chi tiết trong gbRelay.js).
+exports.gbRelay = require('./gbRelay').gbRelay;

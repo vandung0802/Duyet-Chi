@@ -1,0 +1,5 @@
+{
+  "database": {
+    "rules": "database-giabinh.rules.json"
+  }
+}
