@@ -1596,7 +1596,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260922-v23';
+const APP_VERSION = '20260922-v24';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2690,7 +2690,11 @@ async function _pushOutboxFlush(){
       const item=box[0];
       if(Date.now()-(item.ts||0) > 24*3600*1000){ box.shift(); _pushOutboxSave(box); continue; } // quá 1 ngày = thông báo nguội, bỏ
       await gbRelay('send', { title: item.title, body: item.body, roles: item.roles||[] }); // lỗi/mất mạng → ném ra, giữ hộp, lần sau gửi tiếp
-      box.shift(); _pushOutboxSave(box);
+      // v24: NẠP LẠI hộp trước khi gạch. Trong lúc chờ mạng ở lệnh trên, tin MỚI có thể đã được thêm vào cuối hộp;
+      // gạch trên bản sao cũ rồi lưu đè là MẤT tin đó (duyệt 2 phiếu liên tiếp lúc sóng yếu → chỉ tin đầu tới nơi).
+      box=_pushOutboxLoad();
+      if(box.length && box[0].ts===item.ts && box[0].title===item.title) box.shift();
+      _pushOutboxSave(box);
     }
   }catch(e){ /* lỗi (VD chưa đăng nhập) — giữ hộp, lần sau gửi tiếp */ }
   _pushFlushing=false;
@@ -8865,9 +8869,17 @@ function _normName(s){
 // Đọc số tiền: bỏ mọi ký tự không phải số (dấu chấm nghìn, "đ", khoảng trắng)
 function _parseMoney(v){
   if(typeof v==='number') return Math.round(v);
-  const n=parseInt(String(v==null?'':v).replace(/[^\d]/g,''),10);
+  const s=String(v==null?'':v).trim();
+  if(/^[-(−]/.test(s)) return 0;
+  // v24: bỏ đuôi chữ ("đ", "VND", khoảng trắng) TRƯỚC khi cắt phần lẻ — trước đây "5.000.000,50 đ" vẫn ra gấp 100 lần
+  const c=s.replace(/[^\d.,]/g,'');
+  const n=parseInt(c.replace(/[.,]\d{1,2}$/,'').replace(/[^\d]/g,''),10);
   return isNaN(n)?0:n;
 }
+// Tự kiểm khi mở app (rẻ, chạy 1 lần): sai là báo ngay ở console thay vì âm thầm nhập sai tiền lương
+console.assert(_parseMoney('5.000.000,50')===5000000 && _parseMoney('5,000,000.5')===5000000 && _parseMoney('(1.000.000)')===0
+  && _parseMoney('-2.000.000')===0 && _parseMoney('3.500.000 đ')===3500000 && _parseMoney('5.000')===5000 && _parseMoney(1234.6)===1235
+  && _parseMoney('5.000.000,50 đ')===5000000 && _parseMoney('1.000.000,00 VND')===1000000, '_parseMoney SAI');
 function openLuongExcelPick(){
   ensureSalaryMonth();
   if(!employees.length){ showToast('Chưa có nhân viên — thêm ở tab 👥 Nhân viên trước'); return; }

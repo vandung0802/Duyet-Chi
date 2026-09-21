@@ -1439,7 +1439,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260922-v176';
+const APP_VERSION = '20260922-v177';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2255,6 +2255,8 @@ function initAuth(){
 
 async function logoutRole(){
   if(!confirm('Đăng xuất?')) return;
+  // v177: dừng bộ đếm 'đang online' + gỡ dấu online khi CÒN đăng nhập (sau đăng xuất thì máy chủ từ chối)
+  try{ clearInterval(_onlineTimer); if(currentUser) await db.ref('duyetchi/online/'+currentUser.uid).remove(); }catch(e){}
   // v163: GỠ đăng ký thông báo của MÁY NÀY khỏi máy chủ TRƯỚC khi đăng xuất — nếu không, người sau
   // đăng nhập tài khoản khác trên máy này vẫn nhận thông báo (kể cả OTP) của người cũ. Phải chạy
   // khi CÒN đăng nhập (luật cần auth). Lỗi thì bỏ qua, không chặn đăng xuất.
@@ -2470,7 +2472,11 @@ async function _pushOutboxFlush(){
         if(!_u) throw e1;
         await db.ref('push-queue/'+_u.uid).set(item);
       }
-      box.shift(); _pushOutboxSave(box);
+      // v177: NẠP LẠI hộp trước khi gạch. Trong lúc chờ mạng ở lệnh trên, tin MỚI có thể đã được thêm vào cuối hộp;
+      // gạch trên bản sao cũ rồi lưu đè là MẤT tin đó (duyệt 2 phiếu liên tiếp lúc sóng yếu → chỉ tin đầu tới nơi).
+      box=_pushOutboxLoad();
+      if(box.length && box[0].ts===item.ts && box[0].title===item.title) box.shift();
+      _pushOutboxSave(box);
     }
   }catch(e){ /* lỗi (VD chưa đăng nhập) — giữ hộp, lần sau gửi tiếp */ }
   _pushFlushing=false;
@@ -4611,7 +4617,7 @@ async function pasteImgFromClipboard(target){
       compressImage(file).then(dataUrl=>{
         editingImages.push(dataUrl); done++;
         if(done===blobs.length){setZoneLoading('edit-paste-zone',false);renderEditImgPreview();showToast(`✅ Đã dán ${done} ảnh`);}
-      }).catch(()=>{done++;if(done===blobs.length)setZoneLoading('edit-paste-zone',false);showToast('❌ Xử lý ảnh thất bại');});
+      }).catch(()=>{done++;if(done===blobs.length){setZoneLoading('edit-paste-zone',false);renderEditImgPreview();}showToast('❌ Xử lý ảnh thất bại');});
     });
   } else {
     addImagesToUpload(blobs);
@@ -4903,7 +4909,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
           editingImages.push(dataUrl);
           done++;
           if(done===files.length){ setZoneLoading('edit-paste-zone',false); renderEditImgPreview(); showToast(`✅ Đã dán ${done} ảnh`); }
-        }).catch(()=>{ done++; if(done===files.length) setZoneLoading('edit-paste-zone',false); showToast('❌ Xử lý ảnh thất bại'); });
+        }).catch(()=>{ done++; if(done===files.length){ setZoneLoading('edit-paste-zone',false); renderEditImgPreview(); } showToast('❌ Xử lý ảnh thất bại'); });
       });
     }
   });
@@ -5581,7 +5587,7 @@ async function confirmFirstLogin(){
   if(!currentUser){ return; }
   const role = nameToRole(name);
   currentUserName = name;
-  await db.ref('duyetchi/userRoles/'+currentUser.uid).update({ role, name }); // v81: update giu co approved
+  await db.ref('duyetchi/userRoles/'+currentUser.uid).update(Object.assign({ role, name }, currentUser.email ? { email: currentUser.email } : {})); // v81: update giu co approved · v177: kèm email
   document.getElementById('first-login-overlay').style.display = 'none';
   setRole(role);
 }
@@ -5739,7 +5745,7 @@ async function doUpdateRole(){
   const role = nameToRole(name);
   // v175: bắt lỗi — trước đây máy chủ từ chối/rớt mạng thì bấm "Cập nhật" không thấy phản hồi gì,
   // mà tên trên máy đã đổi trước khi máy chủ nhận.
-  try{ await db.ref('duyetchi/userRoles/'+currentUser.uid).update({ role, name }); } // v81: update giu co approved
+  try{ await db.ref('duyetchi/userRoles/'+currentUser.uid).update(Object.assign({ role, name }, currentUser.email ? { email: currentUser.email } : {})); } // v81: update giu co approved · v177: kèm email
   catch(e){ msg.textContent='❌ Không lưu được — kiểm tra mạng rồi thử lại'; return; }
   currentUserName = name;
   setRole(role);
@@ -8391,12 +8397,15 @@ function _parseMoney(v){
   if(typeof v==='number') return Math.round(v);
   const s=String(v==null?'':v).trim();
   if(/^[-(−]/.test(s)) return 0;
-  const n=parseInt(s.replace(/[.,]\d{1,2}$/,'').replace(/[^\d]/g,''),10);
+  // v177: bỏ đuôi chữ ("đ", "VND", khoảng trắng) TRƯỚC khi cắt phần lẻ — trước đây "5.000.000,50 đ" vẫn ra gấp 100 lần
+  const c=s.replace(/[^\d.,]/g,'');
+  const n=parseInt(c.replace(/[.,]\d{1,2}$/,'').replace(/[^\d]/g,''),10);
   return isNaN(n)?0:n;
 }
 // Tự kiểm khi mở app (rẻ, chạy 1 lần): sai là báo ngay ở console thay vì âm thầm nhập sai tiền lương
 console.assert(_parseMoney('5.000.000,50')===5000000 && _parseMoney('5,000,000.5')===5000000 && _parseMoney('(1.000.000)')===0
-  && _parseMoney('-2.000.000')===0 && _parseMoney('3.500.000 đ')===3500000 && _parseMoney('5.000')===5000 && _parseMoney(1234.6)===1235, '_parseMoney SAI');
+  && _parseMoney('-2.000.000')===0 && _parseMoney('3.500.000 đ')===3500000 && _parseMoney('5.000')===5000 && _parseMoney(1234.6)===1235
+  && _parseMoney('5.000.000,50 đ')===5000000 && _parseMoney('1.000.000,00 VND')===1000000, '_parseMoney SAI');
 function openLuongExcelPick(){
   ensureSalaryMonth();
   if(!employees.length){ showToast('Chưa có nhân viên — thêm ở tab 👥 Nhân viên trước'); return; }
