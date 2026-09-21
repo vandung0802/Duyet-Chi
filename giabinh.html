@@ -1596,7 +1596,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260922-v22';
+const APP_VERSION = '20260922-v23';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2497,8 +2497,8 @@ function renderFlowStrip(){
   const HINT = {
     other: '👉 <b>Việc của bạn:</b> bấm <b>➕ Thêm phiếu chi mới</b> để đề xuất. Phiếu đi hết 4 bước thì tiền được chuyển — mỗi bước app đều báo cho bạn.',
     dung:  '👉 <b>Việc của bạn (bước 2):</b> mở phiếu đang <b>Chờ duyệt</b> → bấm nút <b>D · Bấm để duyệt</b>, hoặc <b>✕ Từ chối</b>. Xem ô "Còn được tiêu" trong tab <b>Cân đối</b> trước khi duyệt khoản lớn.',
-    hien:  '👉 <b>Việc của bạn (bước 3):</b> phiếu Dũng đã duyệt → bấm nút <b>H&L · Bấm để duyệt</b>. Hiền hoặc Lan, <b>một người duyệt là đủ</b>; phiếu ghi tên đúng người đã bấm.',
-    toan:  '👉 <b>Việc của bạn (bước 4):</b> phiếu đã qua đủ 2 bước duyệt → chuyển khoản xong bấm nút <b>T · Bấm để chuyển</b> rồi tải ảnh chứng từ. Cuối ngày nhập số dư ngân hàng ở <b>Cân đối → Sổ quỹ</b> để đối chiếu.'
+    hien:  '👉 <b>Việc của bạn (bước 3):</b> mở phiếu đang chờ → bấm nút <b>H&L · Bấm để duyệt</b> (thường là sau Dũng, nhưng <b>không bắt buộc chờ Dũng</b>). Hiền hoặc Lan, <b>một người duyệt là đủ</b>; phiếu ghi tên đúng người đã bấm.',
+    toan:  '👉 <b>Việc của bạn (bước 4):</b> phiếu <b>đã có Hiền/Lan duyệt</b> (nút H&L) là chuyển được → chuyển khoản xong bấm nút <b>T · Bấm để chuyển</b> rồi tải ảnh chứng từ. Cuối ngày nhập số dư ngân hàng ở <b>Cân đối → Sổ quỹ</b> để đối chiếu.'
   };
   el.innerHTML = '<div class="flow-steps">' + steps.map((st,i)=>
       (i?'<span class="flow-arrow">▶</span>':'') +
