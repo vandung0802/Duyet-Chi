@@ -52,6 +52,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* v173: cộng thêm vạch home iPhone — nav tự đẩy cao lên bằng safe-area nên chỗ chừa
    phải cộng theo, không thì phần cuối danh sách bị che trên máy có vạch home. */
 .main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
+/* v175: dòng chú giải D/H/T cho người mới — đặt dưới ô thống kê của 3 tab có thẻ phiếu */
+.dht-legend{font-size:11.5px;color:var(--text-sub);text-align:center;margin:0 0 8px;line-height:1.5}
+.dht-legend b{font-weight:900}
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
 .card-header{padding:12px 14px 8px;border-bottom:1px solid var(--gray-border);font-size:13px;font-weight:700;color:var(--text)}
 .card-body{padding:10px 14px}
@@ -232,11 +235,16 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .report-box{background:var(--gray-light);border-radius:var(--radius);padding:12px;font-size:12px;line-height:1.8;white-space:pre-wrap;color:var(--text);margin-top:10px;min-height:60px}
 
 /* Report sub-tabs */
-.report-subtabs{display:flex;gap:5px;padding:0 4px 10px}
+.report-subtabs{display:flex;gap:5px;padding:0 4px 10px;overflow-x:auto;scrollbar-width:none}
+.report-subtabs::-webkit-scrollbar{display:none}
 /* v122: nút tab có nền + viền nhẹ để nhìn rõ là NÚT BẤM (trước đây trong suốt trông như chữ) */
 .report-subtab{flex:1;padding:8px 4px;border-radius:10px;font-size:11px;font-weight:700;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;cursor:pointer;white-space:nowrap;transition:filter .15s,box-shadow .15s}
 .report-subtab:hover{filter:brightness(.97)}
 .report-subtab.active{background:var(--blue-light);color:var(--blue-dark);border-color:#bfdbfe;box-shadow:0 1px 4px rgba(37,99,235,.18)}
+/* v175: 4 tab cần 343px chữ 11px → máy dưới 390px (iPhone SE/mini, Android 360) thu chữ còn 10px cho vừa;
+   máy cực hẹp 320px vẫn tràn thì vuốt ngang được. Nút Giục thu gọn ở máy ≤340px để chữ 'Chờ duyệt' đỡ bị cắt. */
+@media(max-width:389px){.report-subtab{font-size:10px;padding:8px 2px}}
+@media(max-width:340px){.ab-remind-btn{padding:0 6px;font-size:12px}}
 /* Màu nhẹ theo ý nghĩa cho các tab ở trang Báo cáo (data-tab này chỉ có ở Báo cáo) */
 .report-subtab[data-tab="done"]{background:#ecfdf5;border-color:#bbf7d0;color:#15803d}
 .report-subtab[data-tab="done"].active{background:#d1fae5;color:#166534;border-color:#86efac;box-shadow:0 1px 4px rgba(22,163,74,.2)}
@@ -429,10 +437,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <input type="radio" name="edit-priority" value="urgent" style="accent-color:#e74c3c" onchange="onPriorityPick('edit',this)"> 🔴 Gấp
         </label>
         <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-          <input type="radio" name="edit-priority" value="normal" style="accent-color:#f39c12"> 🟡 BT
+          <input type="radio" name="edit-priority" value="normal" style="accent-color:#f39c12"> 🟡 Bình thường
         </label>
         <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-          <input type="radio" name="edit-priority" value="low" style="accent-color:#27ae60"> 🟢 Chờ
+          <input type="radio" name="edit-priority" value="low" style="accent-color:#27ae60"> 🟢 Có thể chờ
         </label>
       </div>
     </div>
@@ -590,6 +598,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
   </div>
 
+  <div class="dht-legend"><b style="color:var(--blue-dark)">D</b> = Dũng duyệt · <b style="color:#7c3aed">H</b> = Hiền duyệt (chốt cuối) · <b style="color:#b45309">T</b> = Trang chuyển tiền</div>
   <!-- v142: nút Thêm mới đưa vào trong tab (bỏ nút Thêm mới ở thanh dưới) -->
   <button class="btn-full btn-primary-full" onclick="showPage('add', document.getElementById('nav-home'))" style="margin-bottom:8px">➕ Thêm phiếu chi mới</button>
   <div style="position:relative;margin-bottom:8px">
@@ -690,7 +699,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <option value="">👤 Tất cả người</option>
         </select>
         <select id="filter-site" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
-          <option value="">🏗 Tất cả CT</option>
+          <option value="">🏗 Tất cả công trình</option>
         </select>
       </div>
     </div>
@@ -929,7 +938,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
             <option value="">👤 Tất cả người</option>
           </select>
           <select id="plan-filter-site" onchange="renderPlans()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
-            <option value="">🏗 Tất cả CT</option>
+            <option value="">🏗 Tất cả công trình</option>
           </select>
         </div>
       </div>
@@ -957,9 +966,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-body" style="padding:10px 0 0">
       <div class="report-subtabs" style="padding:0 12px 10px">
         <button class="report-subtab active" data-tab="adv" onclick="setLuongTab('adv',this)">💵 Ứng lương</button>
-        <button class="report-subtab" data-tab="emp" onclick="setLuongTab('emp',this)">👥 DS nhân viên</button>
-        <button class="report-subtab" data-tab="stats" onclick="setLuongTab('stats',this)">📊 TK nhóm</button>
-        <button class="report-subtab" data-tab="statsName" onclick="setLuongTab('statsName',this)">👤 TK theo tên</button>
+        <button class="report-subtab" data-tab="emp" onclick="setLuongTab('emp',this)">👥 Nhân viên</button>
+        <button class="report-subtab" data-tab="stats" onclick="setLuongTab('stats',this)">📊 Theo nhóm</button>
+        <button class="report-subtab" data-tab="statsName" onclick="setLuongTab('statsName',this)">👤 Theo tên</button>
       </div>
     </div>
   </div>
@@ -967,6 +976,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Tab con: Ứng lương (theo tháng) -->
   <div id="luong-tab-adv">
     <div id="lg-stats-bar"></div>
+    <div class="dht-legend"><b style="color:var(--blue-dark)">D</b> = Dũng duyệt · <b style="color:#7c3aed">H</b> = Hiền duyệt (chốt cuối) · <b style="color:#b45309">T</b> = Trang chuyển tiền</div>
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px">
@@ -1323,6 +1333,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Tab con: danh sách đề xuất -->
   <div id="kh-tab-list">
     <div id="kh-stats-bar"></div>
+    <div class="dht-legend"><b style="color:var(--blue-dark)">D</b> = Dũng duyệt · <b style="color:#7c3aed">H</b> = Hiền duyệt (chốt cuối) · <b style="color:#b45309">T</b> = Trang chuyển tiền</div>
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <!-- v126: lọc theo NGƯỜI + CÔNG TRÌNH (2 ô chọn, giống tab Báo cáo — user chốt) -->
@@ -1331,7 +1342,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
             <option value="">👤 Tất cả người</option>
           </select>
           <select id="kh-filter-site" onchange="renderKhList()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
-            <option value="">🏗 Tất cả CT</option>
+            <option value="">🏗 Tất cả công trình</option>
           </select>
         </div>
         <button class="btn-full btn-primary-full" onclick="openKhModal()">➕ Đề xuất chi phí Kế hoạch</button>
@@ -1434,7 +1445,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260922-v174';
+const APP_VERSION = '20260922-v175';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1731,12 +1742,17 @@ function hideImgActionMenu(){
 
 // Nén ảnh: resize về tối đa 1000px (đủ rõ khi zoom 4x trong modal, tăng dung lượng không đáng kể —
 // đã đo thực tế: 600px≈34KB/~0.3s, 1000px≈80KB/~0.3s, chênh lệch tải/nén không cảm nhận được)
+// v175: BẮT BUỘC báo lỗi (reject) khi ảnh hỏng. Trước đây ảnh không giải mã được (HEIC lạ, ảnh tải dở,
+// 0 byte) thì lời hứa TREO MÃI → nút "Gửi đề xuất" khoá cứng ở "⏳ Đang tải ảnh...", phải tắt app,
+// mất chữ đang gõ; ảnh chứng từ của Trang thì không bao giờ được lưu. 8 chỗ gọi đều đã có sẵn .catch.
 function compressImage(file){
-  return new Promise(resolve=>{
+  return new Promise((resolve,reject)=>{
     const r = new FileReader();
+    r.onerror = ()=>reject(new Error('Không đọc được file ảnh'));
     r.onload = e=>{
       const img = new Image();
-      img.onload = ()=>{
+      img.onerror = ()=>reject(new Error('Ảnh hỏng hoặc định dạng không hỗ trợ'));
+      img.onload = ()=>{ try{
         const MAX = 1000;
         let w = img.naturalWidth, h = img.naturalHeight;
         if(w > MAX || h > MAX){
@@ -1749,7 +1765,7 @@ function compressImage(file){
         // WebP nhỏ hơn JPEG ~30-35% cùng chất lượng; fallback sang JPEG nếu không hỗ trợ
         const webp = canvas.toDataURL('image/webp', 0.65);
         resolve(webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.55));
-      };
+      }catch(err){ reject(err); } }; // canvas có thể văng lỗi khi máy hết bộ nhớ
       img.src = e.target.result;
     };
     r.readAsDataURL(file);
@@ -2076,6 +2092,8 @@ async function verifyOtp(){
   const btn = document.getElementById('otp-btn');
   if(code.length !== 6){ errEl.textContent='Nhập đủ 6 số'; return; }
   btn.disabled=true; btn.textContent='⏳ Đang kiểm tra...';
+  // v175: bọc try/finally — trước đây rớt mạng giữa chừng là nút khoá chết ở "Đang kiểm tra...", kẹt luôn màn OTP
+  try{
   const snap = await db.ref('duyetchi/pendingOtp/'+_otpUid).get();
   if(!snap.exists()){
     errEl.textContent='Mã không hợp lệ hoặc đã hết hạn'; btn.disabled=false; btn.textContent='Xác nhận'; return;
@@ -2094,7 +2112,7 @@ async function verifyOtp(){
   _otpUid = null;
   // Trigger lại auth flow
   const user = firebase.auth().currentUser;
-  if(user) firebase.auth().onAuthStateChanged(()=>{});
+  if(!user) return; // phiên vừa hết hạn → onAuthStateChanged sẽ đưa về màn đăng nhập
   // Re-run setRole manually
   const roleSnap = await db.ref('duyetchi/userRoles/'+user.uid).get();
   const rv = roleSnap.exists() ? roleSnap.val() : null;
@@ -2104,6 +2122,8 @@ async function verifyOtp(){
   try{ _applyDeptView(); }catch(e){}
   if(!role){ const em=(user.email||'').toLowerCase(); if(em==='vandung0802@gmail.com') role='dung'; }
   if(role){ setRole(role); trackOnline(user.uid, currentUserName||user.email, role); }
+  }catch(err){ errEl.textContent='❌ Lỗi mạng — kiểm tra sóng rồi bấm lại'; }
+  finally{ btn.disabled=false; btn.textContent='Xác nhận'; }
 }
 
 async function cancelOtp(){
@@ -2113,6 +2133,7 @@ async function cancelOtp(){
 }
 
 // ── ONLINE PRESENCE ──
+let _onlineTimer = null; // v175: id bộ đếm 'đang online' — để gỡ cái cũ trước khi đặt cái mới
 function trackOnline(uid, name, role){
   const ref = db.ref('duyetchi/online/'+uid);
   const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',trang:'Trang',other:'Khác'};
@@ -2120,11 +2141,15 @@ function trackOnline(uid, name, role){
   const since = Date.now();
   ref.set({ name: displayName, role: role||'other', since });
   ref.onDisconnect().remove();
-  setInterval(()=>{ ref.update({ lastSeen: Date.now() }); }, 60000);
+  // v175: gỡ bộ đếm cũ trước khi đặt cái mới. Trước đây mỗi lần đăng nhập/nối lại mạng cộng thêm 1 bộ đếm
+  // + 1 bộ nghe không bao giờ gỡ → mở app cả ngày thì ghi Firebase gấp hàng chục lần, máy nóng, app ì dần.
+  clearInterval(_onlineTimer);
+  _onlineTimer = setInterval(()=>{ ref.update({ lastSeen: Date.now() }); }, 60000);
   listenOnlineUsers();
 }
 
 function listenOnlineUsers(){
+  db.ref('duyetchi/online').off('value'); // gỡ trước khi gắn — tránh nghe trùng
   db.ref('duyetchi/online').on('value', snap=>{
     const el = document.getElementById('online-users-list');
     if(!el) return;
@@ -3628,7 +3653,7 @@ function _buildCard(p){
   if(p.status==='pending'){
     const dAmt=approvedAmtOf(p,'D'), hAmt=approvedAmtOf(p,'H'), total=parseFloat(p.amount)||0;
     const dDone=dAmt>0&&dAmt>=total-0.0001, hDone=hAmt>0&&hAmt>=total-0.0001;
-    if(!dDone&&!hDone) badgeHtml=`<span class="badge badge-wait">⏳ ⏳ Chờ duyệt</span>`;
+    if(!dDone&&!hDone) badgeHtml=`<span class="badge badge-wait">⏳ Chờ duyệt</span>`;
     else if(dDone&&!hDone) badgeHtml=`<div class="badge-stack"><span class="badge badge-approved">✅ D đã duyệt</span><span class="badge badge-wait" style="margin-top:4px">⏳ H chờ duyệt</span></div>`;
     else if(!dDone&&hDone) badgeHtml=`<div class="badge-stack"><span class="badge badge-wait">⏳ D chờ duyệt</span><span class="badge badge-approved" style="margin-top:4px">✅ H đã duyệt</span></div>`;
     else badgeHtml=`<span class="badge badge-wait">⏳ Chờ duyệt</span>`;
@@ -3893,11 +3918,11 @@ function renderBtnReject(p){
   }
 
   if(canRejectD && canRejectH)
-    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D, H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.8 1 0%;border-color:#d1d5db"><button class="ab-done-btn" title="Bấm để từ chối phiếu này" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D, H</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
   if(canRejectD)
-    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.8 1 0%;border-color:#d1d5db"><button class="ab-done-btn" title="Bấm để từ chối phiếu này" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-big-letter" style="color:var(--red)">D</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
   if(canRejectH)
-    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">tc</span></div></button></div>`;
+    return `<div class="approve-box ab-done-box" style="flex:0.8 1 0%;border-color:#d1d5db"><button class="ab-done-btn" title="Bấm để từ chối phiếu này" onclick="rejectBy('${sid(p.id)}','H')"><div class="ab-row-top"><span class="ab-big-letter" style="color:#7c3aed">H</span><span class="ab-mid-label" style="color:#1f2937">Từ chối</span></div></button></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">—</div></div>`;
 }
 function renderBtnTransfer(p){
@@ -4399,6 +4424,11 @@ function shareProof(id){
 function rejectBy(id, who){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
+  // v175: đã có tiền chuyển đi thì KHÔNG cho từ chối. Trước đây phiếu chuyển MỘT PHẦN vẫn từ chối được →
+  // số tiền thật đã ra khỏi tài khoản biến mất khỏi ô "Đã chuyển" ở trang chủ (ô đó bỏ qua phiếu từ chối),
+  // trong khi tab Báo cáo vẫn cộng → 2 màn hình vênh nhau. Dữ liệu thật 22/09/2026: chưa phiếu nào dính.
+  const _daCk = getTotalTransferred(p);
+  if(_daCk > 0){ alert(`Phiếu này ĐÃ CHUYỂN ${fmtVND(_daCk)} nên không từ chối được nữa.\n\nMuốn huỷ: nhờ Trang hoàn tác lần chuyển tiền trước, rồi mới từ chối.`); return; }
   const name = who==='D' ? 'Dũng' : 'Hiền';
   const reason = prompt(`${name} từ chối phiếu này.\nNhập lý do từ chối (hoặc bỏ trống):`);
   if(reason === null) return; // người dùng bấm Cancel
@@ -5274,7 +5304,7 @@ function renderPlanStats(){
   const filterSel = document.getElementById('plan-stats-filter-site');
   if(filterSel){
     const cur = filterSel.value;
-    filterSel.innerHTML = '<option value="">🏗 Tất cả CT</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     filterSel.value = cur;
   }
   const filterSite = filterSel ? filterSel.value : '';
@@ -5341,7 +5371,7 @@ function renderPlans(){
   const filterSel = document.getElementById('plan-filter-site');
   if(filterSel){
     const cur = filterSel.value;
-    filterSel.innerHTML = '<option value="">🏗 Tất cả CT</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
+    filterSel.innerHTML = '<option value="">🏗 Tất cả công trình</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     filterSel.value = cur;
   }
   const filterSite = filterSel ? filterSel.value : '';
@@ -5575,9 +5605,9 @@ function showPendingApprovalScreen(){
   div.id = 'pending-approval-overlay';
   div.style.cssText = 'position:fixed;inset:0;background:#6b3fd4;z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px;text-align:center;color:#fff';
   div.innerHTML = `
-    <div style="font-size:44px;margin-bottom:12px">🔒</div>
-    <div style="font-size:18px;font-weight:800;margin-bottom:10px">Tài khoản chờ được duyệt</div>
-    <div style="font-size:14px;line-height:1.6;max-width:340px;opacity:.95">Tài khoản của bạn đã đăng nhập nhưng <b>chưa được cấp quyền xem dữ liệu</b>.<br><br>Vui lòng liên hệ <b>anh Dũng</b> để được duyệt (vào Cài đặt → "Duyệt tài khoản được xem dữ liệu" → Cho xem).</div>
+    <div style="font-size:44px;margin-bottom:12px">⏳</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:10px">Đăng ký xong — đang chờ duyệt</div>
+    <div style="font-size:14px;line-height:1.6;max-width:340px;opacity:.95"><b>Việc của bạn bây giờ:</b> nhắn <b>anh Dũng</b> một câu để anh duyệt tài khoản.<br><br>Duyệt xong màn hình này <b>tự mở</b> sau khoảng 30 giây — không cần đăng nhập lại.</div>
     <button onclick="logoutRole()" style="margin-top:22px;padding:10px 24px;font-size:14px;font-weight:700;background:rgba(255,255,255,.2);color:#fff;border:none;border-radius:10px;cursor:pointer">🚪 Đăng xuất</button>`;
   document.body.appendChild(div);
 }
@@ -5713,8 +5743,11 @@ async function doUpdateRole(){
   if(!name){ msg.textContent='Vui lòng chọn tên'; return; }
   if(!currentUser){ msg.textContent='Chưa đăng nhập'; return; }
   const role = nameToRole(name);
+  // v175: bắt lỗi — trước đây máy chủ từ chối/rớt mạng thì bấm "Cập nhật" không thấy phản hồi gì,
+  // mà tên trên máy đã đổi trước khi máy chủ nhận.
+  try{ await db.ref('duyetchi/userRoles/'+currentUser.uid).update({ role, name }); } // v81: update giu co approved
+  catch(e){ msg.textContent='❌ Không lưu được — kiểm tra mạng rồi thử lại'; return; }
   currentUserName = name;
-  await db.ref('duyetchi/userRoles/'+currentUser.uid).update({ role, name }); // v81: update giu co approved
   setRole(role);
   msg.style.color='var(--green)'; msg.textContent='✅ Đã cập nhật: '+name;
   renderSettings();
@@ -5911,7 +5944,7 @@ function renderReportFilters(){
   const siteList = [...new Set(_exp.map(p=>p.site||'').filter(Boolean))].sort();
   selP.innerHTML = '<option value="">👤 Tất cả người</option>' +
     names.map(n=>`<option value="${esc(n)}"${curP===n?' selected':''}>${esc(n)}</option>`).join('');
-  selS.innerHTML = '<option value="">🏗 Tất cả CT</option>' +
+  selS.innerHTML = '<option value="">🏗 Tất cả công trình</option>' +
     siteList.map(s=>`<option value="${esc(s)}"${curS===s?' selected':''}>${esc(s)}</option>`).join('');
 }
 
@@ -5955,7 +5988,7 @@ function renderReportRejected(){
     const dTs = dRej&&dRej.ts?fmtT(dRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const hTs = hRej&&hRej.ts?fmtT(hRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const prv=p.priority||'normal';
-    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Chờ':'🟡 BT';
+    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Có thể chờ':'🟡 Bình thường';
     const rejNote = [dLine?`D: ${dLine}`:'' , hLine?`H: ${hLine}`:''].filter(Boolean).join('<br>');
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
@@ -6244,29 +6277,35 @@ function generateReport(){
     if(rejInfo) detail += ` [${rejInfo}]`;
     return `• ${p.desc} — ${p.person} — ${p.site||'?'} — ${fmtVND(p.amount)}${detail}`;
   };
-  const _exp = proposals.filter(p=>p.kind!=='salary'); // báo cáo tổng hợp chi — KHÔNG gồm ứng lương
+  // v175: 3 lỗi tiền đã vá ở đây —
+  //  (1) trước chỉ loại ứng lương, QUÊN loại phiếu P.Kế hoạch → tiền + nội dung P.KH lọt vào báo cáo kế toán;
+  //      nay dùng getFilteredProposals() như nút Tải Excel bên cạnh (loại cả 2, và theo đúng bộ lọc đang chọn).
+  //  (2) trước chia nhóm theo cờ status → phiếu chuyển thiếu có thể không nằm nhóm nào; nay dùng _expenseMatch
+  //      (cùng công thức với dải ô thống kê trang chủ: H chốt cuối, xong = chuyển đủ số duyệt).
+  //  (3) đuôi "tr" còn sót từ thời tiền tính bằng triệu — số nay là ĐỒNG → in ra "76.586.400tr". Nay dùng fmtVND.
+  const _exp = getFilteredProposals();
   const hasTrans = _exp.filter(p=>getTotalTransferred(p)>0);
-  const appd = _exp.filter(p=>p.status==='approved');
-  const pend = _exp.filter(p=>p.status==='pending');
-  const rej  = _exp.filter(p=>p.status==='rejected');
+  const appd = _exp.filter(p=>_expenseMatch(p,'approved'));
+  const pend = _exp.filter(p=>_expenseMatch(p,'pending'));
+  const rej  = _exp.filter(p=>_expenseMatch(p,'rejected'));
   const tot  = _exp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const transTotal = _exp.reduce((a,p)=>a+getTotalTransferred(p),0);
   let lines=[];
   lines.push(`📊 BÁO CÁO TỔNG HỢP — ${new Date().toLocaleDateString('vi-VN')}`);
   lines.push(`Tổng: ${_exp.length} đề xuất · ${fmtVND(tot)} · Đã chuyển: ${fmtVND(transTotal)}`);
   lines.push('');
-  lines.push(`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản, ${fmt(hasTrans.reduce((a,p)=>a+getTotalTransferred(p),0))}tr):`);
+  lines.push(`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản, ${fmtVND(hasTrans.reduce((a,p)=>a+getTotalTransferred(p),0))}):`);
   lines.push(hasTrans.length ? hasTrans.map(fLine).join('\n') : '(không có)');
   lines.push('');
   lines.push(`✅ ĐÃ DUYỆT, CHƯA CHUYỂN ĐỦ (${appd.length} khoản):`);
   lines.push(appd.length ? appd.map(fLine).join('\n') : '(không có)');
   lines.push('');
-  lines.push(`⏳ CHỜ DUYỆT (${pend.length} khoản, ${fmt(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}tr):`);
+  lines.push(`⏳ CHỜ DUYỆT (${pend.length} khoản, ${fmtVND(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}):`);
   lines.push(pend.length ? pend.map(fLine).join('\n') : '(không có)');
   lines.push('');
   lines.push(`❌ TỪ CHỐI (${rej.length} khoản):`);
   lines.push(rej.length ? rej.map(fLine).join('\n') : '(không có)');
-  if(pend.length) lines.push(`\n⚠️ CẦN XỬ LÝ GẤP: còn ${pend.length} khoản chờ duyệt, tổng ${fmt(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}tr.`);
+  if(pend.length) lines.push(`\n⚠️ CẦN XỬ LÝ GẤP: còn ${pend.length} khoản chờ duyệt, tổng ${fmtVND(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}.`);
   return lines.join('\n');
 }
 
@@ -7287,7 +7326,7 @@ function renderKhList(){
   if(selS){
     fS=selS.value||'';
     const sitesUsed=[...new Set(all.map(p=>p.site||'Chi phí chung'))].sort((a,b)=> a==='Chi phí chung'?-1 : b==='Chi phí chung'?1 : a.localeCompare(b,'vi'));
-    selS.innerHTML='<option value="">🏗 Tất cả CT</option>'+sitesUsed.map(s=>`<option value="${esc(s)}"${fS===s?' selected':''}>${s==='Chi phí chung'?'🧾 ':''}${esc(s)}</option>`).join('');
+    selS.innerHTML='<option value="">🏗 Tất cả công trình</option>'+sitesUsed.map(s=>`<option value="${esc(s)}"${fS===s?' selected':''}>${s==='Chi phí chung'?'🧾 ':''}${esc(s)}</option>`).join('');
     if(fS && !sitesUsed.includes(fS)) fS='';
   }
   let items=all;
@@ -8351,11 +8390,19 @@ function _normName(s){
     .replace(/đ/g,'d').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
 }
 // Đọc số tiền: bỏ mọi ký tự không phải số (dấu chấm nghìn, "đ", khoảng trắng)
+// v175: ô Excel dạng CHỮ có phần lẻ ("5.000.000,50") trước đây ra 500.000.050 (gấp 100 lần) vì xoá luôn dấu
+// phẩy rồi nối số; số âm "(1.000.000)" / "-2.000.000" thì thành DƯƠNG. Nay: cắt phần lẻ 1-2 chữ số ở cuối
+// (3 chữ số là dấu nghìn, giữ nguyên) và số âm trả 0 → dòng đó bị bỏ qua như mọi dòng không có tiền.
 function _parseMoney(v){
   if(typeof v==='number') return Math.round(v);
-  const n=parseInt(String(v==null?'':v).replace(/[^\d]/g,''),10);
+  const s=String(v==null?'':v).trim();
+  if(/^[-(−]/.test(s)) return 0;
+  const n=parseInt(s.replace(/[.,]\d{1,2}$/,'').replace(/[^\d]/g,''),10);
   return isNaN(n)?0:n;
 }
+// Tự kiểm khi mở app (rẻ, chạy 1 lần): sai là báo ngay ở console thay vì âm thầm nhập sai tiền lương
+console.assert(_parseMoney('5.000.000,50')===5000000 && _parseMoney('5,000,000.5')===5000000 && _parseMoney('(1.000.000)')===0
+  && _parseMoney('-2.000.000')===0 && _parseMoney('3.500.000 đ')===3500000 && _parseMoney('5.000')===5000 && _parseMoney(1234.6)===1235, '_parseMoney SAI');
 function openLuongExcelPick(){
   ensureSalaryMonth();
   if(!employees.length){ showToast('Chưa có nhân viên — thêm ở tab 👥 Nhân viên trước'); return; }
@@ -8807,7 +8854,7 @@ function renderSalaryStats(){
     <div class="card"><div class="card-body" style="padding:2px 0">
       ${gkeys.map(g=>{const d=byG[g];const con=Math.max(0,d.duyet-d.chuyen);return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px"><span>${gIcon(g)} ${esc(g)}</span><span style="text-align:right"><div style="font-weight:700">${fmtVND(d.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(d.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span></div>`}).join('')}
     </div></div>
-    <div style="font-size:11px;color:var(--text-sub);text-align:center;padding:8px 4px">👤 Lũy kế từng người xem ở tab <b>TK theo tên</b></div>`;
+    <div style="font-size:11px;color:var(--text-sub);text-align:center;padding:8px 4px">👤 Lũy kế từng người xem ở tab <b>👤 Theo tên</b></div>`;
   attachSalaryStatsDoubleTap(el);
 }
 
