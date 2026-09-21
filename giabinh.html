@@ -504,7 +504,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="approve-amount-modal" style="display:none;z-index:9500;background:rgba(0,0,0,0.55);pointer-events:none">
   <div style="background:#fff;border-radius:18px;padding:22px 20px;width:100%;max-width:320px">
     <div id="aa-title" style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Duyệt chi</div>
-    <div id="aa-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
+    <div id="aa-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:8px"></div>
+    <div id="aa-fund" style="margin-bottom:12px"></div>
 
     <div id="aa-input-group">
       <label class="form-label">Số tiền duyệt (đồng)</label>
@@ -1595,7 +1596,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260921-v19';
+const APP_VERSION = '20260921-v20';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4384,6 +4385,21 @@ function approveBy(id, field){
     document.getElementById('aa-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
     document.getElementById('aa-undo-btn').style.display = already>0 ? 'block' : 'none';
   }
+  // Gia Bình: hiện QUỸ CÒN ĐƯỢC TIÊU ngay lúc duyệt — người duyệt nhìn số này mà quyết.
+  // Phiếu ĐÃ có người duyệt trước thì tiền của nó đã nằm trong "đã duyệt chưa chuyển" rồi,
+  // nên chỉ cảnh báo vượt quỹ với phiếu CHƯA ai duyệt (tránh trừ 2 lần rồi báo động giả).
+  try{
+    const fundEl = document.getElementById('aa-fund');
+    if(fundEl && typeof cashTotals==='function' && typeof _cashLoaded!=='undefined' && _cashLoaded){
+      const t = cashTotals();
+      const chuaAiDuyet = !(getOfficialApprovedAmount(p) > 0);
+      const vuot = chuaAiDuyet ? Math.max(0, (parseFloat(p.amount)||0) - t.conDuocTieu) : 0;
+      fundEl.innerHTML = `<div style="padding:8px 10px;border-radius:8px;font-size:12.5px;line-height:1.45;background:${vuot>0?'#fef2f2':'#f0fdf4'};border-left:3px solid ${vuot>0?'#dc2626':'#059669'}">
+        💰 Quỹ còn được tiêu: <b style="white-space:nowrap;word-break:normal;color:${t.conDuocTieu<0?'#b91c1c':'#047857'}">${fmtVND(t.conDuocTieu)}</b>
+        ${vuot>0?`<div style="color:#991b1b;font-weight:700;margin-top:2px">⚠️ Duyệt đủ phiếu này sẽ VƯỢT QUỸ ${fmtVND(vuot)} — vẫn duyệt được nếu biết tiền sắp về.</div>`:''}
+      </div>`;
+    } else if(fundEl){ fundEl.innerHTML=''; }
+  }catch(e){}
   document.getElementById('approve-amount-modal').style.display = 'flex';
   document.getElementById('approve-amount-modal').style.pointerEvents = 'auto';
 }
