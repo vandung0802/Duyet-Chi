@@ -52,9 +52,6 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* v173: cộng thêm vạch home iPhone — nav tự đẩy cao lên bằng safe-area nên chỗ chừa
    phải cộng theo, không thì phần cuối danh sách bị che trên máy có vạch home. */
 .main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
-/* v175: dòng chú giải D/H/T cho người mới — đặt dưới ô thống kê của 3 tab có thẻ phiếu */
-.dht-legend{font-size:11.5px;color:var(--text-sub);text-align:center;margin:0 0 8px;line-height:1.5}
-.dht-legend b{font-weight:900}
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
 .card-header{padding:12px 14px 8px;border-bottom:1px solid var(--gray-border);font-size:13px;font-weight:700;color:var(--text)}
 .card-body{padding:10px 14px}
@@ -598,7 +595,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
   </div>
 
-  <div class="dht-legend"><b style="color:var(--blue-dark)">D</b> = Dũng duyệt · <b style="color:#7c3aed">H</b> = Hiền duyệt (chốt cuối) · <b style="color:#b45309">T</b> = Trang chuyển tiền</div>
   <!-- v142: nút Thêm mới đưa vào trong tab (bỏ nút Thêm mới ở thanh dưới) -->
   <button class="btn-full btn-primary-full" onclick="showPage('add', document.getElementById('nav-home'))" style="margin-bottom:8px">➕ Thêm phiếu chi mới</button>
   <div style="position:relative;margin-bottom:8px">
@@ -976,7 +972,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Tab con: Ứng lương (theo tháng) -->
   <div id="luong-tab-adv">
     <div id="lg-stats-bar"></div>
-    <div class="dht-legend"><b style="color:var(--blue-dark)">D</b> = Dũng duyệt · <b style="color:#7c3aed">H</b> = Hiền duyệt (chốt cuối) · <b style="color:#b45309">T</b> = Trang chuyển tiền</div>
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px">
@@ -1333,7 +1328,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Tab con: danh sách đề xuất -->
   <div id="kh-tab-list">
     <div id="kh-stats-bar"></div>
-    <div class="dht-legend"><b style="color:var(--blue-dark)">D</b> = Dũng duyệt · <b style="color:#7c3aed">H</b> = Hiền duyệt (chốt cuối) · <b style="color:#b45309">T</b> = Trang chuyển tiền</div>
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <!-- v126: lọc theo NGƯỜI + CÔNG TRÌNH (2 ô chọn, giống tab Báo cáo — user chốt) -->
@@ -1445,7 +1439,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260922-v175';
+const APP_VERSION = '20260922-v176';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
