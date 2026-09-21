@@ -2,7 +2,7 @@
   "name": "duyetchi-functions",
   "description": "Cloud Functions app Duyet Chi PVA 379",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {

@@ -9,9 +9,15 @@
  * Hàm đọc chúng từ Realtime Database: duyetchi/meta/telegramBotToken|telegramChatId
  * — đúng chỗ app3.html đang đọc.
  *
- * LƯU Ý KHI DEPLOY: repo này còn 2 hàm cũ (processPushQueue, sendPush) KHÔNG có
- * source ở đây. Luôn deploy có chọn lọc, đừng deploy cả nhóm:
- *   firebase deploy --only functions:baoCaoTelegram6h,functions:baoCaoTelegramTest
+ * CÁC HÀM KHÁC trong gói này (mỗi nhóm 1 file riêng, nối vào ở cuối file):
+ *   push379.js : sendPush + processPushQueue — thông báo đẩy của app 379
+ *   gbRelay.js : trạm trung chuyển push + kho ảnh cho app Sổ Quỹ Gia Bình
+ *
+ * LƯU Ý KHI DEPLOY (cập nhật 21/09/2026): CẢ 5 hàm đang chạy đều đã có mã nguồn ở đây và đã
+ * lên Node.js 22 — cái bẫy cũ "deploy cả nhóm sẽ xoá mất 2 hàm push" KHÔNG còn nữa.
+ * Vẫn NÊN deploy chọn lọc từng hàm, vì file này còn 2 hàm Telegram của Gia Bình
+ * (baoCaoTelegram6hGB / baoCaoTelegramTestGB) CHƯA dùng được (chờ cấp quyền IAM + token):
+ *   firebase deploy --only functions:<tênHàm> --project duyetchi-pva379
  */
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
@@ -387,3 +393,10 @@ exports.baoCaoTelegramTestGB = functions
 // ══════════════════ TRẠM TRUNG CHUYỂN cho SỔ QUỸ GIA BÌNH ══════════════════
 // Thông báo đẩy + kho ảnh của app Gia Bình đi qua hàm này (chi tiết trong gbRelay.js).
 exports.gbRelay = require('./gbRelay').gbRelay;
+
+// ══════════════════ THÔNG BÁO ĐẨY của app 379 (sendPush + processPushQueue) ══════════════════
+// Trước 21/09/2026 hai hàm này KHÔNG có mã nguồn trong repo (deploy từ máy khác). Đã tải về từ
+// Google Cloud và đưa vào push379.js → từ nay CẢ 5 hàm đều có mã nguồn ở đây.
+const push379 = require('./push379');
+exports.sendPush = push379.sendPush;
+exports.processPushQueue = push379.processPushQueue;
