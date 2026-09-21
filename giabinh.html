@@ -1596,12 +1596,12 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260921-v20';
+const APP_VERSION = '20260922-v21';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
-if(localStorage.getItem('app_version') !== APP_VERSION){
-  localStorage.setItem('app_version', APP_VERSION);
+if(localStorage.getItem('gb_app_version') !== APP_VERSION){
+  localStorage.setItem('gb_app_version', APP_VERSION);
 }
 // ── KIỂM TRA BẢN MỚI + NÚT CẬP NHẬT ──
 // Có bản mới trên máy chủ → hiện thanh "Cập nhật phần mềm mới" ở đầu màn hình.
@@ -1751,15 +1751,15 @@ function _safeArr(key){
   try{ const v=JSON.parse(localStorage.getItem(key)||'[]'); return Array.isArray(v)?v:[]; }
   catch(e){ try{ localStorage.removeItem(key); }catch(e2){} return []; }
 }
-let proposals = _safeArr('dc_proposals');
-let persons    = _safeArr('dc_persons');
-let sites      = _safeArr('dc_sites');
-let sheetUrl   = sanitizeSheetUrl(localStorage.getItem('dc_sheetUrl')||'');
-let plans      = _safeArr('dc_plans'); // Kế hoạch vật tư — TÁCH BIỆT hoàn toàn khỏi proposals (ngăn Firebase riêng: duyetchi/plans)
+let proposals = _safeArr('gb_proposals');
+let persons    = _safeArr('gb_persons');
+let sites      = _safeArr('gb_sites');
+let sheetUrl   = sanitizeSheetUrl(localStorage.getItem('gb_sheetUrl')||'');
+let plans      = _safeArr('gb_plans'); // Kế hoạch vật tư — TÁCH BIỆT hoàn toàn khỏi proposals (ngăn Firebase riêng: duyetchi/plans)
 // ── MODULE LƯƠNG (ứng lương) ── Danh sách NHÂN VIÊN ở ngăn Firebase riêng (duyetchi/employees).
 //    Các KHOẢN ỨNG LƯƠNG nay là phiếu 'proposals' có kind='salary' → dùng CHUNG toàn bộ bộ máy phiếu chi
 //    (ảnh đính kèm, duyệt D/H từng phần, chuyển, chứng từ, chia sẻ, giục, sửa/ý kiến, chống sửa sau duyệt).
-let employees   = _safeArr('dc_employees'); // danh sách nhân viên hưởng lương
+let employees   = _safeArr('gb_employees'); // danh sách nhân viên hưởng lương
 let salaryMonth = ''; // tháng đang xem ở tab Ứng lương, dạng 'YYYY-MM' (đặt ở init)
 let filter     = 'all';
 let uploadedImages = []; // mảng nhiều ảnh Zalo đính kèm (mỗi phần tử là base64 dataURL)
@@ -2160,10 +2160,11 @@ function toggleAuthPass(){
 // đó là lỗ hổng nặng. Nay: chỉ 3 email cố định (giống app 379) tự có vai; mọi người khác
 // vào vai 'other' (đề xuất), DŨNG cấp vai trong Cài đặt → Duyệt tài khoản. Luật máy chủ khóa y vậy.
 function emailToRole(email){
+  // CHỈ email Dũng. ĐỘI ĐỎ 22/09: email Hiền/Trang ở project Gia Bình CHƯA đăng ký, Firebase lại không bắt
+  // chứng minh sở hữu hộp thư → người lạ đăng ký trước là tự thành 'hien'/'trang'. Hiền, Trang, Lan, Toàn
+  // đều đăng ký như người thường rồi Dũng cấp vai trong Cài đặt.
   const em=(email||'').toLowerCase().trim();
   if(em==='vandung0802@gmail.com') return 'dung';
-  if(em==='hiensbgt@gmail.com') return 'hien';
-  if(em==='phantrang770@gmail.com') return 'trang';
   return 'other';
 }
 
@@ -2185,7 +2186,7 @@ async function doRegister(){
     const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
     const role = emailToRole(email);
     // Lưu tên + role vào Firebase theo UID
-    await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name }); // v81: update (khong set) de khong xoa mat co approved neu co
+    await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name, email: cred.user.email||'' }); // kèm EMAIL THẬT ngay từ đầu
     // Tạo OTP 6 số, lưu DB, gửi push về Dũng
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     await db.ref('duyetchi/pendingOtp/'+cred.user.uid).set({ otp, name, ts: Date.now() });
@@ -2362,7 +2363,7 @@ function initAuth(){
     try{ hidePendingApprovalScreen(); }catch(e){}
     if(user){
       currentUser = user;
-      try{ localStorage.setItem('dc_last_uid', user.uid); }catch(e){} // v147: nhớ tài khoản gần nhất để lần sau áp cache NGAY lúc mở
+      try{ localStorage.setItem('gb_last_uid', user.uid); }catch(e){} // v147: nhớ tài khoản gần nhất để lần sau áp cache NGAY lúc mở
       setTimeout(function(){ try{ _pushOutboxFlush(); }catch(e){} }, 3000); // v166: gửi nốt thông báo còn nợ trong hộp chờ (cần đã đăng nhập)
       // v95: NỐI LẠI NGAY 4 kênh dữ liệu (bị máy chủ hủy lúc đăng xuất) — trước đây phải chờ vòng
       // 30s của v91 nên D đăng nhập lại mất ~50s mới thấy dữ liệu.
@@ -2370,7 +2371,7 @@ function initAuth(){
       // Ẩn màn login NGAY khi Firebase xác nhận danh tính (trước khi đọc DB)
       document.getElementById('role-screen').style.display='none';
       // Dùng cache để vào app ngay
-      const cached = localStorage.getItem('dc_role_'+user.uid);
+      const cached = localStorage.getItem('gb_role_'+user.uid);
       if(cached){
         try {
           const { role, name, dept } = JSON.parse(cached);
@@ -2405,14 +2406,12 @@ function initAuth(){
         // v79 BẢO MẬT: suy vai trò theo email CHÍNH XÁC (bỏ 'includes(trang)' cũ — email bất kỳ chứa
         // chữ "trang" sẽ được giao diện role Trang, dù máy chủ vẫn chặn ghi. Khớp đúng luật Firebase.)
         const em = (user.email||'').toLowerCase();
-        if(em==='vandung0802@gmail.com') role='dung';
-        else if(em==='hiensbgt@gmail.com') role='hien';
-        else if(em==='phantrang770@gmail.com') role='trang';
+        if(em==='vandung0802@gmail.com') role='dung';   // Gia Bình: CHỈ email Dũng (xem emailToRole)
       }
       document.getElementById('role-screen').style.display='none';
       if(role){
         // Lưu cache
-        localStorage.setItem('dc_role_'+user.uid, JSON.stringify({ role, name: currentUserName, dept: currentDept }));
+        localStorage.setItem('gb_role_'+user.uid, JSON.stringify({ role, name: currentUserName, dept: currentDept }));
         setRole(role);
         trackOnline(user.uid, currentUserName||user.email, role);
         // v82: ghi EMAIL + LẦN ĐĂNG NHẬP gần nhất vào hồ sơ (để Dũng soi tài khoản lạ ở Cài đặt).
@@ -2444,7 +2443,7 @@ async function logoutRole(){
   // khi CÒN đăng nhập (luật cần auth). Lỗi thì bỏ qua, không chặn đăng xuất.
   try{
     if('serviceWorker' in navigator){
-      const _reg = await navigator.serviceWorker.ready;
+      const _reg = (await window._gbSwReg) || (await navigator.serviceWorker.ready);
       const _sub = await _reg.pushManager.getSubscription();
       if(_sub){
         await gbRelay('unsub', { endpoint: _sub.endpoint }).catch(()=>{});
@@ -2457,7 +2456,7 @@ async function logoutRole(){
   // được máy không đọc lại được dữ liệu phiếu hay vai trò cũ. (Giữ app_version/dc_notif_seen — vô hại.)
   try{
     Object.keys(localStorage).forEach(k=>{
-      if(k.startsWith('dc_role_') || k.startsWith('dc_nav_seen_') || k==='dc_proposals' || k==='dc_persons' || k==='dc_sites' || k==='dc_plans' || k==='dc_sheetUrl' || k==='dc_role'){
+      if(k.startsWith('gb_role_') || k.startsWith('gb_nav_seen_') || k==='gb_proposals' || k==='gb_persons' || k==='gb_sites' || k==='gb_plans' || k==='gb_sheetUrl' || k==='gb_role'){
         localStorage.removeItem(k);
       }
     });
@@ -2545,7 +2544,8 @@ function urlB64ToUint8Array(b64) {
 
 async function fcmRegister(role) {
   try {
-    const swReg = await navigator.serviceWorker.ready;
+    const swReg = (await window._gbSwReg) || (await navigator.serviceWorker.ready);
+    if (!swReg.active) await new Promise(r => setTimeout(r, 1500));   // vừa cài xong, chờ kích hoạt
     let sub = await swReg.pushManager.getSubscription();
     // Đăng ký cũ tạo bằng khoá của app 379 (bản v1–v18) → trạm Gia Bình không gửi tới được.
     // Phải huỷ rồi đăng ký lại bằng khoá mới, nếu không subscribe() sẽ báo lỗi trùng.
@@ -2567,9 +2567,9 @@ async function fcmRegister(role) {
     const subObj = { endpoint: sub.endpoint, keys: { p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))), auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth')))) } };
     // KÊNH nhận do TRẠM quyết theo vai thật trong database (client không tự chọn được kênh).
     const j = await gbRelay('sub', { sub: subObj });
-    localStorage.setItem('dc_fcm_reg', '✅ ' + (j.channel||'') + ' ' + sub.endpoint.substring(0, 20) + '...');
+    localStorage.setItem('gb_fcm_reg', '✅ ' + (j.channel||'') + ' ' + sub.endpoint.substring(0, 20) + '...');
   } catch(e) {
-    localStorage.setItem('dc_fcm_reg', '❌ ' + e.message);
+    localStorage.setItem('gb_fcm_reg', '❌ ' + e.message);
   }
 }
 
@@ -2626,7 +2626,7 @@ function updateNotifSettingsStatus() {
   if(debugEl) debugEl.innerHTML =
     `PWA mode: <b>${isStandalone ? '✅ Standalone' : '❌ Safari/Browser'}</b><br>` +
     `Notification API: <b>${perm}</b><br>` +
-    `FCM token: <b style="font-size:10px;word-break:break-all">${localStorage.getItem('dc_fcm_reg') || 'chưa đăng ký'}</b><br>` +
+    `FCM token: <b style="font-size:10px;word-break:break-all">${localStorage.getItem('gb_fcm_reg') || 'chưa đăng ký'}</b><br>` +
     `Service Workers: <span id="sw-debug">loading...</span><br>` +
     `Native Push: <span id="push-debug">loading...</span><br>` +
     `iOS: <b>${ua}</b>`;
@@ -2650,7 +2650,7 @@ function updateNotifSettingsStatus() {
 async function sendPushNotif(title, body, targetRoles) {
   if(!Array.isArray(targetRoles) || targetRoles.length === 0) return;
   // Dedup: không gửi lại cùng 1 nội dung trong vòng 10 giây
-  const key = 'dc_notif_' + btoa(unescape(encodeURIComponent(title + body))).substring(0, 20);
+  const key = 'gb_notif_' + btoa(unescape(encodeURIComponent(title + body))).substring(0, 20);
   const last = parseInt(localStorage.getItem(key) || '0');
   if(Date.now() - last < 10000) return;
   localStorage.setItem(key, Date.now());
@@ -2660,8 +2660,8 @@ async function sendPushNotif(title, body, targetRoles) {
   // gửi thành công mới gạch; gửi hụt thì lần mở app sau / lúc có mạng lại tự gửi tiếp.
   _pushOutboxAdd({ title, body, roles: targetRoles, ts: Date.now() });
 }
-function _pushOutboxLoad(){ try{ const v=JSON.parse(localStorage.getItem('dc_push_outbox')||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
-function _pushOutboxSave(a){ try{ localStorage.setItem('dc_push_outbox', JSON.stringify(a.slice(-20))); }catch(e){} }
+function _pushOutboxLoad(){ try{ const v=JSON.parse(localStorage.getItem('gb_push_outbox')||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function _pushOutboxSave(a){ try{ localStorage.setItem('gb_push_outbox', JSON.stringify(a.slice(-20))); }catch(e){} }
 function _pushOutboxAdd(item){ const box=_pushOutboxLoad(); box.push(item); _pushOutboxSave(box); _pushOutboxFlush(); }
 let _pushFlushing=false;
 async function _pushOutboxFlush(){
@@ -2695,9 +2695,9 @@ function _lightProposalsJson(){
 function save(){
   // Lưu cache cục bộ phòng khi mất mạng (chỉ phần nhẹ, không ảnh)
   try{
-    localStorage.setItem('dc_proposals', _lightProposalsJson());
-    localStorage.setItem('dc_persons',   JSON.stringify(persons));
-    localStorage.setItem('dc_sites',     JSON.stringify(sites));
+    localStorage.setItem('gb_proposals', _lightProposalsJson());
+    localStorage.setItem('gb_persons',   JSON.stringify(persons));
+    localStorage.setItem('gb_sites',     JSON.stringify(sites));
   }catch(e){ console.warn('Không lưu được cache local (bỏ qua):', e.message); }
   // Đẩy lên Firebase để đồng bộ mọi thiết bị — PHẢI luôn chạy kể cả khi cache lỗi
   pushToFirebase();
@@ -2960,7 +2960,7 @@ function initFirebaseSync(){
     _tgToken = meta.telegramBotToken || ''; _tgChatId = meta.telegramChatId || ''; // v167: cấu hình bot Telegram (chỉ nằm trong Firebase, không nằm trong file)
     if(meta.sheetUrl){
       sheetUrl = sanitizeSheetUrl(meta.sheetUrl); // v78: chặn URL lạ từ Firebase
-      localStorage.setItem('dc_sheetUrl', sheetUrl);
+      localStorage.setItem('gb_sheetUrl', sheetUrl);
       const inp = document.getElementById('inp-sheet-url');
       if(inp) inp.value = sheetUrl;
     }
@@ -2981,9 +2981,9 @@ function initFirebaseSync(){
     // thì vượt hạn mức localStorage, văng lỗi NGẦM ngay tại đây làm CHẾT cả phần render phía dưới
     // → nhận được dữ liệu mới từ máy khác mà màn hình KHÔNG cập nhật ("cập nhật không kịp thời").
     try{
-      localStorage.setItem('dc_proposals', _lightProposalsJson());
-      localStorage.setItem('dc_persons',   JSON.stringify(persons));
-      localStorage.setItem('dc_sites',     JSON.stringify(sites));
+      localStorage.setItem('gb_proposals', _lightProposalsJson());
+      localStorage.setItem('gb_persons',   JSON.stringify(persons));
+      localStorage.setItem('gb_sites',     JSON.stringify(sites));
     }catch(e){ console.warn('Không lưu được cache local (bỏ qua):', e.message); }
 
     const proposalsMap={}, imagesMap={};
@@ -3002,7 +3002,7 @@ function initFirebaseSync(){
     // lastPushedSnapshot ở trên chụp bản CHƯA sửa, nên pushToFirebase() sẽ phát hiện khác biệt và đẩy bản đã sửa lên.
     const _fixedIds = normalizeApprovedAmounts(proposals);
     if(_fixedIds.length){
-      try{ localStorage.setItem('dc_proposals', _lightProposalsJson()); }catch(e){}
+      try{ localStorage.setItem('gb_proposals', _lightProposalsJson()); }catch(e){}
       if(currentRole === 'dung'){
         // Chỉ thiết bị Dũng đẩy bản sửa lệch lên máy chủ — luật bảo mật v77 chỉ cho đúng vai trò
         // ghi lịch sử duyệt, thiết bị khác đẩy sẽ bị máy chủ từ chối làm KẸT đồng bộ cả thiết bị.
@@ -3126,7 +3126,7 @@ function initFirebaseSync(){
             hidePendingApprovalScreen(); _mergeAndRender(); return;
           }
           const _u = (_cu.email||'').toLowerCase();
-          const _isPriv = _u==='vandung0802@gmail.com' || _u==='hiensbgt@gmail.com' || _u==='phantrang770@gmail.com';
+          const _isPriv = _u==='vandung0802@gmail.com';
           if(_isPriv || v.approved === true){
             // Người có quyền đọc (3 người nhà) HOẶC đã được duyệt → denied chỉ là lỗi TẠM (token chưa gắn
             // kịp) → nối lại nhanh, TUYỆT ĐỐI không dọa "chờ duyệt".
@@ -3164,7 +3164,7 @@ function initFirebaseSync(){
       const raw = snap.val() || {};
       plans = Object.keys(raw).map(k=>raw[k]);
       _lastPlanIds = new Set(plans.map(p=>p.id)); // ghi nhận đúng id đang có TRÊN SERVER, để savePlans() xoá đúng
-      try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
+      try{ localStorage.setItem('gb_plans', JSON.stringify(plans)); }catch(e){}
       const pg = document.getElementById('page-plan');
       if(pg && pg.style.display!=='none'){
         const activeTab = document.querySelector('#page-plan .report-subtab.active')?.dataset.tab || 'list';
@@ -3179,7 +3179,7 @@ function initFirebaseSync(){
       const raw = snap.val() || {};
       employees = Object.keys(raw).map(k=>raw[k]);
       _lastEmpIds = new Set(employees.map(e=>e.id));
-      try{ localStorage.setItem('dc_employees', JSON.stringify(employees)); }catch(e){}
+      try{ localStorage.setItem('gb_employees', JSON.stringify(employees)); }catch(e){}
       const pg = document.getElementById('page-luong');
       if(pg && pg.style.display!=='none') renderLuongActive();
     }, ()=>{});
@@ -3244,9 +3244,9 @@ function initFirebaseSync(){
     proposals = data.proposals || [];
     persons   = (_metaData.persons) || [];
     sites     = (_metaData.sites)   || [];
-    localStorage.setItem('dc_proposals', JSON.stringify(proposals));
-    localStorage.setItem('dc_persons',   JSON.stringify(persons));
-    localStorage.setItem('dc_sites',     JSON.stringify(sites));
+    localStorage.setItem('gb_proposals', JSON.stringify(proposals));
+    localStorage.setItem('gb_persons',   JSON.stringify(persons));
+    localStorage.setItem('gb_sites',     JSON.stringify(sites));
     migrateAmountsToVND();
     fbInitialLoadDone=true;
     renderAll();
@@ -3420,16 +3420,43 @@ if ('serviceWorker' in navigator) {
   // KHÔNG bám theo 'controllerchange' để hiện banner: sự kiện này kích hoạt mỗi lần
   // SW mới claim trang (kể cả khi bản đã khớp) → gây banner giả + vòng lặp bấm hoài không tắt.
   // Việc phát hiện bản mới CHỈ dựa vào checkForUpdate() (so version.txt vs APP_VERSION).
-  navigator.serviceWorker.register('sw-giabinh.js').then(reg => {
-    // Sau khi đăng ký, chủ động kiểm tra update ngay
+  // PHẠM VI RIÊNG './giabinh.html'. Trước v21 đăng ký KHÔNG ghi phạm vi → rơi vào '/Duyet-Chi/' — ĐÚNG
+  // phạm vi service worker của app 379 (2 app nằm chung thư mục). Hậu quả: 2 service worker THAY NHAU
+  // chiếm chỗ mỗi lần mở app, và 2 app dùng CHUNG 1 đăng ký nhận thông báo đẩy. Từ v19 Gia Bình có khoá
+  // đẩy riêng nên nó HUỶ đăng ký của app 379 trên máy đó → máy dùng cả 2 app mất thông báo 379.
+  // Phạm vi riêng = đăng ký riêng = mỗi app một đường thông báo, không đụng nhau.
+  window._gbSwReg = navigator.serviceWorker.register('sw-giabinh.js', { scope: './giabinh.html' }).then(reg => {
     reg.update();
-  }).catch(e => console.log('SW register error:', e));
+    return reg;
+  }).catch(e => { console.log('SW register error:', e); return null; });
+  // TỰ CHỮA LÀNH máy đã chạy bản cũ: xem đăng ký ở phạm vi chung '/Duyet-Chi/'
+  window._gbSwReg.then(async () => {
+    try{
+      const broad = new URL('./', location.href).href;          // .../Duyet-Chi/
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) {
+        if (r.scope !== broad) continue;
+        const script = (r.active || r.waiting || r.installing || {}).scriptURL || '';
+        const sub = await r.pushManager.getSubscription();
+        if (sub) {
+          // Đăng ký đẩy tạo bằng KHOÁ GIA BÌNH mà nằm ở phạm vi chung = do bản cũ của app này tạo nhầm → huỷ.
+          // App 379 lần mở tới sẽ tự tạo lại đăng ký bằng khoá của nó (code bên đó: chưa có thì tạo).
+          const cur = new Uint8Array(sub.options.applicationServerKey || new ArrayBuffer(0));
+          const mine = urlB64ToUint8Array(VAPID_PUBLIC);
+          if (cur.length === mine.length && cur.every((v, i) => v === mine[i])) { try{ await sub.unsubscribe(); }catch(e){} }
+        }
+        // Service worker của Gia Bình nằm lại ở phạm vi chung (bản cũ) → gỡ. KHÔNG đụng nếu đó là sw.js của app 379.
+        if (script.indexOf('sw-giabinh.js') >= 0) { try{ await r.unregister(); }catch(e){} }
+      }
+    }catch(e){}
+  });
 }
 // Xóa badge + đóng hết notification cũ khi mở/quay lại app
 function clearAllNotifs(){
   if (navigator.clearAppBadge) navigator.clearAppBadge();
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(reg => {
+    (window._gbSwReg || navigator.serviceWorker.ready).then(reg => {
+      if (!reg) return;
       if (reg.active) reg.active.postMessage('CLEAR_BADGE');
       // Đóng hết notification đang hiện trong notification center
       reg.getNotifications().then(notifs => notifs.forEach(n => n.close())).catch(()=>{});
@@ -3471,15 +3498,15 @@ document.addEventListener('DOMContentLoaded',()=>{
   // Ẩn màn login ngay nếu có cache role — nhưng KHÔNG tự đặt tên/vai trò từ cache,
   // vì máy có thể từng đăng nhập nhiều tài khoản → dễ hiện nhầm tên người khác.
   // Để Firebase auth xác nhận đúng danh tính rồi mới setRole (đúng người đang đăng nhập).
-  const hasCachedSession = Object.keys(localStorage).some(k => k.startsWith('dc_role_'));
+  const hasCachedSession = Object.keys(localStorage).some(k => k.startsWith('gb_role_'));
   if(hasCachedSession) document.getElementById('role-screen').style.display='none';
 
   // v147 TĂNG TỐC MỞ APP: áp vai trò + dữ liệu từ cache NGAY (~1s), KHÔNG chờ Firebase Auth (5-9s/4G).
   // Chỉ áp theo dc_last_uid (tài khoản đăng nhập gần nhất trên máy này) → tránh hiện nhầm người.
   // onAuthStateChanged xong sẽ xác nhận lại: đúng người → giữ nguyên; khác/đăng xuất → tự sửa.
   try{
-    var _lu = localStorage.getItem('dc_last_uid');
-    var _rc = _lu ? localStorage.getItem('dc_role_'+_lu) : null;
+    var _lu = localStorage.getItem('gb_last_uid');
+    var _rc = _lu ? localStorage.getItem('gb_role_'+_lu) : null;
     if(_rc){
       var _r = JSON.parse(_rc);
       if(_r && _r.role){
@@ -3597,8 +3624,8 @@ function getMyPendingItems(){
   return items;
 }
 
-function getSeenIds(){ try{ return new Set(JSON.parse(localStorage.getItem('dc_notif_seen')||'[]')); }catch(e){ return new Set(); } }
-function markAllSeen(items){ localStorage.setItem('dc_notif_seen', JSON.stringify(items.map(i=>i.id))); }
+function getSeenIds(){ try{ return new Set(JSON.parse(localStorage.getItem('gb_notif_seen')||'[]')); }catch(e){ return new Set(); } }
+function markAllSeen(items){ localStorage.setItem('gb_notif_seen', JSON.stringify(items.map(i=>i.id))); }
 
 function updateNotifBadge(){
   const items = getMyPendingItems();
@@ -4250,7 +4277,7 @@ function remindApprove(id){
   // + nhãn trong báo cáo (remindReportLabel đọc từ remindBy/remindCount, không cần ghi chú).
   save();
   renderAll();
-  const pushKey = 'dc_remind_push_' + id;
+  const pushKey = 'gb_remind_push_' + id;
   const lastPush = parseInt(localStorage.getItem(pushKey)||'0');
   if(Date.now() - lastPush >= 600000){
     localStorage.setItem(pushKey, String(Date.now()));
@@ -5517,7 +5544,7 @@ function populateSelects(){
 // từng phiếu con vẫn được phép ghi riêng lẻ — đây là lỗi thật đã gặp, không phải lỗi mạng/luật).
 let _lastPlanIds = new Set();
 function savePlans(){
-  try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
+  try{ localStorage.setItem('gb_plans', JSON.stringify(plans)); }catch(e){}
   if(!fbInitialLoadDone) return; // dùng chung cờ với proposals, tránh ghi đè rác lúc mới mở app
   const updates = {};
   const nowIds = new Set();
@@ -5974,7 +6001,7 @@ async function renderApproveList(){
   try{ const os = await db.ref('duyetchi/pendingOtp').get(); if(os.exists()) otps = os.val()||{}; }catch(e){}
   // Chưa duyệt lên đầu; trong cùng nhóm thì đăng nhập gần nhất lên trên
   uids.sort((a,b)=> (data[a].approved?1:0) - (data[b].approved?1:0) || (data[b].lastLogin||0) - (data[a].lastLogin||0));
-  const KNOWN_EMAILS = ['vandung0802@gmail.com','hiensbgt@gmail.com','phantrang770@gmail.com','kimanh120311@gmail.com','phanhangbp@gmail.com','anhngocdt9@gmail.com','thaibaoo1203@gmail.com','thhdcongty@gmail.com'];
+  const KNOWN_EMAILS = ['vandung0802@gmail.com']; // Gia Bình: không có "email quen" sẵn — ai chưa duyệt đều phải soi kỹ
   el.innerHTML = `<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px">Tổng: <b>${uids.length}</b> tài khoản</div>` + uids.map(uid=>{
     const u = data[uid]||{};
     const ok = u.approved === true;
@@ -5985,9 +6012,9 @@ async function renderApproveList(){
     // v133: TIN CẬY = có trong danh sách người nhà cũ HOẶC ĐÃ ĐƯỢC DUYỆT (D bấm "Cho xem" = đã vouch).
     // Trước đây mọi email mới đều đỏ "email lạ" → thêm người mới thật (VD P.KH) cũng bị báo động giả.
     // Nay chỉ cảnh báo tài khoản CHƯA duyệt có email lạ (đúng ca cần soi: người ngoài tự đăng ký).
-    const trusted = (email && KNOWN_EMAILS.indexOf(email) >= 0) || ok;
-    const emailColor = !email ? 'var(--text-sub)' : (trusted ? 'var(--text-sub)' : '#dc2626');
-    const strangerFlag = (email && !trusted) ? ' <span style="color:#dc2626;font-weight:700">⚠️ email lạ — chưa duyệt</span>' : '';
+    const trusted = ok || (email && KNOWN_EMAILS.indexOf(email) >= 0);
+    const emailColor = trusted ? 'var(--text-sub)' : '#dc2626';
+    const strangerFlag = !trusted ? ' <span style="color:#dc2626;font-weight:700">⚠️ ' + (email ? 'chưa duyệt — kiểm tra kỹ email này' : 'CHƯA CÓ EMAIL — đừng duyệt') + '</span>' : '';
     const lastLogin = u.lastLogin ? fmtFull(u.lastLogin) : '—';
     // v124 P.KH: phòng của tài khoản — thiếu trường dept coi như Kế toán (8 người hiện tại không đổi gì)
     // Gia Bình KHÔNG chia phòng Kế toán / P.Kế hoạch (chỉ 1 công trình) → bỏ nhãn phòng
@@ -6047,6 +6074,8 @@ async function revokeUser(uid){
   if(!confirm('Thu hồi quyền XEM dữ liệu của tài khoản này? Họ sẽ không xem được phiếu cho tới khi bạn cho xem lại.')) return;
   try{ await db.ref('duyetchi/userRoles/'+uid+'/approved').set(false); showToast('⛔ Đã thu hồi quyền xem'); }
   catch(e){ showToast('❌ Không lưu được: '+e.message); }
+  // Gỡ luôn mọi đăng ký NHẬN THÔNG BÁO của họ — nếu không, người đã bị thu hồi vẫn nhận tin tài chính mãi
+  gbRelay('revoke', { uid }).catch(()=>{});
   renderApproveList();
 }
 
@@ -6093,6 +6122,7 @@ async function deleteUserAccount(uid){
   try{
     await db.ref('duyetchi/userRoles/'+uid).remove();
     db.ref('duyetchi/pendingOtp/'+uid).remove().catch(()=>{});
+    gbRelay('revoke', { uid }).catch(()=>{});   // gỡ đăng ký nhận thông báo của tài khoản vừa xoá
     showToast('🗑 Đã xóa tài khoản khỏi app');
   }catch(e){ showToast('❌ Không xóa được: '+e.message); }
   renderApproveList();
@@ -6771,7 +6801,7 @@ function saveSheet(){
   const _raw = document.getElementById('inp-sheet-url').value.trim();
   sheetUrl = sanitizeSheetUrl(_raw); // v78: chỉ nhận URL Google Apps Script hợp lệ
   if(_raw && !sheetUrl){ showToast('❌ URL không hợp lệ — phải là link Google Apps Script (https://script.google.com/macros/s/.../exec)'); return; }
-  localStorage.setItem('dc_sheetUrl',sheetUrl);
+  localStorage.setItem('gb_sheetUrl',sheetUrl);
   pushToFirebase(); // đồng bộ URL Sheets này tới mọi thiết bị khác
   if(!sheetUrl){ showToast('❌ URL không hợp lệ'); return; }
   // Dùng no-cors để tránh bị chặn, chỉ cần gọi được là OK
@@ -7165,7 +7195,7 @@ async function sendTelegramReport(){
     const r=await fetch('https://api.telegram.org/bot'+_tgToken+'/sendDocument',{method:'POST',body:fd});
     const j=await r.json().catch(()=>({}));
     if(j.ok){
-      try{ localStorage.setItem('dc_tg_last_sent', _tgTodayKey()); }catch(e){}
+      try{ localStorage.setItem('gb_tg_last_sent', _tgTodayKey()); }catch(e){}
       showToast('✅ Đã gửi báo cáo vào nhóm Telegram');
     } else showToast('❌ Telegram từ chối: '+(j.description||('HTTP '+r.status)));
   }catch(e){ showToast('❌ Lỗi gửi báo cáo: '+e.message); }
@@ -7637,7 +7667,7 @@ function _navPlanIds(){
   const f = currentRole==='dung' ? 'confirmedByD' : 'confirmedByH';
   return plans.filter(p=>(p.status==='pending'||p.status==='ordered') && !p[f]).map(p=>p.id);
 }
-function _navSeenKey(sec){ return 'dc_nav_seen_'+sec+'_'+((currentUser&&currentUser.uid)||''); }
+function _navSeenKey(sec){ return 'gb_nav_seen_'+sec+'_'+((currentUser&&currentUser.uid)||''); }
 function _navGetSeen(sec){ try{ return new Set(JSON.parse(localStorage.getItem(_navSeenKey(sec))||'[]')); }catch(e){ return new Set(); } }
 function _navMarkSeen(sec, ids){ try{ localStorage.setItem(_navSeenKey(sec), JSON.stringify(ids)); }catch(e){} }
 function _setNavBadge(id, n){
@@ -8473,7 +8503,7 @@ function salaryGroupOptions(){ return '<option value="Văn phòng">🏢 Văn ph�
 
 // ── LƯU DANH SÁCH NHÂN VIÊN (per-child update, GIỐNG savePlans — KHÔNG set() đè cả ngăn) ──
 function saveEmployees(){
-  try{ localStorage.setItem('dc_employees', JSON.stringify(employees)); }catch(e){}
+  try{ localStorage.setItem('gb_employees', JSON.stringify(employees)); }catch(e){}
   if(!fbInitialLoadDone) return;
   const updates={}, now=new Set();
   employees.forEach(e=>{ updates['duyetchi/employees/'+e.id]=e; now.add(e.id); });
@@ -8567,7 +8597,7 @@ function renderLuongActive(tab){
   else renderSalaryStats();
 }
 // v103: chế độ hiển thị tab Ứng lương — 'card' (thẻ, mặc định) | 'table' (bảng Excel). Nhớ theo máy.
-let salViewMode = (function(){ try{ return localStorage.getItem('dc_sal_view')==='table' ? 'table':'card'; }catch(e){ return 'card'; } })();
+let salViewMode = (function(){ try{ return localStorage.getItem('gb_sal_view')==='table' ? 'table':'card'; }catch(e){ return 'card'; } })();
 function _salSyncViewBtns(){
   const bc=document.getElementById('sal-view-card'), bt=document.getElementById('sal-view-table');
   if(!bc||!bt) return;
@@ -8578,7 +8608,7 @@ function _salSyncViewBtns(){
 }
 function salSetView(mode){
   salViewMode = mode==='table' ? 'table':'card';
-  try{ localStorage.setItem('dc_sal_view', salViewMode); }catch(e){}
+  try{ localStorage.setItem('gb_sal_view', salViewMode); }catch(e){}
   _salSyncViewBtns();
   renderSalaryAdvances();
 }
@@ -8666,8 +8696,8 @@ function renderEmployees(){
     <div class="card"><div class="card-body" style="padding:2px 0">`+groups[g].map(e=>rowHtml(e,false)).join('')+`</div></div>`).join('');
 }
 // ── v158 PA3: xếp danh sách nhân viên (nhớ theo máy) + tổng đã ứng theo năm + danh sách trong Cài đặt + xuất Excel ──
-let _empSortMode=(function(){ try{ return localStorage.getItem('dc_emp_sort')==='az'?'az':'group'; }catch(e){ return 'group'; } })();
-function setEmpSort(m){ _empSortMode=(m==='az')?'az':'group'; try{ localStorage.setItem('dc_emp_sort',_empSortMode); }catch(e){} _empSyncSortBtns(); renderEmployees(); }
+let _empSortMode=(function(){ try{ return localStorage.getItem('gb_emp_sort')==='az'?'az':'group'; }catch(e){ return 'group'; } })();
+function setEmpSort(m){ _empSortMode=(m==='az')?'az':'group'; try{ localStorage.setItem('gb_emp_sort',_empSortMode); }catch(e){} _empSyncSortBtns(); renderEmployees(); }
 // v159: xếp A→Z theo TÊN (chữ cuối: An, Ba, Dũng...) rồi mới tới họ đệm — đúng thói quen Việt Nam (không xếp theo họ)
 // v161: bỏ đuôi sau dấu " - " (VD "Nguyễn Thị Đào - PVA", "Lê Văn Hùng -") rồi mới lấy chữ cuối có chữ cái
 function _tenOf(s){ const core=String(s||'').split(/\s+-\s*|\s*-\s+|\s+-$/)[0]; const p=core.trim().split(/\s+/).filter(w=>/[A-Za-zÀ-ỹ]/.test(w)); return p[p.length-1]||''; }
@@ -9186,7 +9216,7 @@ function jumpToSalaryAdvance(id){
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(p.month) salaryMonth=p.month;
   // v103: về chế độ THẺ + bỏ lọc tìm kiếm để chắc chắn thấy được phiếu cần tới
-  salViewMode='card'; try{ localStorage.setItem('dc_sal_view','card'); }catch(e){}
+  salViewMode='card'; try{ localStorage.setItem('gb_sal_view','card'); }catch(e){}
   // v141: bỏ lọc (2 dropdown + ô thống kê) để chắc chắn thấy phiếu cần tới
   _lgStatFilter='all';
   const _fp=document.getElementById('sal-filter-person'); if(_fp) _fp.value='';

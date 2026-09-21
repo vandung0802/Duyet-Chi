@@ -9,3 +9,22 @@ functions/package-lock.json
 # Bien moi truong cua Cloud Functions co the chua KHOA BI MAT — khong bao gio commit
 functions/.env
 functions/.env.*
+
+# ══ FILE CA NHAN / NHAY CAM nam trong thu muc nay — repo la PUBLIC, tuyet doi khong de lot ══
+# (doi do 22/09/2026: co file mat khau nam o day ma chua bi chan; NOP-LEN.bat chi add 4 file cu the
+#  nen chua tung lot, nhung chi can 1 lan "git add ." la lo het)
+*pass*.md
+*mat*khau*
+*password*
+*.csv
+*.xlsx
+*.xls
+*.zip
+*.plugin
+*.lsp
+files/
+index_files/
+.claude/
+plugin-cau-duong/
+tien-do-pva-379/
+replace.js

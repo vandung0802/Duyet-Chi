@@ -22,6 +22,49 @@
 const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 admin.initializeApp();
+const { secretEquals } = require('./pushGuard');
+const { rtdb379 } = require('./fnState');
+
+// Khoá gửi thử Telegram: nhớ 60 giây (kể cả kết quả "chưa có khoá") → hàm bị gọi dồn dập cũng KHÔNG đọc
+// database mỗi lần. Ưu tiên nhánh bí mật fn-secrets/ (không client nào đọc được); chưa có thì dùng chỗ cũ
+// duyetchi/meta (mọi tài khoản đã duyệt đọc được — đội đỏ bắt; chuyển khoá sang fn-secrets là hết).
+const _khoaThu = {};
+async function khoaGuiThu(tag, url) {
+  const now = Date.now();
+  const c = _khoaThu[tag];
+  if (c && now - c.at < 60 * 1000) return c.v;
+  let v = null;
+  try { v = (await rtdb379().ref('fn-secrets/telegramTestKey/' + tag).once('value')).val(); } catch (e) { v = null; }
+  if (typeof v !== 'string' || !v) {
+    try { v = (await db('duyetchi/meta/telegramTestKey', url).once('value')).val(); } catch (e) { v = null; }
+  }
+  _khoaThu[tag] = { v: (typeof v === 'string' && v.length >= 16) ? v : null, at: now };
+  return _khoaThu[tag].v;
+}
+
+/**
+ * QUÉT DỌN hàng đợi thông báo (chạy kèm báo cáo 6h sáng). Bình thường hàng đợi LUÔN trống vì
+ * processPushQueue xử lý xong là tự xoá. Mục nào còn nằm lại = mồ côi (hàm lỗi/hết giờ, hoặc rác do kẻ
+ * phá ghi theo lô lớn mà bộ kích hoạt không nhận). Xoá theo lô nhỏ; thông báo đang xử lý không bị ảnh hưởng
+ * vì sự kiện onCreate đã mang sẵn dữ liệu.
+ */
+async function donHangDoiPush() {
+  const q = rtdb379().ref('push-queue');
+  let tong = 0;
+  for (let i = 0; i < 50; i++) {
+    const snap = await q.orderByKey().limitToFirst(200).once('value');
+    if (!snap.exists()) break;
+    const del = {};
+    snap.forEach((c) => { del[c.key] = null; });
+    const n = Object.keys(del).length;
+    if (!n) break;
+    await q.update(del);
+    tong += n;
+    if (n < 200) break;
+  }
+  if (tong) functions.logger.warn('Đã dọn ' + tong + ' mục mồ côi trong push-queue');
+  return tong;
+}
 
 const DB_URL = 'https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app';
 // App SỔ QUỸ GIA BÌNH dùng database RIÊNG. Gói Spark bên đó không chạy được Cloud
@@ -320,6 +363,7 @@ exports.baoCaoTelegram6h = functions
   .pubsub.schedule('0 6 * * *')
   .timeZone('Asia/Ho_Chi_Minh')
   .onRun(async () => {
+    try { await donHangDoiPush(); } catch (e) { functions.logger.warn('Dọn push-queue lỗi', e && e.message); }
     try {
       await chayBaoCao('hen-gio');
     } catch (e) {
@@ -335,11 +379,12 @@ exports.baoCaoTelegram6h = functions
  */
 exports.baoCaoTelegramTest = functions
   .region('us-central1')
-  .runWith({ memory: '256MB', timeoutSeconds: 120 })
+  .runWith({ memory: '256MB', timeoutSeconds: 120, maxInstances: 2 }) // đội đỏ: mặc định 3000 máy → bị gọi dồn là đốt tiền
   .https.onRequest(async (req, res) => {
+    res.set('Cache-Control', 'no-store');
     try {
-      const khoa = (await db('duyetchi/meta/telegramTestKey').once('value')).val();
-      if (!khoa || req.query.key !== khoa) {
+      const khoa = await khoaGuiThu('379');
+      if (!secretEquals(String(req.query.key || req.get('x-test-key') || ''), khoa)) { // so thời-gian-hằng; nhận cả header x-test-key
         res.status(403).send('Sai khoá');
         return;
       }
@@ -374,11 +419,11 @@ exports.baoCaoTelegram6hGB = functions
 /** Gửi thử bằng tay: mở URL kèm ?key=<duyetchi/meta/telegramTestKey của Gia Bình>. */
 exports.baoCaoTelegramTestGB = functions
   .region('us-central1')
-  .runWith({ memory: '256MB', timeoutSeconds: 120 })
+  .runWith({ memory: '256MB', timeoutSeconds: 120, maxInstances: 2 })
   .https.onRequest(async (req, res) => {
     try {
-      const khoa = (await db('duyetchi/meta/telegramTestKey', DB_URL_GB).once('value')).val();
-      if (!khoa || req.query.key !== khoa) {
+      const khoa = await khoaGuiThu('gb', DB_URL_GB);
+      if (!secretEquals(String(req.query.key || req.get('x-test-key') || ''), khoa)) { // so thời-gian-hằng; nhận cả header x-test-key
         res.status(403).send('Sai khoá');
         return;
       }

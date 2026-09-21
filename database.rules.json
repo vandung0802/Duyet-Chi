@@ -19,7 +19,19 @@
           // (phải giữ nguyên như cũ) — chống tự cấp quyền xem. Chỉ Dũng mới đặt/đổi approved.
           // v125 P.KH: trường dept (phòng: ketoan/kehoach/both) cũng KHÓA như approved — chỉ Dũng đổi được,
           // chống người P.Kế hoạch tự đổi mình thành Kế toán để vượt rào đọc dữ liệu (bước 5).
-          ".write": "auth != null && ((auth.uid === $uid && newData.child('approved').val() === data.child('approved').val() && newData.child('dept').val() === data.child('dept').val() && (newData.child('role').val() === 'other' || (newData.child('role').val() === 'dung' && auth.token.email === 'vandung0802@gmail.com') || (newData.child('role').val() === 'hien' && auth.token.email === 'hiensbgt@gmail.com') || (newData.child('role').val() === 'trang' && auth.token.email === 'phantrang770@gmail.com'))) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+          ".write": "auth != null && ((auth.uid === $uid && newData.child('approved').val() === data.child('approved').val() && newData.child('dept').val() === data.child('dept').val() && (newData.child('role').val() === 'other' || (newData.child('role').val() === 'dung' && auth.token.email === 'vandung0802@gmail.com') || (newData.child('role').val() === 'hien' && auth.token.email === 'hiensbgt@gmail.com') || (newData.child('role').val() === 'trang' && auth.token.email === 'phantrang770@gmail.com'))) || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+          // ── ĐỘI ĐỎ 22/09/2026: DANH SÁCH TRẮNG + GIỚI HẠN CỠ cho hồ sơ ──
+          // Trước đây hồ sơ (do chính người dùng ghi) không giới hạn gì: người lạ tự đăng ký nhồi được hàng trăm MB
+          // → làm treo trang "Duyệt tài khoản" của Dũng, đốt băng thông. Đúng 6 trường app thật sự ghi:
+          "role":      { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "name":      { ".validate": "newData.isString() && newData.val().length <= 200" },
+          // email trong hồ sơ PHẢI đúng là email đăng nhập thật (Google xác thực). Trước đây tự ghi tuỳ ý →
+          // người lạ ghi email của 1 nhân viên quen để danh sách duyệt KHÔNG báo đỏ "email lạ", lừa Dũng bấm duyệt.
+          "email":     { ".validate": "newData.isString() && newData.val().length <= 320 && (newData.val() === auth.token.email || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" },
+          "lastLogin": { ".validate": "newData.isNumber()" },
+          "approved":  { ".validate": "newData.isBoolean()" },
+          "dept":      { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "$other":    { ".validate": false }
         }
       },
 
@@ -276,7 +288,11 @@
         "$uid": {
           // Chỉ chính mình hoặc Dũng đọc/xóa OTP
           ".read": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
-          ".write": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')"
+          ".write": "auth != null && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+          "otp":    { ".validate": "newData.isString() && newData.val().length <= 10" },
+          "name":   { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "ts":     { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
         }
       },
 
@@ -284,7 +300,12 @@
         ".read": "auth != null",
         "$uid": {
           // Chỉ chính mình ghi trạng thái online của mình
-          ".write": "auth != null && auth.uid === $uid"
+          ".write": "auth != null && auth.uid === $uid",
+          "name":     { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "role":     { ".validate": "newData.isString() && newData.val().length <= 20" },
+          "since":    { ".validate": "newData.isNumber()" },
+          "lastSeen": { ".validate": "newData.isNumber()" },
+          "$other":   { ".validate": false }
         }
       }
     },
@@ -298,17 +319,57 @@
       "$role": {
         ".read": false,
         "$sub": {
-          ".write": "auth != null && ( (newData.exists() && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && ( ($role === root.child('duyetchi/userRoles').child(auth.uid).child('role').val() && $role !== 'other') || ($role === 'kt' && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'other' && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach') || ($role === 'kh' && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'other' && (root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'kehoach' || root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'both')) )) || (!newData.exists() && (data.child('uid').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true)) )"
+          ".write": "auth != null && ( (newData.exists() && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && ( ($role === root.child('duyetchi/userRoles').child(auth.uid).child('role').val() && $role !== 'other') || ($role === 'kt' && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'other' && root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() !== 'kehoach') || ($role === 'kh' && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'other' && (root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'kehoach' || root.child('duyetchi/userRoles').child(auth.uid).child('dept').val() === 'both')) )) || (!newData.exists() && (data.child('uid').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true)) )",
+          // ĐỘI ĐỎ: nội dung đăng ký nhận trước đây không kiểm gì — ghi uid của người khác để né bị dọn,
+          // hoặc nhét dữ liệu lớn làm nghẽn lượt gửi. Nay: uid PHẢI là của chính người ghi, endpoint phải https.
+          // (.validate không chạy khi XOÁ → đăng xuất / dọn kênh cũ vẫn bình thường.)
+          ".validate": "newData.hasChildren(['endpoint', 'keys', 'uid']) && newData.child('uid').val() === auth.uid && newData.child('endpoint').isString() && newData.child('endpoint').val().length <= 1000 && newData.child('endpoint').val().beginsWith('https://')",
+          "endpoint": { ".validate": true },
+          "uid":      { ".validate": true },
+          "keys": {
+            "p256dh": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "auth":   { ".validate": "newData.isString() && newData.val().length <= 100" },
+            "$o":     { ".validate": false }
+          },
+          "$other":   { ".validate": false }
         }
       }
     },
 
     "push-queue": {
-      // v83: GIỮ cho mọi tài khoản đăng nhập gửi được — vì lúc ĐĂNG KÝ (chưa duyệt) app phải gửi push
-      // báo mã OTP cho Dũng. Khóa theo approved sẽ hỏng luồng đăng ký. Rủi ro spam thông báo là nhỏ,
-      // Cloud Function nhận push có thể tự lọc thêm nếu cần.
+      // HÀNG ĐỢI THÔNG BÁO. Cloud Function processPushQueue (functions/push379.js) mới là nơi QUYẾT ĐỊNH
+      // cho gửi hay không: nó xác định người ghi qua context do Google xác thực — tài khoản CHƯA được
+      // duyệt (kể cả người lạ tự đăng ký) chỉ báo được cho Dũng (luồng mã OTP), có giới hạn tần suất.
+      // Luật ở đây là lớp chặn NGAY TẠI CỬA:
+      //  - .write đặt ở cấp $id (KHÔNG ở cấp cha như trước): chỉ được TẠO mục mới, không sửa/xoá được
+      //    mục của người khác, không ghi đè cả hàng đợi (trước đây ai đăng nhập cũng xoá sạch được).
+      //  - giới hạn kích thước rất rộng so với thực tế (nội dung = mô tả phiếu, tối đa ~5000 ký tự) —
+      //    chỉ để chặn nhồi dữ liệu cỡ MB. Hàm phía sau tự cắt còn 140/400 ký tự.
+      //  - trường lạ chỉ được là chuỗi ngắn/số/boolean (không cho nhét object lớn).
       ".read": false,
-      ".write": "auth != null"
-    }
+      "$id": {
+        ".write": "auth != null && !data.exists() && newData.exists()",
+        // ĐỘI ĐỎ: bản đầu còn lọt — 'roles' là 1 CHUỖI khổng lồ, hoặc vô số khoá con dưới roles/$other
+        // → gói tin nhiều MB không bao giờ kích hoạt hàm nên nằm lại vĩnh viễn. Nay: roles PHẢI có con,
+        // khoá con chỉ 0-9 (tối đa 10 kênh), KHÔNG nhận trường lạ → 1 gói tin hợp lệ tối đa ~10KB,
+        // luôn kích hoạt hàm và luôn được xoá. Đúng hình dạng mọi phiên bản app từng ghi: {title, body, roles[], ts}.
+        ".validate": "newData.hasChildren(['title', 'roles']) && newData.child('roles').hasChildren()",
+        "title": { ".validate": "newData.isString() && newData.val().length <= 500" },
+        "body":  { ".validate": "newData.isString() && newData.val().length <= 8000" },
+        "ts":    { ".validate": "newData.isNumber()" },
+        "roles": {
+          "$i": { ".validate": "$i.matches(/^[0-9]$/) && newData.isString() && newData.val().length <= 20" }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+
+    // ══ NHÁNH NỘI BỘ của Cloud Functions — CẤM mọi client (chỉ admin SDK chạm được) ══
+    // Vốn đã bị cấm mặc định vì không có luật nào mở; khai TƯỜNG MINH ở đây để (a) ai đọc file cũng thấy,
+    // (b) lỡ sau này có người thêm luật mở ở cấp gốc thì nhìn vào đây biết ngay là KHÔNG ĐƯỢC.
+    "fn-secrets":   { ".read": false, ".write": false },
+    "fn-state":     { ".read": false, ".write": false },
+    "gb-secrets":   { ".read": false, ".write": false },
+    "gb-push-subs": { ".read": false, ".write": false }
   }
 }
