@@ -125,7 +125,15 @@ ok('5 lan trong cua so -> dem 5', st.count === 5 && st.start === t0);
 ok('nguoi chua duyet: lan thu 5 VUOT han muc 4', st.count > g.RATE.unapproved.limit);
 st = g.nextRateState(st, t0 + W, W);
 ok('het cua so -> dem lai tu 1', st.count === 1 && st.start === t0 + W);
-ok('dong ho lui (now < start) -> dem lai, khong am', g.nextRateState({ start: 5000, count: 99 }, 1000, W).count === 1);
+// VONG 2: now < start la chuyen THAT (now chup truoc transaction, lenh thua luot chay lai tren trang thai moi hon)
+// -> phai GIU so da dem, khong duoc dat lai ve 1
+ok('now < start -> GIU so dem (99 -> 100), lui start ve now', (() => { const r = g.nextRateState({ start: 5000, count: 99 }, 1000, W); return r.count === 100 && r.start === 1000; })());
+ok('4 lenh dong thoi dau cua so (now = 1005,1004,1003,1000) -> dem du 4', (() => { let x = null; [1005, 1004, 1003, 1000].forEach((n) => { x = g.nextRateState(x, n, W); }); return x.count === 4; })());
+ok('chua duyet: cua so 1 GIO, 4 tin', g.RATE.unapproved.limit === 4 && g.RATE.unapproved.windowMs === 3600000);
+ok('email CHUA xac minh -> thong bao ghi ro canh bao', g.composeUnapproved({ title: 'x: An', body: '123456' }, 'a@b.c').body.indexOf('CHƯA xác minh') > 0 && g.composeUnapproved({ title: 'x: An', body: '123456' }, 'a@b.c', false).body.indexOf('CHƯA xác minh') > 0);
+ok('email DA xac minh -> khong canh bao', g.composeUnapproved({ title: 'x: An', body: '123456' }, 'a@b.c', true).body.indexOf('CHƯA') < 0);
+ok('emailVerified phai dung la true (chuoi "true" khong tinh)', g.composeUnapproved({ title: 'x: An', body: '123456' }, 'a@b.c', 'true').body.indexOf('CHƯA xác minh') > 0);
+ok('authorize truyen emailVerified tu sender', g.authorizeQueueItem({ title: 'Dang ky: An', body: 'ma 123456', roles: ['dung'] }, { authType: 'USER', uid: 'u1', email: 'a@b.c', emailVerified: true, profile: { approved: null } }).body.indexOf('đã xác minh') > 0);
 ok('trang thai hong (chuoi/thieu truong) -> dem lai', g.nextRateState('rac', t0, W).count === 1 && g.nextRateState({ start: 'x', count: 'y' }, t0, W).count === 1);
 ok('han muc nguoi da duyet du rong cho duyet don (>=100/10 phut)', g.RATE.approved.limit >= 100);
 ok('CO tran chung cho ca nhom chua duyet (chong tao hang loat tai khoan)', g.RATE.unapprovedGlobal && g.RATE.unapprovedGlobal.limit <= 30 && g.RATE.unapprovedGlobal.windowMs >= 3600000);

@@ -36,7 +36,7 @@ const MAX_NAME = 40;
 // Giới hạn tần suất (số thông báo / cửa sổ).
 const RATE = {
   approved: { limit: 150, windowMs: 10 * 60 * 1000 },        // rộng rãi: duyệt dồn vài chục phiếu vẫn lọt
-  unapproved: { limit: 4, windowMs: 10 * 60 * 1000 },        // 1 người chưa duyệt: chỉ có luồng mã đăng ký
+  unapproved: { limit: 4, windowMs: 60 * 60 * 1000 },        // 1 người chưa duyệt: 4 tin/GIỜ (vòng 2: cửa sổ 10 phút cho 1 tài khoản ăn hết 20 suất chung của cả giờ)
   unapprovedGlobal: { limit: 20, windowMs: 60 * 60 * 1000 }, // CẢ NHÓM chưa duyệt cộng lại (chống tạo hàng loạt tài khoản)
 };
 
@@ -88,11 +88,13 @@ function safeName(v) {
 
 /**
  * Thông báo của người CHƯA được duyệt: MÁY CHỦ tự soạn theo khuôn, không chuyển tiếp chữ của người gửi.
- * Giữ lại đúng 3 thứ: tên (chỉ chữ cái, ≤40), mã 6 số, và EMAIL ĐĂNG NHẬP THẬT do Google xác thực
- * (người gửi không giả được) → Dũng nhìn là biết tài khoản nào đang xin vào.
+ * Giữ lại đúng 3 thứ: tên (chỉ chữ cái, ≤40), mã 6 số, và EMAIL ĐĂNG NHẬP (lấy từ token, không lấy từ gói tin).
+ * VÒNG 2: email này chỉ chứng minh "tài khoản đăng nhập bằng địa chỉ đó", KHÔNG chứng minh người gửi SỞ HỮU
+ * hộp thư — đăng ký email/mật khẩu của Firebase không bắt xác minh. Người lạ đăng ký bằng email của một
+ * nhân viên CHƯA có tài khoản là hiện ra y như người thật → khi chưa xác minh thì GHI RÕ trong thông báo.
  * Không có mã 6 số → không phải luồng đăng ký → trả null (chặn).
  */
-function composeUnapproved(item, senderEmail) {
+function composeUnapproved(item, senderEmail, emailVerified) {
   const it = (item && typeof item === 'object') ? item : {};
   const m = /(?:^|[^0-9])([0-9]{6})(?:[^0-9]|$)/.exec(cleanText(it.body, 200));
   if (!m) return null;
@@ -100,7 +102,8 @@ function composeUnapproved(item, senderEmail) {
   const email = cleanText(String(senderEmail || ''), 80) || 'không rõ email';
   return {
     title: cleanText('🔐 Đăng ký mới: ' + name, MAX_TITLE),
-    body: cleanText('Mã xác nhận: ' + m[1] + ' | Tài khoản: ' + email, MAX_BODY),
+    body: cleanText('Mã xác nhận: ' + m[1] + ' | Tài khoản: ' + email
+      + (emailVerified === true ? ' (đã xác minh hộp thư)' : ' | ⚠ Email CHƯA xác minh — hỏi trực tiếp người đó trước khi duyệt'), MAX_BODY),
   };
 }
 
@@ -130,7 +133,7 @@ function authorizeQueueItem(item, sender) {
   // CHƯA được duyệt (kể cả người lạ vừa tự đăng ký): chỉ tới được Dũng, nội dung do máy chủ soạn
   roles = roles.filter((r) => r === 'dung');
   if (!roles.length) return { ok: false, reason: 'chua-duyet-khong-duoc-gui-kenh-nay' };
-  const composed = composeUnapproved(it, s.email);
+  const composed = composeUnapproved(it, s.email, s.emailVerified);
   if (!composed) return { ok: false, reason: 'chua-duyet-khong-phai-luong-dang-ky' };
   return { ok: true, tier: 'unapproved', title: composed.title, body: composed.body, roles };
 }
@@ -168,9 +171,13 @@ function keyFromHeaders(headers) {
  * @returns trạng thái mới {start, count}
  */
 function nextRateState(cur, now, windowMs) {
-  if (!cur || typeof cur.start !== 'number' || typeof cur.count !== 'number' || now - cur.start >= windowMs || now < cur.start) {
+  if (!cur || typeof cur.start !== 'number' || typeof cur.count !== 'number' || now - cur.start >= windowMs) {
     return { start: now, count: 1 };
   }
+  // VÒNG 2: now < start xảy ra THẬT — 'now' chụp trước transaction, lệnh thua lượt chạy lại trên trạng thái của
+  // lệnh thắng (chụp muộn hơn). Trước đây nhánh này đặt lại count=1 → 10 lệnh đồng thời đầu cửa sổ đều tính là
+  // "lần 1". Nay GIỮ số đã đếm; lùi start về now cũng tự chữa được start lỡ lệch về tương lai.
+  if (now < cur.start) return { start: now, count: cur.count + 1 };
   return { start: cur.start, count: cur.count + 1 };
 }
 

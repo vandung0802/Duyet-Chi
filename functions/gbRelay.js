@@ -91,7 +91,7 @@ function channelOf(role) {
 
 exports.gbRelay = functions
   .region('us-central1')
-  .runWith({ memory: '256MB', timeoutSeconds: 60, maxInstances: 5 }) // trần số máy chạy song song → bị gọi dồn dập cũng không đốt được tiền
+  .runWith({ memory: '256MB', timeoutSeconds: 60, maxInstances: 5 }) // trần số máy chạy song song → bị gọi dồn dập thì chi phí bị CHẶN TRẦN (không phải bằng 0)
   .https.onRequest(async (req, res) => {
     res.set('Cache-Control', 'no-store');
     res.set('X-Content-Type-Options', 'nosniff');
@@ -175,11 +175,12 @@ exports.gbRelay = functions
         if (!approved) {
           // Người CHƯA duyệt: chỉ tới được Dũng, và NỘI DUNG DO MÁY CHỦ SOẠN (tên + mã 6 số + email thật)
           roles = roles.filter((r) => r === 'dung');
-          const composed = guard.composeUnapproved({ title: b.title, body: b.body }, who.email);
+          const composed = guard.composeUnapproved({ title: b.title, body: b.body }, who.email, who.email_verified === true);
           if (!roles.length || !composed) { res.json({ ok: true, sent: 0, note: 'không hợp lệ' }); return; }
           title = composed.title; body = composed.body;
-          if (!(await rateAllow('gb-send-unapproved-all', 'tat-ca', guard.RATE.unapprovedGlobal))
-            || !(await rateAllow('gb-send-unapproved', uid, guard.RATE.unapproved))) {
+          // theo TỪNG tài khoản trước, qua được mới tính vào trần chung (xem push379.js)
+          if (!(await rateAllow('gb-send-unapproved', uid, guard.RATE.unapproved))
+            || !(await rateAllow('gb-send-unapproved-all', 'tat-ca', guard.RATE.unapprovedGlobal))) {
             res.status(429).json({ ok: false, error: 'Gửi quá nhanh — thử lại sau' }); return;
           }
         } else {

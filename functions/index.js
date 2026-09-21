@@ -51,7 +51,8 @@ async function khoaGuiThu(tag, url) {
 async function donHangDoiPush() {
   const q = rtdb379().ref('push-queue');
   let tong = 0;
-  for (let i = 0; i < 50; i++) {
+  const hetGio = Date.now() + 90 * 1000; // VÒNG 2: bỏ trần 50 vòng (10.000 mục/ngày) — dọn tới khi TRỐNG hoặc hết 90 giây
+  while (Date.now() < hetGio) {
     const snap = await q.orderByKey().limitToFirst(200).once('value');
     if (!snap.exists()) break;
     const del = {};

@@ -376,7 +376,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div id="otp-screen" style="display:none;position:fixed;inset:0;background:#6b3fd4;z-index:10003;align-items:center;justify-content:center;padding:24px;flex-direction:column">
   <div style="font-size:48px;margin-bottom:12px">🔐</div>
   <div style="color:#fff;font-size:18px;font-weight:800;margin-bottom:6px;text-align:center">Xác nhận đăng ký</div>
-  <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:20px;text-align:center">Mã 6 số đang hiện trong app của anh Dũng<br>(Cài đặt → Duyệt tài khoản). Liên hệ anh Dũng để lấy mã.</div>
+  <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:20px;text-align:center">Mã 6 số đang hiện trong app của anh Dũng<br>(Cài đặt → Duyệt tài khoản). Liên hệ anh Dũng để lấy mã.<br><b>Mở hộp thư email vừa đăng ký, bấm link xác minh</b> (xem cả mục Thư rác) — để anh Dũng biết đúng là bạn.</div>
   <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
     <input id="otp-input" class="form-input" placeholder="Nhập mã 6 số" inputmode="numeric" maxlength="6" style="font-size:22px;letter-spacing:8px;text-align:center;margin-bottom:10px">
     <div id="otp-error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>
@@ -1596,7 +1596,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260922-v21';
+const APP_VERSION = '20260922-v22';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -1638,7 +1638,7 @@ function doUpdateNow(){
   try{
     var jobs = [];
     if(window.caches && caches.keys){ jobs.push(caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })); }
-    if('serviceWorker' in navigator){ jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(x){ return x.unregister(); })); })); }
+    if('serviceWorker' in navigator){ jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.filter(function(x){ return String(x.scope).indexOf('giabinh.html') >= 0; }).map(function(x){ return x.unregister(); })); })); }
     if(jobs.length){ Promise.all(jobs).then(go).catch(go); return; }
   }catch(e){}
   go();
@@ -2186,7 +2186,9 @@ async function doRegister(){
     const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
     const role = emailToRole(email);
     // Lưu tên + role vào Firebase theo UID
-    await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name, email: cred.user.email||'' }); // kèm EMAIL THẬT ngay từ đầu
+    await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name, email: cred.user.email||'' }); // kèm email ĐĂNG NHẬP ngay từ đầu
+    // v22: gửi thư xác minh hộp thư (bấm link trong thư = chứng minh đúng là chủ email). Lỗi gửi thư không chặn đăng ký.
+    try{ firebase.auth().languageCode = 'vi'; await cred.user.sendEmailVerification(); }catch(e){}
     // Tạo OTP 6 số, lưu DB, gửi push về Dũng
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     await db.ref('duyetchi/pendingOtp/'+cred.user.uid).set({ otp, name, ts: Date.now() });
@@ -2417,6 +2419,7 @@ function initAuth(){
         // v82: ghi EMAIL + LẦN ĐĂNG NHẬP gần nhất vào hồ sơ (để Dũng soi tài khoản lạ ở Cài đặt).
         // update() giữ nguyên role/name/approved. Lỗi (mạng) bỏ qua, không chặn vào app.
         db.ref('duyetchi/userRoles/'+user.uid).update({ email: user.email||'', lastLogin: Date.now() }).catch(()=>{});
+        _gbSyncEmailVerified(user);
       } else {
         showUpdateRolePrompt();
       }
@@ -2443,8 +2446,8 @@ async function logoutRole(){
   // khi CÒN đăng nhập (luật cần auth). Lỗi thì bỏ qua, không chặn đăng xuất.
   try{
     if('serviceWorker' in navigator){
-      const _reg = (await window._gbSwReg) || (await navigator.serviceWorker.ready);
-      const _sub = await _reg.pushManager.getSubscription();
+      const _reg = await window._gbSwReg;   // KHÔNG lùi về .ready (có thể là service worker của app 379)
+      const _sub = _reg ? await _reg.pushManager.getSubscription() : null;
       if(_sub){
         await gbRelay('unsub', { endpoint: _sub.endpoint }).catch(()=>{});
       }
@@ -2542,9 +2545,24 @@ function urlB64ToUint8Array(b64) {
   return arr;
 }
 
+// v22: cờ "đã xác minh hộp thư" trong hồ sơ. Luật máy chủ CHỈ cho ghi true khi chính TOKEN đăng nhập nói đã xác minh
+// (không tự khai được). Làm 1 lần cho mỗi tài khoản trên mỗi máy (nhớ ở localStorage) để không tốn mạng mỗi lần mở app.
+async function _gbSyncEmailVerified(user){
+  try{
+    if(!user || localStorage.getItem('gb_ev_done') === user.uid) return;
+    await user.reload();
+    const u = firebase.auth().currentUser;
+    if(!u || !u.emailVerified) return;          // chưa bấm link trong thư → để nguyên (Dũng sẽ thấy cảnh báo đỏ)
+    await u.getIdToken(true);                   // làm mới token để máy chủ thấy email_verified = true
+    await db.ref('duyetchi/userRoles/'+u.uid+'/ev').set(true);
+    localStorage.setItem('gb_ev_done', u.uid);
+  }catch(e){}
+}
+
 async function fcmRegister(role) {
   try {
-    const swReg = (await window._gbSwReg) || (await navigator.serviceWorker.ready);
+    const swReg = await window._gbSwReg;   // KHÔNG lùi về .ready (có thể là service worker của app 379)
+    if (!swReg) throw new Error('Chưa cài được phần nhận thông báo — tải lại trang rồi thử lại');
     if (!swReg.active) await new Promise(r => setTimeout(r, 1500));   // vừa cài xong, chờ kích hoạt
     let sub = await swReg.pushManager.getSubscription();
     // Đăng ký cũ tạo bằng khoá của app 379 (bản v1–v18) → trạm Gia Bình không gửi tới được.
@@ -2613,8 +2631,8 @@ function updateNotifSettingsStatus() {
       if(swEl) swEl.innerHTML = regs.length === 0 ? '❌ Không có SW' :
         regs.map(r => `✅ ${r.scope} [${r.active ? r.active.state : 'no active'}]`).join('<br>');
     });
-    navigator.serviceWorker.ready.then(reg => {
-      return reg.pushManager.getSubscription();
+    (window._gbSwReg || Promise.resolve(null)).then(reg => {
+      return reg ? reg.pushManager.getSubscription() : null;
     }).then(sub => {
       const el = document.getElementById('push-debug');
       if(el) el.innerHTML = sub ? `✅ endpoint: ${sub.endpoint.substring(0,40)}...` : '❌ Không có push subscription';
@@ -3455,7 +3473,7 @@ if ('serviceWorker' in navigator) {
 function clearAllNotifs(){
   if (navigator.clearAppBadge) navigator.clearAppBadge();
   if ('serviceWorker' in navigator) {
-    (window._gbSwReg || navigator.serviceWorker.ready).then(reg => {
+    (window._gbSwReg || Promise.resolve(null)).then(reg => {
       if (!reg) return;
       if (reg.active) reg.active.postMessage('CLEAR_BADGE');
       // Đóng hết notification đang hiện trong notification center
@@ -6014,7 +6032,8 @@ async function renderApproveList(){
     // Nay chỉ cảnh báo tài khoản CHƯA duyệt có email lạ (đúng ca cần soi: người ngoài tự đăng ký).
     const trusted = ok || (email && KNOWN_EMAILS.indexOf(email) >= 0);
     const emailColor = trusted ? 'var(--text-sub)' : '#dc2626';
-    const strangerFlag = !trusted ? ' <span style="color:#dc2626;font-weight:700">⚠️ ' + (email ? 'chưa duyệt — kiểm tra kỹ email này' : 'CHƯA CÓ EMAIL — đừng duyệt') + '</span>' : '';
+    // v22: email chỉ cho biết họ ĐĂNG NHẬP bằng địa chỉ đó. u.ev === true = họ đã bấm link xác minh trong hộp thư (máy chủ kiểm, không tự khai được).
+    const strangerFlag = !trusted ? ' <span style="color:#dc2626;font-weight:700">⚠️ ' + (!email ? 'CHƯA CÓ EMAIL — đừng duyệt' : (u.ev === true ? 'chưa duyệt — hộp thư ĐÃ xác minh' : 'HỘP THƯ CHƯA XÁC MINH — gọi điện hỏi đúng người đó trước khi duyệt')) + '</span>' : '';
     const lastLogin = u.lastLogin ? fmtFull(u.lastLogin) : '—';
     // v124 P.KH: phòng của tài khoản — thiếu trường dept coi như Kế toán (8 người hiện tại không đổi gì)
     // Gia Bình KHÔNG chia phòng Kế toán / P.Kế hoạch (chỉ 1 công trình) → bỏ nhãn phòng
@@ -6075,7 +6094,7 @@ async function revokeUser(uid){
   try{ await db.ref('duyetchi/userRoles/'+uid+'/approved').set(false); showToast('⛔ Đã thu hồi quyền xem'); }
   catch(e){ showToast('❌ Không lưu được: '+e.message); }
   // Gỡ luôn mọi đăng ký NHẬN THÔNG BÁO của họ — nếu không, người đã bị thu hồi vẫn nhận tin tài chính mãi
-  gbRelay('revoke', { uid }).catch(()=>{});
+  gbRelay('revoke', { uid }).catch(()=>{ showToast('⚠️ Chưa gỡ được đăng ký NHẬN THÔNG BÁO của người này — bấm Thu hồi lại lần nữa khi có mạng'); });
   renderApproveList();
 }
 
@@ -6122,7 +6141,7 @@ async function deleteUserAccount(uid){
   try{
     await db.ref('duyetchi/userRoles/'+uid).remove();
     db.ref('duyetchi/pendingOtp/'+uid).remove().catch(()=>{});
-    gbRelay('revoke', { uid }).catch(()=>{});   // gỡ đăng ký nhận thông báo của tài khoản vừa xoá
+    gbRelay('revoke', { uid }).catch(()=>{ showToast('⚠️ Chưa gỡ được đăng ký nhận thông báo của tài khoản vừa xoá — kiểm tra mạng'); });
     showToast('🗑 Đã xóa tài khoản khỏi app');
   }catch(e){ showToast('❌ Không xóa được: '+e.message); }
   renderApproveList();

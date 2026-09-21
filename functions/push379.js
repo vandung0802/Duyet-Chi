@@ -113,7 +113,8 @@ async function sendToRoles(title, body, roles) {
 //  • khoá 256-bit gửi qua HEADER (x-push-key / Authorization: Bearer) — không nhận qua URL hay body
 //  • máy chủ chỉ giữ BĂM của khoá; so sánh thời-gian-hằng; sai khoá và thiếu khoá trả về y hệt nhau
 //  • kênh theo danh sách trắng, tiêu đề/nội dung bị cắt độ dài
-//  • maxInstances nhỏ → có bị gọi dồn dập cũng không đốt được tiền
+//  • maxInstances nhỏ → bị gọi dồn dập thì chi phí BỊ CHẶN TRẦN (cỡ vài USD/ngày), không phải bằng 0 —
+//    chốt cuối là cảnh báo ngân sách (Budget alert) trên Google Cloud Billing
 let _keyHash = { value: null, at: 0 };
 async function sendPushKeyHash() {
   const now = Date.now();
@@ -161,6 +162,7 @@ exports.processPushQueue = functions
         authType: (context && context.authType) || 'UNAUTHENTICATED',
         uid: auth && auth.uid,
         email: auth && auth.token && auth.token.email,
+        emailVerified: !!(auth && auth.token && auth.token.email_verified === true),
         profile: null,
       };
       if (sender.authType === 'USER' && sender.uid) {
@@ -176,9 +178,10 @@ exports.processPushQueue = functions
         if (!(await rateAllow('q379-approved', sender.uid, guard.RATE.approved))) d = { ok: false, reason: 'vuot-tan-suat-approved' };
       } else if (d.ok && d.tier === 'unapproved') {
         // ĐỘI ĐỎ: giới hạn theo TỪNG tài khoản là chưa đủ vì tài khoản tạo miễn phí → thêm TRẦN CHUNG cả nhóm.
-        // Kiểm trần chung TRƯỚC: khi đang bị dội, mỗi gói rác chỉ tốn đúng 1 lượt đếm.
-        if (!(await rateAllow('q379-unapproved-all', 'tat-ca', guard.RATE.unapprovedGlobal))) d = { ok: false, reason: 'vuot-tran-chung-chua-duyet' };
-        else if (!(await rateAllow('q379-unapproved', sender.uid, guard.RATE.unapproved))) d = { ok: false, reason: 'vuot-tan-suat-unapproved' };
+        // VÒNG 2: kiểm theo TỪNG tài khoản TRƯỚC — chỉ gói qua được mới tính vào trần chung. Thứ tự cũ (chung
+        // trước) cho 1 tài khoản ghi 20 gói là ăn hết suất của cả nhóm → Dũng mù thông báo đăng ký cả giờ.
+        if (!(await rateAllow('q379-unapproved', sender.uid, guard.RATE.unapproved))) d = { ok: false, reason: 'vuot-tan-suat-unapproved' };
+        else if (!(await rateAllow('q379-unapproved-all', 'tat-ca', guard.RATE.unapprovedGlobal))) d = { ok: false, reason: 'vuot-tran-chung-chua-duyet' };
       }
 
       if (!d.ok) {
@@ -186,8 +189,11 @@ exports.processPushQueue = functions
         console.warn(`processPushQueue CHẶN: ${d.reason} | authType=${sender.authType} uid=${sender.uid || '-'} | mode=${mode}`);
         if (mode !== 'monitor') return;
         // CHẾ ĐỘ THEO DÕI (có hạn, tối đa 24 giờ — xem fnState.js): gửi như trước đây nhưng vẫn qua danh sách
-        // trắng + cắt độ dài, và CHỈ cho người đã đăng nhập. Dùng khi nghi chặn nhầm thông báo thật.
-        if (sender.authType !== 'USER') return;
+        // trắng + cắt độ dài. Dùng khi nghi chặn nhầm thông báo thật của NHÂN VIÊN.
+        // VÒNG 2: "đã đăng nhập" KHÔNG có nghĩa là đáng tin (ai cũng tự đăng ký được) → chế độ này chỉ nới cho
+        // người ĐÃ ĐƯỢC DUYỆT. Người chưa duyệt vẫn bị chặn y như enforce — nếu không, bật monitor là mở lại
+        // đúng cái lỗ mà cả lớp khoá này sinh ra để bịt.
+        if (sender.authType !== 'USER' || !guard.isApproved(sender.profile, sender.email)) return;
         const t = guard.cleanText(item && item.title, guard.MAX_TITLE);
         const r = guard.cleanRoles(item && item.roles, guard.ROLES_379);
         if (!t || !r.length) return;

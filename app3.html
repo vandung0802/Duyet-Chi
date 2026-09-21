@@ -1434,7 +1434,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260803-v173';
+const APP_VERSION = '20260922-v174';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1476,7 +1476,7 @@ function doUpdateNow(){
   try{
     var jobs = [];
     if(window.caches && caches.keys){ jobs.push(caches.keys().then(function(ks){ return Promise.all(ks.map(function(k){ return caches.delete(k); })); })); }
-    if('serviceWorker' in navigator){ jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.map(function(x){ return x.unregister(); })); })); }
+    if('serviceWorker' in navigator){ jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){ return Promise.all(rs.filter(function(x){ return String(x.scope).indexOf('giabinh.html') < 0; }).map(function(x){ return x.unregister(); })); })); }
     if(jobs.length){ Promise.all(jobs).then(go).catch(go); return; }
   }catch(e){}
   go();
@@ -1986,7 +1986,7 @@ async function doRegister(){
     const cred = await firebase.auth().createUserWithEmailAndPassword(email, pass);
     const role = nameToRole(name);
     // Lưu tên + role vào Firebase theo UID
-    await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name }); // v81: update (khong set) de khong xoa mat co approved neu co
+    await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name, email: cred.user.email||'' }); // v81: update (khong set) de khong xoa mat co approved neu co · v174: kèm email đăng nhập
     // Tạo OTP 6 số, lưu DB, gửi push về Dũng
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     await db.ref('duyetchi/pendingOtp/'+cred.user.uid).set({ otp, name, ts: Date.now() });
@@ -2442,7 +2442,15 @@ async function _pushOutboxFlush(){
     while(box.length){
       const item=box[0];
       if(Date.now()-(item.ts||0) > 24*3600*1000){ box.shift(); _pushOutboxSave(box); continue; } // quá 1 ngày = thông báo nguội, bỏ
-      await db.ref('push-queue').push(item); // mất mạng thì lệnh chờ tới khi có mạng mới xong — gửi xong mới gạch
+      try{
+        await db.ref('push-queue').push(item); // mất mạng thì lệnh chờ tới khi có mạng mới xong — gửi xong mới gạch
+      }catch(e1){
+        // v174 BẢO MẬT: luật máy chủ nay chỉ cho tài khoản CHƯA ĐƯỢC DUYỆT ghi ĐÚNG 1 mục mang uid của mình
+        // (chống người lạ tự đăng ký rồi nhồi hàng nghìn mục vào hàng đợi). Luồng duy nhất dính: báo mã đăng ký cho Dũng.
+        const _u = firebase.auth().currentUser;
+        if(!_u) throw e1;
+        await db.ref('push-queue/'+_u.uid).set(item);
+      }
       box.shift(); _pushOutboxSave(box);
     }
   }catch(e){ /* lỗi (VD chưa đăng nhập) — giữ hộp, lần sau gửi tiếp */ }
@@ -5601,13 +5609,14 @@ async function renderApproveList(){
     const nm = esc(u.name || '(chưa đặt tên)');
     const rl = esc(u.role || 'other');
     const email = (u.email||'').toLowerCase();
-    const emailShown = email ? esc(u.email) : '(chưa ghi email — sẽ hiện sau khi họ mở app bản mới)';
+    const emailShown = email ? esc(u.email) : '(chưa ghi email)';
     // v133: TIN CẬY = có trong danh sách người nhà cũ HOẶC ĐÃ ĐƯỢC DUYỆT (D bấm "Cho xem" = đã vouch).
     // Trước đây mọi email mới đều đỏ "email lạ" → thêm người mới thật (VD P.KH) cũng bị báo động giả.
     // Nay chỉ cảnh báo tài khoản CHƯA duyệt có email lạ (đúng ca cần soi: người ngoài tự đăng ký).
     const trusted = (email && KNOWN_EMAILS.indexOf(email) >= 0) || ok;
-    const emailColor = !email ? 'var(--text-sub)' : (trusted ? 'var(--text-sub)' : '#dc2626');
-    const strangerFlag = (email && !trusted) ? ' <span style="color:#dc2626;font-weight:700">⚠️ email lạ — chưa duyệt</span>' : '';
+    const emailColor = trusted ? 'var(--text-sub)' : '#dc2626';
+    // v174: email chỉ cho biết họ ĐĂNG NHẬP bằng địa chỉ đó, KHÔNG chứng minh họ là chủ hộp thư → luôn hỏi trực tiếp trước khi duyệt
+    const strangerFlag = !trusted ? ' <span style="color:#dc2626;font-weight:700">⚠️ ' + (email ? 'email lạ — chưa duyệt. Hỏi trực tiếp người đó trước khi bấm Cho xem' : 'CHƯA CÓ EMAIL — đừng duyệt') + '</span>' : '';
     const lastLogin = u.lastLogin ? fmtFull(u.lastLogin) : '—';
     // v124 P.KH: phòng của tài khoản — thiếu trường dept coi như Kế toán (8 người hiện tại không đổi gì)
     const isKH = u.dept === 'kehoach';
