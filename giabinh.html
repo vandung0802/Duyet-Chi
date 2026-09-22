@@ -1596,7 +1596,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260922-v24';
+const APP_VERSION = '20260922-v25';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4389,16 +4389,19 @@ Không hoàn tác được — hãy kiểm tra lại bên Cân đối → Ký qu
   }
   if(!confirm('Hoàn tác lần chuyển gần nhất? (ảnh chứng từ vẫn được giữ nguyên)'+(_depId?' — Khoản ký quỹ tương ứng bên tab Cân đối cũng sẽ được gỡ.':''))) return;
   const removed = p.transfers.pop();
-  if(_depId){
-    db.ref('duyetchi/cashflow/'+_depId).remove().catch(()=>{});
-    try{ syncCashDeleteToSheet(_depId); }catch(e){}
-  }
   const totalLeft = getTotalTransferred(p);
   const officialApproved = getOfficialApprovedAmount(p) || 0;
   // Sau hoàn tác, nếu chưa chuyển đủ số đã duyệt (hoặc về 0) → không còn "đã chuyển xong"
   if(totalLeft<=0){ p.status='approved'; }
   else if(p.status==='transferred' && totalLeft < officialApproved - 0.0001){ p.status='approved'; }
   save();
+  if(_depId){
+    // v25: gỡ khoản ký quỹ SAU KHI đã đẩy phiếu lên. Luật máy chủ chỉ cho Toàn gỡ khoản p_* khi lần chuyển đó
+    // KHÔNG còn trên phiếu (các lệnh ghi đi theo thứ tự: phiếu tới máy chủ trước, khoản ký quỹ gỡ sau).
+    db.ref('duyetchi/cashflow/'+_depId).remove()
+      .then(()=>{ try{ syncCashDeleteToSheet(_depId); }catch(e){} })
+      .catch(e=>{ showToast('⚠️ Đã hoàn tác chuyển tiền nhưng CHƯA gỡ được khoản ký quỹ bên Cân đối ('+(e.message||e.code||'')+') — báo Dũng gỡ giúp'); });
+  }
   // Vẽ lại thẻ NGAY (không chờ debounce)
   _cardCache.delete(id);
   renderProposals(); renderStats(); updateNotifBadge();
@@ -8581,7 +8584,8 @@ function syncAllCashToSheet(){
 async function autoAddDepositFromProposal(p, amount){
   if(!p || p.costType !== 'kyquy') return;
   const amt = parseFloat(amount)||0; if(amt <= 0) return;
-  const id = 'p_' + p.id + '_' + (Array.isArray(p.transfers) ? p.transfers.length : 1);
+  const n = Array.isArray(p.transfers) ? p.transfers.length : 1;   // gọi SAU khi đã push lần chuyển mới → lần này nằm ở transfers[n-1]
+  const id = 'p_' + p.id + '_' + n;
   if(cashflow.some(r => r.id === id)) return;   // đã ghi rồi thì thôi
   const rec = {
     type: 'dep', amount: amt,
@@ -8589,6 +8593,7 @@ async function autoAddDepositFromProposal(p, amount){
     holder: p.person || '',
     date: ymdLocal(),
     fromProposal: p.id,                          // nhớ nguồn gốc để lần ngược lại phiếu
+    tn: String(n - 1),                           // v25: chỉ số lần chuyển — luật chỉ cho Toàn gỡ khoản này khi transfers[tn] không còn (đang hoàn tác)
     ts: Date.now(),
     by: (currentUser && currentUser.uid) || '',
     byName: getCurrentUserName() || ''
@@ -9692,19 +9697,44 @@ function renderCashList(type){
   el.innerHTML = arr.map(r => type==='in' ? cashCardIn(r) : cashCardDep(r)).join('');
 }
 
-// Ai được xóa 1 khoản: Dũng, hoặc chính người đã ghi khoản đó (luật máy chủ khóa y vậy).
-// Khoản TỰ SINH từ phiếu chi ký quỹ: không xóa ở đây — hoàn tác chuyển tiền ở phiếu thì nó tự gỡ
+// ── XOÁ KHOẢN TRONG CÂN ĐỐI (v25 — D chốt 22/09/2026) ──
+// Chỉ DŨNG (quản trị) xoá thẳng. Người khác bấm "Đề nghị xóa" → khoản CHỈ bị xoá khi đủ 3 người đồng ý:
+// Dũng + Hiền + Lan (2 tài khoản vai H&L khác nhau). Luật máy chủ khoá y vậy, không lách được từ app.
+// Khoản TỰ SINH từ phiếu chi ký quỹ: không xoá ở đây — hoàn tác chuyển tiền ở phiếu thì nó tự gỡ
 // (xóa tay sẽ làm tiền "biến mất" khỏi sổ). Ngoại lệ: phiếu gốc đã bị xóa → cho dọn.
-function cashCanDelete(r){
-  const mine = currentUser && r.by && r.by===currentUser.uid;
-  if(currentRole!=='dung' && !mine) return false;
-  if(r.fromProposal && (proposals||[]).some(p=>p.id===r.fromProposal)) return false;
-  return true;
-}
+function cashDelReq(r){ return (r && r.deleteReq && typeof r.deleteReq==='object') ? r.deleteReq : null; }
+function cashLinkedToProposal(r){ return !!(r.fromProposal && (proposals||[]).some(p=>p.id===r.fromProposal)); }
+function cashCanDelete(r){ return currentRole==='dung' && !cashLinkedToProposal(r); }
+const _CASH_BTN = 'padding:3px 10px;font-size:11px;font-weight:700;border-radius:8px;cursor:pointer;';
 function cashDelBtn(r){
-  if(cashCanDelete(r)) return `<button onclick="deleteCashRec('${sid(r.id)}')" style="padding:3px 10px;font-size:11px;font-weight:700;background:#fef2f2;color:var(--red);border:1px solid #fecaca;border-radius:8px;cursor:pointer">🗑 Xóa</button>`;
-  if(r.fromProposal) return '<span style="font-size:10px;color:var(--text-sub)">🔗 Tự ghi từ phiếu chi — muốn gỡ thì hoàn tác chuyển tiền ở phiếu</span>';
-  return '';
+  if(cashLinkedToProposal(r)) return '<span style="font-size:10px;color:var(--text-sub)">🔗 Tự ghi từ phiếu chi — muốn gỡ thì hoàn tác chuyển tiền ở phiếu</span>';
+  if(cashDelReq(r)) return '';   // đang có đề nghị xoá → hộp bên dưới lo
+  if(currentRole==='dung') return `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>`;
+  return `<button onclick="requestCashDelete('${sid(r.id)}')" title="Khoản chỉ bị xóa khi Dũng, Hiền và Lan cùng đồng ý" style="${_CASH_BTN}background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">🗑 Đề nghị xóa</button>`;
+}
+// Hộp "đang có đề nghị xoá": ai đã đồng ý, còn thiếu ai, nút cho đúng người
+function cashDelReqBox(r){
+  const q = cashDelReq(r); if(!q) return '';
+  const ok = q.ok || {}, names = q.names || {};
+  const uid = (currentUser && currentUser.uid) || '';
+  const nm = u => esc(names[u] || 'Hiền/Lan');
+  const hienDone = [ok.hien1, ok.hien2].filter(Boolean);
+  const full = !!(ok.dung && ok.hien1 && ok.hien2);
+  const parts = [ok.dung ? '✅ Dũng' : '⏳ Dũng'].concat(hienDone.map(u => '✅ ' + nm(u)));
+  for(let i = hienDone.length; i < 2; i++) parts.push('⏳ Hiền/Lan');
+  const mineDone = !!uid && (ok.dung===uid || ok.hien1===uid || ok.hien2===uid);
+  const canOk = !mineDone && (currentRole==='dung' || (currentRole==='hien' && hienDone.length < 2));
+  const canCancel = currentRole==='dung' || (!!uid && q.by===uid);
+  let btns = '';
+  if(full && (currentRole==='dung' || currentRole==='hien')) btns += `<button onclick="finishCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:var(--red);color:#fff;border:none">🗑 Đủ 3 đồng ý — Xóa</button>`;
+  else if(canOk) btns += `<button onclick="approveCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Tôi đồng ý xóa</button>`;
+  if(currentRole==='dung' && !full) btns += `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa ngay (quản trị)</button>`;
+  if(canCancel) btns += `<button onclick="cancelCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">✕ Hủy đề nghị</button>`;
+  return `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px">
+    <div style="font-weight:700;color:#92400e">🗑 ${esc(q.byName||'?')} đề nghị XÓA khoản này${q.ts?' · '+fmtFull(q.ts):''}</div>
+    <div style="color:#78350f;margin-top:3px">${full ? 'Đã đủ 3 người đồng ý' : 'Cần đủ 3 người đồng ý'}: ${parts.join(' · ')}</div>
+    ${btns ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</div>` : ''}
+  </div>`;
 }
 function cashCardIn(r){
   const src = CASH_SRC[r.src] || CASH_SRC.other;
@@ -9723,6 +9753,7 @@ function cashCardIn(r){
       <span style="font-size:10px;color:var(--text-sub)">${r.byName?'✍️ '+esc(r.byName)+' ghi':''}</span>
       ${cashDelBtn(r)}
     </div>
+    ${cashDelReqBox(r)}
   </div></div>`;
 }
 
@@ -9752,6 +9783,7 @@ function cashCardDep(r){
       ${done ? '' : `<button onclick="returnDeposit('${sid(r.id)}')" style="padding:4px 12px;font-size:12px;font-weight:700;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:8px;cursor:pointer">💰 Ghi tiền đã lấy về</button>`}
       ${cashDelBtn(r)}
     </div>
+    ${cashDelReqBox(r)}
   </div></div>`;
 }
 
@@ -9896,13 +9928,70 @@ async function returnDeposit(id){
 
 async function deleteCashRec(id){
   const r = cashflow.find(x=>x.id===id); if(!r) return;
-  if(!cashCanDelete(r)){ showToast('🔒 Chỉ Dũng hoặc người đã ghi khoản này mới xóa được'); return; }
+  if(!cashCanDelete(r)){ showToast('🔒 Chỉ Dũng xóa thẳng được — bấm "Đề nghị xóa" để Dũng, Hiền, Lan cùng duyệt'); return; }
   if(!confirm('Xóa khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?\n\nXóa rồi là mất hẳn, không lấy lại được.')) return;
   try{
     await db.ref('duyetchi/cashflow/'+id).remove();
     try{ syncCashDeleteToSheet(id); }catch(e){}
     showToast('🗑 Đã xóa');
   }catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
+}
+
+// ── ĐỀ NGHỊ XOÁ (người không phải Dũng). Ghi deleteReq lên khoản; Dũng + Hiền + Lan mỗi người bấm "đồng ý" 1 lần.
+async function requestCashDelete(id){
+  const r = cashflow.find(x=>x.id===id); if(!r) return;
+  if(currentRole==='dung') return deleteCashRec(id);
+  if(cashLinkedToProposal(r)){ showToast('🔗 Khoản này gắn với phiếu chi — hoàn tác chuyển tiền ở phiếu thì nó tự gỡ'); return; }
+  if(cashDelReq(r)){ showToast('Đã có đề nghị xóa rồi — chờ đủ người đồng ý'); return; }
+  if(!confirm('Đề nghị XÓA khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?\n\nKhoản chỉ bị xóa khi đủ 3 người đồng ý: Dũng, Hiền và Lan.')) return;
+  const uid = (currentUser && currentUser.uid) || '', name = getCurrentUserName() || '';
+  const q = { by: uid, byName: name, ts: Date.now(), names: {} };
+  q.names[uid] = name;
+  if(currentRole==='hien') q.ok = { hien1: uid };   // người đề nghị là Hiền/Lan → tính luôn là 1 phiếu đồng ý
+  try{
+    await db.ref('duyetchi/cashflow/'+id+'/deleteReq').set(q);
+    showToast('📨 Đã gửi đề nghị xóa — chờ Dũng, Hiền, Lan đồng ý');
+    sendPushNotif('🗑 Đề nghị xóa khoản '+(r.type==='in'?'THU':'ký quỹ'), name+': "'+(r.desc||'')+'" '+fmtVND(r.amount)+' — cần Dũng, Hiền, Lan đồng ý', ['dung','hien']);
+  }catch(e){ showToast('❌ Không gửi được: '+(e.message||e.code||'')); }
+}
+// Dũng / Hiền / Lan bấm đồng ý. Ô: dung | hien1 | hien2 (2 tài khoản H&L khác nhau). Đủ 3 ô → xoá luôn.
+async function approveCashDelete(id){
+  const r = cashflow.find(x=>x.id===id), q = cashDelReq(r); if(!r || !q) return;
+  const uid = (currentUser && currentUser.uid) || '', name = getCurrentUserName() || '';
+  const ok = q.ok || {};
+  if(ok.dung===uid || ok.hien1===uid || ok.hien2===uid){ showToast('Bạn đã đồng ý rồi'); return; }
+  let slot = null;
+  if(currentRole==='dung') slot = 'dung';
+  else if(currentRole==='hien') slot = !ok.hien1 ? 'hien1' : (!ok.hien2 ? 'hien2' : null);
+  if(!slot){ showToast('🔒 Chỉ Dũng, Hiền, Lan mới đồng ý được (và đã đủ người)'); return; }
+  if(!confirm('Đồng ý XÓA khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?')) return;
+  const base = 'duyetchi/cashflow/'+id+'/deleteReq/';
+  const write = async(sl)=>{ const up = {}; up[base+'ok/'+sl] = uid; up[base+'names/'+uid] = name; await db.ref().update(up); };
+  try{
+    try{ await write(slot); }
+    catch(e){ if(slot==='hien1' && !ok.hien2) await write('hien2'); else throw e; }   // 2 người bấm cùng lúc → nhường ô 1, lấy ô 2
+    const now = (await db.ref(base+'ok').get()).val() || {};
+    if(now.dung && now.hien1 && now.hien2){ await finishCashDelete(id, true); return; }
+    showToast('✅ Đã ghi đồng ý của bạn — còn chờ người khác');
+    sendPushNotif('✅ '+name+' đồng ý xóa khoản', '"'+(r.desc||'')+'" '+fmtVND(r.amount)+' — còn thiếu '+(3-[now.dung,now.hien1,now.hien2].filter(Boolean).length)+' người', ['dung','hien']);
+  }catch(e){ showToast('❌ Không ghi được: '+(e.message||e.code||'')); }
+}
+// Đủ 3 đồng ý → xoá thật (Dũng hoặc Hiền/Lan bấm; luật máy chủ tự kiểm lại đủ 3 ô)
+async function finishCashDelete(id, silent){
+  const r = cashflow.find(x=>x.id===id), q = cashDelReq(r); if(!r || !q) return;
+  if(!silent && !confirm('Đã đủ 3 người đồng ý. Xóa hẳn khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?')) return;
+  try{
+    await db.ref('duyetchi/cashflow/'+id).remove();
+    try{ syncCashDeleteToSheet(id); }catch(e){}
+    showToast('🗑 Đã xóa (đủ 3 người đồng ý)');
+    sendPushNotif('🗑 Đã xóa khoản '+(r.type==='in'?'THU':'ký quỹ'), '"'+(r.desc||'')+'" '+fmtVND(r.amount)+' — Dũng, Hiền, Lan đã đồng ý', ['dung','hien','toan']);
+  }catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
+}
+async function cancelCashDelete(id){
+  const r = cashflow.find(x=>x.id===id), q = cashDelReq(r); if(!r || !q) return;
+  if(!confirm('Hủy đề nghị xóa khoản "'+(r.desc||'')+'"? (khoản vẫn giữ nguyên)')) return;
+  try{ await db.ref('duyetchi/cashflow/'+id+'/deleteReq').remove(); showToast('✕ Đã hủy đề nghị xóa'); }
+  catch(e){ showToast('❌ Không hủy được: '+(e.message||e.code||'')); }
 }
 
 // ── Chấm đỏ trên nút Cân đối khi có khoản ký quỹ treo quá 6 tháng ──

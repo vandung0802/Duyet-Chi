@@ -156,11 +156,42 @@
         "$id": {
           // KHÔNG đặt .validate ở đây: ghi cọc lấy về chỉ đụng $id/returned (không có
           // type/amount) — validate của cha vẫn chạy khi ghi con nên sẽ chặn nhầm.
-          // Quyền đã được .write gác đủ rồi.
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || data.child('by').val() === auth.uid)",
-          // VÒNG 2: khoá "chỉ Dũng hoặc NGƯỜI GHI mới xoá" từng lách được bằng cách ghi đè by = uid của mình rồi xoá.
-          // (KHÔNG đặt .validate ở cấp $id — ghi nhánh con returned sẽ bị chặn nhầm; đặt ở đúng trường by.)
-          "by": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" }
+          // ── XOÁ KHOẢN (v25, D chốt 22/09/2026): "mọi nút xoá trong Cân đối phải được D, H, L đồng ý; riêng D xoá thẳng" ──
+          //  • Dũng (quản trị): xoá thẳng.
+          //  • Hiền / Lan: chỉ xoá được khi đề nghị xoá đã có ĐỦ 3 phiếu đồng ý ở deleteReq/ok: dung + hien1 + hien2
+          //    (hien1 ≠ hien2 = hai tài khoản vai H&L khác nhau, tức Hiền VÀ Lan).
+          //  • Toàn: chỉ được gỡ khoản ký quỹ TỰ SINH từ phiếu chi (id p_<phiếu>_<lần>) khi lần chuyển tương ứng
+          //    (transfers/<tn>) đã KHÔNG còn trên phiếu — tức đang hoàn tác chuyển tiền; không gỡ được khoản còn gắn tiền thật.
+          //  • Người khác (kể cả người đã ghi khoản đó): KHÔNG xoá được — chỉ ghi được đề nghị xoá (deleteReq).
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && data.child('deleteReq/ok/dung').exists() && data.child('deleteReq/ok/hien1').exists() && data.child('deleteReq/ok/hien2').exists()) || (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'toan' && $id.beginsWith('p_') && data.child('fromProposal').isString() && data.child('tn').isString() && !root.child('duyetchi/proposals').child(data.child('fromProposal').val()).child('transfers').child(data.child('tn').val()).exists()))",
+          // VÒNG 2: người ghi ('by') bất biến; tạo mới phải = chính mình.
+          "by": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
+          // v25: NỘI DUNG khoản đóng băng sau khi ghi (chỉ Dũng sửa) — nếu không, "xoá phải 3 người duyệt" bị lách
+          // bằng cách sửa số tiền về 0. App không có màn sửa khoản nên không chặn nhầm gì.
+          "type":         { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
+          "amount":       { ".validate": "(root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000000" },
+          "desc":         { ".validate": "(root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (!newData.isString() || newData.val().length <= 2000)" },
+          "date":         { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
+          "src":          { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
+          "holder":       { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
+          "fromProposal": { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
+          "tn":           { ".validate": "(root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && newData.isString() && newData.val().length <= 4" },
+          "byName":       { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
+          // ĐỀ NGHỊ XOÁ: ai đã duyệt cũng gửi được; từng phiếu đồng ý = uid của CHÍNH người bấm, đúng vai, ghi rồi không đổi.
+          // (Xoá phiếu đồng ý / huỷ đề nghị thì luật không cản — chỉ làm CHẬM việc xoá, không làm mất tiền.)
+          "deleteReq": {
+            "by":     { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
+            "byName": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "ts":     { ".validate": "newData.isNumber()" },
+            "names":  { "$u": { ".validate": "newData.isString() && newData.val().length <= 200" } },
+            "ok": {
+              "dung":  { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" },
+              "hien1": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && newData.val() !== newData.parent().child('hien2').val())" },
+              "hien2": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && newData.val() !== newData.parent().child('hien1').val())" },
+              "$o":    { ".validate": false }
+            },
+            "$o": { ".validate": false }
+          }
         }
       },
 
