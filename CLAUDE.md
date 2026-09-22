@@ -22,3 +22,15 @@ node -e "const fs=require('fs'),vm=require('vm');const h=fs.readFileSync('app3.h
 ## Người dùng
 - User là "D" (Dũng, vandung0802@gmail.com) — không rành kỹ thuật, trả lời bằng tiếng Việt, ngắn gọn, không hiện suy nghĩ dài dòng.
 - 2 file `LAY-BAN-MOI.bat` (= git pull) và `NOP-LEN.bat` (= commit+push) là để user tự bấm đúp khi không dùng Claude.
+
+## Dùng chung 3 máy (từ 22/09/2026) — đường dẫn repo MỖI MÁY KHÁC NHAU, đừng ghi cứng
+- Code: chỉ qua GitHub (repo này + `tien-do-pva-379` lồng bên trong + `vandung0802.github.io`). Máy này ở đâu thì dùng `cwd` hiện tại, không đoán ổ đĩa.
+- Mọi thứ KHÔNG phải code nằm ở OneDrive `%OneDrive%\Claude code PVA\` (tên có dấu cách → luôn bọc ngoặc kép):
+  - `brain\` = trí nhớ Claude (bản chính, trỏ bằng `autoMemoryDirectory` trong `~/.claude/settings.json`). Đừng ghi vào `~/.claude/projects/*/memory` cũ.
+  - `skills\` = BẢN CHÍNH 3 skill cầu đường. Sửa skill thì sửa ở đây, rồi bảo D bấm lại `CAI-MAY.bat` trên máy khác.
+  - `tai-lieu\` = Excel mẫu, .lsp AutoCAD, Apps Script, ghi chú. File mới không phải app → để vào đây, KHÔNG để trong repo.
+  - `backups\` = backup DB hằng ngày 12:30 (tác vụ `PVA-Backup`, script `scripts/backup-db.ps1`, bỏ qua nếu hôm nay đã có). `env\` = khóa app Tiến độ.
+  - `CAI-MAY.bat` (cài máy mới: Git/Node/clone/skill/trí nhớ) và `CAI-BACKUP.bat` (tạo tác vụ backup, cần đăng nhập Firebase 1 lần).
+- Nếu phiên này thấy `autoMemoryDirectory` chưa trỏ vào OneDrive hoặc thiếu skill → bảo D bấm đúp `CAI-MAY.bat`, không tự sửa settings.
+- Bẫy đã gặp: Task Scheduler + đường dẫn có dấu cách (`C:\Users\Vo Van Dung`) → tác vụ chết im lặng; file gọi phải ở `C:\Users\Public\PVA\`.
+- Mật khẩu: KHÔNG có file mật khẩu trong repo hay OneDrive; không tạo, không chép. Chi tiết đầy đủ: trí nhớ `project_dong_bo_3_may.md`.
