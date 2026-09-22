@@ -16,6 +16,8 @@ if (-not (Test-Path $backupDir)) { New-Item -ItemType Directory -Path $backupDir
 
 $stamp = Get-Date -Format 'yyyy-MM-dd'
 $out   = Join-Path $backupDir "backup-$stamp.json"
+# 3 may cung chay: may nao lam truoc thi may sau bo qua (file hom nay da co va khong rong)
+if ((Test-Path $out) -and ((Get-Item $out).Length -ge 100)) { Write-Output "Bo qua: hom nay da co $out"; exit 0 }
 
 # CHI sao luu nhanh du lieu nghiep vu /duyetchi — KHONG sao luu goc "/".
 # Tu 22/09/2026 goc database co them cac nhanh noi bo cua Cloud Functions: fn-secrets, gb-secrets
