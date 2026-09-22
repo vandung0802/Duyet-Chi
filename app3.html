@@ -753,10 +753,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div style="font-size:12px;color:#1b5e20;font-weight:700;margin-bottom:8px">🟢 Đang online</div>
         <div id="online-users-list" style="font-size:13px;color:var(--text)">Đang tải...</div>
       </div>
-      <div id="admin-reset-section" style="display:none;margin-bottom:12px;padding:10px;background:#fde8e8;border-radius:8px">
-        <div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:6px">⚠️ Chỉ dành cho Admin (D)</div>
-        <button onclick="adminResetAllRoles()" style="width:100%;padding:8px;font-size:13px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">🗑 Xóa toàn bộ dữ liệu đăng nhập (userRoles)</button>
-      </div>
       <div id="admin-migrate-section" style="display:none;margin-bottom:12px;padding:10px;background:#eff6ff;border-radius:8px">
         <div style="font-size:12px;color:var(--blue);font-weight:700;margin-bottom:6px">🖼 Chuyển ảnh cũ lên Kho ảnh (chỉ D — chạy 1 lần)</div>
         <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Ảnh của các phiếu cũ vẫn nằm trong database làm app nặng. Nút này chuyển tuần tự từng phiếu lên Kho ảnh (database chỉ giữ link). Có thể Dừng rồi chạy tiếp sau. Nên chạy lúc ít người dùng.</div>
@@ -1439,7 +1435,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260922-v177';
+const APP_VERSION = '20260922-v178';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -5612,13 +5608,6 @@ function showPendingApprovalScreen(){
   document.body.appendChild(div);
 }
 
-async function adminResetAllRoles(){
-  if(currentRole !== 'dung'){ showToast('Chỉ D mới làm được'); return; }
-  if(!confirm('Xóa toàn bộ dữ liệu vai trò của tất cả người dùng?\nMọi người phải đăng ký lại từ đầu.')) return;
-  await db.ref('duyetchi/userRoles').remove();
-  showToast('✅ Đã xóa toàn bộ userRoles');
-}
-
 // v81 BẢO MẬT: danh sách tài khoản + trạng thái "được xem dữ liệu". Chỉ Dũng đọc được cả node
 // userRoles (luật cho phép). Người CHƯA duyệt hiện nút "Cho xem"; người đã duyệt hiện nút "Thu hồi".
 async function renderApproveList(){
@@ -5788,9 +5777,6 @@ function renderSettings(){
   // Điền dropdown cập nhật tên
   const selRole = document.getElementById('update-role-name');
   if(selRole) selRole.innerHTML = '<option value="">-- Chọn tên của bạn --</option>'+persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
-  // Hiện nút admin reset chỉ cho D
-  const adminSec = document.getElementById('admin-reset-section');
-  if(adminSec) adminSec.style.display = currentRole==='dung' ? 'block' : 'none';
   // Mục chuyển ảnh cũ lên Kho ảnh — chỉ D thấy; hiện số phiếu còn ảnh trong database
   const migSec = document.getElementById('admin-migrate-section');
   if(migSec){
