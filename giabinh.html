@@ -180,18 +180,6 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 
 /* Form */
 .form-group{margin-bottom:12px;display:block;width:100%;clear:both}
-/* Dải QUY TRÌNH 4 bước ở đầu tab Đề xuất — người mới nhìn là biết tiền đi qua những ai, việc của mình là gì */
-.flow-strip{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:10px 12px;margin-bottom:8px}
-.flow-steps{display:flex;align-items:stretch;gap:4px}
-.flow-step{flex:1;min-width:0;text-align:center;border-radius:10px;padding:6px 4px;background:var(--gray-light);border:1.5px solid transparent}
-.flow-step.me{background:var(--blue-light);border-color:var(--blue)}
-.flow-step .fs-n{font-size:11px;font-weight:800;color:var(--text-sub)}
-.flow-step.me .fs-n{color:var(--blue-dark)}
-.flow-step .fs-t{font-size:12px;font-weight:800;color:var(--text);line-height:1.25;word-break:normal}
-.flow-step .fs-s{font-size:10px;color:var(--text-sub);line-height:1.2}
-.flow-arrow{align-self:center;color:var(--text-sub);font-size:12px;flex-shrink:0}
-.flow-hint{margin-top:8px;font-size:12.5px;line-height:1.5;color:var(--text);background:#f0fdf4;border-left:3px solid var(--blue);border-radius:6px;padding:7px 10px}
-.flow-toggle{background:none;border:none;color:var(--text-sub);font-size:11px;font-weight:700;cursor:pointer;padding:2px 0}
 .tab-desc{font-size:12px;color:var(--text-sub);padding:0 14px 10px;line-height:1.45}
 .form-label{font-size:12px;font-weight:700;color:var(--text);margin-bottom:5px;display:block;width:100%;clear:both;line-height:1.4}
 .req{color:var(--red);margin-left:2px}
@@ -604,7 +592,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- v93 GỬI ẢNH ZALO: 2 banner nhắc — ẩn mặc định, chỉ hiện đúng người (T / người đề xuất). MODULE THÊM MỚI, không đụng gì cũ. -->
   <div id="zalo-t-banner" onclick="openZaloListModal('t')" style="display:none;background:#fef2f2;border:1.5px solid #fecaca;color:#b91c1c;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;margin-bottom:8px;cursor:pointer"></div>
   <div id="zalo-p-banner" onclick="openZaloListModal('p')" style="display:none;background:#eff6ff;border:1.5px solid #bfdbfe;color:#1d4ed8;border-radius:10px;padding:9px 12px;font-size:13px;font-weight:700;margin-bottom:8px;cursor:pointer"></div>
-  <div class="flow-strip" id="flow-strip"></div>
   <div class="stats-grid" id="stats-grid">
     <div class="stat-box active" data-f="all" onclick="setFilter('all',this)">
       <div class="stat-row"><div class="stat-val" id="st-all">0</div><div class="stat-lbl">Tất cả</div></div>
@@ -1596,7 +1583,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260922-v25';
+const APP_VERSION = '20260922-v26';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2480,38 +2467,6 @@ function checkNotifBanner() {
 }
 
 // Dải quy trình + "việc của bạn" theo vai. Thu gọn được (nhớ theo máy) để người quen rồi đỡ vướng mắt.
-function renderFlowStrip(){
-  const el = document.getElementById('flow-strip'); if(!el) return;
-  const mine = currentRole==='dung' ? 'dung' : currentRole==='hien' ? 'hien' : currentRole==='toan' ? 'toan' : 'other';
-  let hidden = false; try{ hidden = localStorage.getItem('gb_flow_hide')==='1'; }catch(e){}
-  if(hidden){
-    el.innerHTML = '<button class="flow-toggle" onclick="toggleFlowStrip(false)">ⓘ Xem quy trình: Đề xuất → Dũng duyệt → Hiền/Lan duyệt → Toàn chuyển tiền</button>';
-    return;
-  }
-  const steps = [
-    {k:'other', n:'Bước 1', t:'Đề xuất chi',       s:'ai cũng tạo được'},
-    {k:'dung',  n:'Bước 2', t:'Dũng duyệt',        s:'nút D'},
-    {k:'hien',  n:'Bước 3', t:'Hiền / Lan duyệt',  s:'nút H&L · 1 người là đủ'},
-    {k:'toan',  n:'Bước 4', t:'Toàn chuyển tiền',  s:'nút T · kèm ảnh chứng từ'},
-  ];
-  const HINT = {
-    other: '👉 <b>Việc của bạn:</b> bấm <b>➕ Thêm phiếu chi mới</b> để đề xuất. Phiếu đi hết 4 bước thì tiền được chuyển — mỗi bước app đều báo cho bạn.',
-    dung:  '👉 <b>Việc của bạn (bước 2):</b> mở phiếu đang <b>Chờ duyệt</b> → bấm nút <b>D · Bấm để duyệt</b>, hoặc <b>✕ Từ chối</b>. Xem ô "Còn được tiêu" trong tab <b>Cân đối</b> trước khi duyệt khoản lớn.',
-    hien:  '👉 <b>Việc của bạn (bước 3):</b> mở phiếu đang chờ → bấm nút <b>H&L · Bấm để duyệt</b> (thường là sau Dũng, nhưng <b>không bắt buộc chờ Dũng</b>). Hiền hoặc Lan, <b>một người duyệt là đủ</b>; phiếu ghi tên đúng người đã bấm.',
-    toan:  '👉 <b>Việc của bạn (bước 4):</b> phiếu <b>đã có Hiền/Lan duyệt</b> (nút H&L) là chuyển được → chuyển khoản xong bấm nút <b>T · Bấm để chuyển</b> rồi tải ảnh chứng từ. Cuối ngày nhập số dư ngân hàng ở <b>Cân đối → Sổ quỹ</b> để đối chiếu.'
-  };
-  el.innerHTML = '<div class="flow-steps">' + steps.map((st,i)=>
-      (i?'<span class="flow-arrow">▶</span>':'') +
-      `<div class="flow-step${st.k===mine?' me':''}"><div class="fs-n">${st.n}${st.k===mine?' · BẠN':''}</div><div class="fs-t">${st.t}</div><div class="fs-s">${st.s}</div></div>`
-    ).join('') + '</div>' +
-    `<div class="flow-hint">${HINT[mine]}</div>` +
-    '<div style="text-align:right;margin-top:4px"><button class="flow-toggle" onclick="toggleFlowStrip(true)">Đã hiểu — thu gọn ▲</button></div>';
-}
-function toggleFlowStrip(hide){
-  try{ localStorage.setItem('gb_flow_hide', hide?'1':'0'); }catch(e){}
-  renderFlowStrip();
-}
-
 function setRole(role, skipFcm){
   currentRole = role;
   _cardCache.clear();
@@ -2526,7 +2481,6 @@ function setRole(role, skipFcm){
   }
   checkNotifBanner();
   renderAll();
-  try{ renderFlowStrip(); }catch(e){}
   populateSelects();
   try{ _applyDeptView(); }catch(e){} // v125: hiện/ẩn nút P.KH theo vai trò + phòng
   // Trang vừa vào app (đã đăng nhập xong) → nhắc các khoản chờ chuyển nếu dữ liệu đã tải xong
