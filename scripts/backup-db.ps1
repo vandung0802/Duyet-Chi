@@ -8,6 +8,8 @@ $proj      = 'duyetchi-pva379'
 # Thu muc goc = thu muc cha cua scripts/ (tu suy, khong hardcode path co dau tieng Viet)
 $root      = Split-Path -Parent $PSScriptRoot
 $backupDir = Join-Path $root 'backups'
+# Tu 22/09/2026: co OneDrive thi ghi thang vao "Claude code PVA\backups" (dung chung 3 may); khong co thi giu local
+if ($env:OneDrive -and (Test-Path (Join-Path $env:OneDrive 'Claude code PVA'))) { $backupDir = Join-Path $env:OneDrive 'Claude code PVA\backups' }
 $firebase  = Join-Path $env:APPDATA 'npm\firebase.cmd'
 
 if (-not (Test-Path $backupDir)) { New-Item -ItemType Directory -Path $backupDir | Out-Null }
