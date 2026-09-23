@@ -502,6 +502,93 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 .ab-mid-label{font-size:12px}
 .chat-open-link{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;font-size:11.5px;font-weight:600;background:var(--surface-2);color:var(--text-3);border:1px dashed var(--line-strong);border-radius:var(--radius-pill);cursor:pointer}
 .chat-open-link .ic{width:14px;height:14px}
+/* ── Cân đối: bảng sao kê ── */
+.stmt{padding:2px 14px 12px}
+.stmt-row{padding:9px 0;border-bottom:1px solid var(--line)}
+.stmt-line{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.stmt-label{font-size:13.5px;font-weight:600;color:var(--text)}
+.stmt-val{font-size:15px;font-weight:700;white-space:nowrap}
+.stmt-sub{font-size:11.5px;color:var(--text-3);line-height:1.45;margin-top:3px}
+.stmt-srcs{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:3px;font-size:11.5px;color:var(--text-2)}
+.stmt-srcs b{font-weight:700}
+.is-in{color:var(--accent-strong)} .is-out{color:var(--red)} .is-dep{color:var(--amber)}
+.stmt-total{padding:12px 0 10px;border-bottom:1px solid var(--line)}
+.stmt-total-label{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3)}
+.stmt-total-val{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-top:2px;white-space:nowrap}
+.stmt-hero{margin:10px -14px -12px;padding:12px 14px 14px;background:var(--accent-soft);border-bottom:none;border-radius:0 0 var(--radius-lg) var(--radius-lg)}
+.stmt-hero .stmt-total-label,.stmt-hero .stmt-sub{color:var(--accent-strong)}
+.stmt-hero .stmt-sub{opacity:.85}
+.stmt-alert{margin-top:10px;padding:8px 10px;background:var(--red-soft);color:var(--red);border-radius:8px;font-size:12.5px;font-weight:700;display:flex;gap:6px;align-items:center}
+.cash-actions{display:flex;gap:8px;padding:10px 12px}
+.cash-actions .btn-full{font-size:14px;min-height:44px;padding:0 6px;flex:1}
+/* mục thu / ký quỹ */
+.cash-item{padding:11px 13px}
+.ci-main{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.ci-body{min-width:0;flex:1}
+.ci-title{font-size:14.5px;font-weight:700;line-height:1.3;word-break:break-word}
+.ci-meta{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:12px;color:var(--text-3);margin-top:3px}
+.ci-meta > span{display:inline-flex;align-items:center;gap:4px}
+.ci-meta .ic{width:13px;height:13px;opacity:.75}
+.ci-src{font-weight:700}
+.ci-right{text-align:right;flex-shrink:0}
+.ci-amt{font-size:16px;font-weight:800;white-space:nowrap;letter-spacing:-.2px}
+.ci-amt-in{color:var(--accent-strong)} .ci-amt-dep{color:var(--amber)} .ci-amt-done{color:var(--text-4)}
+.ci-sub{font-size:11px;color:var(--text-3);white-space:nowrap;margin-top:1px}
+.ci-note{margin-top:8px;padding:6px 9px;border-radius:8px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.ci-note .ic{width:15px;height:15px}
+.ci-note-ok{background:var(--accent-soft);color:var(--accent-strong)}
+.ci-note-warn{background:var(--amber-soft);color:var(--amber)}
+.ci-actions{display:flex;gap:6px;margin-top:9px;justify-content:flex-end;flex-wrap:wrap;align-items:center}
+.ci-linked{font-size:11px;color:var(--text-3);display:inline-flex;align-items:center;gap:4px;margin-right:auto;line-height:1.35}
+.ci-stale{border-left:3px solid var(--amber)}
+.btn-xs{display:inline-flex;align-items:center;gap:5px;min-height:32px;padding:0 11px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;border:1px solid transparent;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.btn-xs .ic{width:14px;height:14px}
+.btn-xs:active{transform:scale(.98)}
+.btn-xs-primary{background:var(--accent);color:#fff}
+.btn-xs-danger{background:var(--red-soft);color:var(--red);border-color:var(--red-line)}
+.btn-xs-danger-solid{background:var(--red);color:#fff}
+.btn-xs-warn{background:var(--amber-soft);color:var(--amber);border-color:var(--amber-line)}
+.btn-xs-ghost{background:#fff;color:var(--text-2);border-color:var(--line-strong)}
+.delreq{margin-top:9px;padding:9px 11px;background:var(--amber-soft);border:1px solid var(--amber-line);border-radius:10px;font-size:12.5px}
+.delreq-title{font-weight:700;color:var(--amber)}
+.delreq-who{margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--text-2)}
+.delreq-who span{display:inline-flex;align-items:center;gap:3px}
+.delreq-who .ic{width:14px;height:14px}
+.delreq-actions{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;justify-content:flex-end}
+/* đối soát bên góp */
+.srcs{width:100%;border-collapse:collapse;font-size:13.5px}
+.srcs td{padding:8px 0;border-bottom:1px solid var(--line)}
+.srcs td:last-child{text-align:right;font-weight:700;white-space:nowrap}
+.srcs tr.total td{border-bottom:none;font-weight:800;color:var(--accent-strong);padding-top:10px}
+.srcs td.empty{text-align:center;color:var(--text-3);border-bottom:none}
+/* đối chiếu ngân hàng */
+.recon{padding:12px 14px}
+.recon-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.recon-label{font-size:13px;font-weight:600;color:var(--text-2)}
+.recon-val{font-size:18px;font-weight:800;white-space:nowrap}
+.recon-input{display:flex;gap:6px;margin-top:10px;align-items:stretch}
+.recon-input .form-input{flex:1;margin:0;min-height:42px;font-size:15px}
+.recon-save{min-height:42px;padding:0 16px;border-radius:10px;font-size:14px}
+.recon-hint{font-size:11.5px;color:var(--text-3);margin-top:6px;line-height:1.4}
+/* sổ quỹ */
+.ledger{width:100%;border-collapse:collapse}
+.ledger th{padding:8px;text-align:left;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--text-3);border-bottom:1px solid var(--line);background:var(--surface-2);white-space:nowrap}
+.ledger th.r,.ledger td.r{text-align:right}
+.ledger td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:12.5px}
+.ledger tr:last-child td{border-bottom:none}
+.lg-date{font-size:11.5px;color:var(--text-3);white-space:nowrap}
+.lg-desc{word-break:break-word}
+.lg-tag{font-size:11px;color:var(--text-3);margin-top:1px}
+.lg-amt{text-align:right;font-weight:700;white-space:nowrap}
+.lg-bal{text-align:right;font-weight:600;white-space:nowrap;color:var(--text-2)}
+/* biểu đồ tháng */
+.mchart-row{margin-bottom:10px}
+.mchart-head{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.mchart-head b{font-weight:700}
+.mchart-bar{height:8px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.mchart-fill{height:100%;border-radius:5px;background:var(--accent)}
+.mchart-fill.neg{background:var(--red)}
+.mchart-sub{font-size:11px;color:var(--text-3);margin-top:3px}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -1181,7 +1268,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div id="page-cash" class="main" style="display:none">
   <div class="card">
     <div class="card-header"><svg class="ic"><use href="#i-cash"/></svg>Cân đối quỹ công trình</div>
-    <div class="tab-desc" style="padding-top:8px">Tiền <b>vào</b> – tiền <b>ra</b> – tiền <b>còn</b> của công trình Gia Bình. Ai trong app cũng xem được, để 2 công ty cùng đối chiếu.</div>
+    <div class="tab-desc" style="padding-top:8px">Tiền vào, tiền ra và tiền còn của công trình Gia Bình. Ai trong app cũng xem được để hai công ty cùng đối chiếu.</div>
     <div class="card-body" style="padding:0">
       <div class="report-subtabs" style="margin:0 12px 10px">
         <button class="report-subtab active" data-tab="sum" onclick="setCashTab('sum',this)">Tổng quan</button>
@@ -1195,10 +1282,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Tab con: TỔNG QUAN -->
   <div id="cash-tab-sum">
     <div id="cash-summary"></div>
-    <div class="card"><div class="card-body" style="padding:10px 12px;display:flex;gap:8px">
-      <button class="btn-full btn-primary-full" style="flex:1" onclick="openCashModal('in')"><svg class="ic"><use href="#i-in"/></svg>Ghi tiền THU về</button>
-      <button class="btn-full btn-amber-full" style="flex:1" onclick="openCashModal('dep')"><svg class="ic"><use href="#i-lock"/></svg>Ghi KÝ QUỸ</button>
-    </div></div>
+    <div class="card cash-actions">
+      <button class="btn-full btn-primary-full" onclick="openCashModal('in')"><svg class="ic"><use href="#i-in"/></svg>Ghi khoản THU</button>
+      <button class="btn-full btn-amber-full" onclick="openCashModal('dep')"><svg class="ic"><use href="#i-lock"/></svg>Ghi KÝ QUỸ</button>
+    </div>
     <div class="card">
       <div class="card-header"><svg class="ic"><use href="#i-chart"/></svg>Tiền còn lại theo tháng</div>
       <div class="card-body" style="padding:12px"><div id="cash-chart"></div></div>
@@ -1209,7 +1296,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="cash-tab-in" style="display:none">
     <div class="card">
       <div class="card-body" style="padding:12px">
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Mỗi lần có tiền <b>vào tài khoản công trình</b> thì ghi 1 khoản: chủ đầu tư thanh toán, công ty 134 góp, công ty PVA góp.</div>
+        <div class="tab-desc" style="padding:0 0 10px">Mỗi lần có tiền <b>vào tài khoản công trình</b> thì ghi một khoản: chủ đầu tư thanh toán, công ty 134 góp, công ty PVA góp.</div>
         <button onclick="openCashModal('in')" class="btn-full btn-primary-full"><svg class="ic"><use href="#i-plus"/></svg>Thêm khoản THU</button>
       </div>
     </div>
@@ -1221,7 +1308,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="cash-tab-dep" style="display:none">
     <div class="card">
       <div class="card-body" style="padding:12px">
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Tiền <b>đặt cọc / ký quỹ</b> là tiền gửi chỗ khác, <b>sẽ lấy về</b> — không phải chi phí. Phiếu chi chọn loại "đặt cọc / ký quỹ" sẽ <b>tự hiện ở đây</b> khi thủ quỹ chuyển tiền. Lấy về được thì bấm "Ghi tiền đã lấy về". Khoản treo quá 6 tháng app tô vàng để nhắc đi đòi.</div>
+        <div class="tab-desc" style="padding:0 0 10px">Tiền <b>đặt cọc, ký quỹ</b> là tiền gửi chỗ khác và <b>sẽ lấy về</b>, không phải chi phí. Phiếu chi chọn loại "đặt cọc / ký quỹ" sẽ <b>tự hiện ở đây</b> khi thủ quỹ chuyển tiền. Lấy về được thì bấm "Ghi tiền đã lấy về". Khoản treo quá 6 tháng app tô vàng để nhắc đi đòi.</div>
         <button onclick="openCashModal('dep')" class="btn-full btn-primary-full"><svg class="ic"><use href="#i-plus"/></svg>Thêm khoản KÝ QUỸ / CỌC</button>
       </div>
     </div>
@@ -1230,7 +1317,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: SỔ QUỸ (thu + chi + ký quỹ theo ngày, có số dư chạy) -->
   <div id="cash-tab-book" style="display:none">
-    <div class="tab-desc" style="padding:0 4px 8px">Mọi khoản vào / ra xếp theo ngày, kèm <b>số dư sau từng dòng</b> — giống sổ quỹ giấy. Thủ quỹ nhập số dư ngân hàng thật để app so: lệch ở đâu dò ra ngay dòng đó.</div>
+    <div class="tab-desc" style="padding:0 4px 10px">Mọi khoản vào, ra xếp theo ngày kèm <b>số dư sau từng dòng</b>, giống sổ quỹ giấy. Thủ quỹ nhập số dư ngân hàng thật để app so: lệch ở đâu dò ra ngay dòng đó.</div>
     <div id="cash-book-bal"></div>
     <div id="cash-book-list"></div>
   </div>
@@ -1749,7 +1836,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260924-v27';
+const APP_VERSION = '20260924-v28';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -9648,6 +9735,9 @@ function listenCashflow(){
   }, ()=>{});
 }
 
+// ngày lưu dạng yyyy-mm-dd → hiện dd/mm/yyyy
+function fmtYMD(d){ const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d||'')); return m ? m[3]+'/'+m[2]+'/'+m[1] : esc(String(d||'')); }
+
 // ── Tiền đã lấy về của 1 khoản ký quỹ ──
 function cashReturned(r){
   if(!Array.isArray(r.returned)) return 0;
@@ -9715,33 +9805,26 @@ function renderCashActive(){
 function renderCashSummary(){
   const el = document.getElementById('cash-summary'); if(!el) return;
   const t = cashTotals();
-  const row = (label, val, opt) => {
-    const o = opt||{};
-    return `<div style="padding:${o.big?'9px 0':'6px 0'}">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-        <span style="font-size:${o.big?'14px':'13px'};font-weight:${o.big?800:700};color:var(--text)">${label}</span>
-        <span style="font-size:${o.big?'19px':'15px'};font-weight:${o.big?900:700};color:${o.color||'var(--text)'};white-space:nowrap;word-break:normal">${fmtVND(val)}</span>
-      </div>
-      ${o.sub?`<div style="font-size:11px;color:var(--text-sub);line-height:1.4;margin-top:1px">${o.sub}</div>`:''}
-    </div>`;
-  };
-  const line = '<div style="border-top:1px solid var(--gray-border);margin:4px 0"></div>';
-  const srcLine = Object.keys(CASH_SRC)
-    .filter(k=>t.thuBySrc[k] > 0)
-    .map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtShortMoney(t.thuBySrc[k])}`)
-    .join(' · ');
-
-  el.innerHTML = `<div class="card"><div class="card-body" style="padding:12px 14px">
-    ${row('Đã thu về', t.thu, {color:'#047857', sub: srcLine || 'Tiền chủ đầu tư trả + tiền 2 công ty góp vào. Ghi ở nút "Ghi tiền THU về" bên dưới.'})}
-    ${row('Đã chi ra (thật sự)', -t.daChi, {color:'#b91c1c', sub:'Tổng tiền thủ quỹ ĐÃ chuyển đi theo các phiếu chi + ứng lương (không tính ký quỹ).'})}
-    ${row('Đang gửi ngoài (ký quỹ / cọc)', -t.dangGuiNgoai, {color:'#b45309', sub:'Tiền cọc, ký quỹ ngân hàng… — chưa mất, sẽ lấy về. Xem tab "Ký quỹ".'})}
-    ${line}
-    ${row('= TIỀN TRONG TÀI KHOẢN', t.tienTrongTk, {big:true, color:'var(--blue-dark)', sub:'Phải khớp với số dư ngân hàng thật. Thủ quỹ đối chiếu ở tab "Sổ quỹ".'})}
-    ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, {color:'#b91c1c', sub:'Tiền đã hứa chi nhưng thủ quỹ chưa chuyển — coi như không còn để tiêu.'})}
-    ${line}
-    ${row('= CÒN ĐƯỢC TIÊU', t.conDuocTieu, {big:true, color: t.conDuocTieu<0 ? '#b91c1c' : '#047857', sub:'Số tiền còn duyệt chi thêm được mà quỹ không bị âm. Phiếu chưa duyệt không tính vào đây.'})}
-    ${t.conDuocTieu<0 ? '<div style="margin-top:8px;padding:8px 10px;background:#fef2f2;border-left:3px solid #dc2626;border-radius:6px;font-size:12px;color:#991b1b;font-weight:700">⚠️ Quỹ đang âm — đã duyệt chi nhiều hơn tiền có</div>' : ''}
-  </div></div>`;
+  const row = (label, val, cls, sub) => `<div class="stmt-row">
+      <div class="stmt-line"><span class="stmt-label">${label}</span><span class="stmt-val ${cls||''}">${fmtVND(val||0)}</span></div>
+      ${sub?`<div class="stmt-sub">${sub}</div>`:''}</div>`;
+  const total = (label, val, cls, sub, hero) => `<div class="stmt-total${hero?' stmt-hero':''}">
+      <div class="stmt-total-label">${label}</div><div class="stmt-total-val ${cls||''}">${fmtVND(val)}</div>
+      ${sub?`<div class="stmt-sub">${sub}</div>`:''}</div>`;
+  const srcs = Object.keys(CASH_SRC).filter(k=>t.thuBySrc[k] > 0)
+    .map(k=>`<span><span style="color:${CASH_SRC[k].color}">${CASH_SRC[k].label}</span> <b>${fmtShortMoney(t.thuBySrc[k])}</b></span>`).join('');
+  el.innerHTML = `<div class="card stmt">
+    <div class="stmt-row">
+      <div class="stmt-line"><span class="stmt-label">Đã thu về</span><span class="stmt-val is-in">${fmtVND(t.thu)}</span></div>
+      ${srcs ? `<div class="stmt-srcs">${srcs}</div>` : '<div class="stmt-sub">Tiền chủ đầu tư trả và tiền hai công ty góp vào. Ghi ở nút "Ghi khoản THU" bên dưới.</div>'}
+    </div>
+    ${row('Đã chi ra', -t.daChi, 'is-out', 'Tổng tiền thủ quỹ đã chuyển đi theo các phiếu chi và ứng lương (không tính ký quỹ).')}
+    ${row('Đang gửi ngoài (ký quỹ, cọc)', -t.dangGuiNgoai, 'is-dep', 'Tiền cọc, ký quỹ ngân hàng: chưa mất, sẽ lấy về. Xem tab "Ký quỹ".')}
+    ${total('Tiền trong tài khoản', t.tienTrongTk, '', 'Phải khớp với số dư ngân hàng thật. Thủ quỹ đối chiếu ở tab "Sổ quỹ".')}
+    ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, 'is-out', 'Tiền đã hứa chi nhưng thủ quỹ chưa chuyển, coi như không còn để tiêu.')}
+    ${total('Còn được tiêu', t.conDuocTieu, t.conDuocTieu<0?'is-out':'is-in', 'Số còn duyệt chi thêm được mà quỹ không âm. Phiếu chưa duyệt không tính vào đây.', true)}
+    ${t.conDuocTieu<0 ? `<div class="stmt-alert">${ic('warning')}Quỹ đang âm: đã duyệt chi nhiều hơn tiền có</div>` : ''}
+  </div>`;
 }
 
 // ── BIỂU ĐỒ tiền còn lại theo tháng (thanh ngang, không cần thư viện ngoài) ──
@@ -9777,15 +9860,10 @@ function renderCashChart(){
     const pct = Math.round(Math.abs(p.bal)/maxAbs*100);
     const neg = p.bal < 0;
     const [y,mm] = p.m.split('-');
-    return `<div style="margin-bottom:9px">
-      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
-        <span style="font-weight:700;color:var(--text)">T${parseInt(mm,10)}/${y}</span>
-        <span style="font-weight:800;color:${neg?'#b91c1c':'#047857'};white-space:nowrap;word-break:normal">${fmtShortMoney(p.bal)}</span>
-      </div>
-      <div style="height:9px;background:var(--gray-light);border-radius:5px;overflow:hidden">
-        <div style="height:100%;width:${pct}%;background:${neg?'#dc2626':'#059669'};border-radius:5px"></div>
-      </div>
-      <div style="font-size:10px;color:var(--text-sub);margin-top:2px">vào ${fmtShortMoney(p.in)} · ra ${fmtShortMoney(p.out)}</div>
+    return `<div class="mchart-row">
+      <div class="mchart-head"><b>Tháng ${parseInt(mm,10)}/${y}</b><span class="${neg?'is-out':'is-in'}" style="font-weight:700">${fmtShortMoney(p.bal)}</span></div>
+      <div class="mchart-bar"><div class="mchart-fill${neg?' neg':''}" style="width:${pct}%"></div></div>
+      <div class="mchart-sub">vào ${fmtShortMoney(p.in)}, ra ${fmtShortMoney(p.out)}</div>
     </div>`;
   }).join('');
 }
@@ -9795,13 +9873,11 @@ function renderCashInSrc(){
   const el = document.getElementById('cash-in-src'); if(!el) return;
   const t = cashTotals();
   const rows = Object.keys(CASH_SRC).filter(k=>t.thuBySrc[k]>0).map(k=>
-    `<tr><td style="padding:7px 8px;font-weight:700;color:${CASH_SRC[k].color}">${CASH_SRC[k].label}</td>
-         <td style="padding:7px 8px;text-align:right;font-weight:800;white-space:nowrap;word-break:normal">${fmtVND(t.thuBySrc[k])}</td></tr>`).join('');
-  el.innerHTML = `<div class="card"><div class="card-header"><svg class="ic"><use href="#i-handcoins"/></svg>Đối soát theo bên góp</div>
-    <div class="card-body" style="padding:4px 10px 10px"><table style="width:100%;border-collapse:collapse;font-size:13px">
-      ${rows || '<tr><td style="padding:8px;color:var(--text-sub);text-align:center">Chưa có khoản thu nào</td></tr>'}
-      ${rows ? `<tr style="background:#f0fdf4;border-top:2px solid #86efac"><td style="padding:8px">TỔNG</td>
-        <td style="padding:8px;text-align:right;font-weight:900;color:#047857;white-space:nowrap;word-break:normal">${fmtVND(t.thu)}</td></tr>` : ''}
+    `<tr><td style="font-weight:600;color:${CASH_SRC[k].color}">${CASH_SRC[k].label}</td><td>${fmtVND(t.thuBySrc[k])}</td></tr>`).join('');
+  el.innerHTML = `<div class="card"><div class="card-header">${ic('handcoins')}Đối soát theo bên góp</div>
+    <div class="card-body" style="padding:2px 14px 8px"><table class="srcs">
+      ${rows || '<tr><td class="empty" colspan="2">Chưa có khoản thu nào</td></tr>'}
+      ${rows ? `<tr class="total"><td>Tổng</td><td>${fmtVND(t.thu)}</td></tr>` : ''}
     </table></div></div>`;
 }
 
@@ -9828,12 +9904,12 @@ function cashLinkedToProposal(r){ return !!(r.fromProposal && (proposals||[]).so
 function cashCanDelete(r){ return currentRole==='dung' && !cashLinkedToProposal(r); }
 const _CASH_BTN = 'padding:3px 10px;font-size:11px;font-weight:700;border-radius:8px;cursor:pointer;';
 function cashDelBtn(r){
-  if(cashLinkedToProposal(r)) return '<span style="font-size:10px;color:var(--text-sub)">🔗 Tự ghi từ phiếu chi — muốn gỡ thì hoàn tác chuyển tiền ở phiếu</span>';
+  if(cashLinkedToProposal(r)) return `<span class="ci-linked">${ic('link')}Tự ghi từ phiếu chi. Muốn gỡ thì hoàn tác chuyển tiền ở phiếu</span>`;
   if(cashDelReq(r)) return '';   // đang có đề nghị xoá → hộp bên dưới lo
-  if(currentRole==='dung') return `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>`;
-  return `<button onclick="requestCashDelete('${sid(r.id)}')" title="Khoản chỉ bị xóa khi Dũng, Hiền và Lan cùng đồng ý" style="${_CASH_BTN}background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">🗑 Đề nghị xóa</button>`;
+  if(currentRole==='dung') return `<button class="btn-xs btn-xs-danger" onclick="deleteCashRec('${sid(r.id)}')">${ic('trash')}Xóa</button>`;
+  return `<button class="btn-xs btn-xs-warn" onclick="requestCashDelete('${sid(r.id)}')" title="Khoản chỉ bị xóa khi Dũng, Hiền và Lan cùng đồng ý">${ic('trash')}Đề nghị xóa</button>`;
 }
-// Hộp "đang có đề nghị xoá": ai đã đồng ý, còn thiếu ai, nút cho đúng người
+
 function cashDelReqBox(r){
   const q = cashDelReq(r); if(!q) return '';
   const ok = q.ok || {}, names = q.names || {};
@@ -9841,41 +9917,37 @@ function cashDelReqBox(r){
   const nm = u => esc(names[u] || 'Hiền/Lan');
   const hienDone = [ok.hien1, ok.hien2].filter(Boolean);
   const full = !!(ok.dung && ok.hien1 && ok.hien2);
-  const parts = [ok.dung ? '✅ Dũng' : '⏳ Dũng'].concat(hienDone.map(u => '✅ ' + nm(u)));
-  for(let i = hienDone.length; i < 2; i++) parts.push('⏳ Hiền/Lan');
+  const parts = [`<span class="${ok.dung?'is-in':''}">${ok.dung?ic('checkc'):ic('hourglass')}Dũng</span>`].concat(hienDone.map(u => `<span class="is-in">${ic('checkc')}${nm(u)}</span>`));
+  for(let i = hienDone.length; i < 2; i++) parts.push(`<span>${ic('hourglass')}Hiền/Lan</span>`);
   const mineDone = !!uid && (ok.dung===uid || ok.hien1===uid || ok.hien2===uid);
   const canOk = !mineDone && (currentRole==='dung' || (currentRole==='hien' && hienDone.length < 2));
   const canCancel = currentRole==='dung' || (!!uid && q.by===uid);
   let btns = '';
-  if(full && (currentRole==='dung' || currentRole==='hien')) btns += `<button onclick="finishCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:var(--red);color:#fff;border:none">🗑 Đủ 3 đồng ý — Xóa</button>`;
-  else if(canOk) btns += `<button onclick="approveCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Tôi đồng ý xóa</button>`;
-  if(currentRole==='dung' && !full) btns += `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa ngay (quản trị)</button>`;
-  if(canCancel) btns += `<button onclick="cancelCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">✕ Hủy đề nghị</button>`;
-  return `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px">
-    <div style="font-weight:700;color:#92400e">🗑 ${esc(q.byName||'?')} đề nghị XÓA khoản này${q.ts?' · '+fmtFull(q.ts):''}</div>
-    <div style="color:#78350f;margin-top:3px">${full ? 'Đã đủ 3 người đồng ý' : 'Cần đủ 3 người đồng ý'}: ${parts.join(' · ')}</div>
-    ${btns ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</div>` : ''}
+  if(full && (currentRole==='dung' || currentRole==='hien')) btns += `<button class="btn-xs btn-xs-danger-solid" onclick="finishCashDelete('${sid(r.id)}')">${ic('trash')}Đủ 3 đồng ý, xóa</button>`;
+  else if(canOk) btns += `<button class="btn-xs btn-xs-primary" onclick="approveCashDelete('${sid(r.id)}')">${ic('check')}Tôi đồng ý xóa</button>`;
+  if(currentRole==='dung' && !full) btns += `<button class="btn-xs btn-xs-danger" onclick="deleteCashRec('${sid(r.id)}')">${ic('trash')}Xóa ngay (quản trị)</button>`;
+  if(canCancel) btns += `<button class="btn-xs btn-xs-ghost" onclick="cancelCashDelete('${sid(r.id)}')">${ic('x')}Hủy đề nghị</button>`;
+  return `<div class="delreq">
+    <div class="delreq-title">${esc(q.byName||'?')} đề nghị xóa khoản này${q.ts?' · '+fmtFull(q.ts):''}</div>
+    <div class="delreq-who"><span>${full ? 'Đã đủ 3 người đồng ý:' : 'Cần đủ 3 người đồng ý:'}</span>${parts.join('')}</div>
+    ${btns ? `<div class="delreq-actions">${btns}</div>` : ''}
   </div>`;
 }
+
 function cashCardIn(r){
   const src = CASH_SRC[r.src] || CASH_SRC.other;
-  return `<div class="card"><div class="card-body" style="padding:11px 13px">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-      <div style="min-width:0;flex:1">
-        <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${esc(r.desc||'Tiền về')}</div>
-        <div style="font-size:11px;margin-top:3px">
-          <span style="background:${src.color}22;color:${src.color};padding:1px 8px;border-radius:8px;font-weight:700">${src.label}</span>
-          <span style="color:var(--text-sub);margin-left:6px">${esc(r.date||'')}</span>
-        </div>
+  const del = cashDelBtn(r);
+  return `<div class="card cash-item">
+    <div class="ci-main">
+      <div class="ci-body">
+        <div class="ci-title">${esc(r.desc||'Tiền về')}</div>
+        <div class="ci-meta"><span class="ci-src" style="color:${src.color}">${src.label}</span><span>${ic('calendar')}${fmtYMD(r.date)}</span>${r.byName?`<span>${ic('user')}${esc(r.byName)} ghi</span>`:''}</div>
       </div>
-      <div style="font-size:16px;font-weight:900;color:#047857;white-space:nowrap;word-break:normal">+${fmtVND(r.amount)}</div>
+      <div class="ci-amt ci-amt-in">+${fmtVND(r.amount)}</div>
     </div>
-    <div style="display:flex;gap:6px;margin-top:8px;justify-content:space-between;align-items:center">
-      <span style="font-size:10px;color:var(--text-sub)">${r.byName?'✍️ '+esc(r.byName)+' ghi':''}</span>
-      ${cashDelBtn(r)}
-    </div>
+    ${del ? `<div class="ci-actions">${del}</div>` : ''}
     ${cashDelReqBox(r)}
-  </div></div>`;
+  </div>`;
 }
 
 function cashCardDep(r){
@@ -9885,27 +9957,25 @@ function cashCardDep(r){
   const dTs = r.date ? new Date(r.date).getTime() : (r.ts||0);
   const oldDays = dTs ? Math.floor((Date.now()-dTs)/86400000) : 0;
   const stale = !done && oldDays > 180;
-  return `<div class="card" style="${stale?'border-left:4px solid #f59e0b':''}"><div class="card-body" style="padding:11px 13px">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-      <div style="min-width:0;flex:1">
-        <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${esc(r.desc||'Ký quỹ')}</div>
-        <div style="font-size:11px;color:var(--text-sub);margin-top:3px">
-          ${r.holder?`🏦 ${esc(r.holder)} · `:''}${esc(r.date||'')}${oldDays?` · ${oldDays} ngày`:''}
-        </div>
+  return `<div class="card cash-item${stale?' ci-stale':''}">
+    <div class="ci-main">
+      <div class="ci-body">
+        <div class="ci-title">${esc(r.desc||'Ký quỹ')}</div>
+        <div class="ci-meta">${r.holder?`<span>${ic('bank')}${esc(r.holder)}</span>`:''}<span>${ic('calendar')}${fmtYMD(r.date)}</span>${oldDays?`<span>${oldDays} ngày</span>`:''}</div>
       </div>
-      <div style="text-align:right">
-        <div style="font-size:16px;font-weight:900;color:${done?'var(--text-sub)':'#b45309'};white-space:nowrap;word-break:normal">${fmtVND(left)}</div>
-        <div style="font-size:10px;color:var(--text-sub);white-space:nowrap;word-break:normal">đưa ${fmtShortMoney(amt)}${back?` · về ${fmtShortMoney(back)}`:''}</div>
+      <div class="ci-right">
+        <div class="ci-amt ${done?'ci-amt-done':'ci-amt-dep'}">${fmtVND(left)}</div>
+        <div class="ci-sub">đưa ${fmtShortMoney(amt)}${back?`, về ${fmtShortMoney(back)}`:''}</div>
       </div>
     </div>
-    ${done ? '<div style="margin-top:6px;font-size:11px;font-weight:700;color:#047857">✅ Đã lấy về đủ</div>' : ''}
-    ${stale ? '<div style="margin-top:6px;padding:6px 9px;background:#fffbeb;border-radius:6px;font-size:11px;font-weight:700;color:#92400e">⏰ Treo quá 6 tháng — nhớ đi đòi về</div>' : ''}
-    <div style="display:flex;gap:6px;margin-top:8px;justify-content:flex-end;flex-wrap:wrap">
-      ${done ? '' : `<button onclick="returnDeposit('${sid(r.id)}')" style="padding:4px 12px;font-size:12px;font-weight:700;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;border-radius:8px;cursor:pointer">💰 Ghi tiền đã lấy về</button>`}
+    ${done ? `<div class="ci-note ci-note-ok">${ic('checkc')}Đã lấy về đủ</div>` : ''}
+    ${stale ? `<div class="ci-note ci-note-warn">${ic('warning')}Treo quá 6 tháng, nhớ đi đòi về</div>` : ''}
+    <div class="ci-actions">
+      ${done ? '' : `<button class="btn-xs btn-xs-primary" onclick="returnDeposit('${sid(r.id)}')">${ic('handcoins')}Ghi tiền đã lấy về</button>`}
       ${cashDelBtn(r)}
     </div>
     ${cashDelReqBox(r)}
-  </div></div>`;
+  </div>`;
 }
 
 // ── SỔ QUỸ: thu + chi + ký quỹ xếp theo ngày, có SỐ DƯ CHẠY từng dòng.
@@ -9947,42 +10017,33 @@ function renderCashBook(){
   const real = bankBalance ? parseFloat(bankBalance.amount)||0 : null;
   const diff = (real===null) ? null : (real - t.tienTrongTk);
   if(elBal){
-    elBal.innerHTML = `<div class="card"><div class="card-body" style="padding:11px 13px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
-        <span style="font-size:13px;font-weight:700;color:var(--text-sub)">Sổ quỹ tính ra</span>
-        <span style="font-size:17px;font-weight:900;color:var(--blue-dark);white-space:nowrap;word-break:normal">${fmtVND(t.tienTrongTk)}</span>
-      </div>
-      <div style="display:flex;gap:6px;margin-top:9px;align-items:center">
+    elBal.innerHTML = `<div class="card recon">
+      <div class="recon-row"><span class="recon-label">Sổ quỹ tính ra</span><span class="recon-val">${fmtVND(t.tienTrongTk)}</span></div>
+      <div class="recon-input">
         <input id="cash-bank-inp" class="form-input" inputmode="numeric" placeholder="Số dư ngân hàng thật"
-               value="${real!==null?fmtVND(real).replace(' đ',''):''}" oninput="fmtAmountInput(this)" style="flex:1;font-size:14px;margin:0">
-        <button onclick="saveBankBalance()" style="padding:9px 14px;font-size:13px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Lưu</button>
+               value="${real!==null?fmtVND(real).replace(' đ',''):''}" oninput="fmtAmountInput(this)">
+        <button class="btn-xs btn-xs-primary recon-save" onclick="saveBankBalance()">Lưu</button>
       </div>
-      ${diff===null ? '<div style="font-size:11px;color:var(--text-sub);margin-top:6px">Nhập số dư thật để app tự so — lệch là biết ngay có phiếu ghi sai</div>'
+      ${diff===null ? '<div class="recon-hint">Nhập số dư thật để app tự so. Lệch là biết ngay có dòng ghi sai.</div>'
         : Math.abs(diff)<1
-          ? '<div style="margin-top:8px;padding:7px 10px;background:#f0fdf4;border-radius:6px;font-size:12px;font-weight:700;color:#047857">✅ Khớp với ngân hàng</div>'
-          : `<div style="margin-top:8px;padding:7px 10px;background:#fef2f2;border-radius:6px;font-size:12px;font-weight:700;color:#991b1b">⚠️ Lệch ${fmtVND(Math.abs(diff))} — ${diff>0?'ngân hàng nhiều hơn sổ':'sổ nhiều hơn ngân hàng'}. Dò lại các dòng gần đây.</div>`}
-      ${(bankBalance&&bankBalance.at) ? `<div style="font-size:10px;color:var(--text-sub);margin-top:5px">Cập nhật: ${fmtFull(bankBalance.at)}${bankBalance.by?' · '+esc(bankBalance.by):''}</div>` : ''}
-    </div></div>`;
+          ? `<div class="ci-note ci-note-ok">${ic('checkc')}Khớp với ngân hàng</div>`
+          : `<div class="ci-note ci-note-warn">${ic('warning')}Lệch ${fmtVND(Math.abs(diff))}: ${diff>0?'ngân hàng nhiều hơn sổ':'sổ nhiều hơn ngân hàng'}. Dò lại các dòng gần đây.</div>`}
+      ${(bankBalance&&bankBalance.at) ? `<div class="recon-hint">Cập nhật ${fmtFull(bankBalance.at)}${bankBalance.by?' bởi '+esc(bankBalance.by):''}</div>` : ''}
+    </div>`;
   }
 
   if(!rows.length){
     elList.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có giao dịch nào</div></div>';
     return;
   }
-  const body = rows.slice().reverse().map(r=>`<tr style="border-bottom:1px solid var(--gray-border)">
-    <td style="padding:7px 6px;font-size:11px;color:var(--text-sub);white-space:nowrap">${esc(r.date||'')}</td>
-    <td style="padding:7px 6px;font-size:12px;word-break:break-word">${esc(r.desc)}${r.tag?`<div style="font-size:10px;color:var(--text-sub)">${esc(r.tag)}</div>`:''}</td>
-    <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:800;color:${r.kind==='in'?'#047857':'#b91c1c'};white-space:nowrap;word-break:normal">${r.kind==='in'?'+':'−'}${fmtShortMoney(r.amount)}</td>
-    <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${r.bal<0?'#b91c1c':'var(--text)'};white-space:nowrap;word-break:normal">${fmtShortMoney(r.bal)}</td>
+  const body = rows.slice().reverse().map(r=>`<tr>
+    <td class="lg-date">${fmtYMD(r.date)}</td>
+    <td class="lg-desc">${esc(r.desc)}${r.tag?`<div class="lg-tag">${esc(r.tag)}</div>`:''}</td>
+    <td class="lg-amt ${r.kind==='in'?'is-in':'is-out'}">${r.kind==='in'?'+':'−'}${fmtShortMoney(r.amount)}</td>
+    <td class="lg-bal${r.bal<0?' is-out':''}">${fmtShortMoney(r.bal)}</td>
   </tr>`).join('');
-  elList.innerHTML = `<div class="card"><div class="card-header"><svg class="ic"><use href="#i-note"/></svg>Sổ quỹ (mới nhất trước)</div>
-    <div class="card-body" style="padding:0 6px 10px"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
-      <thead><tr style="background:var(--gray-light)">
-        <th style="padding:6px;text-align:left;font-size:11px">Ngày</th>
-        <th style="padding:6px;text-align:left;font-size:11px">Nội dung</th>
-        <th style="padding:6px;text-align:right;font-size:11px">Vào / Ra</th>
-        <th style="padding:6px;text-align:right;font-size:11px">Số dư</th>
-      </tr></thead><tbody>${body}</tbody></table></div></div></div>`;
+  elList.innerHTML = `<div class="card"><div class="card-header">${ic('note')}Sổ quỹ (mới nhất trước)</div>
+    <table class="ledger"><thead><tr><th>Ngày</th><th>Nội dung</th><th class="r">Vào / Ra</th><th class="r">Số dư</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
 async function saveBankBalance(){
