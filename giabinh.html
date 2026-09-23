@@ -630,6 +630,75 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 .emp-note{font-size:11.5px;color:var(--amber);margin-top:1px}
 .emp-adv{font-size:11.5px;margin-top:2px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
 .emp-adv .ic{width:13px;height:13px}
+/* ── báo cáo ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px}
+@media (max-width:420px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer}
+.kpi-l{font-size:10px;color:var(--text-3);font-weight:700;letter-spacing:.03em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi-v{font-size:16px;font-weight:800;white-space:nowrap;margin-top:2px}
+.kpi-v small{font-size:10px;font-weight:500;color:var(--text-3)}
+.kpi-a{font-size:11px;color:var(--text-2);font-weight:600;margin-top:1px}
+.kpi.is-in{background:var(--accent-soft);border-color:var(--accent-line)} .kpi.is-in .kpi-v{color:var(--accent-strong)}
+.kpi.is-warn{background:var(--amber-soft);border-color:var(--amber-line)} .kpi.is-warn .kpi-v{color:var(--amber)}
+.kpi.is-teal{background:var(--teal-soft)} .kpi.is-teal .kpi-v{color:var(--teal)}
+.rpt-sec{padding:0 12px 12px}
+.rpt-sec-head{font-size:12.5px;font-weight:700;padding:7px 10px;border-radius:8px 8px 0 0;border:1px solid var(--line);border-bottom:none;background:var(--surface-2);display:flex;justify-content:space-between;gap:8px;align-items:center;color:var(--text)}
+.rpt-sec-head small{font-weight:600;color:var(--text-3);font-size:11px;white-space:nowrap}
+.rpt-sec-head .ic{width:15px;height:15px}
+.rpt-sec-head.is-urgent{background:var(--red-soft);color:var(--red);border-color:var(--red-line)}
+.rpt-sec-head.is-urgent small{color:var(--red)}
+.rpt-sec-body{border:1px solid var(--line);border-radius:0 0 8px 8px;overflow:hidden}
+.report-table,.excel-table{border:none;font-size:12px}
+.report-table th,.excel-table th{background:var(--surface-2);color:var(--text-3);font-size:10.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;border-right:none;border-bottom:1px solid var(--line);padding:7px 6px}
+.report-table td,.excel-table td{border-right:none;border-bottom:1px solid var(--line);padding:7px 6px}
+.report-table tr:nth-child(even) td,.excel-table tr:nth-child(even) td{background:transparent}
+.excel-table tr:hover td{background:var(--surface-2)}
+.excel-table .col-amount{color:var(--text)}
+.table-total-top{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;font-size:12.5px}
+.table-total-top .ttt-amt{color:var(--accent-strong)}
+.excel-table-footer{background:var(--surface-2);border-top:1px solid var(--line)}
+.pri-u{color:var(--red);font-weight:800;font-size:11px} .pri-l{color:var(--text-3);font-size:11px} .pri-n{color:var(--text-4)}
+.rpt-actions{padding:12px 12px 4px;display:flex;flex-direction:column;gap:8px}
+.rpt-actions .btn-full{flex:1;margin-top:4px;font-size:14px;padding:0 8px}
+/* ── cài đặt ── */
+.panel{padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--surface-2);margin-bottom:12px}
+.panel-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.panel-title .ic{width:16px;height:16px;color:var(--text-3)}
+.panel-desc{font-size:12px;color:var(--text-3);margin-bottom:8px;line-height:1.5}
+.panel.is-ok{background:var(--accent-soft);border-color:var(--accent-line)}
+.panel .btn-xs{margin:2px 4px 2px 0}
+.guide-steps{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:10px;line-height:1.7}
+.guide-tabs{margin-top:4px}
+.guide-tabs div{display:flex;gap:8px;align-items:flex-start;margin:5px 0}
+.guide-tabs .ic{width:16px;height:16px;color:var(--text-3);margin-top:3px;flex-shrink:0}
+.section-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.section-title .ic{width:16px;height:16px;color:var(--text-3)}
+/* ── tấm trượt (modal) ── */
+.sheet{background:#fff;border-radius:16px 16px 0 0;padding:16px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto;box-shadow:0 -8px 30px rgba(16,24,40,.18)}
+.sheet-wide{max-width:640px;max-height:92vh}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:8px}
+.sheet-title{font-size:16px;font-weight:700;color:var(--text)}
+.sheet-close{width:34px;height:34px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0}
+.sheet-close .ic{width:16px;height:16px}
+/* ── form ── */
+.radio-chip{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 6px;border-radius:10px;border:1px solid var(--line-strong);cursor:pointer;font-size:13px;font-weight:600;background:#fff}
+.radio-chip input{accent-color:var(--accent);margin:0}
+.paste-btn{margin-top:6px;width:100%;min-height:40px;border:1px dashed var(--accent-line);border-radius:10px;background:var(--accent-soft);color:var(--accent-strong);font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.form-hint{font-size:11.5px;color:var(--text-3);margin-top:5px;line-height:1.45}
+/* ── đăng nhập / OTP ── */
+.role-screen{background:var(--accent)}
+.role-screen h2{font-size:24px}
+.brand-mark{width:64px;height:64px;border-radius:18px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;margin-bottom:14px;color:#fff}
+.brand-mark .ic{width:34px;height:34px}
+#otp-screen{background:var(--accent)}
+#auth-form{border-radius:16px}
+.auth-tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px}
+.auth-tab{flex:1;background:none;border:none;padding:9px 0;font-size:14px;font-weight:600;color:var(--text-3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.auth-tab.active{color:var(--accent-strong);font-weight:700;border-bottom-color:var(--accent)}
+.eye-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-3);width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;padding:0}
+.eye-btn .ic{width:18px;height:18px}
+.eye-btn.on{color:var(--accent-strong)}
+.link-btn{background:none;border:none;color:var(--accent-strong);font-size:12.5px;font-weight:600;cursor:pointer;padding:6px;width:100%}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
 </head>
@@ -659,33 +728,33 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 
 <!-- OTP VERIFY SCREEN — sau đăng ký lần đầu -->
-<div id="otp-screen" style="display:none;position:fixed;inset:0;background:#6b3fd4;z-index:10003;align-items:center;justify-content:center;padding:24px;flex-direction:column">
-  <div style="font-size:48px;margin-bottom:12px">🔐</div>
+<div id="otp-screen" style="display:none;position:fixed;inset:0;z-index:10003;align-items:center;justify-content:center;padding:24px;flex-direction:column">
+  <div class="brand-mark"><svg class="ic"><use href="#i-lock"/></svg></div>
   <div style="color:#fff;font-size:18px;font-weight:800;margin-bottom:6px;text-align:center">Xác nhận đăng ký</div>
-  <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:20px;text-align:center">Mã 6 số đang hiện trong app của anh Dũng<br>(Cài đặt → Duyệt tài khoản). Liên hệ anh Dũng để lấy mã.<br><b>Mở hộp thư email vừa đăng ký, bấm link xác minh</b> (xem cả mục Thư rác) — để anh Dũng biết đúng là bạn.</div>
+  <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:20px;text-align:center">Mã 6 số đang hiện trong app của anh Dũng<br>(Cài đặt → Duyệt tài khoản). Liên hệ anh Dũng để lấy mã.<br><b>Mở hộp thư email vừa đăng ký, bấm link xác minh</b> (xem cả mục Thư rác) để anh Dũng biết đúng là bạn.</div>
   <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
     <input id="otp-input" class="form-input" placeholder="Nhập mã 6 số" inputmode="numeric" maxlength="6" style="font-size:22px;letter-spacing:8px;text-align:center;margin-bottom:10px">
     <div id="otp-error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>
     <button onclick="verifyOtp()" class="btn-full btn-primary-full" id="otp-btn" style="font-size:15px;padding:12px">Xác nhận</button>
-    <button onclick="cancelOtp()" style="margin-top:8px;width:100%;background:none;border:none;color:var(--gray);font-size:12px;cursor:pointer;padding:4px">Hủy / Đăng xuất</button>
+    <button class="link-btn" style="color:var(--text-3)" onclick="cancelOtp()">Hủy / Đăng xuất</button>
   </div>
 </div>
 
 <!-- LOGIN SCREEN — Firebase Auth -->
 <div class="role-screen" id="role-screen">
-  <div style="font-size:48px;margin-bottom:12px">📋</div>
+  <div class="brand-mark"><svg class="ic"><use href="#i-cash"/></svg></div>
   <h2>Sổ Quỹ Gia Bình</h2>
   <p style="margin-bottom:20px;text-align:center;line-height:1.5">Sổ tiền chung công trình Gia Bình<br><span style="font-size:12px;opacity:.85">Liên danh PVA + 134 · đề xuất → duyệt → chuyển tiền</span></p>
   <form id="auth-form" autocomplete="on" onsubmit="return false" style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
     <!-- Tab switch -->
-    <div style="display:flex;border-bottom:2px solid var(--gray-border);margin-bottom:16px">
-      <button id="auth-tab-login" onclick="switchAuthTab('login')" style="flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:700;color:var(--blue);border-bottom:2px solid var(--blue);margin-bottom:-2px;cursor:pointer">Đăng nhập</button>
-      <button id="auth-tab-register" onclick="switchAuthTab('register')" style="flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:600;color:var(--gray);cursor:pointer">Đăng ký</button>
+    <div class="auth-tabs">
+      <button id="auth-tab-login" type="button" class="auth-tab active" onclick="switchAuthTab(\'login\')">Đăng nhập</button>
+      <button id="auth-tab-register" type="button" class="auth-tab" onclick="switchAuthTab(\'register\')">Đăng ký</button>
     </div>
     <input type="email" id="auth-email" name="email" class="form-input" placeholder="Email" autocomplete="email" style="margin-bottom:10px;font-size:15px">
     <div style="position:relative;margin-bottom:10px">
       <input type="password" id="auth-pass" name="password" class="form-input" placeholder="Mật khẩu" autocomplete="current-password" style="font-size:15px;padding-right:40px">
-      <button type="button" onclick="toggleAuthPass()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:18px;color:var(--gray);padding:4px" id="auth-pass-eye">👁</button>
+      <button type="button" class="eye-btn" id="auth-pass-eye" onclick="toggleAuthPass()" aria-label="Hiện mật khẩu"><svg class="ic"><use href="#i-eye"/></svg></button>
     </div>
     <!-- Nhập tên — chỉ hiện khi đăng ký. v131: ô GÕ TỰ DO (có gợi ý) thay cho dropdown cứng,
          vì người mới (VD phòng Kế hoạch) không có sẵn trong danh sách; sếp duyệt sẽ chỉnh tên lại nếu cần. -->
@@ -700,17 +769,17 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div id="auth-error" style="color:var(--red);font-size:12px;margin-top:4px;min-height:16px;text-align:center"></div>
     <button id="auth-btn" type="submit" class="btn-full btn-primary-full" style="margin-top:10px" onclick="doLogin()">Đăng nhập</button>
-    <button id="auth-forgot" type="button" onclick="doForgotPass()" style="margin-top:8px;width:100%;background:none;border:none;color:var(--blue);font-size:12px;cursor:pointer;padding:4px">Quên mật khẩu?</button>
+    <button id="auth-forgot" type="button" class="link-btn" onclick="doForgotPass()">Quên mật khẩu?</button>
   </form>
 </div>
 
 
 <!-- Modal Sửa đề xuất — chỉ dùng khi phiếu đang ở trạng thái Chờ duyệt -->
 <div class="role-screen" id="edit-modal" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)">✏️ Sửa đề xuất</div>
-      <button onclick="closeEditModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title">Sửa đề xuất</div>
+      <button class="sheet-close" onclick="closeEditModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
 
     <div class="form-group">
@@ -742,14 +811,14 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="form-group">
       <label class="form-label">Mức độ ưu tiên</label>
       <div style="display:flex;gap:8px">
-        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-          <input type="radio" name="edit-priority" value="urgent" style="accent-color:#e74c3c" onchange="onPriorityPick('edit',this)"> 🔴 Gấp
+        <label class="radio-chip">
+          <input type="radio" name="edit-priority" value="urgent" style="accent-color:#e74c3c" onchange="onPriorityPick('edit',this)"> Gấp
         </label>
-        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-          <input type="radio" name="edit-priority" value="normal" style="accent-color:#f39c12"> 🟡 BT
+        <label class="radio-chip">
+          <input type="radio" name="edit-priority" value="normal" style="accent-color:#f39c12"> Bình thường
         </label>
-        <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-          <input type="radio" name="edit-priority" value="low" style="accent-color:#27ae60"> 🟢 Chờ
+        <label class="radio-chip">
+          <input type="radio" name="edit-priority" value="low" style="accent-color:#27ae60"> Có thể chờ
         </label>
       </div>
     </div>
@@ -777,11 +846,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div class="upload-txt">Thêm / Thay ảnh</div>
         <div class="upload-sub">Có thể chọn nhiều ảnh · Nhấn giữ ảnh để xóa từng cái</div>
       </label>
-      <button type="button" onclick="pasteImgFromClipboard('edit')" style="margin-top:6px;width:100%;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer">📋 Dán ảnh từ clipboard</button>
+      <button type="button" class="paste-btn" onclick="pasteImgFromClipboard(\'edit\')"><svg class="ic"><use href="#i-copy"/></svg>Dán ảnh từ clipboard</button>
       <input type="file" id="edit-file-input" accept="image/*" multiple style="display:none" onchange="handleEditImg(this)">
     </div>
 
-    <button class="btn-full btn-primary-full" onclick="saveEditProposal()">💾 Lưu thay đổi</button>
+    <button class="btn-full btn-primary-full" onclick="saveEditProposal()"><svg class="ic"><use href="#i-save"/></svg>Lưu thay đổi</button>
     <button class="btn-full btn-outline-full" onclick="closeEditModal()">Hủy</button>
   </div>
 </div>
@@ -929,7 +998,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
             <div class="upload-txt">Chọn / Chụp ảnh</div>
             <div class="upload-sub">Có thể chọn nhiều ảnh cùng lúc</div>
           </label>
-          <button type="button" onclick="pasteImgFromClipboard('add')" style="margin-top:6px;width:100%;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer">📋 Dán ảnh từ clipboard</button>
+          <button type="button" class="paste-btn" onclick="pasteImgFromClipboard(\'add\')"><svg class="ic"><use href="#i-copy"/></svg>Dán ảnh từ clipboard</button>
           <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleImg(this)">
         </div>
         <div id="img-preview-wrap" class="img-preview-grid" style="display:none"></div>
@@ -959,7 +1028,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <option value="noinghiep">Chi phí nội nghiệp</option>
           <option value="khac">Khác</option>
         </select>
-        <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chọn <b>đặt cọc / ký quỹ</b> thì khi Toàn chuyển tiền, app tự ghi sang tab Cân đối → Ký quỹ.</div>
+        <div class="form-hint">Chọn <b>đặt cọc / ký quỹ</b> thì khi Toàn chuyển tiền, app tự ghi sang tab Cân đối, mục Ký quỹ.</div>
       </div>
 
       <div class="form-group">
@@ -975,14 +1044,14 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="form-group">
         <label class="form-label">Mức độ ưu tiên</label>
         <div style="display:flex;gap:8px">
-          <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-            <input type="radio" name="inp-priority" value="urgent" style="accent-color:#e74c3c" onchange="onPriorityPick('add',this)"> 🔴 Gấp
+          <label class="radio-chip">
+            <input type="radio" name="inp-priority" value="urgent" style="accent-color:#e74c3c" onchange="onPriorityPick('add',this)"> Gấp
           </label>
-          <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-            <input type="radio" name="inp-priority" value="normal" checked style="accent-color:#f39c12"> 🟡 Bình thường
+          <label class="radio-chip">
+            <input type="radio" name="inp-priority" value="normal" checked style="accent-color:#f39c12"> Bình thường
           </label>
-          <label style="flex:1;display:flex;align-items:center;gap:6px;padding:9px 10px;border-radius:8px;border:1.5px solid var(--gray-border);cursor:pointer;font-size:13px;font-weight:600">
-            <input type="radio" name="inp-priority" value="low" style="accent-color:#27ae60"> 🟢 Có thể chờ
+          <label class="radio-chip">
+            <input type="radio" name="inp-priority" value="low" style="accent-color:#27ae60"> Có thể chờ
           </label>
         </div>
       </div>
@@ -993,7 +1062,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </div>
 
       <button class="btn-full btn-primary-full" id="btn-submit-proposal" onclick="submitProposal()">Gửi đề xuất</button>
-      <button class="btn-full btn-outline-full" onclick="showPage('home', document.getElementById('nav-home'))" style="margin-top:8px">← Quay lại danh sách</button>
+      <button class="btn-full btn-outline-full" onclick="showPage('home', document.getElementById('nav-home'))"><svg class="ic"><use href="#i-back"/></svg>Quay lại danh sách</button>
     </div>
   </div>
 </div>
@@ -1002,22 +1071,22 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div id="page-report" class="main" style="display:none">
   <div class="card">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><svg class="ic"><use href="#i-report"/></svg>Báo cáo
-      <button onclick="sendTelegramReport()" style="padding:7px 12px;font-size:12.5px;font-weight:800;background:#229ED9;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">📤 Gửi báo cáo Telegram</button>
+      <button class="btn-xs btn-xs-primary" onclick="sendTelegramReport()"><svg class="ic"><use href="#i-telegram"/></svg>Gửi Telegram</button>
     </div>
     <div class="card-body" style="padding:10px 0 0">
       <div class="report-subtabs">
         <button class="report-subtab active" data-tab="summary" onclick="setReportTab('summary',this)">Tóm tắt</button>
         <button class="report-subtab" data-tab="list" onclick="setReportTab('list',this)">Danh sách</button>
         <button class="report-subtab" data-tab="done" onclick="setReportTab('done',this)">Đã chuyển</button>
-        <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">⏳ Chưa chuyển</button>
+        <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">Chưa chuyển</button>
         <button class="report-subtab" data-tab="rejected" onclick="setReportTab('rejected',this)">Từ chối</button>
       </div>
       <!-- Hàng lọc -->
-      <div style="display:flex;gap:8px;padding:8px 12px 10px">
-        <select id="filter-person" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+      <div class="filter-row" style="padding:8px 12px 10px;margin:0">
+        <select id="filter-person" onchange="applyReportFilter()" class="filter-select">
           <option value="">Tất cả người</option>
         </select>
-        <select id="filter-site" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+        <select id="filter-site" onchange="applyReportFilter()" class="filter-select">
           <option value="">Tất cả CT</option>
         </select>
       </div>
@@ -1028,9 +1097,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card report-tab-panel" id="report-tab-summary">
     <div class="card-body" style="padding:0">
       <div id="report-summary-content" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
-      <div style="padding:12px 12px 4px;display:flex;gap:8px">
-        <button class="btn-full btn-outline-full" onclick="copyReport()" style="margin-top:4px;flex:1">📋 Sao chép gửi Zalo</button>
-        <button class="btn-full btn-outline-full" onclick="downloadSummaryExcel()" style="margin-top:4px;flex:1;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button>
+      <div class="rpt-actions">
+        <button class="btn-full btn-outline-full" onclick="copyReport()"><svg class="ic"><use href="#i-copy"/></svg>Sao chép gửi Zalo</button>
+        <button class="btn-full btn-outline-full" onclick="downloadSummaryExcel()"><svg class="ic"><use href="#i-xls"/></svg>Tải Excel</button>
       </div>
     </div>
   </div>
@@ -1069,25 +1138,25 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Hướng dẫn nhanh: người mới đọc 1 phút là biết app làm gì, mình làm gì -->
   <div class="card">
-    <div class="card-header"><svg class="ic"><use href="#i-doc"/></svg>Hướng dẫn nhanh — app này dùng để làm gì?</div>
+    <div class="card-header"><svg class="ic"><use href="#i-doc"/></svg>Hướng dẫn nhanh</div>
     <div class="card-body" style="font-size:13px;line-height:1.6">
       <div style="margin-bottom:8px"><b>Sổ Quỹ Gia Bình</b> là sổ tiền chung của công trình Gia Bình (liên danh <b>PVA</b> + <b>134</b>). Mọi khoản chi phải đi đủ 4 bước:</div>
-      <div style="background:var(--gray-light);border-radius:8px;padding:8px 10px;margin-bottom:8px">
-        <b>1.</b> Ai cũng <b>đề xuất</b> được (tab Đề xuất → ➕)<br>
+      <div class="guide-steps">
+        <b>1.</b> Ai cũng <b>đề xuất</b> được (tab Đề xuất, nút "Thêm phiếu chi mới")<br>
         <b>2.</b> <b>Dũng</b> duyệt (nút D)<br>
-        <b>3.</b> <b>Hiền hoặc Lan</b> duyệt (nút H&amp;L — một người là đủ)<br>
+        <b>3.</b> <b>Hiền hoặc Lan</b> duyệt (nút H&amp;L, một người là đủ)<br>
         <b>4.</b> <b>Toàn</b> (thủ quỹ) chuyển tiền + tải ảnh chứng từ (nút T)
       </div>
       <div><b>6 tab ở thanh dưới:</b></div>
-      <div style="margin:4px 0 0 2px">
-        📋 <b>Đề xuất</b> — tạo và duyệt phiếu chi<br>
-        📦 <b>Vật tư</b> — kế hoạch vật tư cần mua, nhắc trước ngày cần<br>
-        💵 <b>Lương</b> — ứng lương nhân viên (duyệt y như phiếu chi)<br>
-        📊 <b>Báo cáo</b> — thống kê chi theo người, công trường, thời gian<br>
-        ⚖️ <b>Cân đối</b> — tiền vào, tiền ra, ký quỹ, tiền còn được tiêu<br>
-        ⚙️ <b>Cài đặt</b> — tài khoản, thông báo, kết nối Google Sheet
+      <div class="guide-tabs">
+        <div><svg class="ic"><use href="#i-home"/></svg><span><b>Đề xuất</b>: tạo và duyệt phiếu chi</span></div>
+        <div><svg class="ic"><use href="#i-plan"/></svg><span><b>Vật tư</b>: kế hoạch vật tư cần mua, nhắc trước ngày cần</span></div>
+        <div><svg class="ic"><use href="#i-luong"/></svg><span><b>Lương</b>: ứng lương nhân viên (duyệt y như phiếu chi)</span></div>
+        <div><svg class="ic"><use href="#i-report"/></svg><span><b>Báo cáo</b>: thống kê chi theo người, công trường, thời gian</span></div>
+        <div><svg class="ic"><use href="#i-cash"/></svg><span><b>Cân đối</b>: tiền vào, tiền ra, ký quỹ, tiền còn được tiêu</span></div>
+        <div><svg class="ic"><use href="#i-settings"/></svg><span><b>Cài đặt</b>: tài khoản, thông báo, kết nối Google Sheet</span></div>
       </div>
-      <div style="margin-top:8px;font-size:12px;color:var(--text-sub)">Người mới: bấm <b>Đăng ký</b> → báo anh Dũng để lấy <b>mã xác nhận</b> và được <b>cấp quyền</b>.</div>
+      <div class="form-hint" style="margin-top:10px">Người mới: bấm <b>Đăng ký</b>, rồi báo anh Dũng để lấy <b>mã xác nhận</b> và được <b>cấp quyền</b>.</div>
     </div>
   </div>
 
@@ -1096,40 +1165,35 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-header"><svg class="ic"><use href="#i-lock"/></svg>Tài khoản</div>
     <div class="card-body">
       <div id="auth-account-info" style="font-size:13px;color:var(--text-sub);margin-bottom:12px"></div>
-      <div style="padding:10px;background:#e8f5e9;border-radius:8px;margin-bottom:12px">
-        <div style="font-size:12px;color:#1b5e20;font-weight:700;margin-bottom:8px">🟢 Đang online</div>
+      <div class="panel is-ok">
+        <div class="panel-title"><svg class="ic"><use href="#i-users"/></svg>Đang online</div>
         <div id="online-users-list" style="font-size:13px;color:var(--text)">Đang tải...</div>
       </div>
-      <div id="admin-reset-section" style="display:none;margin-bottom:12px;padding:10px;background:#fde8e8;border-radius:8px">
-        <div style="font-size:12px;color:var(--red);font-weight:700;margin-bottom:6px">⚠️ Chỉ dành cho Admin (D)</div>
-        <button onclick="adminResetAllRoles()" style="width:100%;padding:8px;font-size:13px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">🗑 Xóa toàn bộ dữ liệu đăng nhập (userRoles)</button>
-      </div>
-      <div id="admin-migrate-section" style="display:none;margin-bottom:12px;padding:10px;background:#eff6ff;border-radius:8px">
-        <div style="font-size:12px;color:var(--blue);font-weight:700;margin-bottom:6px">🖼 Chuyển ảnh cũ lên Kho ảnh (chỉ D — chạy 1 lần)</div>
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Ảnh của các phiếu cũ vẫn nằm trong database làm app nặng. Nút này chuyển tuần tự từng phiếu lên Kho ảnh (database chỉ giữ link). Có thể Dừng rồi chạy tiếp sau. Nên chạy lúc ít người dùng.</div>
+      <div id="admin-migrate-section" class="panel" style="display:none">
+        <div class="panel-title"><svg class="ic"><use href="#i-image"/></svg>Chuyển ảnh cũ lên Kho ảnh (chỉ D, chạy 1 lần)</div>
+        <div class="panel-desc">Ảnh của các phiếu cũ vẫn nằm trong database làm app nặng. Nút này chuyển tuần tự từng phiếu lên Kho ảnh (database chỉ giữ link). Có thể Dừng rồi chạy tiếp sau. Nên chạy lúc ít người dùng.</div>
         <div id="mig-img-status" style="font-size:12px;color:var(--text);margin-bottom:8px;min-height:16px"></div>
-        <button id="mig-img-btn" onclick="toggleMigrateOldImages()" style="width:100%;padding:8px;font-size:13px;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700">▶ Bắt đầu chuyển</button>
+        <button id="mig-img-btn" class="btn-full btn-primary-full" onclick="toggleMigrateOldImages()">▶ Bắt đầu chuyển</button>
       </div>
-      <div id="admin-approve-section" style="display:none;margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px">
-        <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">👥 Tài khoản đã đăng nhập + Duyệt xem dữ liệu (chỉ D)</div>
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Danh sách MỌI tài khoản từng đăng nhập (tên · email · lần vào gần nhất). Soi email lạ để phát hiện tài khoản không phải người nhà. Tài khoản mới KHÔNG xem được dữ liệu tới khi bạn bấm "Cho xem".</div>
+      <div id="admin-approve-section" class="panel" style="display:none">
+        <div class="panel-title"><svg class="ic"><use href="#i-users"/></svg>Tài khoản đã đăng nhập và duyệt xem dữ liệu (chỉ D)</div>
+        <div class="panel-desc">Danh sách MỌI tài khoản từng đăng nhập (tên · email · lần vào gần nhất). Soi email lạ để phát hiện tài khoản không phải người nhà. Tài khoản mới KHÔNG xem được dữ liệu tới khi bạn bấm "Cho xem".</div>
         <div style="display:flex;gap:6px;margin-bottom:8px">
-          <button onclick="renderApproveList()" style="padding:5px 10px;font-size:11px;font-weight:700;background:#e8f0fe;color:var(--blue-dark);border:none;border-radius:8px;cursor:pointer">🔄 Tải lại danh sách</button>
+          <button class="btn-xs btn-xs-ghost" onclick="renderApproveList()"><svg class="ic"><use href="#i-refresh"/></svg>Tải lại danh sách</button>
         </div>
         <div id="approve-list" style="font-size:13px;color:var(--text)">Đang tải...</div>
       </div>
       <!-- v118: đồng bộ toàn bộ phiếu ứng lương → sheet "Tổng hợp Lương" (chỉ D) -->
-      <div id="admin-luongsheet-section" style="display:none;margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px">
-        <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">📊 Sheet "Tổng hợp Lương" (chỉ D)</div>
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Phiếu ứng lương tự cập nhật sang sheet này mỗi khi có thay đổi. Nút dưới để đồng bộ LẠI toàn bộ (lần đầu, hoặc khi nghi thiếu dòng). Lưu ý: phải dán code Apps Script bản mới nhất trước.</div>
-        <button onclick="syncAllExpenseToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#1a56db;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-bottom:6px">🔄 Đồng bộ lại phiếu chi → Google Sheet</button>
-        <br>
-        <button onclick="syncAllLuongToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Lương → Google Sheet</button>
-        <button onclick="syncAllCashToSheet()" style="margin-left:6px;padding:6px 12px;font-size:12px;font-weight:700;background:#0e7490;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Thu &amp; Ký quỹ → Google Sheet</button>
+      <div id="admin-luongsheet-section" class="panel" style="display:none">
+        <div class="panel-title"><svg class="ic"><use href="#i-table"/></svg>Đồng bộ lại Google Sheet (chỉ D)</div>
+        <div class="panel-desc">Phiếu ứng lương tự cập nhật sang sheet này mỗi khi có thay đổi. Nút dưới để đồng bộ LẠI toàn bộ (lần đầu, hoặc khi nghi thiếu dòng). Lưu ý: phải dán code Apps Script bản mới nhất trước.</div>
+        <button class="btn-xs btn-xs-ghost" onclick="syncAllExpenseToSheet()"><svg class="ic"><use href="#i-refresh"/></svg>Đồng bộ lại phiếu chi → Google Sheet</button>
+        <button class="btn-xs btn-xs-ghost" onclick="syncAllLuongToSheet()"><svg class="ic"><use href="#i-refresh"/></svg>Đồng bộ Lương → Google Sheet</button>
+        <button class="btn-xs btn-xs-ghost" onclick="syncAllCashToSheet()"><svg class="ic"><use href="#i-refresh"/></svg>Đồng bộ Thu &amp; Ký quỹ → Google Sheet</button>
       </div>
       <!-- v158 PA3: danh sách nhân viên trong Cài đặt (xem nhanh, xếp A→Z / theo nhóm, xuất Excel) -->
       <details id="settings-emp-section" style="display:none;margin-bottom:10px">
-        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--blue)">📋 Danh sách nhân viên <span id="settings-emp-count" style="font-size:11px;color:var(--text-sub);font-weight:600"></span></summary>
+        <summary style="font-size:13px;font-weight:600;cursor:pointer;color:var(--accent-strong)">Danh sách nhân viên <span id="settings-emp-count" style="font-size:11px;color:var(--text-sub);font-weight:600"></span></summary>
         <div style="margin-top:8px">
           <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
             <button id="semp-sort-group" onclick="setEmpSort('group');renderSettingsEmpList()" style="flex:1;padding:6px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer">🏗 Theo nhóm</button>
@@ -1137,7 +1201,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           </div>
           <div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">
             <button class="seg-btn" onclick="exportEmployeesExcel()" title="Xuất Excel"><svg class="ic"><use href="#i-xls"/></svg>Excel</button>
-            <button onclick="exportSalaryByPersonExcel()" style="flex:1;padding:6px 8px;font-size:11.5px;font-weight:700;border-radius:8px;border:none;background:#dbeafe;color:#1e40af;cursor:pointer">📤 Xuất Excel Lương theo người</button>
+            <button class="seg-btn" style="flex:1" onclick="exportSalaryByPersonExcel()"><svg class="ic"><use href="#i-xls"/></svg>Xuất Excel Lương theo người</button>
           </div>
           <div id="settings-emp-list" style="font-size:13px"></div>
         </div>
@@ -1154,7 +1218,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         </div>
       </details>
       <div style="border-top:1px solid var(--gray-border);padding-top:12px;margin-top:4px">
-        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">🔑 Đổi mật khẩu</div>
+        <div class="section-title"><svg class="ic"><use href="#i-key"/></svg>Đổi mật khẩu</div>
         <input type="password" id="chpw-old" class="form-input" placeholder="Mật khẩu hiện tại" style="margin-bottom:8px;font-size:14px">
         <input type="password" id="chpw-new" class="form-input" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" style="margin-bottom:8px;font-size:14px">
         <input type="password" id="chpw-confirm" class="form-input" placeholder="Nhập lại mật khẩu mới" style="margin-bottom:8px;font-size:14px">
@@ -1168,11 +1232,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card">
     <div class="card-header"><svg class="ic"><use href="#i-bell"/></svg>Thông báo đẩy (Push Notification)</div>
     <div class="card-body">
-      <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px">Nhận thông báo khi có phiếu mới được duyệt hoặc chuyển tiền. Yêu cầu: mở app từ biểu tượng SQ (Sổ Quỹ) ngoài màn hình (không phải Safari).</p>
+      <p class="tab-desc" style="padding:0 0 10px">Nhận thông báo khi có phiếu mới được duyệt hoặc chuyển tiền. Yêu cầu: mở app từ biểu tượng SQ (Sổ Quỹ) ngoài màn hình (không phải Safari).</p>
       <div id="notif-status-text" style="font-size:13px;margin-bottom:10px;font-weight:600">Đang kiểm tra...</div>
       <div id="notif-debug" style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6"></div>
-      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px;margin-bottom:8px">🔔 Bật thông báo</button>
-      <button onclick="updateNotifSettingsStatus()" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569">🔄 Kiểm tra lại trạng thái</button>
+      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="margin-bottom:8px"><svg class="ic"><use href="#i-bell"/></svg>Bật thông báo</button>
+      <button class="btn-full btn-outline-full" onclick="updateNotifSettingsStatus()"><svg class="ic"><use href="#i-refresh"/></svg>Kiểm tra lại trạng thái</button>
       <button onclick="fcmRegister(currentRole).then(updateNotifSettingsStatus)" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569;margin-top:6px">📡 Đăng ký FCM thủ công</button>
     </div>
   </div>
@@ -1205,7 +1269,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Google Sheets -->
   <div class="card">
     <div class="card-header" style="display:flex;align-items:center;justify-content:space-between">
-      <span>🔗 Kết nối Google Sheets</span>
+      <span style="display:flex;align-items:center;gap:7px"><svg class="ic"><use href="#i-link"/></svg>Kết nối Google Sheets</span>
       <span id="sheet-badge-settings" class="sheet-badge sheet-none" style="background:var(--gray-light);color:var(--text-sub)">● Chưa kết nối</span>
     </div>
     <div class="card-body">
@@ -1221,7 +1285,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div class="step-body">
           <div class="step-title">Cài Apps Script</div>
           <div class="step-desc">Extensions → Apps Script → Dán code → Deploy → Web App → Anyone → Copy URL</div>
-          <button onclick="copyScript()" style="margin-top:6px;padding:6px 12px;border-radius:7px;background:var(--gray-light);border:1px solid var(--gray-border);font-size:11px;font-weight:700;cursor:pointer">📋 Copy code Apps Script</button>
+          <button class="btn-xs btn-xs-ghost" style="margin-top:6px" onclick="copyScript()">📋 Copy code Apps Script</button>
         </div>
       </div>
       <div class="setup-step">
@@ -1250,7 +1314,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Đăng xuất — dời từ thanh dưới vào đây để nhường chỗ cho nút Kế hoạch -->
   <div class="card">
     <div class="card-body">
-      <button class="btn-full btn-outline-full" style="color:var(--red);border-color:var(--red)" onclick="logoutRole()">🚪 Thoát / Đăng xuất</button>
+      <button class="btn-full btn-outline-full" style="color:var(--red);border-color:var(--red-line);margin-top:0" onclick="logoutRole()"><svg class="ic"><use href="#i-signout"/></svg>Thoát / Đăng xuất</button>
     </div>
   </div>
 
@@ -1467,10 +1531,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
 <!-- Modal Thêm/Sửa nhân viên -->
 <div class="role-screen" id="emp-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)" id="emp-modal-title">Thêm nhân viên</div>
-      <button onclick="closeEmpModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title" id="emp-modal-title">Thêm nhân viên</div>
+      <button class="sheet-close" onclick="closeEmpModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="form-group">
       <label class="form-label">Tên nhân viên <span class="req">*</span></label>
@@ -1491,17 +1555,17 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <label class="form-label">Ghi chú</label>
       <textarea class="form-input" id="emp-inp-note" rows="2" placeholder="VD: nửa tháng 7 chuyển sang CT khác..."></textarea>
     </div>
-    <button class="btn-full btn-primary-full" onclick="saveEmpFromModal()">💾 Lưu nhân viên</button>
+    <button class="btn-full btn-primary-full" onclick="saveEmpFromModal()"><svg class="ic"><use href="#i-save"/></svg>Lưu nhân viên</button>
     <button class="btn-full btn-outline-full" onclick="closeEmpModal()">Hủy</button>
   </div>
 </div>
 
 <!-- Modal Đề xuất ứng lương -->
 <div class="role-screen" id="adv-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)" id="adv-modal-title">Đề xuất ứng lương</div>
-      <button onclick="closeAdvModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title" id="adv-modal-title">Đề xuất ứng lương</div>
+      <button class="sheet-close" onclick="closeAdvModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Khoản ứng cho <b id="adv-month-label">tháng —</b></div>
     <div class="form-group">
@@ -1527,17 +1591,17 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <label class="form-label">Ghi chú</label>
       <textarea class="form-input" id="adv-inp-note" rows="2"></textarea>
     </div>
-    <button class="btn-full btn-primary-full" onclick="saveAdvFromModal()">💾 Gửi đề xuất</button>
+    <button class="btn-full btn-primary-full" onclick="saveAdvFromModal()"><svg class="ic"><use href="#i-save"/></svg>Gửi đề xuất</button>
     <button class="btn-full btn-outline-full" onclick="closeAdvModal()">Hủy</button>
   </div>
 </div>
 
 <!-- Modal XEM TRƯỚC nhập ứng lương từ Excel (v154) -->
 <div class="role-screen" id="lx-modal-overlay" style="display:none;z-index:9200;background:rgba(0,0,0,0.6);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:16px 12px 20px;width:100%;max-width:640px;margin-top:auto;max-height:92vh;overflow-y:auto">
+  <div class="sheet sheet-wide">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)">📥 Nhập ứng lương từ Excel</div>
-      <button onclick="closeLuongExcel()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+      <div class="sheet-title">Nhập ứng lương từ Excel</div>
+      <button class="sheet-close" onclick="closeLuongExcel()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:6px">Khoản ứng cho <b id="lx-month-label">tháng —</b>. Kiểm tra kỹ tên + số tiền trước khi tạo. Dòng <span style="color:#dc2626;font-weight:700">đỏ</span> = tên chưa có trong danh sách.</div>
     <div id="lx-summary" style="font-size:12.5px;font-weight:700;margin:6px 0 8px"></div>
@@ -1551,7 +1615,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
 <!-- v165 UX: menu ⋯ trên thẻ phiếu (gom các thao tác hiếm: gửi chat, chia sẻ ảnh, sửa, xoá) -->
 <div class="role-screen" id="card-menu-overlay" style="display:none;z-index:9300;background:rgba(0,0,0,0.55);align-items:flex-end" onclick="if(event.target===this)closeCardMenu()">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:16px 14px 20px;width:100%;max-width:480px;margin:0 auto">
+  <div class="sheet" style="margin:0 auto">
     <div id="card-menu-title" style="font-size:13px;font-weight:700;color:var(--text-sub);margin-bottom:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></div>
     <div id="card-menu-items"></div>
     <button class="btn-full btn-outline-full" onclick="closeCardMenu()">Đóng</button>
@@ -1562,10 +1626,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
 <!-- Modal Thêm/Sửa kế hoạch vật tư -->
 <div class="role-screen" id="plan-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)" id="plan-modal-title">Thêm đề xuất vật tư</div>
-      <button onclick="closePlanModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title" id="plan-modal-title">Thêm đề xuất vật tư</div>
+      <button class="sheet-close" onclick="closePlanModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="form-group">
       <label class="form-label">Đính kèm ảnh yêu cầu</label>
@@ -1575,7 +1639,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <div class="upload-txt">Chọn / Chụp ảnh</div>
           <div class="upload-sub">Có thể chọn nhiều ảnh cùng lúc</div>
         </label>
-        <button type="button" onclick="pasteImgFromClipboard('plan')" style="margin-top:6px;width:100%;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer">📋 Dán ảnh từ clipboard</button>
+        <button type="button" class="paste-btn" onclick="pasteImgFromClipboard(\'plan\')"><svg class="ic"><use href="#i-copy"/></svg>Dán ảnh từ clipboard</button>
         <input type="file" id="plan-file-input" accept="image/*" multiple style="display:none" onchange="handlePlanImg(this)">
       </div>
       <div id="plan-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
@@ -1612,7 +1676,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <label class="form-label">Ghi chú</label>
       <textarea class="form-input" id="plan-inp-note" rows="2"></textarea>
     </div>
-    <button class="btn-full btn-primary-full" onclick="savePlanFromModal()">💾 Lưu đề xuất vật tư</button>
+    <button class="btn-full btn-primary-full" onclick="savePlanFromModal()"><svg class="ic"><use href="#i-save"/></svg>Lưu đề xuất vật tư</button>
     <button class="btn-full btn-outline-full" onclick="closePlanModal()">Hủy</button>
   </div>
 </div>
@@ -1621,8 +1685,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="zalo-list-modal" style="display:none;z-index:9250;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:18px 14px;width:100%;max-width:420px;max-height:84vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <div style="font-size:16px;font-weight:800;color:var(--text)" id="zalo-list-title">📤 Chờ gửi Zalo</div>
-      <button onclick="closeZaloListModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+      <div class="sheet-title" id="zalo-list-title">Chờ gửi Zalo</div>
+      <button class="sheet-close" onclick="closeZaloListModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div id="zalo-list-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:10px"></div>
     <div id="zalo-list-body"></div>
@@ -1633,8 +1697,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="sal-stat-modal" style="display:none;z-index:9260;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:18px 14px;width:100%;max-width:420px;max-height:84vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <div style="font-size:16px;font-weight:800;color:var(--text)" id="sal-stat-modal-title">Danh sách</div>
-      <button onclick="closeSalStatModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+      <div class="sheet-title" id="sal-stat-modal-title">Danh sách</div>
+      <button class="sheet-close" onclick="closeSalStatModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div id="sal-stat-modal-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:10px"></div>
     <div id="sal-stat-modal-body"></div>
@@ -1644,11 +1708,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- v95: modal LÝ DO GẤP — chọn 🔴 Gấp phải gõ lý do thì mới có tác dụng (user: "dùng bừa bãi quá") -->
 <div class="role-screen" id="urgent-reason-modal" style="display:none;z-index:9350;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:20px 18px;width:100%;max-width:360px">
-    <div style="font-size:16px;font-weight:800;color:#c0392b;margin-bottom:4px">🔴 Lý do GẤP?</div>
+    <div class="sheet-title" style="color:var(--red);margin-bottom:4px">Lý do GẤP?</div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Phải ghi rõ lý do vì sao khoản này gấp thì mới chọn được mức "Gấp". Lý do sẽ hiện ngay trên phiếu cho mọi người thấy.</div>
     <textarea class="form-input" id="urgent-reason-input" rows="3" placeholder="VD: 8h sáng mai đổ bê tông, thiếu xi măng là dừng cả đội..."></textarea>
     <div id="urgent-reason-err" style="color:var(--red);font-size:12px;min-height:16px;margin:4px 0 6px"></div>
-    <button class="btn-full btn-primary-full" style="background:#e74c3c" onclick="confirmUrgentReason()">Xác nhận GẤP</button>
+    <button class="btn-full btn-primary-full" style="background:var(--red)" onclick="confirmUrgentReason()">Xác nhận GẤP</button>
     <button class="btn-full btn-outline-full" onclick="cancelUrgentReason()">Hủy (về Bình thường)</button>
   </div>
 </div>
@@ -1705,8 +1769,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="chat-pick-modal" style="display:none;z-index:9460;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:16px 14px;width:100%;max-width:400px;max-height:80vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)">📋 Chọn phiếu để gắn</div>
-      <button onclick="closeChatPick()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+      <div class="sheet-title">Chọn phiếu để gắn</div>
+      <button class="sheet-close" onclick="closeChatPick()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <input id="chat-pick-search" type="text" autocomplete="off" placeholder="🔍 Tìm theo nội dung / tên người..." oninput="renderChatPick()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;outline:none;font-family:inherit;margin-bottom:8px">
     <div id="chat-pick-list"></div>
@@ -1786,10 +1850,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
 <!-- Modal tạo đề xuất P.KH (mẫu theo modal ứng lương) -->
 <div class="role-screen" id="kh-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)">📐 Đề xuất chi phí Kế hoạch</div>
-      <button onclick="closeKhModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title">Đề xuất chi phí Kế hoạch</div>
+      <button class="sheet-close" onclick="closeKhModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="form-group">
       <label class="form-label">Loại chi phí <span class="req">*</span></label>
@@ -1818,7 +1882,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <input type="file" id="kh-file-input" accept="image/*" multiple style="display:none" onchange="handleKhImg(this)">
       <div id="kh-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
     </div>
-    <button class="btn-full btn-primary-full" onclick="saveKhFromModal()">💾 Gửi đề xuất</button>
+    <button class="btn-full btn-primary-full" onclick="saveKhFromModal()"><svg class="ic"><use href="#i-save"/></svg>Gửi đề xuất</button>
     <button class="btn-full btn-outline-full" onclick="closeKhModal()">Hủy</button>
   </div>
 </div>
@@ -1877,7 +1941,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260924-v29';
+const APP_VERSION = '20260924-v30';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2414,8 +2478,8 @@ let authMode = 'login'; // 'login' | 'register'
 function switchAuthTab(mode){
   authMode = mode;
   const isReg = mode === 'register';
-  document.getElementById('auth-tab-login').style.cssText    = `flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:${isReg?600:700};color:${isReg?'var(--gray)':'var(--blue)'};border-bottom:2px solid ${isReg?'transparent':'var(--blue)'};margin-bottom:-2px;cursor:pointer`;
-  document.getElementById('auth-tab-register').style.cssText = `flex:1;background:none;border:none;padding:8px 0;font-size:14px;font-weight:${isReg?700:600};color:${isReg?'var(--blue)':'var(--gray)'};border-bottom:2px solid ${isReg?'var(--blue)':'transparent'};margin-bottom:-2px;cursor:pointer`;
+  document.getElementById('auth-tab-login').classList.toggle('active', !isReg);
+  document.getElementById('auth-tab-register').classList.toggle('active', isReg);
   document.getElementById('auth-name-wrap').style.display    = isReg ? 'block' : 'none';
   document.getElementById('auth-confirm-wrap').style.display = isReg ? 'block' : 'none';
   document.getElementById('auth-forgot').style.display = isReg ? 'none' : 'block';
@@ -2432,8 +2496,8 @@ function switchAuthTab(mode){
 function toggleAuthPass(){
   const inp = document.getElementById('auth-pass');
   const eye = document.getElementById('auth-pass-eye');
-  if(inp.type==='password'){ inp.type='text'; eye.textContent='🙈'; }
-  else { inp.type='password'; eye.textContent='👁'; }
+  if(inp.type==='password'){ inp.type='text'; eye.classList.add('on'); }
+  else { inp.type='password'; eye.classList.remove('on'); }
 }
 
 // BẢO MẬT: vai KHÔNG suy từ tên tự gõ nữa. Trước đây ai gõ tên "Lan"/"Toàn" (lúc đăng ký
@@ -2950,10 +3014,10 @@ async function _pushOutboxFlush(){
 }
 
 const STATUS = {
-  pending:     {label:'Chờ duyệt',  badge:'badge-wait',     icon:'⏳'},
-  approved:    {label:'Đã duyệt',    badge:'badge-approved', icon:'✅'},
-  transferred: {label:'Đã chuyển',  badge:'badge-done',     icon:'💸'},
-  rejected:    {label:'Từ chối',    badge:'badge-reject',   icon:'❌'},
+  pending:     {label:'Chờ duyệt',  badge:'badge-wait',     icon:'⏳', short:'Chờ'},
+  approved:    {label:'Đã duyệt',    badge:'badge-approved', icon:'✅', short:'Duyệt'},
+  transferred: {label:'Đã chuyển',  badge:'badge-done',     icon:'💸', short:'Đã CK'},
+  rejected:    {label:'Từ chối',    badge:'badge-reject',   icon:'❌', short:'Từ chối'},
 };
 
 // Cache cục bộ CHỈ giữ phần thông tin nhẹ, KHÔNG kèm ảnh base64.
@@ -6253,13 +6317,6 @@ function showPendingApprovalScreen(){
   document.body.appendChild(div);
 }
 
-async function adminResetAllRoles(){
-  if(currentRole !== 'dung'){ showToast('Chỉ D mới làm được'); return; }
-  if(!confirm('Xóa toàn bộ dữ liệu vai trò của tất cả người dùng?\nMọi người phải đăng ký lại từ đầu.')) return;
-  await db.ref('duyetchi/userRoles').remove();
-  showToast('✅ Đã xóa toàn bộ userRoles');
-}
-
 // v81 BẢO MẬT: danh sách tài khoản + trạng thái "được xem dữ liệu". Chỉ Dũng đọc được cả node
 // userRoles (luật cho phép). Người CHƯA duyệt hiện nút "Cho xem"; người đã duyệt hiện nút "Thu hồi".
 async function renderApproveList(){
@@ -6452,9 +6509,6 @@ function renderSettings(){
   // Điền dropdown cập nhật tên
   const selRole = document.getElementById('update-role-name');
   if(selRole) selRole.innerHTML = '<option value="">-- Chọn tên của bạn --</option>'+persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
-  // Hiện nút admin reset chỉ cho D
-  const adminSec = document.getElementById('admin-reset-section');
-  if(adminSec) adminSec.style.display = currentRole==='dung' ? 'block' : 'none';
   // Mục chuyển ảnh cũ lên Kho ảnh — chỉ D thấy; hiện số phiếu còn ảnh trong database
   const migSec = document.getElementById('admin-migrate-section');
   if(migSec){
@@ -6652,7 +6706,7 @@ function renderReportRejected(){
     const dTs = dRej&&dRej.ts?fmtT(dRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const hTs = hRej&&hRej.ts?fmtT(hRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const prv=p.priority||'normal';
-    const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Chờ':'🟡 BT';
+    const prCell=prv==='urgent'?'<span class="pri-u">Gấp</span>':prv==='low'?'<span class="pri-l">Chờ</span>':'<span class="pri-n">—</span>';
     const rejNote = [dLine?`D: ${dLine}`:'' , hLine?`H: ${hLine}`:''].filter(Boolean).join('<br>');
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
@@ -6665,9 +6719,9 @@ function renderReportRejected(){
     </tr>`;
   }).join('');
   const total = fp.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
-  el.innerHTML=`<div style="padding:0 12px 12px">
-    <div style="font-size:11px;font-weight:700;color:#dc2626;background:#fff1f2;padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid #dc2626">❌ Từ chối — ${fp.length} phiếu · ${fmtTr(total)}</div>
-    <div style="border-radius:0 0 8px 8px;overflow:hidden">
+  el.innerHTML=`<div class="rpt-sec">
+    <div class="rpt-sec-head" style="border-left:3px solid var(--red)">Từ chối <small>${fp.length} phiếu, ${fmtTr(total)}</small></div>
+    <div class="rpt-sec-body">
       <table class="report-table">
         <thead><tr><th style="text-align:center;width:18px">#</th><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">Số tiền</th><th class="col-rej">Lý do từ chối</th></tr></thead>
         <tbody>${rows}</tbody>
@@ -6698,7 +6752,7 @@ function renderReportList(){
     const tHist = Array.isArray(p.transfers)&&p.transfers.length ? p.transfers.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (trans>0?fmtTr(trans):'');
     const cellBase = 'style="vertical-align:middle;white-space:normal;line-height:1.5"';
     const prv2 = p.priority||'normal';
-    const prCell2 = prv2==='urgent'?'<span style="color:#b00000;font-weight:800">🔴</span>':prv2==='low'?'🟢':'🟡';
+    const prCell2 = prv2==='urgent'?'<span class="pri-u">Gấp</span>':prv2==='low'?'<span class="pri-l">Chờ</span>':'<span class="pri-n">—</span>';
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
       <td style="vertical-align:middle;text-align:center">${sorted.length-i}</td>
       <td ${cellBase} style="max-width:120px;font-size:10px;font-weight:700">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
@@ -6709,7 +6763,7 @@ function renderReportList(){
       <td ${cellBase} style="font-size:9px;color:var(--blue);white-space:nowrap">${dHist}</td>
       <td ${cellBase} style="font-size:9px;color:#7c3aed;white-space:nowrap">${hHist}</td>
       <td ${cellBase} style="font-size:9px;color:var(--yellow);white-space:nowrap">${tHist}</td>
-      <td style="vertical-align:middle"><span class="badge ${st.badge}" style="font-size:8px;padding:1px 5px">${st.icon}</span></td>
+      <td style="vertical-align:middle"><span class="badge ${st.badge}" style="font-size:9px;padding:1px 6px">${st.short||st.label}</span></td>
       <td ${cellBase} style="font-size:9px;color:var(--red)">${rejStr}</td>
     </tr>`;
   }).join('');
@@ -6761,7 +6815,7 @@ function renderExcelTable(containerId, items, kind){
         ? `<span style="font-weight:700;white-space:nowrap">${fmtTr(remaining)}</span><br><span style="font-size:9px;color:var(--red);font-weight:600;white-space:nowrap">⚠ đã ck ${fmtTr(transferred)}</span>`
         : `<span style="white-space:nowrap">${fmtTr(p.amount)}</span>`;
     const prv = p.priority||'normal';
-    const prCell = prv==='urgent'?'<span style="color:#b00000;font-weight:800;font-size:9px;line-height:1.2">🔴<br>Gấp</span>':prv==='low'?'<span style="color:#1a7a3c;font-size:9px;line-height:1.2">🟢<br>Chờ</span>':'🟡';
+    const prCell = prv==='urgent'?'<span class="pri-u">Gấp</span>':prv==='low'?'<span class="pri-l">Chờ</span>':'<span class="pri-n">—</span>';
     const dAmt = approvedAmtOf(p,'D');
     const hAmt = approvedAmtOf(p,'H');
     const dCell = kind==='pending' ? (dAmt>0?`<span style="color:var(--blue);font-weight:700;font-size:10px;word-break:normal">${fmtTr(dAmt)}</span>`:'<span style="color:#aaa;font-size:9px">—</span>') : '';
@@ -6834,35 +6888,34 @@ function renderReportSummary(){
 
   // Thẻ thống kê
   const statCards = `
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 12px">
-    <div onclick="setReportTab('list', document.querySelector('.report-subtab[data-tab=\\'list\\']'))" style="background:#eff6ff;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
-      <div style="font-size:9px;color:#1a56db;font-weight:600">TỔNG ĐỀ XUẤT</div>
-      <div style="font-size:15px;font-weight:800;color:#1a56db;white-space:nowrap">${fp.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#1a56db;font-weight:600">${fmtTr(tot)}</div>
+  <div class="kpi-grid">
+    <div onclick="setReportTab('list', document.querySelector('.report-subtab[data-tab=\\'list\\']'))" class="kpi">
+      <div class="kpi-l">Tổng đề xuất</div>
+      <div class="kpi-v">${fp.length} <small>phiếu</small></div>
+      <div class="kpi-a">${fmtTr(tot)}</div>
     </div>
-    <div onclick="_rptScrollTo('rpt-sec-done')" style="background:#f0fdf4;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
-      <div style="font-size:9px;color:#16a34a;font-weight:600">ĐÃ CHUYỂN</div>
-      <div style="font-size:15px;font-weight:800;color:#16a34a;white-space:nowrap">${hasTrans.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#16a34a;font-weight:600">${fmtTr(transTotal)}</div>
+    <div onclick="_rptScrollTo('rpt-sec-done')" class="kpi is-in">
+      <div class="kpi-l">Đã chuyển</div>
+      <div class="kpi-v">${hasTrans.length} <small>phiếu</small></div>
+      <div class="kpi-a">${fmtTr(transTotal)}</div>
     </div>
-    <div onclick="_rptScrollTo('rpt-sec-appd')" style="background:#fffbeb;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
-      <div style="font-size:9px;color:#d97706;font-weight:600">DT·CHỜ CK</div>
-      <div style="font-size:15px;font-weight:800;color:#d97706;white-space:nowrap">${appd.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#d97706;font-weight:600">${fmtTr(appdAmt)}</div>
+    <div onclick="_rptScrollTo('rpt-sec-appd')" class="kpi is-teal">
+      <div class="kpi-l">Duyệt, chờ CK</div>
+      <div class="kpi-v">${appd.length} <small>phiếu</small></div>
+      <div class="kpi-a">${fmtTr(appdAmt)}</div>
     </div>
-    <div onclick="_rptScrollTo('rpt-sec-pend')" style="background:#fdf4ff;border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer">
-      <div style="font-size:9px;color:#9333ea;font-weight:600">CHỜ DUYỆT</div>
-      <div style="font-size:15px;font-weight:800;color:#9333ea;white-space:nowrap">${pend.length} <span style="font-size:9px;font-weight:500">phiếu</span></div>
-      <div style="font-size:9px;color:#9333ea;font-weight:600">${fmtTr(pendAmt)}</div>
+    <div onclick="_rptScrollTo('rpt-sec-pend')" class="kpi is-warn">
+      <div class="kpi-l">Chờ duyệt</div>
+      <div class="kpi-v">${pend.length} <small>phiếu</small></div>
+      <div class="kpi-a">${fmtTr(pendAmt)}</div>
     </div>
   </div>
-  ${urgent.length ? `<div style="margin:0 12px 10px;border-radius:10px;overflow:hidden;border:1.5px solid #f5a0a0">
-    <div style="background:#c0392b;padding:6px 10px;font-size:10px;color:#fff;font-weight:700">🔴 VIỆC GẤP CHƯA XONG — ${urgent.length} phiếu · ${fmtTr(urgent.reduce((a,p)=>a+_outstanding(p),0))}</div>
-    <table style="width:100%;border-collapse:collapse;background:#fff;table-layout:fixed">
+  ${urgent.length ? `<div class="rpt-sec" style="padding-bottom:10px">
+    <div class="rpt-sec-head is-urgent"><svg class="ic"><use href="#i-bolt"/></svg>Việc gấp chưa xong <small>${urgent.length} phiếu, ${fmtTr(urgent.reduce((a,p)=>a+_outstanding(p),0))}</small></div><div class="rpt-sec-body"><table class="report-table" style="table-layout:fixed">
       <colgroup><col style="width:auto"><col style="width:56px"><col style="width:auto"><col style="width:120px"></colgroup>
-      <tr style="background:#fdecea"><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Nội dung</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Người</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:left;font-weight:800">Công trình</th><th style="padding:5px 6px;font-size:14px;color:#1e293b;text-align:right;font-weight:800">Số tiền</th></tr>
+      <tr><th style="text-align:left">Nội dung</th><th style="text-align:left">Người</th><th style="text-align:left">Công trình</th><th style="text-align:right">Số tiền</th></tr>
       ${urgent.map(p=>`<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')" style="border-top:1px solid #fde8e8;cursor:pointer"><td style="padding:4px 6px;font-size:10px;overflow:hidden;text-overflow:ellipsis">${esc(p.desc||'—')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.person||'')}</td><td style="padding:4px 6px;font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis">${esc(p.site||'—')}</td><td style="padding:4px 6px;font-size:11px;font-weight:700;color:#c0392b;text-align:right;white-space:nowrap">${fmtTr(_outstanding(p))}</td></tr>`).join('')}
-    </table>
+    </table></div>
   </div>` : ''}`;
 
   // Hàm tạo bảng nhóm
@@ -6889,7 +6942,7 @@ function renderReportSummary(){
               ? `<span style="color:#d97706">${fmtTr(official)}</span>`
               : `<span style="color:#64748b">${fmtTr(p.amount)}</span>`;
       const prv = p.priority||'normal';
-      const prCell = prv==='urgent'?'🔴':prv==='low'?'🟢':'🟡';
+      const prCell = prv==='urgent'?'<span class="pri-u">Gấp</span>':prv==='low'?'<span class="pri-l">Chờ</span>':'<span class="pri-n">—</span>';
       return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
         <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap;width:18px">${stt}</td>
         <td class="col-desc" style="font-weight:600;line-height:1.4">${esc(p.desc)}${remindReportLabel(p)?` <span style="color:#ea580c;font-weight:700;font-style:italic">(${esc(remindReportLabel(p))})</span>`:''}${opinionReportHtml(p)}</td>
@@ -6906,9 +6959,9 @@ function renderReportSummary(){
         ? list.reduce((a,p)=>a+(parseFloat(p.amount)||0),0)
         : list.reduce((a,p)=>a+getTotalTransferred(p),0);
     return `
-    <div style="padding:0 12px 12px">
-      <div style="font-size:11px;font-weight:700;color:${color};background:${bg};padding:6px 10px;border-radius:8px 8px 0 0;border-left:3px solid ${color}">${title} — ${list.length} khoản · ${fmtTr(groupTotal)}</div>
-      <div style="border-radius:0 0 8px 8px;overflow:hidden">
+    <div class="rpt-sec">
+      <div class="rpt-sec-head" style="border-left:3px solid ${color}">${title} <small>${list.length} khoản, ${fmtTr(groupTotal)}</small></div>
+      <div class="rpt-sec-body">
         <table class="report-table report-table-summary">
           <thead><tr><th style="text-align:center;width:18px">#</th><th class="col-desc">Nội dung</th><th class="col-person">Người</th><th class="col-site">Công trình</th><th class="col-pri">Mức</th><th class="col-amt">${showRej?'Đề xuất':'Số tiền'}</th>${showRej?'<th class="col-rej">Lý do</th>':''}</tr></thead>
           <tbody>${rows}</tbody>
@@ -6918,10 +6971,10 @@ function renderReportSummary(){
   };
 
   el.innerHTML = statCards
-    + `<div id="rpt-sec-pend">` + makeTable('⏳ Chờ duyệt', '#9333ea', '#fdf4ff', pend, false, p=>parseFloat(p.amount)||0) + `</div>`
-    + `<div id="rpt-sec-appd">` + makeTable('✅ Đã duyệt · chờ chuyển', '#d97706', '#fffbeb', appd, false, p=>(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)) + `</div>`
+    + `<div id="rpt-sec-pend">` + makeTable('Chờ duyệt', 'var(--amber)', '', pend, false, p=>parseFloat(p.amount)||0) + `</div>`
+    + `<div id="rpt-sec-appd">` + makeTable('Đã duyệt, chờ chuyển', 'var(--teal)', '', appd, false, p=>(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)) + `</div>`
     + `<div id="rpt-sec-done">` + makeTable('💸 Đã chuyển tiền', '#16a34a', '#f0fdf4', hasTrans, false, p=>getTotalTransferred(p)) + `</div>`
-    + `<div id="rpt-sec-rej">` + makeTable('❌ Từ chối', '#dc2626', '#fff1f2', rej, true) + `</div>`;
+    + `<div id="rpt-sec-rej">` + makeTable('Từ chối', 'var(--red)', '', rej, true) + `</div>`;
   attachReportDoubleTap(el);
 }
 
@@ -10231,10 +10284,10 @@ function updateCashBadge(){
 </script>
 <!-- MODAL: thêm khoản THU / KÝ QUỸ (Gia Bình) -->
 <div class="role-screen" id="cash-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)" id="cash-modal-title">Thêm khoản</div>
-      <button onclick="closeCashModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+  <div class="sheet">
+    <div class="sheet-head">
+      <div class="sheet-title" id="cash-modal-title">Thêm khoản</div>
+      <button class="sheet-close" onclick="closeCashModal()" aria-label="Đóng"><svg class="ic"><use href="#i-x"/></svg></button>
     </div>
     <div class="form-group">
       <label class="form-label">Số tiền <span class="req">*</span></label>
