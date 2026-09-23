@@ -744,7 +744,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="role-screen">
   <div class="brand-mark"><svg class="ic"><use href="#i-cash"/></svg></div>
   <h2>Sổ Quỹ Gia Bình</h2>
-  <p style="margin-bottom:20px;text-align:center;line-height:1.5">Sổ tiền chung công trình Gia Bình<br><span style="font-size:12px;opacity:.85">Liên danh PVA + 134 · đề xuất → duyệt → chuyển tiền</span></p>
+  <p style="margin-bottom:20px;text-align:center;line-height:1.5">Sổ tiền chung công trình Gia Bình</p>
   <form id="auth-form" autocomplete="on" onsubmit="return false" style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
     <!-- Tab switch -->
     <div class="auth-tabs">
@@ -1941,7 +1941,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260924-v30';
+const APP_VERSION = '20260924-v31';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
