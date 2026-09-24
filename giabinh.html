@@ -1960,7 +1960,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260924-v34';
+const APP_VERSION = '20260924-v35';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4228,6 +4228,14 @@ function renderCard(p){
 }
 function _buildCard(p){
   const st = STATUS[p.status]||STATUS.pending;
+  // v35 (D chốt): nút H&L là của Hiền HOẶC Lan → chưa ai bấm thì ghi "H&L chờ duyệt"; ai bấm thì ghi ĐÚNG TÊN
+  // người đó ("Hiền đã duyệt" / "Lan đã duyệt"; cả hai cùng duyệt thì "Hiền, Lan"). Tên lấy từ lịch sử duyệt H (t.by).
+  const _hWho = (()=>{
+    const h = Array.isArray(p.approvedHHistory) ? p.approvedHHistory : [];
+    const names = [];
+    h.forEach(t=>{ const nm = t && t.by ? String(t.by).trim().split(/\s+/).pop() : ''; if(nm && names.indexOf(nm)<0) names.push(nm); });
+    return names.length ? esc(names.join(', ')) : 'H&amp;L';
+  })();
   // Khi đang ở trạng thái "Đã duyệt", hiện rõ D đã duyệt bao nhiêu và H đã duyệt bao nhiêu (hoặc đang chờ),
   // mỗi người 1 dòng badge riêng, để biết ngay tình trạng duyệt từng phần mà không cần mở từng nút.
   let badgeHtml = '';
@@ -4235,8 +4243,8 @@ function _buildCard(p){
     const dAmt=approvedAmtOf(p,'D'), hAmt=approvedAmtOf(p,'H'), total=parseFloat(p.amount)||0;
     const dDone=dAmt>0&&dAmt>=total-0.0001, hDone=hAmt>0&&hAmt>=total-0.0001;
     if(!dDone&&!hDone) badgeHtml=`<span class="badge badge-wait">${ic('hourglass')} Chờ duyệt</span>`;
-    else if(dDone&&!hDone) badgeHtml=`<div class="badge-stack"><span class="badge badge-approved">${ic('checkc')} D đã duyệt</span><span class="badge badge-wait" style="margin-top:4px">${ic('hourglass')} H chờ duyệt</span></div>`;
-    else if(!dDone&&hDone) badgeHtml=`<div class="badge-stack"><span class="badge badge-wait">${ic('hourglass')} D chờ duyệt</span><span class="badge badge-approved" style="margin-top:4px">${ic('checkc')} H đã duyệt</span></div>`;
+    else if(dDone&&!hDone) badgeHtml=`<div class="badge-stack"><span class="badge badge-approved">${ic('checkc')} D đã duyệt</span><span class="badge badge-wait" style="margin-top:4px">${ic('hourglass')} H&amp;L chờ duyệt</span></div>`;
+    else if(!dDone&&hDone) badgeHtml=`<div class="badge-stack"><span class="badge badge-wait">${ic('hourglass')} D chờ duyệt</span><span class="badge badge-approved" style="margin-top:4px">${ic('checkc')} ${_hWho} đã duyệt</span></div>`;
     else badgeHtml=`<span class="badge badge-wait">${ic('hourglass')} Chờ duyệt</span>`;
   }
   if(p.status==='rejected'){
@@ -4269,8 +4277,8 @@ function _buildCard(p){
       ? (dFull ? `D đã duyệt ${fmtVND(isClosed?dAmt:total)}` : `D đã duyệt <span style="color:#ff0000">${fmtVND(dAmt)}/${fmtVND(total)}</span>`)
       : 'D chờ duyệt';
     const hLabel = hAmt>0
-      ? (hFull ? `H đã duyệt ${fmtVND(isClosed?hAmt:total)}` : `H đã duyệt <span style="color:#ff0000">${fmtVND(hAmt)}/${fmtVND(total)}</span>`)
-      : 'H chờ duyệt';
+      ? (hFull ? `${_hWho} đã duyệt ${fmtVND(isClosed?hAmt:total)}` : `${_hWho} đã duyệt <span style="color:var(--red)">${fmtVND(hAmt)}/${fmtVND(total)}</span>`)
+      : 'H&amp;L chờ duyệt';
     const dBadgeClass = dAmt>0 ? 'badge-approved' : 'badge-wait';
     const hBadgeClass = hAmt>0 ? 'badge-approved' : 'badge-wait';
     const dHistory = Array.isArray(p.approvedDHistory) ? p.approvedDHistory : [];
