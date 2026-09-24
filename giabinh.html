@@ -1579,7 +1579,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260924-v37';
+const APP_VERSION = '20260924-v38';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2095,16 +2095,26 @@ const COST_TYPES = {
 };
 const ROLES = {
   dung:  {label:'Dũng',  icon:'D', color:'var(--blue)'},
-  hien:  {label:'Hiền',  icon:'H', color:'#7c3aed'},
+  hien:  {label:'Hiền/Lan', icon:'H&amp;L', color:'#7c3aed'},
   toan:  {label:'Toàn',  icon:'To',color:'#0e7490'},
   trang: {label:'Trang', icon:'T', color:'var(--yellow)'},
   other: {label:'Khác',  icon:'👤',color:'var(--gray)'},
 };
 
+// v38: vai 'hien' dùng chung cho Hiền và Lan → nhãn chung "H&L"; đã có người bấm thì ghi TÊN GỌI thật (từ cuối họ tên).
+function shortName(s){ s = String(s||'').trim(); return s ? s.split(/\s+/).pop() : ''; }
+function hlMe(){ return (currentRole==='hien' && shortName(currentUserName)) || 'Hiền/Lan'; }   // người H&L đang đăng nhập
+function hlNames(p){   // ai (vai H&L) đã duyệt phiếu này — theo lịch sử duyệt; chưa ai thì "H&L". Chữ THƯỜNG, chèn HTML phải esc()
+  const h = Array.isArray(p && p.approvedHHistory) ? p.approvedHHistory : [];
+  const names = [];
+  h.forEach(t=>{ const nm = shortName(t && t.by); if(nm && names.indexOf(nm)<0) names.push(nm); });
+  return names.length ? names.join(', ') : 'H&L';
+}
+function hlRejName(p){ const nm = shortName(p && p.rejectedByH && p.rejectedByH.by); return nm || 'H&L'; }   // ai (H&L) đã từ chối
 function getCurrentUserName(){
   if(currentUserName) return currentUserName;
   if(currentRole==='dung') return 'Dũng';
-  if(currentRole==='hien') return 'Hiền';
+  if(currentRole==='hien') return 'Hiền/Lan';
   if(currentRole==='toan') return 'Toàn';
   if(currentRole==='trang') return 'Trang';
   return '';
@@ -2302,7 +2312,7 @@ async function cancelOtp(){
 // ── ONLINE PRESENCE ──
 function trackOnline(uid, name, role){
   const ref = db.ref('duyetchi/online/'+uid);
-  const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',toan:'Toàn',trang:'Trang',other:'Khác'};
+  const ROLE_LABEL = {dung:'Dũng',hien:'Hiền/Lan',toan:'Toàn',trang:'Trang',other:'Khác'};
   const displayName = (name && name !== 'undefined') ? name : (ROLE_LABEL[role] || role || 'Ẩn danh');
   const since = Date.now();
   ref.set({ name: displayName, role: role||'other', since });
@@ -2316,7 +2326,7 @@ function listenOnlineUsers(){
     const el = document.getElementById('online-users-list');
     if(!el) return;
     if(!snap.exists()){ el.innerHTML='<span style="color:var(--text-sub)">Không có ai đang online</span>'; return; }
-    const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',toan:'Toàn',trang:'Trang',other:'Khác'};
+    const ROLE_LABEL = {dung:'Dũng',hien:'Hiền/Lan',toan:'Toàn',trang:'Trang',other:'Khác'};
     const ROLE_COLOR = {dung:'var(--blue)',hien:'#7c3aed',toan:'#0e7490',trang:'#d97706',other:'var(--gray)'};
     const users = Object.values(snap.val()).filter(u=>u && u.role);
     if(!users.length){ el.innerHTML='<span style="color:var(--text-sub)">Không có ai đang online</span>'; return; }
@@ -3566,7 +3576,7 @@ function getMyPendingItems(){
         items.push({desc:p.desc, note:'Chờ D duyệt', person:p.person, id:p.id});
     } else if(currentRole==='hien'){
       if(hAmt < total - 0.0001 && p.status!=='transferred')
-        items.push({desc:p.desc, note:'Chờ H duyệt', person:p.person, id:p.id});
+        items.push({desc:p.desc, note:'Chờ H&L duyệt', person:p.person, id:p.id});
     } else if(currentRole==='toan'){
       const official = getOfficialApprovedAmount(p)||0;
       if(official > 0 && transferred < official - 0.0001)
@@ -3829,12 +3839,7 @@ function renderCard(p){
 }
 function _buildCard(p){
   const st = STATUS[p.status]||STATUS.pending;
-  const _hWho = (()=>{
-    const h = Array.isArray(p.approvedHHistory) ? p.approvedHHistory : [];
-    const names = [];
-    h.forEach(t=>{ const nm = t && t.by ? String(t.by).trim().split(/\s+/).pop() : ''; if(nm && names.indexOf(nm)<0) names.push(nm); });
-    return names.length ? esc(names.join(', ')) : 'H&amp;L';
-  })();
+  const _hWho = esc(hlNames(p)); // v38: tên gọi người H&L đã duyệt, chưa ai thì "H&L"
   // Khi đang ở trạng thái "Đã duyệt", hiện rõ D đã duyệt bao nhiêu và H đã duyệt bao nhiêu (hoặc đang chờ),
   // mỗi người 1 dòng badge riêng, để biết ngay tình trạng duyệt từng phần mà không cần mở từng nút.
   let badgeHtml = '';
@@ -3854,7 +3859,7 @@ function _buildCard(p){
     const dTs = dRej&&dRej.ts ? ' · '+fmtFull(dRej.ts) : (p.rejectedAt?' · '+fmtFull(p.rejectedAt):'');
     const hTs = hRej&&hRej.ts ? ' · '+fmtFull(hRej.ts) : (p.rejectedAt?' · '+fmtFull(p.rejectedAt):'');
     const dLine = (dRej||legD) ? `<div class="badge-history" style="color:#c81e1e;font-style:italic">D${dRej&&dRej.reason?': "'+esc(dRej.reason)+'"':' từ chối'}${dTs}</div>` : '';
-    const hLine = (hRej||legH) ? `<div class="badge-history" style="color:#7c3aed;font-style:italic">H${hRej&&hRej.reason?': "'+esc(hRej.reason)+'"':' từ chối'}${hTs}</div>` : '';
+    const hLine = (hRej||legH) ? `<div class="badge-history" style="color:#7c3aed;font-style:italic">${esc(hlRejName(p))}${hRej&&hRej.reason?': "'+esc(hRej.reason)+'"':' từ chối'}${hTs}</div>` : '';
     badgeHtml = `<div class="badge-stack"><span class="badge badge-reject">❌ Từ chối</span>${dLine}${hLine}</div>`;
   }
   if(p.status==='approved' || p.status==='transferred'){
@@ -3941,7 +3946,7 @@ function _buildCard(p){
   const _opD=(p.opinionD||'').trim(), _opH=(p.opinionH||'').trim();
   const _showOpD = _opD && !_chArr.some(m=>m.role==='dung' && (m.text||'').trim()===_opD);
   const _showOpH = _opH && !_chArr.some(m=>m.role==='hien' && (m.text||'').trim()===_opH);
-  const opinionHtml = (_showOpD||_showOpH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_showOpD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_showOpH?`<div${_showOpD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H:</b> ${esc(_opH)}</div>`:''}</div>` : '';
+  const opinionHtml = (_showOpD||_showOpH) ? `<div class="proposal-note" style="background:#eef6ff;border-left:3px solid var(--blue)">${_showOpD?`<div>💬 <b style="color:var(--blue-dark)">Ý kiến D:</b> ${esc(_opD)}</div>`:''}${_showOpH?`<div${_showOpD?' style="margin-top:3px"':''}>💬 <b style="color:#7c3aed">Ý kiến H&amp;L:</b> ${esc(_opH)}</div>`:''}</div>` : '';
 
   // v106 HỎI–ĐÁP trên phiếu: lịch sử nhắn (bong bóng) + ô trả lời tại chỗ cho người liên quan
   const _chMe = getCurrentUserName();
@@ -4059,7 +4064,7 @@ function renderBtnH(p){
   // Khi H từ chối: ẩn ô "H Đã duyệt"
   const hHasRej = !!(p.rejectedByH || (!p.rejectedByD && !p.rejectedByH && p.rejectedBy==='H'));
   if(p.status==='rejected' && hHasRej)
-    return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
+    return `<div class="approve-box"><div class="ab-flat-locked">🔒 H&amp;L</div></div>`;
   const canPress = currentRole==='hien' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
     const done = amt>0;
@@ -4071,12 +4076,12 @@ function renderBtnH(p){
     return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${sid(p.id)}','approvedH')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626;font-size:13px">H&amp;L</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626;font-size:13px">${esc(hlNames(p))}</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
     const canUndo = currentRole==='hien' && p.status!=='transferred';
     if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
   }
-  return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
+  return `<div class="approve-box"><div class="ab-flat-locked">🔒 H&amp;L</div></div>`;
 }
 function renderBtnReject(p){
   const dRejected = p.rejectedByD;
@@ -4094,7 +4099,7 @@ function renderBtnReject(p){
     const transferred = getTotalTransferred(p);
     const remaining = officialAmt > 0 ? officialAmt - transferred : 0;
     const remLabel = remaining > 0.0001 ? ` ${fmtVND(remaining)}` : '';
-    const whoLabel = (dHasRejected && hHasRejected) ? 'D+H' : (dHasRejected ? 'D' : 'H');
+    const whoLabel = (dHasRejected && hHasRejected) ? 'D+'+esc(hlRejName(p)) : (dHasRejected ? 'D' : esc(hlRejName(p)));
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#c81e1e">${whoLabel}</span><span class="ab-mid-label" style="color:#c81e1e">Từ chối${remLabel}</span></div>`;
     if(canRejectD && dHasRejected)
       return `<div class="approve-box ab-done-box" style="border-color:var(--red);background:#fff0f0"><button class="ab-done-btn" style="color:var(--red)" onclick="undoRejectBy('${sid(p.id)}','D')" title="Bấm để bỏ từ chối">${inner}</button></div>`;
@@ -4215,7 +4220,7 @@ function remindReportLabel(p){
 function opinionReportHtml(p){
   const opD=(p.opinionD||'').trim(), opH=(p.opinionH||'').trim();
   if(!opD&&!opH) return '';
-  return `<div style="font-style:italic;font-weight:600;font-size:0.92em;margin-top:1px">${opD?`<div style="color:var(--blue-dark)">💬 D: ${esc(opD)}</div>`:''}${opH?`<div style="color:#7c3aed">💬 H: ${esc(opH)}</div>`:''}</div>`;
+  return `<div style="font-style:italic;font-weight:600;font-size:0.92em;margin-top:1px">${opD?`<div style="color:var(--blue-dark)">💬 D: ${esc(opD)}</div>`:''}${opH?`<div style="color:#7c3aed">💬 H&amp;L: ${esc(opH)}</div>`:''}</div>`;
 }
 function renderBtnRemind(p){
   if(!canRemind(p)) return '';
@@ -4248,7 +4253,7 @@ function remindApprove(id){
       showToast('💸 Đã nhắc Toàn chuyển tiền (lần '+p.remindCount+')');
     } else {
       sendPushNotif('🔁 Xin duyệt lại', `${p.desc} — đề xuất ${fmtFull(p.ts)}, chưa duyệt xong`, ['dung','hien']);
-      showToast('🔁 Đã giục D và H duyệt lại (lần '+p.remindCount+')');
+      showToast('🔁 Đã giục D và H&L duyệt lại (lần '+p.remindCount+')');
     }
   } else {
     const wait = Math.max(1, Math.ceil((600000-(Date.now()-lastPush))/60000));
@@ -4361,7 +4366,7 @@ function approveBy(id, field){
   const _histField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
   const already = (Array.isArray(p[_histField]) ? p[_histField] : []).reduce((a,t)=>a+(parseFloat(t.amount)||0),0);
   const remain = (parseFloat(p.amount)||0) - already;
-  const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+  const who = field==='approvedD' ? 'Dũng' : hlMe();
   document.getElementById('aa-title').textContent = who + ' duyệt chi';
   const sub = document.getElementById('aa-sub');
   const inputGroup = document.getElementById('aa-input-group');
@@ -4404,7 +4409,7 @@ function undoApproveFromModal(){
   const { id, field } = pendingApproveField;
   const p = proposals.find(x=>x.id===id);
   if(!p){ closeApproveAmountModal(); return; }
-  const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+  const who = field==='approvedD' ? 'Dũng' : 'H&L';
   if(!confirm(`Bỏ TOÀN BỘ phần duyệt của ${who} cho phiếu này? Phiếu sẽ về trạng thái chưa duyệt (dùng khi số liệu bị lỗi, để duyệt lại từ đầu).`)) return;
   const amountField  = field==='approvedD' ? 'approvedDAmount'  : 'approvedHAmount';
   const historyField = field==='approvedD' ? 'approvedDHistory' : 'approvedHHistory';
@@ -4453,7 +4458,7 @@ function confirmApproveAmount(){
     // Số liệu vừa đổi (đồng bộ từ máy khác) trong lúc khung này đang mở, nên số nhập cũ không còn đúng nữa.
     // Thay vì báo lỗi rồi để khung đứng yên với số cũ (bấm lại vẫn lỗi y hệt), tự làm mới khung theo số THẬT hiện tại.
     const remainNow = Math.max(0, (parseFloat(p.amount)||0) - prevAmt);
-    const whoR = field==='approvedD' ? 'Dũng' : 'Hiền';
+    const whoR = field==='approvedD' ? 'Dũng' : 'H&amp;L';
     if(remainNow <= 0.0001){
       // Vừa đồng bộ xong: đã duyệt đủ → ẩn ô nhập, hiện rõ trạng thái để khỏi bấm nhầm nữa.
       document.getElementById('aa-sub').innerHTML = `Tổng đề xuất: ${fmtVND(p.amount)}<br><span style="color:#16a34a;font-weight:800">✅ ${whoR} đã duyệt đủ ${fmtVND(prevAmt)} rồi — không cần duyệt thêm.</span>`;
@@ -4512,7 +4517,7 @@ function undoApprove(id, field){
   if(hist.length === 0){
     // Dữ liệu cũ chỉ có field (chưa kịp backfill lịch sử) → vẫn cho bỏ duyệt: xoá sạch field.
     if(fieldAmt > 0){
-      const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+      const who = field==='approvedD' ? 'Dũng' : 'H&L';
       if(!confirm(`Bỏ toàn bộ phần duyệt của ${who} (${fmtVND(fieldAmt)})?`)) return;
       p[amountField] = null; p[historyField] = []; p[field] = null;
       if(getOfficialApprovedAmount(p) <= 0 && getTotalTransferred(p) <= 0 && p.status !== 'rejected') p.status = 'pending';
@@ -4557,7 +4562,7 @@ function undoApprove(id, field){
   syncApprovalToSheet(id, field, p[field] || null);
   syncApprovalAmountToSheet(p);
   renderAll();
-  const who = field==='approvedD' ? 'Dũng' : 'Hiền';
+  const who = field==='approvedD' ? 'Dũng' : 'H&L';
   showToast(hist.length > 0
     ? `↩ Đã bỏ lần duyệt cuối của ${who}. Còn ${hist.length} lần (${fmtVND(newTotal)})`
     : `↩ Đã bỏ duyệt của ${who}`);
@@ -4662,12 +4667,12 @@ function shareProof(id){
 function rejectBy(id, who){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
-  const name = who==='D' ? 'Dũng' : 'Hiền';
+  const name = who==='D' ? 'Dũng' : hlMe();
   const reason = prompt(`${name} từ chối phiếu này.\nNhập lý do từ chối (hoặc bỏ trống):`);
   if(reason === null) return; // người dùng bấm Cancel
   // Lưu riêng từng người từ chối
   const field = who==='D' ? 'rejectedByD' : 'rejectedByH';
-  p[field] = { ts: Date.now(), reason: reason.trim() };
+  p[field] = { ts: Date.now(), reason: reason.trim(), by: getCurrentUserName() }; // v38: nhớ tên người từ chối (Hiền hay Lan)
   p.status = 'rejected';
   // Giữ tương thích ngược
   p.rejectedBy = who;
@@ -4683,7 +4688,7 @@ function rejectBy(id, who){
 function undoRejectBy(id, who){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
-  const name = who==='D' ? 'Dũng' : 'Hiền';
+  const name = who==='D' ? 'Dũng' : hlRejName(p);
   if(!confirm(`Bỏ từ chối của ${name}? Phiếu sẽ được xử lý lại.`)) return;
   const field = who==='D' ? 'rejectedByD' : 'rejectedByH';
   p[field] = null;
@@ -4768,7 +4773,7 @@ function openEditProposal(id){
   if(!p) return;
   // v135: chỉ người tạo phiếu hoặc D/H/T mới mở sửa được (chống sửa đề xuất của nhau ở phòng Kế hoạch)
   if(!_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu, người duyệt hoặc thủ quỹ mới sửa được đề xuất này'); return; }
-  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); return; }
+  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H&L hoặc T mới sửa được phiếu đã duyệt'); return; }
   editingProposalId = id;
 
   // Đổ danh sách người đề xuất / công trường vào 2 ô select (giống màn Thêm mới)
@@ -4944,7 +4949,7 @@ function removeEditImage(idx){
 function saveEditProposal(){
   const p = proposals.find(x=>x.id===editingProposalId);
   if(!p){ closeEditModal(); return; }
-  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
+  if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H&L hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
 
   // v92: phiếu ứng lương — người/nhóm KHÓA theo phiếu (ô select bị disable), lấy thẳng giá trị gốc
   // để chắc chắn không đổi (đổi tên/nhóm là việc của DS nhân viên, và tránh vi phạm đóng băng sau duyệt).
@@ -4993,9 +4998,9 @@ function saveEditProposal(){
     }
     if(currentRole==='hien' && p.opinionH && p.opinionH!==_prevOpH){
       if(!Array.isArray(p.chat)) p.chat=[];
-      p.chat.push({ by:_chMe2||'Hiền', role:'hien', text:p.opinionH, ts:Date.now() });
+      p.chat.push({ by:_chMe2||'Hiền/Lan', role:'hien', text:p.opinionH, ts:Date.now() });
       if(currentUser){ (p.chatSeen=p.chatSeen||{})[currentUser.uid]=Date.now(); }
-      sendPushNotif('💬 Ý kiến mới của H', (p.desc||'')+': '+p.opinionH.slice(0,90), ['dung','toan','trang']);
+      sendPushNotif('💬 Ý kiến mới của '+hlMe(), (p.desc||'')+': '+p.opinionH.slice(0,90), ['dung','toan','trang']);
     }
   }catch(e){}
   p.priority = _ePrio;
@@ -5540,9 +5545,11 @@ function planUrgencyInfo(p){
 function planConfirmBadge(p, who){
   const field = who==='D' ? 'confirmedByD' : 'confirmedByH';
   const roleMatch = who==='D' ? 'dung' : 'hien';
-  if(p[field]) return `<span class="badge badge-approved">✅ ${who} đã xác nhận</span>`;
-  if(currentRole===roleMatch) return `<button onclick="confirmPlan('${sid(p.id)}','${who}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:20px;cursor:pointer">✅ ${who} xác nhận</button>`;
-  return `<span class="badge badge-wait">⏳ ${who} chưa xác nhận</span>`;
+  const lbl = who==='D' ? 'D' : 'H&amp;L';                                                                           // v38
+  const doneLbl = who==='D' ? 'D' : (shortName(p.confirmedByHName) ? esc(shortName(p.confirmedByHName)) : 'H&amp;L'); // v38: tên người H&L đã bấm
+  if(p[field]) return `<span class="badge badge-approved">✅ ${doneLbl} đã xác nhận</span>`;
+  if(currentRole===roleMatch) return `<button onclick="confirmPlan('${sid(p.id)}','${who}')" style="padding:4px 10px;font-size:11px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:none;border-radius:20px;cursor:pointer">✅ ${lbl} xác nhận</button>`;
+  return `<span class="badge badge-wait">⏳ ${lbl} chưa xác nhận</span>`;
 }
 
 function setPlanTab(tab, btn){
@@ -5833,10 +5840,10 @@ function setPlanStatus(id, status){
 function confirmPlan(id, who){
   const p = plans.find(x=>x.id===id);
   if(!p) return;
-  if(who==='D') p.confirmedByD = Date.now(); else p.confirmedByH = Date.now();
+  if(who==='D') p.confirmedByD = Date.now(); else { p.confirmedByH = Date.now(); p.confirmedByHName = getCurrentUserName(); } // v38: nhớ tên người H&L bấm
   savePlans();
   renderPlans();
-  showToast(`✅ ${who} đã xác nhận kế hoạch`);
+  showToast(`✅ ${who==='D'?'Dũng':hlMe()} đã xác nhận kế hoạch`);
 }
 function remindPlan(id){
   const p = plans.find(x=>x.id===id);
@@ -6331,7 +6338,7 @@ function renderReportRejected(){
     const hTs = hRej&&hRej.ts?fmtT(hRej.ts):(p.rejectedAt?fmtT(p.rejectedAt):'');
     const prv=p.priority||'normal';
     const prCell=prv==='urgent'?'<span style="color:#b00000;font-weight:800">🔴 Gấp</span>':prv==='low'?'🟢 Chờ':'🟡 BT';
-    const rejNote = [dLine?`D: ${dLine}`:'' , hLine?`H: ${hLine}`:''].filter(Boolean).join('<br>');
+    const rejNote = [dLine?`D: ${dLine}`:'' , hLine?`${esc(hlRejName(p))}: ${hLine}`:''].filter(Boolean).join('<br>');
     return `<tr class="report-row-link" ondblclick="jumpToProposal('${sid(p.id)}')">
       <td style="text-align:center;font-size:9px;color:var(--text-sub);vertical-align:middle;white-space:nowrap">${stt}</td>
       <td class="col-desc" style="font-weight:600">${esc(p.desc)}</td>
@@ -6369,7 +6376,7 @@ function renderReportList(){
     const dRej = p.rejectedByD; const hRej = p.rejectedByH;
     const legD = !dRej&&!hRej&&p.rejectedBy==='D'; const legH = !dRej&&!hRej&&p.rejectedBy==='H';
     const rejD = (dRej||legD)?(dRej&&dRej.reason?`D: "${esc(dRej.reason)}"`:'D từ chối'):'';
-    const rejH = (hRej||legH)?(hRej&&hRej.reason?`H: "${esc(hRej.reason)}"`:'H từ chối'):'';
+    const rejH = (hRej||legH)?(hRej&&hRej.reason?`${esc(hlRejName(p))}: "${esc(hRej.reason)}"`:esc(hlRejName(p))+' từ chối'):'';
     const rejStr = [rejD,rejH].filter(Boolean).join('<br>');
     const dHist = Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length ? p.approvedDHistory.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (dAmt>0?fmtTr(dAmt):'');
     const hHist = Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length ? p.approvedHHistory.map((t,j)=>`L${j+1}:${fmtTr(t.amount)} ${fmtT(t.ts)}`).join('<br>') : (hAmt>0?fmtTr(hAmt):'');
@@ -6397,7 +6404,7 @@ function renderReportList(){
   <div class="table-total-top"><span>Tổng ${fp.length} phiếu · ${fmtTr(total)}</span><span class="ttt-amt">Đã chuyển: ${fmtTr(totalTrans)}</span></div>
   <div id="list-scroll-top" style="overflow-x:auto;height:14px;margin-bottom:1px"><div id="list-scroll-spacer" style="height:1px"></div></div>
   <div class="excel-table-wrap" id="list-scroll-main"><table class="excel-table">
-    <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
+    <thead><tr><th>#</th><th>Nội dung</th><th>Người</th><th>CT</th><th>Đề xuất</th><th>Mức</th><th>D duyệt</th><th>H&amp;L duyệt</th><th>T chuyển</th><th>TT</th><th>Từ chối / Lý do</th></tr></thead>
     <tbody>${rows}</tbody></table></div>`;
   // Sync dual scrollbar
   requestAnimationFrame(()=>{
@@ -6477,7 +6484,7 @@ function renderExcelTable(containerId, items, kind){
         ${kind==='pending'?colsPending:colsDone}
         <thead><tr>
           <th style="text-align:center">#</th><th>Tên đề xuất</th><th style="text-align:right">${kind==='done'?'Đã chuyển':'Còn chuyển'}</th><th style="text-align:center">Người</th><th style="text-align:center">CT</th>
-          ${kind==='pending'?'<th style="text-align:center">D duyệt</th><th style="text-align:center">H duyệt</th><th style="text-align:center">Mức</th>':''}
+          ${kind==='pending'?'<th style="text-align:center">D duyệt</th><th style="text-align:center">H&amp;L duyệt</th><th style="text-align:center">Mức</th>':''}
           <th style="text-align:center">${kind==='done'?'Ngày CK':'Ngày'}</th>
         </tr></thead>
         <tbody>${rows}</tbody>
@@ -6555,7 +6562,7 @@ function renderReportSummary(){
       const legD=!dRej&&!hRej&&p.rejectedBy==='D', legH=!dRej&&!hRej&&p.rejectedBy==='H';
       const rejStr = showRej ? [
         (dRej||legD)?(dRej&&dRej.reason?`D: "${esc(dRej.reason)}"`:'D từ chối'):'',
-        (hRej||legH)?(hRej&&hRej.reason?`H: "${esc(hRej.reason)}"`:'H từ chối'):''
+        (hRej||legH)?(hRej&&hRej.reason?`${esc(hlRejName(p))}: "${esc(hRej.reason)}"`:esc(hlRejName(p))+' từ chối'):''
       ].filter(Boolean).join('<br>') : '';
       const amtCell = showRej
         ? `<span style="color:var(--red)">${fmtTr(p.amount)}</span>`
@@ -6611,8 +6618,8 @@ function generateReport(){
     const hAmt = approvedAmtOf(p,'H');
     const dRej = p.rejectedByD; const hRej = p.rejectedByH;
     const legD = !dRej&&!hRej&&p.rejectedBy==='D'; const legH = !dRej&&!hRej&&p.rejectedBy==='H';
-    const rejInfo = [(dRej||legD)?(dRej&&dRej.reason?`D từ chối: "${dRej.reason}"`:'D từ chối'):'', (hRej||legH)?(hRej&&hRej.reason?`H từ chối: "${hRej.reason}"`:'H từ chối'):''].filter(Boolean).join(', ');
-    const duyetInfo = [dAmt>0?`D:${fmtVND(dAmt)}`:'', hAmt>0?`H:${fmtVND(hAmt)}`:''].filter(Boolean).join(', ');
+    const rejInfo = [(dRej||legD)?(dRej&&dRej.reason?`D từ chối: "${dRej.reason}"`:'D từ chối'):'', (hRej||legH)?(hRej&&hRej.reason?`${hlRejName(p)} từ chối: "${hRej.reason}"`:hlRejName(p)+' từ chối'):''].filter(Boolean).join(', ');
+    const duyetInfo = [dAmt>0?`D:${fmtVND(dAmt)}`:'', hAmt>0?`${hlNames(p)}:${fmtVND(hAmt)}`:''].filter(Boolean).join(', ');
     let detail = '';
     if(duyetInfo) detail += ` [Duyệt: ${duyetInfo}]`;
     if(trans>0) detail += ` [Chuyển: ${fmtVND(trans)}]`;
@@ -6699,7 +6706,7 @@ function downloadSummaryExcel(){
     const official = getOfficialApprovedAmount(p)||0;
     const remaining = Math.max(0, official - trans);
     const dRej = p.rejectedByD; const hRej = p.rejectedByH;
-    const rejNote = [dRej&&dRej.reason?'D: '+dRej.reason:'', hRej&&hRej.reason?'H: '+hRej.reason:''].filter(Boolean).join(' | ');
+    const rejNote = [dRej&&dRej.reason?'D: '+dRej.reason:'', hRej&&hRej.reason?hlRejName(p)+': '+hRej.reason:''].filter(Boolean).join(' | ');
     return [
       list.length - i,
       p.desc||'',
@@ -6825,7 +6832,7 @@ function syncKhToSheet(p){
   const off=getOfficialApprovedAmount(p)||0, ck=getTotalTransferred(p);
   const st = p.status==='rejected' ? 'Tu choi'
     : (off>0 && ck>=off-0.0001) ? 'Xong'
-    : h>0 ? 'Cho CK' : d>0 ? 'Cho H' : 'Cho D';
+    : h>0 ? 'Cho CK' : d>0 ? 'Cho H&L' : 'Cho D';
   const params=new URLSearchParams({
     action:'khchi', id:p.id,
     ts: p.ts ? new Date(p.ts).toLocaleString('vi-VN') : '',
@@ -8373,7 +8380,7 @@ function unpinChatMsg(){
 }
 function chatMenuDetail(){
   const m=_chatMenuMsg(); closeChatMsgMenu(); if(!m) return;
-  const roleLbl={dung:'Dũng (D)',hien:'Hiền / Lan (H)',toan:'Toàn (thủ quỹ)',trang:'Trang',other:'Thành viên'};
+  const roleLbl={dung:'Dũng (D)',hien:'Hiền / Lan (H&L)',toan:'Toàn (thủ quỹ)',trang:'Trang',other:'Thành viên'};
   alert('ℹ️ Chi tiết tin nhắn\n\nNgười gửi: '+(m.by||'—')+'\nVai trò: '+(roleLbl[m.role]||m.role||'—')+'\nLúc: '+fmtFull(m.ts)+(m.ref?'\nGắn phiếu: có':'')+(m.img?'\nKèm ảnh: có':''));
 }
 function chatMenuDelete(){ const k=_chatMenuKey; closeChatMsgMenu(); if(k) deleteChatMsg(k); }
@@ -9134,7 +9141,7 @@ function _salStatusLabel(p){
   if(p.status==='rejected') return {label:'❌ Từ chối', color:'#dc2626'};
   if(off>0 && tr>=off-0.0001) return {label:'✅ xong', color:'#16a34a'};
   if(approvedAmtOf(p,'H')>0) return {label:'💸 chờ CK', color:'#2563eb'};
-  if(approvedAmtOf(p,'D')>0) return {label:'⏳ chờ H', color:'#d97706'};
+  if(approvedAmtOf(p,'D')>0) return {label:'⏳ chờ H&L', color:'#d97706'};
   return {label:'⏳ chờ D', color:'#9333ea'};
 }
 function _renderSalaryTable(list, shown){
@@ -9161,13 +9168,13 @@ function _renderSalaryTable(list, shown){
     <div class="card"><div class="card-body" style="padding:0">
       <div class="table-total-top">
         <span>Tổng · ${shown.length} khoản</span>
-        <span>ĐX ${fmtTr(tDX2)} · D ${fmtTr(tD2)} · H ${fmtTr(tH2)}</span>
+        <span>ĐX ${fmtTr(tDX2)} · D ${fmtTr(tD2)} · H&amp;L ${fmtTr(tH2)}</span>
         <span class="ttt-amt">Đã CK ${fmtTr(tCK2)}</span>
       </div>
       <div class="excel-table-wrap">
         <table class="excel-table excel-table-scroll" style="width:100%;min-width:${totalWidth}px">
           <colgroup>${colWidths.map(w=>`<col style="width:${w}px">`).join('')}</colgroup>
-          <thead><tr><th style="text-align:center">#</th><th>Nhân viên</th><th>Chức vụ</th><th>Nhóm</th><th style="text-align:right">Đề xuất</th><th style="text-align:right">D</th><th style="text-align:right">H</th><th style="text-align:right">Đã CK</th><th>Trạng thái</th></tr></thead>
+          <thead><tr><th style="text-align:center">#</th><th>Nhân viên</th><th>Chức vụ</th><th>Nhóm</th><th style="text-align:right">Đề xuất</th><th style="text-align:right">D</th><th style="text-align:right">H&amp;L</th><th style="text-align:right">Đã CK</th><th>Trạng thái</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
       </div>
