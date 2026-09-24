@@ -168,7 +168,8 @@
           "by": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
           // v25: NỘI DUNG khoản đóng băng sau khi ghi (chỉ Dũng sửa) — nếu không, "xoá phải 3 người duyệt" bị lách
           // bằng cách sửa số tiền về 0. App không có màn sửa khoản nên không chặn nhầm gì.
-          "type":         { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
+          // v40: khoản 'ret' (trả lại vốn góp) chỉ THỦ QUỸ (toan) hoặc Dũng tạo được — D chốt 24/09/2026.
+          "type":         { ".validate": "(root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (newData.val() !== 'ret' || data.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'toan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" },
           "amount":       { ".validate": "(root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000000" },
           "desc":         { ".validate": "(root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (!newData.isString() || newData.val().length <= 2000)" },
           "date":         { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
@@ -201,6 +202,36 @@
         "$id": {
           // v83: GHI cũng phải là tài khoản ĐÃ DUYỆT.
           ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com')"
+        }
+      },
+
+      "assets": {
+        // v40 (24/09/2026): VẬT TƯ / THIẾT BỊ LUÂN CHUYỂN — sổ theo dõi đơn vị nào chuyển gì đến công trường để còn thu hồi.
+        // Không phải tiền. Ai đã duyệt cũng đọc / ghi / sửa / thu hồi; XOÁ chỉ Dũng, Toàn, phụ trách vật tư (trang) hoặc chính người ghi.
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com')",
+        "$id": {
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'toan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang' || data.child('by').val() === auth.uid)",
+          ".validate": "newData.hasChildren(['name', 'qty', 'from', 'by', 'ts'])",
+          "by":       { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
+          "name":     { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200" },
+          "qty":      { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000" },
+          "unit":     { ".validate": "!newData.isString() || newData.val().length <= 30" },
+          "from":     { ".validate": "newData.val() === 'pva' || newData.val() === '134' || newData.val() === 'other'" },
+          "fromName": { ".validate": "!newData.isString() || newData.val().length <= 200" },
+          "date":     { ".validate": "!newData.isString() || newData.val().length <= 10" },
+          "note":     { ".validate": "!newData.isString() || newData.val().length <= 2000" },
+          "byName":   { ".validate": "!newData.isString() || newData.val().length <= 200" },
+          "ts":       { ".validate": "newData.isNumber()" },
+          "returned": {
+            "$i": {
+              "qty":  { ".validate": "newData.isNumber() && newData.val() >= 0" },
+              "date": { ".validate": "!newData.isString() || newData.val().length <= 10" },
+              "ts":   { ".validate": "newData.isNumber()" },
+              "by":   { ".validate": "!newData.isString() || newData.val().length <= 200" },
+              "$o":   { ".validate": false }
+            }
+          },
+          "$other": { ".validate": false }
         }
       },
 
