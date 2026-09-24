@@ -749,7 +749,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div id="otp-screen" style="display:none;position:fixed;inset:0;z-index:10003;align-items:center;justify-content:center;padding:24px;flex-direction:column">
   <div class="brand-mark"><span class="ic ic-emo">🔒</span></div>
   <div style="color:#fff;font-size:18px;font-weight:800;margin-bottom:6px;text-align:center">Xác nhận đăng ký</div>
-  <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:20px;text-align:center">Mã 6 số đang hiện trong app của anh Dũng<br>(Cài đặt → Duyệt tài khoản). Liên hệ anh Dũng để lấy mã.<br><b>Mở hộp thư email vừa đăng ký, bấm link xác minh</b> (xem cả mục Thư rác) để anh Dũng biết đúng là bạn.</div>
+  <div style="color:rgba(255,255,255,0.8);font-size:13px;margin-bottom:20px;text-align:center">Mã 6 số đang hiện trong app của anh Dũng<br>(Cài đặt → Duyệt tài khoản). Liên hệ anh Dũng để lấy mã.</div>
   <div style="background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:320px">
     <input id="otp-input" class="form-input" placeholder="Nhập mã 6 số" inputmode="numeric" maxlength="6" style="font-size:22px;letter-spacing:8px;text-align:center;margin-bottom:10px">
     <div id="otp-error" style="color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px;text-align:center"></div>
@@ -1960,7 +1960,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260924-v35';
+const APP_VERSION = '20260924-v36';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2551,8 +2551,6 @@ async function doRegister(){
     const role = emailToRole(email);
     // Lưu tên + role vào Firebase theo UID
     await db.ref('duyetchi/userRoles/'+cred.user.uid).update({ role, name, email: cred.user.email||'' }); // kèm email ĐĂNG NHẬP ngay từ đầu
-    // v22: gửi thư xác minh hộp thư (bấm link trong thư = chứng minh đúng là chủ email). Lỗi gửi thư không chặn đăng ký.
-    try{ firebase.auth().languageCode = 'vi'; await cred.user.sendEmailVerification(); }catch(e){}
     // Tạo OTP 6 số, lưu DB, gửi push về Dũng
     const otp = String(Math.floor(100000 + Math.random() * 900000));
     await db.ref('duyetchi/pendingOtp/'+cred.user.uid).set({ otp, name, ts: Date.now() });
@@ -2783,7 +2781,6 @@ function initAuth(){
         // v82: ghi EMAIL + LẦN ĐĂNG NHẬP gần nhất vào hồ sơ (để Dũng soi tài khoản lạ ở Cài đặt).
         // update() giữ nguyên role/name/approved. Lỗi (mạng) bỏ qua, không chặn vào app.
         db.ref('duyetchi/userRoles/'+user.uid).update({ email: user.email||'', lastLogin: Date.now() }).catch(()=>{});
-        _gbSyncEmailVerified(user);
       } else {
         showUpdateRolePrompt();
       }
@@ -2875,20 +2872,6 @@ function urlB64ToUint8Array(b64) {
   const arr = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
   return arr;
-}
-
-// v22: cờ "đã xác minh hộp thư" trong hồ sơ. Luật máy chủ CHỈ cho ghi true khi chính TOKEN đăng nhập nói đã xác minh
-// (không tự khai được). Làm 1 lần cho mỗi tài khoản trên mỗi máy (nhớ ở localStorage) để không tốn mạng mỗi lần mở app.
-async function _gbSyncEmailVerified(user){
-  try{
-    if(!user || localStorage.getItem('gb_ev_done') === user.uid) return;
-    await user.reload();
-    const u = firebase.auth().currentUser;
-    if(!u || !u.emailVerified) return;          // chưa bấm link trong thư → để nguyên (Dũng sẽ thấy cảnh báo đỏ)
-    await u.getIdToken(true);                   // làm mới token để máy chủ thấy email_verified = true
-    await db.ref('duyetchi/userRoles/'+u.uid+'/ev').set(true);
-    localStorage.setItem('gb_ev_done', u.uid);
-  }catch(e){}
 }
 
 async function fcmRegister(role) {
@@ -6374,8 +6357,8 @@ async function renderApproveList(){
     // Nay chỉ cảnh báo tài khoản CHƯA duyệt có email lạ (đúng ca cần soi: người ngoài tự đăng ký).
     const trusted = ok || (email && KNOWN_EMAILS.indexOf(email) >= 0);
     const emailColor = trusted ? 'var(--text-sub)' : '#dc2626';
-    // v22: email chỉ cho biết họ ĐĂNG NHẬP bằng địa chỉ đó. u.ev === true = họ đã bấm link xác minh trong hộp thư (máy chủ kiểm, không tự khai được).
-    const strangerFlag = !trusted ? ' <span style="color:#dc2626;font-weight:700">⚠️ ' + (!email ? 'CHƯA CÓ EMAIL — đừng duyệt' : (u.ev === true ? 'chưa duyệt — hộp thư ĐÃ xác minh' : 'HỘP THƯ CHƯA XÁC MINH — gọi điện hỏi đúng người đó trước khi duyệt')) + '</span>' : '';
+    // v36: bỏ xác minh hộp thư (D quyết 24/09/2026). Email chỉ cho biết họ ĐĂNG NHẬP bằng địa chỉ đó → D hỏi đúng người rồi mới bấm Cho xem.
+    const strangerFlag = !trusted ? ' <span style="color:#dc2626;font-weight:700">⚠️ ' + (!email ? 'CHƯA CÓ EMAIL — đừng duyệt' : 'tài khoản mới — hỏi đúng người đó trước khi bấm Cho xem') + '</span>' : '';
     const lastLogin = u.lastLogin ? fmtFull(u.lastLogin) : '—';
     // v124 P.KH: phòng của tài khoản — thiếu trường dept coi như Kế toán (8 người hiện tại không đổi gì)
     // Gia Bình KHÔNG chia phòng Kế toán / P.Kế hoạch (chỉ 1 công trình) → bỏ nhãn phòng
