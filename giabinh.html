@@ -1192,7 +1192,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card"><div class="card-body" style="padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap">
       <button onclick="openCashModal('in')" style="flex:1;padding:12px 8px;font-size:14px;font-weight:700;background:#047857;color:#fff;border:none;border-radius:10px;cursor:pointer">📥 Ghi tiền THU về</button>
       <button onclick="openCashModal('dep')" style="flex:1;padding:12px 8px;font-size:14px;font-weight:700;background:#b45309;color:#fff;border:none;border-radius:10px;cursor:pointer">🔒 Ghi KÝ QUỸ</button>
-      <button id="cash-btn-ret" onclick="openCashModal('ret')" style="flex:1 1 100%;padding:12px 8px;font-size:14px;font-weight:700;background:#6d28d9;color:#fff;border:none;border-radius:10px;cursor:pointer">↩️ Trả lại vốn góp cho PVA / 134</button>
     </div></div>
     <div class="card">
       <div class="card-header">📈 Tiền còn lại theo tháng</div>
@@ -1205,8 +1204,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card">
       <div class="card-body" style="padding:12px">
         <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Mỗi lần có tiền <b>vào tài khoản công trình</b> thì ghi 1 khoản: chủ đầu tư thanh toán, công ty 134 góp, công ty PVA góp.</div>
-        <button onclick="openCashModal('in')" class="btn-full btn-primary-full" style="font-size:15px;padding:12px">➕ Thêm khoản THU</button>
-        <button id="cash-btn-ret2" onclick="openCashModal('ret')" class="btn-full" style="font-size:15px;padding:12px;margin-top:8px;background:#f5f3ff;color:#6d28d9;border:1.5px solid #c4b5fd;border-radius:10px;font-weight:700;cursor:pointer">↩️ Ghi TRẢ LẠI vốn góp (PVA / 134)</button>
+        <div style="display:flex;gap:8px">
+          <button onclick="openCashModal('in')" style="flex:1;font-size:14px;padding:12px 6px;background:#047857;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer">➕ Thêm khoản THU</button>
+          <button id="cash-btn-ret2" onclick="openCashModal('ret')" style="flex:1;font-size:14px;padding:12px 6px;background:#f5f3ff;color:#6d28d9;border:1.5px solid #c4b5fd;border-radius:10px;font-weight:700;cursor:pointer">↩️ Trả lại vốn góp</button>
+        </div>
       </div>
     </div>
     <div id="cash-in-src"></div>
@@ -1235,7 +1236,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: TẠM ỨNG (v43) -->
   <div id="cash-tab-adv" style="display:none">
-    <div class="card"><div class="card-body" style="padding:12px;font-size:12px;color:var(--text-sub);line-height:1.45">Mỗi người đi công trường có một <b>sổ tạm ứng</b>: phiếu tạm ứng Toàn chuyển → cộng vào sổ; chi xong, <b>người lập phiếu (Trang) hoặc Kế toán</b> kê từng khoản đã chi ngay trong sổ (khoản kê mới tính là chi phí). Chi ít hơn ứng thì còn dư trên sổ; chi vượt thì sổ <b>âm</b> (công ty còn nợ). Kết sổ: dư → nộp lại quỹ; âm → lập phiếu tạm ứng mới để chi bù.</div></div>
+    <div class="card"><div class="card-body" style="padding:12px;font-size:12px;color:var(--text-sub);line-height:1.45">Mỗi người đi công trường có một <b>sổ tạm ứng</b>: phiếu tạm ứng Toàn chuyển → cộng vào sổ; chi xong, <b>người lập phiếu hoặc Kế toán</b> kê từng khoản đã chi ngay trong sổ; khoản chi được <b>H&L duyệt</b> (tiền nộp lại: <b>Toàn xác nhận</b>) mới trừ sổ và tính là chi phí. Chi ít hơn ứng thì còn dư trên sổ; chi vượt thì sổ <b>âm</b> (công ty còn nợ). Kết sổ: dư → nộp lại quỹ; âm → lập phiếu tạm ứng mới để chi bù.</div></div>
     <div id="cash-adv-list"></div>
   </div>
 
@@ -1758,7 +1759,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v45';
+const APP_VERSION = '20260926-v47';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5059,8 +5060,8 @@ function del(id){
 // Mỗi người một sổ: phiếu costType 'tamung' Toàn chuyển → cộng vào sổ; kê khoản đã chi (items) trừ dần; chi vượt → sổ ÂM (công ty nợ);
 // nộp lại quỹ = item kind:'ret' (tiền về TK quỹ Toàn). Items ghi vào phiếu tạm ứng MỚI NHẤT của người đó (p.settlement.items — luật máy chủ:
 // người lập phiếu / Kế toán / Dũng). Số dư = Σ ứng − Σ đã chi − Σ nộp lại. Kết sổ: dương → nộp lại; âm → lập phiếu tạm ứng mới để chi bù.
-function settleSpent(p){ const st=p&&p.settlement; return st ? (st.items||[]).filter(x=>x.kind!=='ret').reduce((a,x)=>a+(parseFloat(x.amount)||0),0) : 0; }
-function settleRet(p){ const st=p&&p.settlement; return st ? (st.items||[]).filter(x=>x.kind==='ret').reduce((a,x)=>a+(parseFloat(x.amount)||0),0) + (parseFloat(st.returned)||0) : 0; }
+function settleSpent(p){ const st=p&&p.settlement; return st ? (st.items||[]).filter(x=>x.kind!=='ret' && x.ok).reduce((a,x)=>a+(parseFloat(x.amount)||0),0) : 0; }   // v47: chỉ khoản đã duyệt
+function settleRet(p){ const st=p&&p.settlement; return st ? (st.items||[]).filter(x=>x.kind==='ret' && x.ok).reduce((a,x)=>a+(parseFloat(x.amount)||0),0) + (parseFloat(st.returned)||0) : 0; }   // v47: chỉ khoản Toàn đã xác nhận
 function _settleCan(p){ return _isMyProposal(p) || currentRole==='ketoan' || currentRole==='dung'; }
 function advTargetOf(person){   // phiếu tạm ứng mới nhất ĐÃ chuyển tiền của người này (nơi ghi các khoản kê)
   return (proposals||[]).filter(p=>p.costType==='tamung' && p.kind!=='kh' && p.status!=='rejected' && (p.person||'')===person && (getTotalTransferred(p)||0)>0).sort((a,b)=>(b.ts||0)-(a.ts||0))[0] || null;
@@ -5069,25 +5070,31 @@ function advPersons(){   // sổ từng người: {name, tr, chi, ret, bal, entr
   const M = {};
   (proposals||[]).forEach(p=>{
     if(p.costType!=='tamung' || p.kind==='kh' || p.status==='rejected') return;
-    const name = p.person||'—'; const o = M[name] || (M[name] = {name, tr:0, chi:0, ret:0, bal:0, entries:[], phieu:0});
+    const name = p.person||'—'; const o = M[name] || (M[name] = {name, tr:0, chi:0, ret:0, bal:0, pendChi:0, pendRet:0, pend:0, entries:[], phieu:0});
     o.phieu++;
     (p.transfers||[]).forEach(t=>{ const a=parseFloat(t.amount)||0; o.tr+=a; o.entries.push({ts:t.ts||0, date:ymdLocal(t.ts), kind:'ung', desc:'Ứng: '+(p.desc||''), amount:a, pid:p.id}); });
     const st = p.settlement; if(!st) return;
-    (st.items||[]).forEach((x,idx)=>{ const a=parseFloat(x.amount)||0; if(x.kind==='ret'){ o.ret+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'ret', desc:x.desc||'Nộp lại quỹ', amount:a, pid:p.id, idx, by:x.by||st.byName||''}); }
-      else { o.chi+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'chi', desc:x.desc||'', amount:a, tax:x.tax||'', pid:p.id, idx, by:x.by||st.byName||''}); } });
+    (st.items||[]).forEach((x,idx)=>{ const a=parseFloat(x.amount)||0, ok=!!x.ok;   // v47: chưa duyệt → chờ, chưa trừ sổ
+      if(x.kind==='ret'){ if(ok) o.ret+=a; else o.pendRet+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'ret', desc:x.desc||'Nộp lại quỹ', amount:a, pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null}); }
+      else { if(ok) o.chi+=a; else o.pendChi+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'chi', desc:x.desc||'', amount:a, tax:x.tax||'', pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null}); } });
     if(st.returned){ const a=parseFloat(st.returned)||0; o.ret+=a; o.entries.push({ts:st.ts||0, date:ymdLocal(st.ts), kind:'ret', desc:'Nộp lại quỹ', amount:a, pid:p.id, legacy:true}); }
   });
-  Object.values(M).forEach(o=>{ o.bal = o.tr - o.chi - o.ret; o.entries.sort((a,b)=>(a.ts||0)-(b.ts||0)); });
+  Object.values(M).forEach(o=>{ o.bal = o.tr - o.chi - o.ret; o.pend = o.pendChi + o.pendRet; o.entries.sort((a,b)=>(a.ts||0)-(b.ts||0)); });
   return M;
 }
-function advBalHtml(bal){ return `<b style="color:${bal>0.5?'#b45309':bal<-0.5?'#b91c1c':'#047857'};white-space:nowrap;word-break:normal">${bal<0?'−':''}${fmtVND(Math.abs(bal))}</b> ${bal>0.5?'<span style="font-size:10.5px;color:var(--text-sub)">còn giữ tiền ứng</span>':bal<-0.5?'<span style="font-size:10.5px;color:#b91c1c">công ty còn nợ (chi vượt)</span>':'<span style="font-size:10.5px;color:#047857">đã kết sổ</span>'}`; }
+function advBalHtml(bal, o){
+  if(o && !(o.tr>0) && !o.entries.length) return `<b style="color:var(--text-sub)">0 đ</b> <span style="font-size:10.5px;color:var(--text-sub)">chưa nhận tiền ứng (chờ Toàn chuyển)</span>`;   // v47
+  return `<b style="color:${bal>0.5?'#b45309':bal<-0.5?'#b91c1c':'#047857'};white-space:nowrap;word-break:normal">${bal<0?'−':''}${fmtVND(Math.abs(bal))}</b> ${bal>0.5?'<span style="font-size:10.5px;color:var(--text-sub)">còn giữ tiền ứng</span>':bal<-0.5?'<span style="font-size:10.5px;color:#b91c1c">công ty còn nợ (chi vượt)</span>':'<span style="font-size:10.5px;color:#047857">đã kết sổ</span>'}${o&&o.pend>0?` <span style="font-size:10.5px;color:#b45309">· chờ duyệt ${fmtShortMoney(o.pend)}</span>`:''}`;
+}
+function _advOkCan(e){ return e.kind==='ret' ? (currentRole==='toan'||currentRole==='dung') : (currentRole==='hien'||currentRole==='dung'); }   // v47: ai duyệt khoản nào
+function _advOkLabel(e){ return e.ok ? `<span style="font-size:10px;color:#047857">✅ ${esc(shortName(e.ok.byName||'')||e.ok.byName||'')}</span>` : `<span style="font-size:10px;color:#b45309">⏳ chờ ${e.kind==='ret'?'Toàn xác nhận':'H&L duyệt'}</span>`; }
 function _settleHtml(p){   // trên thẻ phiếu tạm ứng
   const tr = getTotalTransferred(p)||0;
   if(tr <= 0) return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b;font-size:11.5px">💼 Phiếu TẠM ỨNG — Toàn chuyển tiền xong, tiền cộng vào <b>sổ tạm ứng của ${esc(p.person||'')}</b>; chi xong kê khoản đã chi ngay trong sổ.</div>`;
-  const o = advPersons()[p.person||'—'] || {bal:tr, chi:0, ret:0, entries:[]};
+  const o = advPersons()[p.person||'—'] || {bal:tr, tr, chi:0, ret:0, pend:0, entries:[]};
   const target = advTargetOf(p.person||'');
   return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b">
-    <div style="font-size:12px">👛 Sổ tạm ứng <b>${esc(p.person||'')}</b>: ${advBalHtml(o.bal)}<div style="font-size:10.5px;color:var(--text-sub)">Tổng ứng ${fmtShortMoney(o.tr)} · đã kê chi ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}</div></div>
+    <div style="font-size:12px">👛 Sổ tạm ứng <b>${esc(p.person||'')}</b>: ${advBalHtml(o.bal, o)}<div style="font-size:10.5px;color:var(--text-sub)">Tổng ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}</div></div>
     <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">
       ${(target && _settleCan(target)) ? `<button onclick="openTamUngModal('${esc(p.person||'').replace(/'/g,'&#39;')}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
       <button onclick="showPage('cash', document.querySelector('.nav-item')); setCashTab('adv', document.querySelector('#page-cash .report-subtab[data-tab=\\'adv\\']')); _advOpen='${esc(p.person||'').replace(/'/g,'&#39;')}'; renderAdvLedger();" style="padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#b45309;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📖 Xem sổ</button>
@@ -5102,15 +5109,16 @@ function renderAdvLedger(){
   el.innerHTML = `<div style="font-size:12px;color:var(--text);padding:0 4px 8px">Đang giữ tiền ứng <b style="color:#b45309">${fmtVND(totHold)}</b>${totOwe?` · công ty còn nợ <b style="color:#b91c1c">${fmtVND(totOwe)}</b>`:''}</div>` + names.map(n=>{ const o=M[n], open=_advOpen===n, target=advTargetOf(n), can=!!(target && _settleCan(target));
     const rows = o.entries.slice().reverse().map(e=>`<div style="display:flex;justify-content:space-between;gap:6px;font-size:11.5px;padding:4px 0;border-top:1px dashed var(--gray-border)">
         <span style="min-width:0;word-break:break-word"><span style="color:var(--text-sub)">${esc(e.date||'')}</span> ${e.kind==='ung'?'💸':e.kind==='ret'?'↩️':'🧾'} ${esc(e.desc)}${e.kind==='chi'&&TAX_TYPES[e.tax]?' <span style="color:'+TAX_TYPES[e.tax].color+'">'+TAX_TYPES[e.tax].icon+'</span>':''}${e.by?' <span style="color:var(--text-sub)">· '+esc(e.by)+'</span>':''}</span>
-        <span style="white-space:nowrap;word-break:normal;font-weight:700;color:${e.kind==='ung'?'#047857':'#b91c1c'}">${e.kind==='ung'?'+':'−'}${fmtShortMoney(e.amount)}${(e.kind!=='ung'&&!e.legacy&&can)?` <a href="#" onclick="advDeleteItem('${sid(e.pid)}',${e.idx});return false" title="Xóa dòng này" style="color:var(--red);text-decoration:none;margin-left:4px">✕</a>`:''}</span></div>`).join('');
+        <span style="white-space:nowrap;word-break:normal;font-weight:700;color:${e.kind==='ung'?'#047857':e.ok?'#b91c1c':'#9ca3af'}">${e.kind==='ung'?'+':'−'}${fmtShortMoney(e.amount)}${e.kind!=='ung'&&!e.legacy?' '+_advOkLabel(e):''}${(e.kind!=='ung'&&!e.legacy&&!e.ok&&_advOkCan(e))?` <a href="#" onclick="advApproveItem('${sid(e.pid)}',${e.idx});return false" style="margin-left:4px;padding:1px 7px;border-radius:8px;background:#047857;color:#fff;text-decoration:none;font-size:10.5px">✅ Duyệt</a>`:''}${(e.kind!=='ung'&&!e.legacy&&(!e.ok||currentRole==='dung')&&can)?` <a href="#" onclick="advDeleteItem('${sid(e.pid)}',${e.idx});return false" title="Xóa dòng này" style="color:var(--red);text-decoration:none;margin-left:4px">✕</a>`:''}</span></div>`).join('');
     return `<div class="card"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;cursor:pointer" onclick="_advOpen=_advOpen==='${esc(n).replace(/'/g,'&#39;')}'?'':'${esc(n).replace(/'/g,'&#39;')}';renderAdvLedger()">
-        <div style="min-width:0;flex:1"><div style="font-size:14px;font-weight:700">👛 ${esc(n)}</div><div style="font-size:10.5px;color:var(--text-sub)">${o.phieu} phiếu · ứng ${fmtShortMoney(o.tr)} · đã kê chi ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}</div></div>
-        <div style="text-align:right;font-size:14px">${advBalHtml(o.bal)}<div style="font-size:10px;color:var(--text-sub)">${open?'▲ thu gọn':'▼ xem sổ'}</div></div>
+        <div style="min-width:0;flex:1"><div style="font-size:14px;font-weight:700">👛 ${esc(n)}</div><div style="font-size:10.5px;color:var(--text-sub)">${o.phieu} phiếu · ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}${o.pend>0?' · <b style="color:#b45309">chờ duyệt '+fmtShortMoney(o.pend)+'</b>':''}</div></div>
+        <div style="text-align:right;font-size:14px">${advBalHtml(o.bal, o)}<div style="font-size:10px;color:var(--text-sub)">${open?'▲ thu gọn':'▼ xem sổ'}</div></div>
       </div>
       ${open ? `<div style="margin-top:6px">${rows||'<div style="font-size:12px;color:var(--text-sub)">Chưa có dòng nào</div>'}</div>` : ''}
       <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
         ${o.bal < -0.5 ? `<button onclick="advMakeTopUp('${esc(n).replace(/'/g,'&#39;')}', ${Math.round(-o.bal)})" style="${_CASH_BTN}background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">➕ Lập phiếu chi bù ${fmtShortMoney(-o.bal)}</button>` : ''}
+        ${(o.pendChi>0 && (currentRole==='hien'||currentRole==='dung')) ? `<button onclick="advApproveAll('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt hết khoản chi chờ (${fmtShortMoney(o.pendChi)})</button>` : ''}
         ${can ? `<button onclick="openTamUngModal('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#f59e0b;color:#fff;border:none">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
       </div>
     </div></div>`; }).join('');
@@ -5150,7 +5158,7 @@ function settleRecalc(){
   if(!_advPerson) return;
   const o = advPersons()[_advPerson] || {bal:0}; const {items, returned} = _settleRead();
   const spent = items.reduce((a,x)=>a+x.amount,0), after = o.bal - spent - returned;
-  document.getElementById('settle-sum').innerHTML = `Kê thêm chi <b>${fmtVND(spent)}</b> · nộp lại <b>${fmtVND(returned)}</b> → số dư sau khi lưu: ${advBalHtml(after)}`;
+  document.getElementById('settle-sum').innerHTML = `Kê thêm chi <b>${fmtVND(spent)}</b> · nộp lại <b>${fmtVND(returned)}</b> → sau khi H&L duyệt (nộp lại: Toàn xác nhận) số dư sẽ là: ${advBalHtml(after)}`;
 }
 function settleFillReturn(){
   if(!_advPerson) return;
@@ -5175,8 +5183,8 @@ function saveSettlement(){
   target.settlement = {...st, items:arr, ts:now, by:(currentUser&&currentUser.uid)||'', byName:by};
   logEdit(target, 'kê sổ tạm ứng: chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):''));
   _cardCache.clear(); save(); renderAll(); closeSettleModal(); try{ renderAdvLedger(); }catch(e){}
-  showToast('✅ Đã ghi vào sổ tạm ứng');
-  sendPushNotif('🧾 Sổ tạm ứng '+_advPerson, by+' kê chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+' · số dư '+fmtVND(after), ['dung','hien','toan','kt']);
+  showToast('✅ Đã ghi vào sổ — chờ H&L duyệt'+(returned?' (nộp lại: chờ Toàn xác nhận)':''));
+  sendPushNotif('🧾 Sổ tạm ứng '+_advPerson+' — cần duyệt', by+' kê chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+' · vào Cân đối → Tạm ứng để duyệt', ['dung','hien','toan','kt']);
 }
 // v45: sổ âm (công ty nợ người tạm ứng) → giảm nợ bằng cách lập phiếu tạm ứng mới ("chi bù"); duyệt + Toàn chuyển xong thì sổ về 0
 function advMakeTopUp(person, amount){
@@ -5188,10 +5196,37 @@ function advMakeTopUp(person, amount){
   showToast('Đã điền sẵn phiếu tạm ứng chi bù — kiểm tra rồi bấm Gửi đề xuất');
   try{ window.scrollTo(0,0); }catch(e){}
 }
+// v47: DUYỆT khoản kê — khoản chi: H&L / Dũng; tiền nộp lại: Toàn (đã nhận tiền) / Dũng. Duyệt xong mới trừ sổ + tính chi phí.
+function advApproveItem(pid, idx){
+  const p = proposals.find(x=>x.id===pid); const x = p && p.settlement && Array.isArray(p.settlement.items) ? p.settlement.items[idx] : null; if(!x) return;
+  if(x.ok){ showToast('Khoản này đã duyệt rồi'); return; }
+  const e = {kind: x.kind==='ret'?'ret':'chi'};
+  if(!_advOkCan(e)){ showToast(e.kind==='ret' ? '🔒 Tiền nộp lại do thủ quỹ (Toàn) xác nhận' : '🔒 Khoản chi do H&L duyệt'); return; }
+  if(!confirm((e.kind==='ret' ? 'Xác nhận ĐÃ NHẬN tiền nộp lại ' : 'Duyệt khoản chi ')+fmtVND(x.amount)+' — "'+(x.desc||'')+'"?')) return;
+  x.ok = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
+  p.settlement = {...p.settlement, ts:Date.now()};
+  logEdit(p, (e.kind==='ret'?'xác nhận nộp lại ':'duyệt khoản chi tạm ứng ')+fmtVND(x.amount)+' — '+(x.desc||''));
+  _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){}
+  showToast('✅ Đã duyệt');
+  sendPushNotif('✅ '+(getCurrentUserName()||'')+(e.kind==='ret'?' xác nhận nộp lại ':' duyệt khoản chi ')+fmtVND(x.amount), (p.person||'')+': '+(x.desc||''), ['dung','hien','toan','kt']);
+}
+function advApproveAll(person){
+  if(currentRole!=='hien' && currentRole!=='dung'){ showToast('🔒 Khoản chi do H&L duyệt'); return; }
+  const list = (proposals||[]).filter(p=>p.costType==='tamung' && (p.person||'')===person && p.settlement && Array.isArray(p.settlement.items));
+  let n=0, tot=0; list.forEach(p=>p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !x.ok){ n++; tot+=parseFloat(x.amount)||0; } }));
+  if(!n){ showToast('Không còn khoản chi chờ duyệt'); return; }
+  if(!confirm('Duyệt tất cả '+n+' khoản chi chờ của '+person+' (tổng '+fmtVND(tot)+')?')) return;
+  const ok = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
+  list.forEach(p=>{ let ch=false; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !x.ok){ x.ok = {...ok}; ch=true; } }); if(ch){ p.settlement = {...p.settlement, ts:Date.now()}; logEdit(p, 'duyệt các khoản chi tạm ứng chờ'); } });
+  _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){}
+  showToast('✅ Đã duyệt '+n+' khoản');
+  sendPushNotif('✅ '+(getCurrentUserName()||'')+' duyệt '+n+' khoản chi tạm ứng', person+': tổng '+fmtVND(tot), ['dung','hien','toan','kt']);
+}
 function advDeleteItem(pid, idx){
   const p = proposals.find(x=>x.id===pid); if(!p || !p.settlement || !Array.isArray(p.settlement.items) || !p.settlement.items[idx]) return;
   if(!_settleCan(p)){ showToast('🔒 Không có quyền'); return; }
   const x = p.settlement.items[idx];
+  if(x.ok && currentRole!=='dung'){ showToast('🔒 Khoản đã duyệt — không xóa được'); return; }   // v47
   if(!confirm('Xóa dòng "'+(x.desc||'')+'" '+fmtVND(x.amount)+' khỏi sổ?')) return;
   p.settlement.items.splice(idx,1); p.settlement.ts = Date.now(); p.settlement.byName = getCurrentUserName()||'';
   logEdit(p, 'xóa dòng sổ tạm ứng: '+(x.desc||'')+' '+fmtVND(x.amount));
@@ -7645,7 +7680,7 @@ async function downloadMonthExcel(){
     if(p.kind==='kh' || p.status==='rejected') return;
     (p.transfers||[]).forEach(t=>{ if(!inM(t.ts)) return;
       rows.push([ymdLocal(t.ts), (p.costType==='tamung'?'[Tạm ứng] ':'')+(p.desc||''), p.person||'', p.site||'', ctName(p.costType), p.costType==='tamung'?'':txName(p.tax), acctLabel(acctOf(t)), cName(p.contractId), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.review?'Có':'Chưa']); });
-    if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', cName(p.contractId), +x.amount||0, '', p.review?'Có':'Chưa']); });   // v43
+    if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || !x.ok || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', cName(p.contractId), +x.amount||0, '', p.review?'Có':'Chưa']); });   // v43
   });
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   const head = ['Ngày','Nội dung','Người','Công trường','Loại chi phí','Thuế','Tài khoản','Hợp đồng','Số tiền','Hóa đơn','KT rà soát'];
@@ -10893,7 +10928,7 @@ function cashBookRows(){
     });
     if(p.costType==='tamung' && p.settlement){
       if(N(p.settlement.returned)>0) rows.push({date: ymdLocal(p.settlement.ts), ts:p.settlement.ts, desc:'Hoàn ứng nộp lại: '+(p.desc||''), kind:'in', amount:N(p.settlement.returned), acct:'quy', tag:p.person||''});
-      (p.settlement.items||[]).forEach(x=>{ if(x.kind==='ret' && N(x.amount)>0) rows.push({date: x.date||ymdLocal(x.ts||p.settlement.ts), ts:x.ts||p.settlement.ts, desc:'Nộp lại tạm ứng: '+(p.person||''), kind:'in', amount:N(x.amount), acct:'quy', tag:p.person||''}); });   // v43
+      (p.settlement.items||[]).forEach(x=>{ if(x.kind==='ret' && x.ok && N(x.amount)>0) rows.push({date: x.date||ymdLocal(x.ts||p.settlement.ts), ts:x.ts||p.settlement.ts, desc:'Nộp lại tạm ứng: '+(p.person||''), kind:'in', amount:N(x.amount), acct:'quy', tag:p.person||''}); });   // v43 (v47: chỉ khoản Toàn đã xác nhận)
     }
   });
   // Xếp theo ngày; cùng ngày thì theo giờ ghi
