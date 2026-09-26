@@ -271,26 +271,27 @@
 
       "assets": {
         // v40 (24/09/2026): VẬT TƯ / THIẾT BỊ LUÂN CHUYỂN — sổ theo dõi đơn vị nào chuyển gì đến công trường để còn thu hồi.
-        // Không phải tiền. Ai đã duyệt cũng đọc / ghi / sửa / thu hồi; XOÁ (v61, D 26/09): chỉ Dũng, hoặc Hiền/Lan khi đề nghị xoá đã đủ 2 phiếu đồng ý deleteReq/ok/hien1 + hien2 (2 tài khoản vai hien khác nhau); người khác chỉ ghi được deleteReq.
+        // v69 (D 26/09): GIẢM / SỬA / XÓA do người khác đề nghị (pending) → CHỈ DŨNG duyệt: nội dung + returned sau khi tạo chỉ Dũng đổi; xoá chỉ Dũng; ai đã duyệt tạo mục mới / ghi pending (by = mình).
         ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com')",
         "$id": {
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && data.child('deleteReq/ok/hien1').exists() && data.child('deleteReq/ok/hien2').exists()))",
-          ".validate": "newData.hasChildren(['name', 'qty', 'from', 'by', 'ts']) && (newData.child('editLog/0').exists() || !data.child('editLog/0').exists()) && (newData.child('editLog/1').exists() || !data.child('editLog/1').exists()) && (newData.child('editLog/2').exists() || !data.child('editLog/2').exists()) && (newData.child('editLog/3').exists() || !data.child('editLog/3').exists()) && (newData.child('editLog/4').exists() || !data.child('editLog/4').exists()) && (newData.child('editLog/5').exists() || !data.child('editLog/5').exists()) && (newData.child('editLog/6').exists() || !data.child('editLog/6').exists()) && (newData.child('editLog/7').exists() || !data.child('editLog/7').exists()) && (newData.child('editLog/8').exists() || !data.child('editLog/8').exists()) && (newData.child('editLog/9').exists() || !data.child('editLog/9').exists()) && (newData.child('editLog/10').exists() || !data.child('editLog/10').exists()) && (newData.child('editLog/11').exists() || !data.child('editLog/11').exists()) && (newData.child('editLog/12').exists() || !data.child('editLog/12').exists()) && (newData.child('editLog/13').exists() || !data.child('editLog/13').exists()) && (newData.child('editLog/14').exists() || !data.child('editLog/14').exists()) && (newData.child('editLog/15').exists() || !data.child('editLog/15').exists()) && (newData.child('editLog/16').exists() || !data.child('editLog/16').exists()) && (newData.child('editLog/17').exists() || !data.child('editLog/17').exists()) && (newData.child('editLog/18').exists() || !data.child('editLog/18').exists()) && (newData.child('editLog/19').exists() || !data.child('editLog/19').exists()) && (newData.child('deleteReq').exists() || !data.child('deleteReq').exists() || data.child('deleteReq/by').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien')",
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+          ".validate": "newData.hasChildren(['name', 'qty', 'from', 'by', 'ts']) && (newData.child('editLog/0').exists() || !data.child('editLog/0').exists()) && (newData.child('editLog/1').exists() || !data.child('editLog/1').exists()) && (newData.child('editLog/2').exists() || !data.child('editLog/2').exists()) && (newData.child('editLog/3').exists() || !data.child('editLog/3').exists()) && (newData.child('editLog/4').exists() || !data.child('editLog/4').exists()) && (newData.child('editLog/5').exists() || !data.child('editLog/5').exists()) && (newData.child('editLog/6').exists() || !data.child('editLog/6').exists()) && (newData.child('editLog/7').exists() || !data.child('editLog/7').exists()) && (newData.child('editLog/8').exists() || !data.child('editLog/8').exists()) && (newData.child('editLog/9').exists() || !data.child('editLog/9').exists()) && (newData.child('editLog/10').exists() || !data.child('editLog/10').exists()) && (newData.child('editLog/11').exists() || !data.child('editLog/11').exists()) && (newData.child('editLog/12').exists() || !data.child('editLog/12').exists()) && (newData.child('editLog/13').exists() || !data.child('editLog/13').exists()) && (newData.child('editLog/14').exists() || !data.child('editLog/14').exists()) && (newData.child('editLog/15').exists() || !data.child('editLog/15').exists()) && (newData.child('editLog/16').exists() || !data.child('editLog/16').exists()) && (newData.child('editLog/17').exists() || !data.child('editLog/17').exists()) && (newData.child('editLog/18').exists() || !data.child('editLog/18').exists()) && (newData.child('editLog/19').exists() || !data.child('editLog/19').exists()) && (newData.child('pending').exists() || !data.child('pending').exists() || data.child('pending/by').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
           "by":       { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid) || (!data.exists() && !data.parent().exists() && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" },
-          "name":     { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200" },
-          "qty":      { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000" },
-          "unit":     { ".validate": "!newData.isString() || newData.val().length <= 30" },
-          "from":     { ".validate": "newData.val() === 'pva' || newData.val() === '134' || newData.val() === 'other' || newData.val() === 'duan' || newData.val() === 'thue'" },
-          "due":      { ".validate": "!newData.isString() || newData.val().length <= 10" },
-          "fromProposal": { ".validate": "!newData.isString() || newData.val().length <= 40" },
+          "name":     { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (newData.isString() && newData.val().length > 0 && newData.val().length <= 200)" },
+          "qty":      { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000)" },
+          "unit":     { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (!newData.isString() || newData.val().length <= 30)" },
+          "from":     { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (newData.val() === 'pva' || newData.val() === '134' || newData.val() === 'other' || newData.val() === 'duan' || newData.val() === 'thue')" },
+          "due":      { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (!newData.isString() || newData.val().length <= 10)" },
+          "fromProposal": { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (!newData.isString() || newData.val().length <= 40)" },
           "editLog":  { "$i": { ".validate": "(data.exists() && newData.child('ts').val() === data.child('ts').val() && newData.child('what').val() === data.child('what').val() && newData.child('by').val() === data.child('by').val()) || (!data.exists() && newData.child('by').val() === auth.uid && newData.child('what').isString() && newData.child('what').val().length <= 600) || (!data.exists() && (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' && !data.parent().parent().exists()) && newData.child('what').isString() && newData.child('what').val().length <= 600)" } },
-          "fromName": { ".validate": "!newData.isString() || newData.val().length <= 200" },
-          "date":     { ".validate": "!newData.isString() || newData.val().length <= 10" },
-          "note":     { ".validate": "!newData.isString() || newData.val().length <= 2000" },
+          "fromName": { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (!newData.isString() || newData.val().length <= 200)" },
+          "date":     { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (!newData.isString() || newData.val().length <= 10)" },
+          "note":     { ".validate": "(!data.parent().exists() || newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (!newData.isString() || newData.val().length <= 2000)" },
           "byName":   { ".validate": "!newData.isString() || newData.val().length <= 200" },
           "ts":       { ".validate": "newData.isNumber()" },
           "returned": {
             "$i": {
+              ".validate": "(data.exists() && newData.child('qty').val() === data.child('qty').val() && newData.child('ts').val() === data.child('ts').val()) || (!data.exists() && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
               "qty":  { ".validate": "newData.isNumber() && newData.val() >= 0" },
               "date": { ".validate": "!newData.isString() || newData.val().length <= 10" },
               "ts":   { ".validate": "newData.isNumber()" },
@@ -300,16 +301,14 @@
               "$o":   { ".validate": false }
             }
           },
-          "deleteReq": {
+          "pending": {
+            ".validate": "newData.hasChildren(['type', 'by', 'ts'])",
+            "type":   { ".validate": "newData.val() === 'dec' || newData.val() === 'edit' || newData.val() === 'del'" },
             "by":     { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
             "byName": { ".validate": "newData.isString() && newData.val().length <= 200" },
             "ts":     { ".validate": "newData.isNumber()" },
-            "names":  { "$u": { ".validate": "newData.isString() && newData.val().length <= 200" } },
-            "ok": {
-              "hien1": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && newData.val() !== newData.parent().child('hien2').val())" },
-              "hien2": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && newData.val() !== newData.parent().child('hien1').val())" },
-              "$o":    { ".validate": false }
-            },
+            "note":   { ".validate": "!newData.isString() || newData.val().length <= 500" },
+            "data":   { "$f": { ".validate": "(newData.isString() && newData.val().length <= 2000) || newData.isNumber()" } },
             "$o": { ".validate": false }
           },
           "$other": { ".validate": false }

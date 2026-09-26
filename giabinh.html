@@ -65,14 +65,14 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* Stats compact - 7 ô */
 .stats-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
 .stats-grid .stat-box{flex:1 1 calc(25% - 4px);min-width:60px}
-.stat-box{background:#fff;border-radius:8px;padding:6px 4px;text-align:center;box-shadow:var(--shadow);cursor:pointer;border:1.5px solid transparent;display:flex;flex-direction:column;justify-content:center;position:relative}
+.stat-box{background:#fff;border-radius:8px;padding:4px 6px;text-align:center;box-shadow:var(--shadow);cursor:pointer;border:1.5px solid transparent;display:flex;flex-direction:column;justify-content:center;position:relative;min-height:0}   /* v69: dẹt (D) */
 /* v165 UX: ô nào BẤM ĐƯỢC thì có mũi tên › góc phải — hết cảnh "bảng tĩnh" không ai biết bấm */
 .stat-box[onclick]::after{content:'›';position:absolute;right:4px;top:1px;font-size:12px;font-weight:900;color:#93b4f0}
 .stat-box.active{border-color:var(--blue);background:var(--blue-light)}
-.stat-row{display:flex;align-items:baseline;justify-content:center;gap:3px;flex-wrap:wrap;overflow:hidden}
-.stat-val{font-size:15px;font-weight:800;line-height:1.1;white-space:nowrap;flex-shrink:0}
-.stat-lbl{font-size:10.5px;color:var(--text);font-weight:700;white-space:normal;line-height:1.15;text-align:center}
-.stat-amt{font-size:11px;color:#374151;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stat-row{display:flex;align-items:baseline;justify-content:center;gap:4px;flex-wrap:nowrap;overflow:hidden;min-width:0}
+.stat-val{font-size:14px;font-weight:800;line-height:1.1;white-space:nowrap;flex-shrink:0}
+.stat-lbl{font-size:10.5px;color:var(--text);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.15;text-align:center;min-width:0}
+.stat-amt{font-size:10.5px;color:#374151;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2}
 
 /* Badge */
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
@@ -652,7 +652,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="stat-row stat-amt" id="st-pending-amt">—</div>
     </div>
     <div class="stat-box" data-f="approved" onclick="setFilter('approved',this)">
-      <div class="stat-row"><div class="stat-val" style="color:var(--blue-dark)" id="st-approved">0</div><div class="stat-lbl">Đã duyệt · chờ chuyển tiền</div></div>
+      <div class="stat-row"><div class="stat-val" style="color:var(--blue-dark)" id="st-approved">0</div><div class="stat-lbl">Đã duyệt, chờ chuyển</div></div>
       <div class="stat-row stat-amt" id="st-approved-amt">—</div>
     </div>
     <div class="stat-box" data-f="rejected" onclick="setFilter('rejected',this)">
@@ -660,7 +660,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="stat-row stat-amt" id="st-rejected-amt">—</div>
     </div>
     <div class="stat-box" data-f="transferred" onclick="setFilter('transferred',this)">
-      <div class="stat-row"><div class="stat-val" style="color:var(--green)" id="st-done">0</div><div class="stat-lbl">Đã chuyển tiền xong</div></div>
+      <div class="stat-row"><div class="stat-val" style="color:var(--green)" id="st-done">0</div><div class="stat-lbl">Đã chuyển xong</div></div>
       <div class="stat-row stat-amt" id="st-done-amt">—</div>
     </div>
   </div>
@@ -1813,7 +1813,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v68';
+const APP_VERSION = '20260926-v69';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -6608,34 +6608,30 @@ function assetReturned(a){ return Array.isArray(a.returned) ? a.returned.reduce(
 function assetLeft(a){ return Math.max(0, (parseFloat(a.qty)||0) - assetReturned(a)); }
 function assetFromLabel(a){ const f = ASSET_FROM[a.from] || ASSET_FROM.other; return (a.from==='other' && a.fromName) ? a.fromName : (a.from==='thue' && a.fromName) ? 'Thuê: '+a.fromName : f.label; }
 function assetCanDelete(a){ return currentRole==='dung'; }   // v61 (D 26/09): xóa mục luân chuyển phải có Hiền và Lan đồng ý — người khác chỉ "Đề nghị xóa" (như Cân đối v25)
-function assetDelReq(a){ return (a && a.deleteReq && typeof a.deleteReq==='object') ? a.deleteReq : null; }
+function assetPending(a){ return (a && a.pending && typeof a.pending==='object' && a.pending.type) ? a.pending : null; }   // v69
 function assetLabel(a){ return '"'+(a.name||'')+'" ('+fmtQty(a.qty)+' '+(a.unit||'')+' · '+assetFromLabel(a)+')'; }
-function assetDelBtn(a){
-  if(assetDelReq(a)) return '';   // đang có đề nghị xoá → hộp assetDelReqBox lo
-  if(currentRole==='dung') return `<button onclick="deleteAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>`;
-  return `<button onclick="requestAssetDelete('${sid(a.id)}')" title="Mục chỉ bị xóa khi Hiền và Lan cùng đồng ý" style="${_CASH_BTN}background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">🗑 Đề nghị xóa</button>`;
+const _ASSET_F = {name:'tên', qty:'số lượng', unit:'đơn vị tính', from:'nguồn', fromName:'tên đơn vị', date:'ngày đến', note:'ghi chú', due:'hạn trả'};
+function assetPendingText(a){   // mô tả đề nghị (đã esc)
+  const q = assetPending(a); if(!q) return '';
+  const d = q.data || {};
+  if(q.type==='dec') return 'GIẢM '+fmtQty(d.qty)+' '+esc(a.unit||'')+' — '+esc((ASSET_DEC[d.reason]||ASSET_DEC.thuhoi).label)+(d.date?' · '+esc(d.date):'')+(d.note?' · '+esc(d.note):'');
+  if(q.type==='edit'){ const ch=[]; Object.keys(_ASSET_F).forEach(k=>{ if(d[k]!==undefined && String(d[k]==null?'':d[k])!==String(a[k]==null?'':a[k])) ch.push(_ASSET_F[k]+' → '+esc(k==='from'?((ASSET_FROM[d[k]]||{}).label||String(d[k])):k==='qty'?fmtQty(d[k]):String(d[k]))); }); return 'SỬA: '+(ch.length?ch.join(', '):'(không đổi gì)'); }
+  return 'XÓA mục này';
 }
-// Hộp "đang có đề nghị xoá" của mục luân chuyển: ai đã đồng ý, còn thiếu ai, nút cho đúng người (bản sao của cashDelReqBox)
-function assetDelReqBox(a){
-  const q = assetDelReq(a); if(!q) return '';
-  const ok = q.ok || {}, names = q.names || {};
-  const uid = (currentUser && currentUser.uid) || '';
-  const nm = u => esc(names[u] || 'Hiền/Lan');
-  const hienDone = [ok.hien1, ok.hien2].filter(Boolean);
-  const full = !!(ok.hien1 && ok.hien2);
-  const parts = hienDone.map(u => '✅ ' + nm(u));
-  for(let i = hienDone.length; i < 2; i++) parts.push('⏳ Hiền/Lan');
-  const mineDone = !!uid && (ok.hien1===uid || ok.hien2===uid);
-  const canOk = !mineDone && currentRole==='hien' && hienDone.length < 2;
-  const canCancel = currentRole==='dung' || (!!uid && q.by===uid);
+function assetDelBtn(a){
+  if(assetPending(a)) return '';
+  if(currentRole==='dung') return `<button onclick="deleteAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>`;
+  return `<button onclick="assetRequestDelete('${sid(a.id)}')" title="Đề nghị xóa — Dũng duyệt mới xóa" style="${_CASH_BTN}background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">🗑 Xóa</button>`;
+}
+// Hộp "đang có đề nghị chờ Dũng duyệt": nội dung đề nghị + nút Duyệt / Từ chối (Dũng) + Hủy (người đề nghị / Dũng)
+function assetPendingBox(a){
+  const q = assetPending(a); if(!q) return '';
+  const uid = (currentUser&&currentUser.uid)||'';
   let btns = '';
-  if(full && (currentRole==='dung' || currentRole==='hien')) btns += `<button onclick="finishAssetDelete('${sid(a.id)}')" style="${_CASH_BTN}background:var(--red);color:#fff;border:none">🗑 Đủ 2 đồng ý — Xóa</button>`;
-  else if(canOk) btns += `<button onclick="approveAssetDelete('${sid(a.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Tôi đồng ý xóa</button>`;
-  if(currentRole==='dung' && !full) btns += `<button onclick="deleteAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa ngay</button>`;
-  if(canCancel) btns += `<button onclick="cancelAssetDelete('${sid(a.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">✕ Hủy đề nghị</button>`;
-  return `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px">
-    <div style="font-weight:700;color:#92400e">🗑 ${esc(q.byName||'?')} đề nghị XÓA mục này${q.ts?' · '+fmtFull(q.ts):''}</div>
-    <div style="color:#78350f;margin-top:3px">${full ? 'Hiền và Lan đã đồng ý' : 'Cần cả Hiền và Lan đồng ý'}: ${parts.join(' · ')}</div>
+  if(currentRole==='dung') btns += `<button onclick="assetApprovePending('${sid(a.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt</button><button onclick="assetRejectPending('${sid(a.id)}')" style="${_CASH_BTN}background:#fff;color:var(--red);border:1px solid #fecaca">✕ Từ chối</button>`;
+  if(currentRole==='dung' || (uid && q.by===uid)) btns += `<button onclick="assetCancelPending('${sid(a.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">↩ Hủy đề nghị</button>`;
+  return `<div style="margin-top:6px;padding:7px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px">
+    <div style="font-weight:700;color:#92400e">⏳ ${esc(q.byName||'?')} đề nghị ${assetPendingText(a)}${q.ts?' · '+fmtFull(q.ts):''} — chờ Dũng duyệt</div>
     ${btns ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</div>` : ''}
   </div>`;
 }
@@ -6692,14 +6688,14 @@ function renderAssets(){
         <span style="color:var(--text-sub)">đến ${esc(a.date||'')}</span>
         <span>${st}</span>
         ${a.note ? `<span style="color:var(--text-sub)">📝 ${esc(a.note)}</span>` : ''}
-      </div>${dueTxt}${hist}${logH}${assetDelReqBox(a)}
+      </div>${dueTxt}${hist}${logH}${assetPendingBox(a)}
       <div style="display:flex;gap:6px;margin-top:6px;justify-content:space-between;align-items:center;flex-wrap:wrap">
         <span style="font-size:10px;color:var(--text-sub)">${a.byName?'✍️ '+esc(a.byName)+' ghi':''}${a.fromProposal?' · <a href="#" onclick="jumpToProposal(\''+sid(a.fromProposal)+'\');return false" style="color:var(--blue)">xem phiếu chi</a>':''}</span>
-        <span style="display:flex;gap:6px;flex-wrap:wrap">
-          ${done ? '' : `<button onclick="returnAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">➖ Giảm</button>`}
-          <button onclick="openAssetModal('${sid(a.id)}')" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">✏️ Sửa</button>
+        ${assetPending(a) ? '<span style="font-size:10.5px;color:#92400e">đang chờ Dũng duyệt đề nghị</span>' : `<span style="display:flex;gap:6px;flex-wrap:wrap">
+          ${done ? '' : `<button onclick="returnAsset('${sid(a.id)}')" title="${currentRole==='dung'?'':'Đề nghị giảm — Dũng duyệt'}" style="${_CASH_BTN}background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">➖ Giảm</button>`}
+          <button onclick="openAssetModal('${sid(a.id)}')" title="${currentRole==='dung'?'':'Đề nghị sửa — Dũng duyệt'}" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">✏️ Sửa</button>
           ${assetDelBtn(a)}
-        </span>
+        </span>`}
       </div>
     </div></div>`;
   }).join('');
@@ -6725,7 +6721,7 @@ function syncAssetDeleteToSheet(id){
 
 function openAssetModal(id){
   const a = id ? assets.find(x=>x.id===id) : null;
-  document.getElementById('rot-modal-title').textContent = a ? '✏️ Sửa vật tư / thiết bị' : '🔁 Vật tư / thiết bị chuyển đến';
+  document.getElementById('rot-modal-title').textContent = a ? (currentRole==='dung' ? '✏️ Sửa vật tư / thiết bị' : '✏️ Đề nghị sửa (Dũng duyệt)') : '🔁 Vật tư / thiết bị chuyển đến';   // v69
   document.getElementById('rot-inp-id').value   = a ? a.id : '';
   document.getElementById('rot-inp-name').value = a ? (a.name||'') : '';
   document.getElementById('rot-inp-qty').value  = a ? fmtQty(a.qty) : '';
@@ -6778,6 +6774,10 @@ async function submitAsset(){
   try{
     if(id){
       const old = assets.find(x=>x.id===id) || {};
+      if(currentRole!=='dung'){   // v69: người thường chỉ ĐỀ NGHỊ sửa — Dũng duyệt mới đổi
+        const data = {}; ['name','qty','unit','from','fromName','date','note','due'].forEach(k=>{ data[k] = fields[k]==null ? '' : fields[k]; });
+        const ok = await _assetSendPending(old, {type:'edit', data}, 'sửa'); if(ok) closeAssetModal(); return;
+      }
       { const chg=[]; ['name','qty','unit','from','fromName','date','note','due'].forEach(k=>{ if(String(old[k]==null?'':old[k])!==String(fields[k]==null?'':fields[k])) chg.push(k==='name'?'tên':k==='qty'?'số lượng':k==='unit'?'đơn vị tính':k==='from'?'nguồn':k==='fromName'?'tên đơn vị':k==='date'?'ngày':k==='due'?'hạn thuê':'ghi chú'); });
         if(chg.length){ const L = Array.isArray(old.editLog) ? old.editLog.slice() : []; L.push({ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', what:'sửa '+chg.join(', ')}); fields.editLog = L; } }   // v41 nhật ký sửa
       await db.ref('duyetchi/assets/'+id).update(fields);
@@ -6816,6 +6816,9 @@ async function saveAssetDec(){
   const reason = document.getElementById('dec-reason').value || 'thuhoi', note = (document.getElementById('dec-note').value||'').trim();
   if(qty <= 0){ showToast('⚠️ Số lượng không hợp lệ'); return; }
   if(qty > left + 0.0001){ showToast('⚠️ Giảm nhiều hơn số đang ở công trường'); return; }
+  if(currentRole!=='dung'){   // v69: người thường chỉ ĐỀ NGHỊ giảm — Dũng duyệt mới trừ
+    const ok = await _assetSendPending(a, {type:'dec', data:{qty, date: document.getElementById('dec-date').value||ymdLocal(), reason, note}}, 'giảm'); if(ok) closeDecModal(); return;
+  }
   const arr = Array.isArray(a.returned) ? a.returned.slice() : [];
   arr.push({qty, date: document.getElementById('dec-date').value||ymdLocal(), ts:Date.now(), by:getCurrentUserName()||'', reason, note});
   try{
@@ -6827,64 +6830,79 @@ async function saveAssetDec(){
 
 async function deleteAsset(id){
   const a = assets.find(x=>x.id===id); if(!a) return;
-  if(!assetCanDelete(a)) return requestAssetDelete(id);   // v61: người thường → đề nghị xóa (cần Hiền và Lan đồng ý)
+  if(!assetCanDelete(a)) return assetRequestDelete(id);   // v69: người thường → đề nghị xóa (Dũng duyệt)
   if(!confirm('Xóa mục '+assetLabel(a)+'?\n\n(vào Thùng rác — chỉ Dũng khôi phục được)')) return;
   try{ const {id:_i, ...rest} = a; await moveToTrash('assets', id, rest); await db.ref('duyetchi/assets/'+id).remove(); try{ syncAssetDeleteToSheet(id); }catch(e){} showToast('🗑 Đã xóa'); }
   catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
 }
 // ── v61 ĐỀ NGHỊ XÓA mục luân chuyển (như Cân đối v25): ghi deleteReq; Hiền + Lan mỗi người bấm đồng ý 1 lần; đủ 2 ô → xoá.
-async function requestAssetDelete(id){
+// ── v69 (D 26/09): GIẢM / SỬA / XÓA vật tư do người khác đề nghị → DŨNG DUYỆT mới có hiệu lực (Dũng làm thẳng). Mỗi mục 1 đề nghị chờ.
+async function _assetSendPending(a, q, label){
+  if(assetPending(a)){ showToast('Mục này đang có đề nghị chờ Dũng duyệt — hủy đề nghị cũ trước'); return false; }
+  q.by = (currentUser&&currentUser.uid)||''; q.byName = getCurrentUserName()||''; q.ts = Date.now();
+  try{
+    await db.ref('duyetchi/assets/'+a.id+'/pending').set(q);
+    showToast('📨 Đã gửi đề nghị '+label+' — chờ Dũng duyệt');
+    sendPushNotif('🔁 Đề nghị '+label+' vật tư luân chuyển — chờ duyệt', q.byName+': '+assetLabel(a), ['dung']);
+    return true;
+  }catch(e){ showToast('❌ Không gửi được: '+(e.message||e.code||'')); return false; }
+}
+async function assetRequestDelete(id){
   const a = assets.find(x=>x.id===id); if(!a) return;
   if(currentRole==='dung') return deleteAsset(id);
-  if(assetDelReq(a)){ showToast('Đã có đề nghị xóa rồi — chờ đủ người đồng ý'); return; }
-  if(!confirm('Đề nghị XÓA mục '+assetLabel(a)+'?\n\nMục chỉ bị xóa khi cả Hiền và Lan đồng ý.')) return;
-  const uid = (currentUser && currentUser.uid) || '', name = getCurrentUserName() || '';
-  const q = { by: uid, byName: name, ts: Date.now(), names: {} };
-  q.names[uid] = name;
-  if(currentRole==='hien') q.ok = { hien1: uid };   // người đề nghị là Hiền/Lan → tính luôn là 1 phiếu đồng ý
-  try{
-    await db.ref('duyetchi/assets/'+id+'/deleteReq').set(q);
-    showToast('📨 Đã gửi đề nghị xóa — chờ Hiền và Lan đồng ý');
-    sendPushNotif('🗑 Đề nghị xóa mục luân chuyển', name+': '+assetLabel(a)+' — cần Hiền và Lan đồng ý', ['dung','hien']);
-  }catch(e){ showToast('❌ Không gửi được: '+(e.message||e.code||'')); }
+  if(!confirm('Đề nghị XÓA mục '+assetLabel(a)+'?\n\nMục chỉ bị xóa khi Dũng duyệt.')) return;
+  await _assetSendPending(a, {type:'del'}, 'xóa');
 }
-async function approveAssetDelete(id){
-  const a = assets.find(x=>x.id===id), q = assetDelReq(a); if(!a || !q) return;
-  const uid = (currentUser && currentUser.uid) || '', name = getCurrentUserName() || '';
-  const ok = q.ok || {};
-  if(currentRole==='dung') return deleteAsset(id);
-  if(ok.hien1===uid || ok.hien2===uid){ showToast('Bạn đã đồng ý rồi'); return; }
-  let slot = null;
-  if(currentRole==='hien') slot = !ok.hien1 ? 'hien1' : (!ok.hien2 ? 'hien2' : null);
-  if(!slot){ showToast('🔒 Chỉ Hiền, Lan mới đồng ý được (và đã đủ người)'); return; }
-  if(!confirm('Đồng ý XÓA mục '+assetLabel(a)+'?')) return;
-  const base = 'duyetchi/assets/'+id+'/deleteReq/';
-  const write = async(sl)=>{ const up = {}; up[base+'ok/'+sl] = uid; up[base+'names/'+uid] = name; await db.ref().update(up); };
+const _assetPendLabel = q => q.type==='del' ? 'xóa' : q.type==='dec' ? 'giảm' : 'sửa';
+async function assetApprovePending(id){
+  const a = assets.find(x=>x.id===id), q = assetPending(a); if(!a || !q) return;
+  if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng duyệt'); return; }
+  if(!confirm('Duyệt đề nghị của '+(q.byName||'')+': '+assetPendingText(a).replace(/<[^>]+>/g,'').replace(/&[a-z#0-9]+;/g,' ')+' ?')) return;
+  const d = q.data || {}, byN = getCurrentUserName()||'', uid = (currentUser&&currentUser.uid)||'';
   try{
-    try{ await write(slot); }
-    catch(e){ if(slot==='hien1' && !ok.hien2) await write('hien2'); else throw e; }   // 2 người bấm cùng lúc → nhường ô 1, lấy ô 2
-    const now = (await db.ref(base+'ok').get()).val() || {};
-    if(now.hien1 && now.hien2){ await finishAssetDelete(id, true); return; }
-    showToast('✅ Đã ghi đồng ý của bạn — còn chờ người kia');
-    sendPushNotif('✅ '+name+' đồng ý xóa mục luân chuyển', assetLabel(a)+' — còn thiếu 1 người (Hiền/Lan)', ['dung','hien']);
+    if(q.type==='del'){
+      const {id:_i, pending:_p, ...rest} = a; await moveToTrash('assets', id, rest); await db.ref('duyetchi/assets/'+id).remove(); try{ syncAssetDeleteToSheet(id); }catch(e){}
+      showToast('🗑 Đã xóa (duyệt đề nghị của '+(q.byName||'')+')');
+    } else if(q.type==='dec'){
+      const left = assetLeft(a), qty = parseFloat(d.qty)||0;
+      if(qty<=0 || qty > left+0.0001){ showToast('⚠️ Số giảm không hợp lệ (đang ở công trường '+fmtQty(left)+') — từ chối hoặc hủy đề nghị'); return; }
+      const arr = Array.isArray(a.returned) ? a.returned.slice() : [];
+      arr.push({qty, date:d.date||ymdLocal(), ts:Date.now(), by:(q.byName||'')+' (Dũng duyệt)', reason:d.reason||'thuhoi', note:d.note||''});
+      const L = Array.isArray(a.editLog) ? a.editLog.slice() : []; L.push({ts:Date.now(), by:uid, byName:byN, what:'duyệt đề nghị giảm '+fmtQty(qty)+' '+(a.unit||'')+' của '+(q.byName||'')});
+      await db.ref('duyetchi/assets/'+id).update({returned:arr, editLog:L, pending:null});
+      try{ syncAssetToSheet({...a, returned:arr, editLog:L, pending:null}); }catch(e){}
+      showToast('✅ Đã duyệt giảm '+fmtQty(qty)+' '+(a.unit||''));
+    } else {
+      const fields = {}; Object.keys(_ASSET_F).forEach(k=>{ if(d[k]!==undefined) fields[k] = (k==='qty') ? (parseFloat(d[k])||0) : d[k]; });
+      if(fields.name!==undefined && !String(fields.name).trim()){ showToast('⚠️ Tên trống — từ chối đề nghị'); return; }
+      if(fields.qty!==undefined && fields.qty<=0){ showToast('⚠️ Số lượng không hợp lệ — từ chối đề nghị'); return; }
+      const chg=[]; Object.keys(fields).forEach(k=>{ if(String(a[k]==null?'':a[k])!==String(fields[k]==null?'':fields[k])) chg.push(_ASSET_F[k]); });
+      const L = Array.isArray(a.editLog) ? a.editLog.slice() : []; L.push({ts:Date.now(), by:uid, byName:byN, what:'duyệt đề nghị sửa của '+(q.byName||'')+(chg.length?': '+chg.join(', '):'')});
+      await db.ref('duyetchi/assets/'+id).update({...fields, editLog:L, pending:null});
+      try{ syncAssetToSheet({...a, ...fields, editLog:L, pending:null}); }catch(e){}
+      showToast('✅ Đã duyệt sửa');
+    }
+    sendPushNotif('✅ Dũng đã duyệt đề nghị '+_assetPendLabel(q)+' vật tư luân chuyển', assetLabel(a)+' — đề nghị của '+(q.byName||''), ['hien','toan','trang','kt']);
+  }catch(e){ showToast('❌ Không duyệt được: '+(e.message||e.code||'')); }
+}
+async function assetRejectPending(id){
+  const a = assets.find(x=>x.id===id), q = assetPending(a); if(!a || !q) return;
+  if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng'); return; }
+  let reason = prompt('Lý do từ chối đề nghị '+_assetPendLabel(q)+' của '+(q.byName||'')+' (bắt buộc):', ''); if(reason===null) return;
+  reason = String(reason).trim().slice(0,300); if(!reason){ showToast('⚠️ Cần ghi lý do'); return; }
+  const L = Array.isArray(a.editLog) ? a.editLog.slice() : []; L.push({ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', what:'từ chối đề nghị '+_assetPendLabel(q)+' của '+(q.byName||'')+': '+reason});
+  try{
+    await db.ref('duyetchi/assets/'+id).update({editLog:L, pending:null});
+    showToast('✕ Đã từ chối đề nghị');
+    sendPushNotif('❌ Dũng từ chối đề nghị '+_assetPendLabel(q)+' vật tư luân chuyển', assetLabel(a)+' — '+reason, ['hien','toan','trang','kt']);
   }catch(e){ showToast('❌ Không ghi được: '+(e.message||e.code||'')); }
 }
-async function finishAssetDelete(id, silent){
-  const a = assets.find(x=>x.id===id), q = assetDelReq(a); if(!a || !q) return;
-  if(!silent && !confirm('Hiền và Lan đã đồng ý. Xóa mục '+assetLabel(a)+'? (vào Thùng rác)')) return;
-  try{
-    const {id:_i, ...rest} = a;
-    await moveToTrash('assets', id, rest);
-    await db.ref('duyetchi/assets/'+id).remove();
-    try{ syncAssetDeleteToSheet(id); }catch(e){}
-    showToast('🗑 Đã xóa (Hiền và Lan đồng ý)');
-    sendPushNotif('🗑 Đã xóa mục luân chuyển', assetLabel(a)+' — Hiền và Lan đã đồng ý', ['dung','hien','toan']);
-  }catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
-}
-async function cancelAssetDelete(id){
-  const a = assets.find(x=>x.id===id), q = assetDelReq(a); if(!a || !q) return;
-  if(!confirm('Hủy đề nghị xóa mục "'+(a.name||'')+'"? (mục vẫn giữ nguyên)')) return;
-  try{ await db.ref('duyetchi/assets/'+id+'/deleteReq').remove(); showToast('✕ Đã hủy đề nghị xóa'); }
+async function assetCancelPending(id){
+  const a = assets.find(x=>x.id===id), q = assetPending(a); if(!a || !q) return;
+  const uid = (currentUser&&currentUser.uid)||'';
+  if(!(currentRole==='dung' || (uid && q.by===uid))){ showToast('🔒 Chỉ người đề nghị (hoặc Dũng) mới hủy được'); return; }
+  if(!confirm('Hủy đề nghị '+_assetPendLabel(q)+' này? (mục giữ nguyên)')) return;
+  try{ await db.ref('duyetchi/assets/'+id+'/pending').remove(); showToast('↩️ Đã hủy đề nghị'); }
   catch(e){ showToast('❌ Không hủy được: '+(e.message||e.code||'')); }
 }
 
