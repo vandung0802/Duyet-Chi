@@ -35,6 +35,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* v173: iOS Safari vẽ lại position:fixed trễ khi cuộn (thanh địa chỉ co giãn làm
    đổi cỡ màn hình) → thanh menu nhảy ra giữa màn hình. translateZ(0) đẩy thanh menu
    sang lớp vẽ riêng của GPU nên nó đứng yên, không vẽ lại theo nội dung đang cuộn. */
+body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên điện thoại → ẩn thanh điều hướng (iOS đẩy nó lên giữa màn) */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:10px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
 /* v96: chấm số đỏ trên nút điều hướng — biết đang có việc chờ duyệt/chuyển ở khu nào */
@@ -1811,7 +1812,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v71';
+const APP_VERSION = '20260927-v72';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -11020,6 +11021,17 @@ function _snMonthTable(name){
 }
 function salMonthJump(month,name){ if(month && month!=='?') salaryMonth=month; salNameJump(name); }
 
+
+// ══ v72: iOS — bàn phím ảo làm thanh điều hướng cố định nhảy lên giữa màn hình (D báo 27/09) ══
+(function(){
+  const nav = document.querySelector('.bottom-nav'); if(!nav) return;
+  const isField = el => !!el && ((el.tagName==='INPUT' && ['checkbox','radio','button','file','submit','range','color'].indexOf(String(el.type||'').toLowerCase())<0) || el.tagName==='TEXTAREA' || el.tagName==='SELECT' || el.isContentEditable);
+  let t = null, t2 = null;
+  const refix = ()=>{ try{ nav.style.display='none'; void nav.offsetHeight; nav.style.display=''; window.scrollBy(0,1); window.scrollBy(0,-1); }catch(e){} };
+  document.addEventListener('focusin', e=>{ if(isField(e.target)){ clearTimeout(t); document.body.classList.add('kb-open'); } });
+  document.addEventListener('focusout', e=>{ if(isField(e.target)){ clearTimeout(t); t = setTimeout(()=>{ if(!isField(document.activeElement)){ document.body.classList.remove('kb-open'); refix(); } }, 250); } });
+  if(window.visualViewport){ window.visualViewport.addEventListener('resize', ()=>{ clearTimeout(t2); t2 = setTimeout(()=>{ if(!isField(document.activeElement)){ document.body.classList.remove('kb-open'); refix(); } }, 150); }); }
+})();
 </script>
 
 
