@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#047857">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -29,7 +29,7 @@
   --text:#111827;--text-sub:#6b7280;--white:#ffffff;
   --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.08);
 }
-body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:18px}
+body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:18px;touch-action:manipulation}   /* v74: bỏ double-tap zoom trên điện thoại */
 .app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
 .app-header h1{font-size:16px;font-weight:700;letter-spacing:-0.3px}
 /* v173: iOS Safari vẽ lại position:fixed trễ khi cuộn (thanh địa chỉ co giãn làm
@@ -1812,7 +1812,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v73';
+const APP_VERSION = '20260927-v74';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -11022,6 +11022,23 @@ function _snMonthTable(name){
 function salMonthJump(month,name){ if(month && month!=='?') salaryMonth=month; salNameJump(name); }
 
 
+// ══ v74: iPhone — trang bị zoom (double-tap / véo 2 ngón) làm thanh điều hướng cố định trôi lên giữa màn và bị cắt 2 bên (D báo 27/09) ══
+(function(){
+  const inImg = e => !!(e.target && e.target.closest && e.target.closest('#imgModal'));   // khung xem ảnh có zoom riêng — không chặn
+  ['gesturestart','gesturechange','gestureend'].forEach(t=>document.addEventListener(t, e=>{ if(!inImg(e)) e.preventDefault(); }, {passive:false}));
+  document.addEventListener('touchmove', e=>{ if(e.touches && e.touches.length>1 && !inImg(e)) e.preventDefault(); }, {passive:false});
+  // Nếu vẫn bị zoom bằng cách nào đó: ghim thanh điều hướng vào đáy VÙNG NHÌN THẤY (visualViewport) thay vì khung bố cục gốc
+  const nav = document.querySelector('.bottom-nav'), vv = window.visualViewport; if(!nav || !vv) return;
+  let raf = 0;
+  const pin = ()=>{ raf = 0;
+    const zoomed = (vv.scale||1) > 1.02 || vv.offsetLeft > 1 || vv.width < document.documentElement.clientWidth - 1;
+    if(!zoomed){ if(nav.dataset.pinned){ nav.style.left=''; nav.style.right=''; nav.style.width=''; nav.style.top=''; nav.style.bottom=''; delete nav.dataset.pinned; } return; }
+    nav.dataset.pinned = '1'; nav.style.left = vv.offsetLeft+'px'; nav.style.right = 'auto'; nav.style.width = vv.width+'px'; nav.style.bottom = 'auto';
+    nav.style.top = (vv.offsetTop + vv.height - nav.offsetHeight) + 'px';
+  };
+  const sched = ()=>{ if(!raf) raf = requestAnimationFrame(pin); };
+  vv.addEventListener('scroll', sched); vv.addEventListener('resize', sched); window.addEventListener('scroll', sched, {passive:true});
+})();
 // ══ v72: iOS — bàn phím ảo làm thanh điều hướng cố định nhảy lên giữa màn hình (D báo 27/09) ══
 (function(){
   const nav = document.querySelector('.bottom-nav'); if(!nav) return;
