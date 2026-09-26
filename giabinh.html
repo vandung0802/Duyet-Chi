@@ -339,6 +339,18 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 .sheet-ok{background:rgba(255,255,255,0.2);color:#fff}
 .sheet-err{background:rgba(255,0,0,0.2);color:#ffcccc}
 .sheet-none{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.8)}
+
+/* v50: dòng kê sổ tạm ứng — máy tính 1 hàng (ô tiền rộng), điện thoại 2 tầng để không khuất số tiền */
+.settle-row{display:grid;grid-template-columns:1fr 170px 120px 28px;gap:6px;margin-bottom:6px;align-items:center}
+.settle-row .st-desc{font-size:13px;padding:8px 10px}
+.settle-row .st-tax{font-size:12px;padding:8px 4px}
+@media (max-width:640px){
+  .settle-row{grid-template-columns:1fr 1fr 28px}
+  .settle-row .st-desc{grid-column:1/3;grid-row:1}
+  .settle-row .st-x{grid-column:3;grid-row:1}
+  .settle-row .st-amt{grid-column:1;grid-row:2}
+  .settle-row .st-tax{grid-column:2;grid-row:2}
+}
 </style>
 </head>
 <body id="artifacts-component-root-html">
@@ -449,6 +461,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <option value="khongthue">📄 Không thuế VAT</option>
         <option value="khonghl" title="Chi phí không hợp lệ">⛔ Không HL</option>
       </select>
+    </div>
+    <div class="form-group" id="edit-adv-wrap" style="display:none">
+      <label class="form-label">Người nhận tạm ứng <span class="req">*</span></label>
+      <input class="form-input" id="edit-adv-person" list="adv-person-list" type="text" placeholder="Tên người cầm tiền ứng" autocomplete="off" oninput="_advAutoPos('edit-adv-person','edit-adv-position')">
+      <input class="form-input" id="edit-adv-position" list="adv-position-list" type="text" placeholder="Chức vụ / công việc" autocomplete="off" style="margin-top:6px">
     </div>
     <div class="form-group" id="edit-contract-wrap" style="display:none">
       <label class="form-label">Thuộc hợp đồng</label>
@@ -699,6 +716,14 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chọn <b>đặt cọc / ký quỹ</b> thì khi Toàn chuyển tiền, app tự ghi sang tab Cân đối → Ký quỹ. Chọn <b>tạm ứng</b> thì tiền vào sổ tạm ứng của người nhận, chưa tính là chi phí — chi xong kê từng khoản trong sổ (thuế ghi lúc kê).</div>
       </div>
 
+      <div class="form-group" id="inp-adv-wrap" style="display:none">
+        <label class="form-label">Người nhận tạm ứng <span class="req">*</span></label>
+        <input class="form-input" id="inp-adv-person" list="adv-person-list" type="text" placeholder="Gõ tên người sẽ cầm tiền ứng (VD: Trần Văn Hòa)" autocomplete="off" oninput="_advAutoPos('inp-adv-person','inp-adv-position')">
+        <datalist id="adv-person-list"></datalist>
+        <input class="form-input" id="inp-adv-position" list="adv-position-list" type="text" placeholder="Chức vụ / công việc (VD: Thợ sắt, Đội trưởng, Lái máy)" autocomplete="off" style="margin-top:6px">
+        <datalist id="adv-position-list"></datalist>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Người đề xuất ở trên = người lập phiếu hộ. Sổ tạm ứng ghi theo <b>người nhận tiền</b>. Tên và chức vụ gõ một lần, app nhớ cho lần sau.</div>
+      </div>
       <div class="form-group" id="inp-contract-wrap" style="display:none">
         <label class="form-label">Thuộc hợp đồng</label>
         <select class="form-input form-select" id="inp-contract"><option value="">— Không —</option></select>
@@ -1006,6 +1031,22 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
   </div>
 
+  <!-- v48: xem thử app với vai khác (chỉ D) -->
+  <div class="card" id="viewas-card" style="display:none">
+    <div class="card-header">👁 Xem thử app với vai khác</div>
+    <div class="card-body" style="padding:10px 12px">
+      <div style="font-size:11.5px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Chỉ để <b>xem</b> mỗi vai nhìn thấy gì, bấm được gì. Trong lúc xem thử app <b>không ghi gì lên máy chủ</b>. Bấm thanh đen phía dưới hoặc tải lại trang là về vai của anh.</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        <button onclick="viewAs('toan','Toàn')" style="padding:7px 12px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc">💰 Toàn (thủ quỹ)</button>
+        <button onclick="viewAs('hien','Hiền')" style="padding:7px 12px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe">✅ Hiền / Lam (H&amp;L)</button>
+        <button onclick="viewAs('ketoan','Thắm')" style="padding:7px 12px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc">📒 Thắm (Kế toán)</button>
+        <button onclick="viewAs('trang','Trang')" style="padding:7px 12px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;background:#fffbeb;color:#b45309;border:1px solid #fde68a">📦 Phụ trách vật tư</button>
+        <button onclick="viewAs('other','Hương')" style="padding:7px 12px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;background:#f8fafc;color:#334155;border:1px solid #cbd5e1">👤 Thành viên (Hương)</button>
+        <button onclick="viewAsExit()" style="padding:7px 12px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;background:#111827;color:#fff;border:none">↩️ Về vai của tôi</button>
+      </div>
+    </div>
+  </div>
+
   <!-- v41: Thùng rác -->
   <div class="card" id="trash-card">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">🗑 Thùng rác <span id="trash-count" style="font-size:11px;color:var(--text-sub);font-weight:600"></span></div>
@@ -1236,7 +1277,17 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: TẠM ỨNG (v43) -->
   <div id="cash-tab-adv" style="display:none">
-    <div class="card"><div class="card-body" style="padding:12px;font-size:12px;color:var(--text-sub);line-height:1.45">Mỗi người đi công trường có một <b>sổ tạm ứng</b>: phiếu tạm ứng Toàn chuyển → cộng vào sổ; chi xong, <b>người lập phiếu hoặc Kế toán</b> kê từng khoản đã chi ngay trong sổ; khoản chi được <b>H&L duyệt</b> (tiền nộp lại: <b>Toàn xác nhận</b>) mới trừ sổ và tính là chi phí. Chi ít hơn ứng thì còn dư trên sổ; chi vượt thì sổ <b>âm</b> (công ty còn nợ). Kết sổ: dư → nộp lại quỹ; âm → lập phiếu tạm ứng mới để chi bù.</div></div>
+    <div class="card"><div class="card-body" style="padding:12px;font-size:12px;color:var(--text-sub);line-height:1.45">Mỗi người đi công trường có một <b>sổ tạm ứng</b>: phiếu tạm ứng Toàn chuyển → cộng vào sổ; chi xong, <b>người lập phiếu hoặc Kế toán</b> kê từng khoản đã chi ngay trong sổ; từng khoản chi có ô <b>D duyệt</b> (khi người khác ứng) và ô <b>H&L duyệt</b> — H&L duyệt xong mới trừ sổ và tính là chi phí; tiền nộp lại do <b>Toàn xác nhận</b>. Bấm 🔍 Xem để thấy đủ nội dung, thuế, ảnh chứng từ của từng món trước khi duyệt. Chi ít hơn ứng thì còn dư trên sổ; chi vượt thì sổ <b>âm</b> (công ty còn nợ). Kết sổ: dư → nộp lại quỹ; âm → lập phiếu tạm ứng mới để chi bù.</div></div>
+    <div style="display:flex;gap:6px;margin:0 0 8px">
+      <input id="adv-search" type="text" placeholder="🔍 Tìm theo tên người nhận tạm ứng…" oninput="renderAdvLedger()" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:14px;font-family:inherit">
+      <select id="adv-filter" onchange="renderAdvLedger()" style="padding:9px 8px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+        <option value="">Tất cả</option>
+        <option value="hold">Còn giữ tiền</option>
+        <option value="owe">Sổ âm (công ty nợ)</option>
+        <option value="pend">Có khoản chờ duyệt</option>
+        <option value="done">Đã kết sổ</option>
+      </select>
+    </div>
     <div id="cash-adv-list"></div>
   </div>
 
@@ -1759,7 +1810,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v47';
+const APP_VERSION = '20260926-v55';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2862,6 +2913,7 @@ function _lightProposalsJson(){
   return JSON.stringify(proposals.map(p=>{ const {imgImages, imgB64, proofImages, proofB64, invoiceImages, ...lf} = p; return lf; }));
 }
 function save(){
+  if(typeof _viewAs!=='undefined' && _viewAs){ showToast('👁 Đang xem thử — không ghi thật'); return; }   // v48
   // Lưu cache cục bộ phòng khi mất mạng (chỉ phần nhẹ, không ảnh)
   try{
     localStorage.setItem('gb_proposals', _lightProposalsJson());
@@ -3340,6 +3392,9 @@ function initFirebaseSync(){
       trashItems.sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));
       const pg = document.getElementById('page-settings'); if(pg && pg.style.display!=='none') renderTrash();
     }, ()=>{});
+    // ── v53 sổ người nhận tạm ứng (duyetchi/advPeople) ──
+    db.ref('duyetchi/advPeople').off('value');
+    db.ref('duyetchi/advPeople').on('value', snap=>{ const raw=snap.val()||{}; advPeople = Object.keys(raw).map(k=>raw[k]).filter(x=>x&&x.name); try{ _fillAdvList(); }catch(e){} }, ()=>{});
     // ── v41 sổ hợp đồng (duyetchi/contracts) ──
     db.ref('duyetchi/contracts').off('value');
     db.ref('duyetchi/contracts').on('value', snap=>{
@@ -4067,7 +4122,7 @@ const _cardCache = new Map();
 function _cardHash(p){
   // v126: thêm desc/person/site vào hash — trước đây SỬA nội dung/người/công trình mà thẻ vẫn hiện
   // bản cũ (cache không biết có thay đổi; lỗi user báo trên phiếu P.KH, nhưng ảnh hưởng mọi loại phiếu)
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.tax||'')+'|'+(p.costType||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0)+'|'+(p.desc||'')+'|'+(p.person||'')+'|'+(p.site||'')+'|'+(p.costType||'')+'|'+(p.editLog?p.editLog.length:0)+'|'+(p.settlement?(p.settlement.ts||1):0)+'|'+(p.invoiceImages?p.invoiceImages.length:0)+'|'+(p.contractId||'')+'|'+(p.review?(p.review.ts||1):0);   // v41
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.tax||'')+'|'+(p.costType||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0)+'|'+(p.desc||'')+'|'+(p.person||'')+'|'+(p.site||'')+'|'+(p.costType||'')+'|'+(p.advPerson||'')+'|'+(p.advPosition||'')+'|'+(p.editLog?p.editLog.length:0)+'|'+(p.settlement?(p.settlement.ts||1):0)+'|'+(p.invoiceImages?p.invoiceImages.length:0)+'|'+(p.contractId||'')+'|'+(p.review?(p.review.ts||1):0);   // v41
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -4183,7 +4238,7 @@ function _buildCard(p){
   const _invMine = _isMyProposal(p);
   const invoiceHtml = (p.kind==='kh') ? '' : `<div style="padding:4px 10px 0;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap">
       <span style="font-size:11.5px;font-weight:700;color:${invoiceNeeded(p)?'#b45309':invoiceImages.length?'#047857':'var(--text-sub)'}">${invoiceNeeded(p)?'⚠️ Chưa đính kèm hóa đơn / chứng từ mua':invoiceImages.length?'🧾 Hóa đơn: '+invoiceImages.length+' ảnh':'🧾 Hóa đơn: chưa có'}${p.review?` · <span style="color:#0e7490">✔ KT đã rà soát</span>`:''}</span>
-      ${_invMine ? `<button onclick="uploadInvoice('${sid(p.id)}')" style="padding:3px 9px;font-size:11px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📎 Thêm hóa đơn</button>` : ''}
+      ${_invMine ? `<span style="display:flex;gap:4px"><button onclick="uploadInvoice('${sid(p.id)}')" style="padding:3px 9px;font-size:11px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📎 Thêm hóa đơn</button><button onclick="pasteInvoice('${sid(p.id)}')" title="Dán ảnh đã copy" style="padding:3px 9px;font-size:11px;font-weight:700;background:#fff;color:#c2410c;border:1px dashed #fed7aa;border-radius:8px;cursor:pointer">📋 Dán</button></span>` : ''}
     </div>${invoiceImages.length ? `<div class="proof-grid">${invoiceImages.map((src,idx)=>`
     <div class="proof-thumb" data-pid="${sid(p.id)}" data-kind="invoice" data-idx="${idx}">
       <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','invoice',${idx})" alt="Hóa đơn ${idx+1}">
@@ -4420,9 +4475,13 @@ function renderBtnShare(p){
     <div class="ab-share-stack">
       <button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${sid(p.id)}')">📤 ${proofImages.length} ảnh</button>
       <button class="ab-btn" style="background:#fff;color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${sid(p.id)}')">📎 Thêm</button>
+      <button class="ab-btn" style="background:#fff;color:var(--blue);border:1px dashed var(--blue)" onclick="pasteProof('${sid(p.id)}')" title="Dán ảnh đã copy (Zalo, chụp màn hình)">📋 Dán</button>
     </div></div>`;
   if(hasProof) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)"><button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${sid(p.id)}')">📤 ${proofImages.length} ảnh</button></div>`;
-  if(canUpload) return `<div class="approve-box"><button class="ab-btn ab-btn-tight" style="background:var(--blue-light);color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${sid(p.id)}')">📎 Upload</button></div>`;
+  if(canUpload) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)"><div class="ab-share-stack">
+      <button class="ab-btn" style="background:var(--blue-light);color:var(--blue);border:1px solid var(--blue)" onclick="uploadProof('${sid(p.id)}')">📎 Upload</button>
+      <button class="ab-btn" style="background:#fff;color:var(--blue);border:1px dashed var(--blue)" onclick="pasteProof('${sid(p.id)}')" title="Dán ảnh đã copy (Zalo, chụp màn hình)">📋 Dán</button>
+    </div></div>`;
   return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">${done?'⏳ Chờ T':'🔒'}</div></div>`;
 }
 
@@ -5063,20 +5122,22 @@ function del(id){
 function settleSpent(p){ const st=p&&p.settlement; return st ? (st.items||[]).filter(x=>x.kind!=='ret' && x.ok).reduce((a,x)=>a+(parseFloat(x.amount)||0),0) : 0; }   // v47: chỉ khoản đã duyệt
 function settleRet(p){ const st=p&&p.settlement; return st ? (st.items||[]).filter(x=>x.kind==='ret' && x.ok).reduce((a,x)=>a+(parseFloat(x.amount)||0),0) + (parseFloat(st.returned)||0) : 0; }   // v47: chỉ khoản Toàn đã xác nhận
 function _settleCan(p){ return _isMyProposal(p) || currentRole==='ketoan' || currentRole==='dung'; }
+function advWho(p){ return (p && (p.advPerson || p.person)) || '—'; }   // v51: người NHẬN tạm ứng (không có thì = người đề xuất)
 function advTargetOf(person){   // phiếu tạm ứng mới nhất ĐÃ chuyển tiền của người này (nơi ghi các khoản kê)
-  return (proposals||[]).filter(p=>p.costType==='tamung' && p.kind!=='kh' && p.status!=='rejected' && (p.person||'')===person && (getTotalTransferred(p)||0)>0).sort((a,b)=>(b.ts||0)-(a.ts||0))[0] || null;
+  return (proposals||[]).filter(p=>p.costType==='tamung' && p.kind!=='kh' && p.status!=='rejected' && advWho(p)===person && (getTotalTransferred(p)||0)>0).sort((a,b)=>(b.ts||0)-(a.ts||0))[0] || null;
 }
 function advPersons(){   // sổ từng người: {name, tr, chi, ret, bal, entries[]}
   const M = {};
   (proposals||[]).forEach(p=>{
     if(p.costType!=='tamung' || p.kind==='kh' || p.status==='rejected') return;
-    const name = p.person||'—'; const o = M[name] || (M[name] = {name, tr:0, chi:0, ret:0, bal:0, pendChi:0, pendRet:0, pend:0, entries:[], phieu:0});
+    const name = advWho(p); const o = M[name] || (M[name] = {name, tr:0, chi:0, ret:0, bal:0, pendChi:0, pendRet:0, pend:0, entries:[], phieu:0, by:{}});
+    if(p.person) o.by[p.person] = 1;   // ai đề xuất hộ
     o.phieu++;
     (p.transfers||[]).forEach(t=>{ const a=parseFloat(t.amount)||0; o.tr+=a; o.entries.push({ts:t.ts||0, date:ymdLocal(t.ts), kind:'ung', desc:'Ứng: '+(p.desc||''), amount:a, pid:p.id}); });
     const st = p.settlement; if(!st) return;
     (st.items||[]).forEach((x,idx)=>{ const a=parseFloat(x.amount)||0, ok=!!x.ok;   // v47: chưa duyệt → chờ, chưa trừ sổ
-      if(x.kind==='ret'){ if(ok) o.ret+=a; else o.pendRet+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'ret', desc:x.desc||'Nộp lại quỹ', amount:a, pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null}); }
-      else { if(ok) o.chi+=a; else o.pendChi+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'chi', desc:x.desc||'', amount:a, tax:x.tax||'', pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null}); } });
+      if(x.kind==='ret'){ if(ok) o.ret+=a; else o.pendRet+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'ret', desc:x.desc||'Nộp lại quỹ', amount:a, pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null, img:x.img||null}); }
+      else { if(ok) o.chi+=a; else o.pendChi+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'chi', desc:x.desc||'', amount:a, tax:x.tax||'', pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null, okD:x.okD||null, img:x.img||null}); } });
     if(st.returned){ const a=parseFloat(st.returned)||0; o.ret+=a; o.entries.push({ts:st.ts||0, date:ymdLocal(st.ts), kind:'ret', desc:'Nộp lại quỹ', amount:a, pid:p.id, legacy:true}); }
   });
   Object.values(M).forEach(o=>{ o.bal = o.tr - o.chi - o.ret; o.pend = o.pendChi + o.pendRet; o.entries.sort((a,b)=>(a.ts||0)-(b.ts||0)); });
@@ -5086,39 +5147,84 @@ function advBalHtml(bal, o){
   if(o && !(o.tr>0) && !o.entries.length) return `<b style="color:var(--text-sub)">0 đ</b> <span style="font-size:10.5px;color:var(--text-sub)">chưa nhận tiền ứng (chờ Toàn chuyển)</span>`;   // v47
   return `<b style="color:${bal>0.5?'#b45309':bal<-0.5?'#b91c1c':'#047857'};white-space:nowrap;word-break:normal">${bal<0?'−':''}${fmtVND(Math.abs(bal))}</b> ${bal>0.5?'<span style="font-size:10.5px;color:var(--text-sub)">còn giữ tiền ứng</span>':bal<-0.5?'<span style="font-size:10.5px;color:#b91c1c">công ty còn nợ (chi vượt)</span>':'<span style="font-size:10.5px;color:#047857">đã kết sổ</span>'}${o&&o.pend>0?` <span style="font-size:10.5px;color:#b45309">· chờ duyệt ${fmtShortMoney(o.pend)}</span>`:''}`;
 }
-function _advOkCan(e){ return e.kind==='ret' ? (currentRole==='toan'||currentRole==='dung') : (currentRole==='hien'||currentRole==='dung'); }   // v47: ai duyệt khoản nào
+// v50: ô duyệt từng món — khoản chi: ô D (khi người khác ứng) + ô H&L (quyết định); tiền nộp lại: ô Toàn xác nhận
+function _advOkCan(e){ return e.kind==='ret' ? (currentRole==='toan'||currentRole==='dung') : (currentRole==='hien'||currentRole==='dung'); }
+function _advDSelf(target){ return !!(target && ((target.createdByRole==='dung' && !target.advPerson) || (currentRole==='dung' && advWho(target)===(currentUserName||'')))); }   // người NHẬN tạm ứng là chính Dũng → không có ô D
+function _advBox(lbl, ok, canBtn, onclick, waitTxt){
+  if(ok) return `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#dcfce7;color:#047857;white-space:nowrap">✅ ${esc(lbl)}${ok.byName?' '+esc(shortName(ok.byName)||ok.byName):''}</span>`;
+  const who = lbl==='D' ? 'Dũng' : lbl==='H&L' ? 'Hiền hoặc Lam' : 'Toàn';
+  return canBtn ? `<a href="#" onclick="${onclick};return false" style="font-size:10.5px;padding:2px 8px;border-radius:8px;background:#047857;color:#fff;text-decoration:none;white-space:nowrap">✅ ${esc(lbl)} duyệt</a>` : `<span title="Ô này do ${who} bấm khi đăng nhập bằng tài khoản của mình" onclick="showToast('Ô này do ${who} bấm (đăng nhập bằng tài khoản của ${who})')" style="font-size:10px;padding:1px 6px;border-radius:8px;background:#fef3c7;color:#b45309;white-space:nowrap;cursor:help">⏳ ${esc(waitTxt||lbl)}</span>`;
+}
 function _advOkLabel(e){ return e.ok ? `<span style="font-size:10px;color:#047857">✅ ${esc(shortName(e.ok.byName||'')||e.ok.byName||'')}</span>` : `<span style="font-size:10px;color:#b45309">⏳ chờ ${e.kind==='ret'?'Toàn xác nhận':'H&L duyệt'}</span>`; }
+let _advDetail = '';
+function advToggleDetail(key){ _advDetail = (_advDetail===key) ? '' : key; renderAdvLedger(); }
 function _settleHtml(p){   // trên thẻ phiếu tạm ứng
   const tr = getTotalTransferred(p)||0;
-  if(tr <= 0) return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b;font-size:11.5px">💼 Phiếu TẠM ỨNG — Toàn chuyển tiền xong, tiền cộng vào <b>sổ tạm ứng của ${esc(p.person||'')}</b>; chi xong kê khoản đã chi ngay trong sổ.</div>`;
-  const o = advPersons()[p.person||'—'] || {bal:tr, tr, chi:0, ret:0, pend:0, entries:[]};
-  const target = advTargetOf(p.person||'');
+  if(tr <= 0) return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b;font-size:11.5px">💼 Phiếu TẠM ỨNG cho <b>${esc(advWho(p))}</b>${p.advPerson&&p.advPerson!==p.person?' (đề xuất hộ: '+esc(p.person||'')+')':''} — Toàn chuyển tiền xong, tiền cộng vào sổ tạm ứng của người này; chi xong kê khoản đã chi ngay trong sổ.</div>`;
+  const who = advWho(p);
+  const o = advPersons()[who] || {bal:tr, tr, chi:0, ret:0, pend:0, entries:[]};
+  const target = advTargetOf(who);
   return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b">
-    <div style="font-size:12px">👛 Sổ tạm ứng <b>${esc(p.person||'')}</b>: ${advBalHtml(o.bal, o)}<div style="font-size:10.5px;color:var(--text-sub)">Tổng ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}</div></div>
+    <div style="font-size:12px">👛 Sổ tạm ứng <b>${esc(who)}</b>${(p.advPosition||advPosOf(who))?` <span style="font-size:10.5px;color:var(--text-sub)">— ${esc(p.advPosition||advPosOf(who))}</span>`:''}${p.advPerson&&p.advPerson!==p.person?` <span style="font-size:10.5px;color:var(--text-sub)">(đề xuất hộ: ${esc(p.person||'')})</span>`:''}: ${advBalHtml(o.bal, o)}<div style="font-size:10.5px;color:var(--text-sub)">Tổng ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}</div></div>
     <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">
-      ${(target && _settleCan(target)) ? `<button onclick="openTamUngModal('${esc(p.person||'').replace(/'/g,'&#39;')}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
-      <button onclick="showPage('cash', document.querySelector('.nav-item')); setCashTab('adv', document.querySelector('#page-cash .report-subtab[data-tab=\\'adv\\']')); _advOpen='${esc(p.person||'').replace(/'/g,'&#39;')}'; renderAdvLedger();" style="padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#b45309;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📖 Xem sổ</button>
+      ${(target && _settleCan(target)) ? `<button onclick="openTamUngModal('${esc(who).replace(/'/g,'&#39;')}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
+      <button onclick="showPage('cash', document.querySelector('.nav-item')); setCashTab('adv', document.querySelector('#page-cash .report-subtab[data-tab=\\'adv\\']')); _advOpen='${esc(who).replace(/'/g,'&#39;')}'; renderAdvLedger();" style="padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#b45309;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📖 Xem sổ</button>
     </div></div>`;
 }
 let _advOpen = '';
 function renderAdvLedger(){
   const el = document.getElementById('cash-adv-list'); if(!el) return;
-  const M = advPersons(); const names = Object.keys(M).sort((a,b)=>Math.abs(M[b].bal)-Math.abs(M[a].bal));
+  const M = advPersons(); let names = Object.keys(M).sort((a,b)=>Math.abs(M[b].bal)-Math.abs(M[a].bal));
   if(!names.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có phiếu tạm ứng nào</div></div>'; return; }
+  // v55: tìm theo tên (không dấu) + lọc trạng thái
+  const q = _normName((document.getElementById('adv-search')||{}).value||''), fl = (document.getElementById('adv-filter')||{}).value||'';
+  const total = names.length;
+  if(q) names = names.filter(n=>_normName(n).includes(q) || _normName(advPosOf(n)).includes(q));
+  if(fl==='hold') names = names.filter(n=>M[n].bal>0.5); else if(fl==='owe') names = names.filter(n=>M[n].bal<-0.5); else if(fl==='pend') names = names.filter(n=>M[n].pend>0.5); else if(fl==='done') names = names.filter(n=>Math.abs(M[n].bal)<=0.5 && M[n].tr>0);
+  if(!names.length){ el.innerHTML = `<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">${q ? 'Không có ai khớp "'+esc((document.getElementById('adv-search')||{}).value||'')+'"' : 'Không có sổ nào theo bộ lọc'} (${total} sổ)</div></div>`; return; }
   const totHold = names.reduce((a,n)=>a+Math.max(0,M[n].bal),0), totOwe = names.reduce((a,n)=>a+Math.max(0,-M[n].bal),0);
-  el.innerHTML = `<div style="font-size:12px;color:var(--text);padding:0 4px 8px">Đang giữ tiền ứng <b style="color:#b45309">${fmtVND(totHold)}</b>${totOwe?` · công ty còn nợ <b style="color:#b91c1c">${fmtVND(totOwe)}</b>`:''}</div>` + names.map(n=>{ const o=M[n], open=_advOpen===n, target=advTargetOf(n), can=!!(target && _settleCan(target));
-    const rows = o.entries.slice().reverse().map(e=>`<div style="display:flex;justify-content:space-between;gap:6px;font-size:11.5px;padding:4px 0;border-top:1px dashed var(--gray-border)">
-        <span style="min-width:0;word-break:break-word"><span style="color:var(--text-sub)">${esc(e.date||'')}</span> ${e.kind==='ung'?'💸':e.kind==='ret'?'↩️':'🧾'} ${esc(e.desc)}${e.kind==='chi'&&TAX_TYPES[e.tax]?' <span style="color:'+TAX_TYPES[e.tax].color+'">'+TAX_TYPES[e.tax].icon+'</span>':''}${e.by?' <span style="color:var(--text-sub)">· '+esc(e.by)+'</span>':''}</span>
-        <span style="white-space:nowrap;word-break:normal;font-weight:700;color:${e.kind==='ung'?'#047857':e.ok?'#b91c1c':'#9ca3af'}">${e.kind==='ung'?'+':'−'}${fmtShortMoney(e.amount)}${e.kind!=='ung'&&!e.legacy?' '+_advOkLabel(e):''}${(e.kind!=='ung'&&!e.legacy&&!e.ok&&_advOkCan(e))?` <a href="#" onclick="advApproveItem('${sid(e.pid)}',${e.idx});return false" style="margin-left:4px;padding:1px 7px;border-radius:8px;background:#047857;color:#fff;text-decoration:none;font-size:10.5px">✅ Duyệt</a>`:''}${(e.kind!=='ung'&&!e.legacy&&(!e.ok||currentRole==='dung')&&can)?` <a href="#" onclick="advDeleteItem('${sid(e.pid)}',${e.idx});return false" title="Xóa dòng này" style="color:var(--red);text-decoration:none;margin-left:4px">✕</a>`:''}</span></div>`).join('');
+  el.innerHTML = `<div style="font-size:12px;color:var(--text);padding:0 4px 8px">${(q||fl)?`Hiện ${names.length}/${total} sổ · `:''}Đang giữ tiền ứng <b style="color:#b45309">${fmtVND(totHold)}</b>${totOwe?` · công ty còn nợ <b style="color:#b91c1c">${fmtVND(totOwe)}</b>`:''}</div>` + names.map(n=>{ const o=M[n], open=_advOpen===n, target=advTargetOf(n), can=!!(target && _settleCan(target));
+    const rows = o.entries.slice().reverse().map(e=>{
+      if(e.kind==='ung') return `<div style="display:flex;justify-content:space-between;gap:6px;font-size:11.5px;padding:4px 0;border-top:1px dashed var(--gray-border)"><span style="min-width:0;word-break:break-word"><span style="color:var(--text-sub)">${esc(e.date||'')}</span> 💸 ${esc(e.desc)}</span><span style="white-space:nowrap;word-break:normal;font-weight:700;color:#047857">+${fmtVND(e.amount)}</span></div>`;
+      const key = e.pid+'|'+e.idx, openD = _advDetail===key, tp = proposals.find(x=>x.id===e.pid), dSelf = _advDSelf(tp);
+      const boxes = e.kind==='ret'
+        ? _advBox('Toàn', e.ok, (!e.ok && (currentRole==='toan'||currentRole==='dung')), `advApproveItem('${sid(e.pid)}',${e.idx},'T')`, 'chờ Toàn xác nhận')
+        : (dSelf ? '' : _advBox('D', e.okD, (!e.okD && currentRole==='dung'), `advApproveItem('${sid(e.pid)}',${e.idx},'D')`, 'D chờ duyệt') + ' ') + _advBox('H&L', e.ok, (!e.ok && currentRole==='hien'), `advApproveItem('${sid(e.pid)}',${e.idx},'H')`, 'H&L chờ duyệt');
+      const canDel = !e.legacy && (!e.ok || currentRole==='dung') && can;
+      let detail = '';
+      if(openD){
+        const imgs = (tp && Array.isArray(tp.invoiceImages)) ? tp.invoiceImages : [];
+        const mine = Array.isArray(e.img) ? e.img.filter(k=>imgs[k]) : [];
+        const showImgs = mine.length ? mine : [];
+        detail = `<div style="margin:4px 0 6px 8px;padding:7px 9px;background:#f8fafc;border-radius:8px;font-size:11.5px;line-height:1.5">
+          <div><b>${esc(e.desc)}</b></div>
+          <div>Số tiền: <b>${fmtVND(e.amount)}</b>${e.kind==='chi'?' · Thuế: '+(TAX_TYPES[e.tax]?TAX_TYPES[e.tax].icon+' '+esc(TAX_TYPES[e.tax].label):'<span style="color:#b91c1c">chưa chọn</span>'):''} · Ngày: ${esc(e.date||'')}</div>
+          <div style="color:var(--text-sub)">Người kê: ${esc(e.by||'')}${e.okD?' · D duyệt: '+esc(e.okD.byName||'')+' '+fmtFull(e.okD.ts):''}${e.ok?' · '+(e.kind==='ret'?'Toàn xác nhận: ':'H&L duyệt: ')+esc(e.ok.byName||'')+' '+fmtFull(e.ok.ts):''}</div>
+          ${showImgs.length ? `<div class="proof-grid" style="margin-top:6px">${showImgs.map(k=>`<div class="proof-thumb"><img src="${esc(imgs[k])}" loading="lazy" onclick="openImg('${sid(e.pid)}','invoice',${k})" alt="Chứng từ"></div>`).join('')}</div>`
+            : (imgs.length ? `<div style="margin-top:4px;color:var(--text-sub)">Món này không kèm ảnh riêng — phiếu tạm ứng có ${imgs.length} ảnh chứng từ: <a href="#" onclick="openImg('${sid(e.pid)}','invoice',0);return false" style="color:var(--blue)">xem</a></div>` : '<div style="margin-top:4px;color:#b91c1c">Chưa có ảnh chứng từ</div>')}
+        </div>`;
+      }
+      return `<div style="padding:4px 0;border-top:1px dashed var(--gray-border);font-size:11.5px">
+        <div style="display:flex;justify-content:space-between;gap:6px">
+          <span style="min-width:0;word-break:break-word"><span style="color:var(--text-sub)">${esc(e.date||'')}</span> ${e.kind==='ret'?'↩️':'🧾'} ${esc(e.desc)}${e.kind==='chi'&&TAX_TYPES[e.tax]?' <span style="color:'+TAX_TYPES[e.tax].color+'">'+TAX_TYPES[e.tax].icon+'</span>':''}${(Array.isArray(e.img)&&e.img.length)?' 📎':''}</span>
+          <span style="white-space:nowrap;word-break:normal;font-weight:700;color:${e.ok?'#b91c1c':'#9ca3af'}">−${fmtVND(e.amount)}</span>
+        </div>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px">
+          <a href="#" onclick="advToggleDetail('${sid(e.pid)}|${e.idx}');return false" style="font-size:10.5px;color:var(--blue);text-decoration:none">${openD?'▲ Ẩn':'🔍 Xem'}</a>
+          ${boxes}
+          ${canDel?`<a href="#" onclick="advDeleteItem('${sid(e.pid)}',${e.idx});return false" title="Xóa dòng này" style="color:var(--red);text-decoration:none">✕</a>`:''}
+        </div>${detail}</div>`;
+    }).join('');
     return `<div class="card"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;cursor:pointer" onclick="_advOpen=_advOpen==='${esc(n).replace(/'/g,'&#39;')}'?'':'${esc(n).replace(/'/g,'&#39;')}';renderAdvLedger()">
-        <div style="min-width:0;flex:1"><div style="font-size:14px;font-weight:700">👛 ${esc(n)}</div><div style="font-size:10.5px;color:var(--text-sub)">${o.phieu} phiếu · ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}${o.pend>0?' · <b style="color:#b45309">chờ duyệt '+fmtShortMoney(o.pend)+'</b>':''}</div></div>
+        <div style="min-width:0;flex:1"><div style="font-size:14px;font-weight:700">👛 ${esc(n)}${advPosOf(n)?` <span style="font-size:11px;font-weight:600;color:var(--text-sub)">— ${esc(advPosOf(n))}</span>`:''}</div><div style="font-size:10.5px;color:var(--text-sub)">${(()=>{ const bs=Object.keys(o.by||{}).filter(b=>b!==n); return bs.length?'đề xuất hộ: '+esc(bs.join(', '))+' · ':''; })()}${o.phieu} phiếu · ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}${o.pend>0?' · <b style="color:#b45309">chờ duyệt '+fmtShortMoney(o.pend)+'</b>':''}</div></div>
         <div style="text-align:right;font-size:14px">${advBalHtml(o.bal, o)}<div style="font-size:10px;color:var(--text-sub)">${open?'▲ thu gọn':'▼ xem sổ'}</div></div>
       </div>
       ${open ? `<div style="margin-top:6px">${rows||'<div style="font-size:12px;color:var(--text-sub)">Chưa có dòng nào</div>'}</div>` : ''}
       <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
         ${o.bal < -0.5 ? `<button onclick="advMakeTopUp('${esc(n).replace(/'/g,'&#39;')}', ${Math.round(-o.bal)})" style="${_CASH_BTN}background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">➕ Lập phiếu chi bù ${fmtShortMoney(-o.bal)}</button>` : ''}
-        ${(o.pendChi>0 && (currentRole==='hien'||currentRole==='dung')) ? `<button onclick="advApproveAll('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt hết khoản chi chờ (${fmtShortMoney(o.pendChi)})</button>` : ''}
+        ${(o.pendChi>0 && currentRole==='hien') ? `<button onclick="advApproveAll('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ H&L duyệt hết khoản chi chờ (${fmtShortMoney(o.pendChi)})</button>` : ''}
+        ${(currentRole==='dung' && o.entries.some(e=>e.kind==='chi'&&!e.okD&&!_advDSelf(proposals.find(x=>x.id===e.pid)))) ? `<button onclick="advApproveAll('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#1d4ed8;color:#fff;border:none">✅ D duyệt hết khoản chi chờ</button>` : ''}
         ${can ? `<button onclick="openTamUngModal('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#f59e0b;color:#fff;border:none">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
       </div>
     </div></div>`; }).join('');
@@ -5134,6 +5240,8 @@ function openTamUngModal(person){
   document.getElementById('settle-sub').innerHTML = `Sổ tạm ứng <b>${esc(person)}</b> · số dư hiện tại: ${advBalHtml(o.bal)}`;
   document.getElementById('settle-rows').innerHTML = ''; settleAddRow();
   document.getElementById('settle-ret').value = '';
+  _settleImgs = []; settleRenderImgs();   // v49
+  { const f1=document.getElementById('settle-file-input'); if(f1) f1.value=''; const f2=document.getElementById('settle-xlsx-input'); if(f2) f2.value=''; }
   settleRecalc();
   document.getElementById('settle-modal-overlay').style.display='flex';
 }
@@ -5141,16 +5249,98 @@ function openSettleModal(id){ const p = proposals.find(x=>x.id===id); if(p) open
 function closeSettleModal(){ document.getElementById('settle-modal-overlay').style.display='none'; _advPerson=null; }
 function settleAddRow(x){
   x = x || {desc:'',amount:'',tax:''};
-  const d = document.createElement('div'); d.className='settle-row'; d.style.cssText='display:grid;grid-template-columns:1fr 92px 84px 26px;gap:4px;margin-bottom:5px;align-items:center';
+  const d = document.createElement('div'); d.className='settle-row';
   d.innerHTML = `<input class="form-input st-desc" type="text" placeholder="Đã chi gì" value="${esc(x.desc||'')}" style="margin:0;font-size:12px;padding:7px 8px">
-    <input class="form-input st-amt" type="text" inputmode="numeric" placeholder="Tiền" value="${x.amount?fmtVND(x.amount).replace(' đ',''):''}" oninput="fmtAmountInput(this);settleRecalc()" style="margin:0;font-size:12px;padding:7px 6px;text-align:right">
+    <input class="form-input st-amt" type="text" inputmode="numeric" placeholder="Số tiền" value="${x.amount?fmtVND(x.amount).replace(/\s*đ\s*$/,''):''}" oninput="fmtAmountInput(this);settleRecalc()" style="margin:0;font-size:14px;padding:8px 8px;text-align:right;font-weight:700">
     <select class="form-input form-select st-tax" style="margin:0;font-size:11px;padding:7px 4px"><option value="">Thuế?</option><option value="cothue" ${x.tax==='cothue'?'selected':''}>🧾 VAT</option><option value="khongthue" ${x.tax==='khongthue'?'selected':''}>📄 Không</option><option value="khonghl" ${x.tax==='khonghl'?'selected':''}>⛔ K.HL</option></select>
-    <button onclick="this.parentNode.remove();settleRecalc()" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0">✕</button>`;
+    <button class="st-x" onclick="this.parentNode.remove();settleRecalc()" style="background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:0">✕</button>`;
+  if(x.date) d.dataset.date = x.date;   // v49: ngày từ Excel (không có thì lấy hôm nay lúc lưu)
+  if(x.desc) d.title = x.date ? 'Ngày '+x.date : '';
   document.getElementById('settle-rows').appendChild(d);
+}
+// ══ v49: ẢNH + EXCEL trong khung kê ══
+let _settleImgs = [];
+function settleRenderImgs(){
+  const w = document.getElementById('settle-img-preview'); if(!w) return;
+  if(!_settleImgs.length){ w.style.display='none'; w.innerHTML=''; return; }
+  w.style.display='grid';
+  w.innerHTML = _settleImgs.map((src,i)=>`<div class="img-preview-item" style="position:relative"><img src="${esc(src)}" style="width:100%;height:80px;object-fit:cover;border-radius:6px"><button type="button" onclick="_settleImgs.splice(${i},1);settleRenderImgs()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:10px;width:20px;height:20px;font-size:12px;cursor:pointer">✕</button></div>`).join('');
+}
+function settleAddImages(input){ _settleAddFiles(Array.from(input.files||[])); input.value=''; }
+function _settleAddFiles(list){
+  const files = (list||[]).filter(f=>f && f.type && f.type.startsWith('image/')); if(!files.length){ showToast('📋 Không có ảnh'); return; }
+  showToast('⏳ Đang xử lý '+files.length+' ảnh...');
+  let done=0;
+  files.forEach(f=>compressImage(f).then(u=>{ _settleImgs.push(u); done++; if(done===files.length){ settleRenderImgs(); showToast('✅ Đã thêm '+files.length+' ảnh (bấm Ghi vào sổ để lưu)'); } }).catch(()=>{ done++; showToast('❌ Ảnh lỗi'); }));
+}
+// v52/v54: đọc ảnh đang có trong clipboard (dùng cho mọi nút 📋 Dán). null = không đọc được / không có ảnh (đã báo toast)
+async function _readClipboardImages(){
+  if(!navigator.clipboard || !navigator.clipboard.read){ showToast('❌ Trình duyệt không hỗ trợ dán — hãy dùng nút chọn ảnh'); return null; }
+  let items; try{ items = await navigator.clipboard.read(); }catch(e){ showToast('❌ Cần cấp quyền clipboard — bấm "Cho phép" khi trình duyệt hỏi'); return null; }
+  const blobs=[];
+  for(const item of items){ for(const type of item.types){ if(type.startsWith('image/')){ const blob = await item.getType(type); blobs.push(new File([blob], 'paste.jpg', {type: blob.type||'image/jpeg'})); } } }
+  if(!blobs.length){ showToast('📋 Clipboard không có ảnh — hãy copy ảnh trước (Zalo: chuột phải ảnh → Sao chép)'); return null; }
+  return blobs;
+}
+async function settlePasteImages(){ const b = await _readClipboardImages(); if(b) _settleAddFiles(b); }
+async function pasteProof(id){ const b = await _readClipboardImages(); if(b){ addProofImages(id, b); } }          // v54: Toàn dán ảnh chuyển khoản
+async function pasteInvoice(id){ const p=proposals.find(x=>x.id===id); if(!p) return; if(!_isMyProposal(p)){ showToast('🔒 Chỉ người lập phiếu mới đính kèm hóa đơn'); return; } const b = await _readClipboardImages(); if(b){ addInvoiceImages(id, b); } }   // v54: người lập dán hóa đơn
+document.addEventListener('paste', (e)=>{
+  const ov=document.getElementById('settle-modal-overlay'); if(!ov || ov.style.display==='none') return;
+  const items = (e.clipboardData||window.clipboardData)?.items; if(!items) return;
+  const files=[]; for(const it of items){ if(it.kind==='file' && it.type.startsWith('image/')){ const f=it.getAsFile(); if(f) files.push(f); } }
+  if(files.length){ e.preventDefault(); _settleAddFiles(files); }
+});
+const _SETTLE_TAX_TXT = { cothue:'Có thuế VAT', khongthue:'Không thuế VAT', khonghl:'Không HL' };
+function _settleTaxFromText(t){
+  t = String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').trim();
+  if(!t) return '';
+  if(/khl|khong hl|khong hop le|k\.?hl/.test(t)) return 'khonghl';
+  if(/khong/.test(t)) return 'khongthue';
+  if(/vat|co thue|hoa don/.test(t)) return 'cothue';
+  return '';
+}
+async function settleDownloadTemplate(){
+  let XLSX; try{ XLSX = await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
+  const who = _advPerson || (getCurrentUserName()||'');
+  const aoa = [['MẪU KÊ KHOẢN ĐÃ CHI — SỔ TẠM ỨNG ('+who+')'], ['Ghi mỗi khoản một dòng. Cột Thuế ghi 1 trong 3: Có thuế VAT / Không thuế VAT / Không HL. Xóa 2 dòng ví dụ trước khi nộp.'], [],
+    ['Ngày', 'Nội dung', 'Số tiền', 'Thuế', 'Ghi chú'],
+    [ymdLocal(), 'VD: Mua dây buộc thép', 1200000, 'Không thuế VAT', 'cửa hàng Minh'],
+    [ymdLocal(), 'VD: Đổ dầu máy xúc', 15000000, 'Có thuế VAT', 'HĐ 0001234']];
+  const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [{wch:12},{wch:40},{wch:15},{wch:18},{wch:26}];
+  for(let r=5; r<=60; r++){ const c = ws['C'+r]; if(c && c.t==='n') c.z = '#,##0'; }
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Ke chi');
+  XLSX.writeFile(wb, 'Mau-ke-tam-ung-'+(who||'').replace(/\s+/g,'-')+'.xlsx');
+  showToast('⬇️ Đã tải mẫu — ghi xong bấm "Chọn file đã ghi"');
+}
+async function settleImportExcel(input){
+  const f = input.files && input.files[0]; if(!f) return; input.value='';
+  let XLSX; try{ XLSX = await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
+  let rows;
+  try{ const buf = await f.arrayBuffer(); const wb = XLSX.read(buf, {type:'array', cellDates:true}); const ws = wb.Sheets[wb.SheetNames[0]]; rows = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:''}); }
+  catch(e){ showToast('❌ Không đọc được file: '+(e.message||'')); return; }
+  const norm = v => String(v==null?'':v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').trim();
+  let hi = -1, col = {};
+  for(let i=0;i<Math.min(rows.length,15);i++){ const r = rows[i].map(norm); const ci = r.findIndex(x=>/noi dung|dien giai|khoan chi/.test(x)); const ca = r.findIndex(x=>/so tien|thanh tien|^tien$/.test(x)); if(ci>=0 && ca>=0){ hi=i; col = {desc:ci, amount:ca, date:r.findIndex(x=>/^ngay/.test(x)), tax:r.findIndex(x=>/thue/.test(x)), note:r.findIndex(x=>/ghi chu/.test(x))}; break; } }
+  if(hi<0){ showToast('❌ Không thấy dòng tiêu đề (cần cột "Nội dung" và "Số tiền") — dùng nút Tải mẫu'); return; }
+  const toYmd = v => { if(v instanceof Date && !isNaN(v)) return ymdLocal(v); if(typeof v==='number' && v>20000 && v<80000){ const d = new Date(Math.round((v-25569)*86400000)); return ymdLocal(new Date(d.getTime()+d.getTimezoneOffset()*60000)); } const m = String(v||'').trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/); if(m){ const y = m[3].length===2 ? '20'+m[3] : m[3]; return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0'); } const m2 = String(v||'').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})/); if(m2) return m2[1]+'-'+m2[2].padStart(2,'0')+'-'+m2[3].padStart(2,'0'); return ''; };
+  let n=0, skipVd=0, badTax=0;
+  const wrap = document.getElementById('settle-rows');
+  if(wrap.querySelectorAll('.settle-row').length===1 && !wrap.querySelector('.st-desc').value && !wrap.querySelector('.st-amt').value) wrap.innerHTML='';   // dòng trống mặc định
+  for(let i=hi+1;i<rows.length;i++){
+    const r = rows[i]; const desc = String(r[col.desc]||'').trim(); const amount = _parseMoney(r[col.amount]);
+    if(!desc && !amount) continue;
+    if(/^vd[:.]/i.test(desc)){ skipVd++; continue; }   // dòng ví dụ trong mẫu
+    const tax = col.tax>=0 ? _settleTaxFromText(r[col.tax]) : ''; if(!tax) badTax++;
+    const note = col.note>=0 ? String(r[col.note]||'').trim() : '';
+    settleAddRow({desc: desc + (note ? ' — '+note : ''), amount, tax, date: col.date>=0 ? toYmd(r[col.date]) : ''}); n++;
+  }
+  settleRecalc();
+  showToast(n ? ('✅ Đã điền '+n+' dòng từ Excel'+(badTax?' — '+badTax+' dòng chưa rõ thuế, chọn tay':'')+(skipVd?' (bỏ '+skipVd+' dòng ví dụ)':'')) : '⚠️ File không có dòng nào');
 }
 function _settleRead(){
   const items = Array.from(document.querySelectorAll('#settle-rows .settle-row')).map(r=>({
-    desc:(r.querySelector('.st-desc').value||'').trim(), amount:parseFloat(String(r.querySelector('.st-amt').value).replace(/[^\d]/g,''))||0, tax:r.querySelector('.st-tax').value||'' })).filter(x=>x.desc||x.amount);
+    desc:(r.querySelector('.st-desc').value||'').trim(), amount:parseFloat(String(r.querySelector('.st-amt').value).replace(/[^\d]/g,''))||0, tax:r.querySelector('.st-tax').value||'', date:r.dataset.date||'' })).filter(x=>x.desc||x.amount);
   const returned = parseFloat(String(document.getElementById('settle-ret').value).replace(/[^\d]/g,''))||0;
   return {items, returned};
 }
@@ -5164,7 +5354,7 @@ function settleFillReturn(){
   if(!_advPerson) return;
   const o = advPersons()[_advPerson] || {bal:0}; const {items} = _settleRead();
   const left = Math.max(0, o.bal - items.reduce((a,x)=>a+x.amount,0));
-  document.getElementById('settle-ret').value = left ? fmtVND(left).replace(' đ','') : '';
+  document.getElementById('settle-ret').value = left ? fmtVND(left).replace(/\s*đ\s*$/,'') : '';
   settleRecalc();
 }
 function saveSettlement(){
@@ -5178,10 +5368,12 @@ function saveSettlement(){
   if(after < -0.5 && !confirm('Sau khi kê, sổ của '+_advPerson+' sẽ ÂM '+fmtVND(-after)+' (chi vượt số ứng, công ty còn nợ người này). Vẫn lưu?')) return;
   const now = Date.now(), by = getCurrentUserName()||'', d = ymdLocal();
   const st = target.settlement || {items:[]}; const arr = Array.isArray(st.items) ? st.items.slice() : [];
-  items.forEach(x=>arr.push({desc:x.desc, amount:x.amount, tax:x.tax, date:d, ts:now, by}));
+  let imgIdx = null;
+  if(_settleImgs.length){ const base = (Array.isArray(target.invoiceImages)?target.invoiceImages:[]).length; target.invoiceImages = (Array.isArray(target.invoiceImages)?target.invoiceImages:[]).concat(_settleImgs); imgIdx = _settleImgs.map((_,k)=>base+k); }   // v49/v50: ảnh chứng từ vào phiếu, gắn theo món
+  items.forEach(x=>arr.push({desc:x.desc, amount:x.amount, tax:x.tax, date:x.date||d, ts:now, by, ...(imgIdx?{img:imgIdx}:{})}));
   if(returned>0) arr.push({kind:'ret', desc:'Nộp lại quỹ', amount:returned, tax:'', date:d, ts:now, by});
   target.settlement = {...st, items:arr, ts:now, by:(currentUser&&currentUser.uid)||'', byName:by};
-  logEdit(target, 'kê sổ tạm ứng: chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):''));
+  logEdit(target, 'kê sổ tạm ứng: chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+(_settleImgs.length?', '+_settleImgs.length+' ảnh chứng từ':''));
   _cardCache.clear(); save(); renderAll(); closeSettleModal(); try{ renderAdvLedger(); }catch(e){}
   showToast('✅ Đã ghi vào sổ — chờ H&L duyệt'+(returned?' (nộp lại: chờ Toàn xác nhận)':''));
   sendPushNotif('🧾 Sổ tạm ứng '+_advPerson+' — cần duyệt', by+' kê chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+' · vào Cân đối → Tạm ứng để duyệt', ['dung','hien','toan','kt']);
@@ -5192,32 +5384,45 @@ function advMakeTopUp(person, amount){
   const ct=document.getElementById('inp-costtype'); if(ct){ ct.value='tamung'; taxWrapToggle(); }
   const am=document.getElementById('inp-amount'); if(am){ am.value = Number(amount||0).toLocaleString('vi-VN',{maximumFractionDigits:0}); }
   const ds=document.getElementById('inp-desc'); if(ds && !ds.value) ds.value = 'Chi bù tạm ứng (sổ âm) cho '+person;
-  const ps=document.getElementById('inp-person'); if(ps && currentRole==='dung'){ ps.value = person; }
+  const ap=document.getElementById('inp-adv-person'); if(ap) ap.value = person;   // v51: người nhận = người đang âm sổ
   showToast('Đã điền sẵn phiếu tạm ứng chi bù — kiểm tra rồi bấm Gửi đề xuất');
   try{ window.scrollTo(0,0); }catch(e){}
 }
 // v47: DUYỆT khoản kê — khoản chi: H&L / Dũng; tiền nộp lại: Toàn (đã nhận tiền) / Dũng. Duyệt xong mới trừ sổ + tính chi phí.
-function advApproveItem(pid, idx){
+function advApproveItem(pid, idx, who){
   const p = proposals.find(x=>x.id===pid); const x = p && p.settlement && Array.isArray(p.settlement.items) ? p.settlement.items[idx] : null; if(!x) return;
-  if(x.ok){ showToast('Khoản này đã duyệt rồi'); return; }
-  const e = {kind: x.kind==='ret'?'ret':'chi'};
-  if(!_advOkCan(e)){ showToast(e.kind==='ret' ? '🔒 Tiền nộp lại do thủ quỹ (Toàn) xác nhận' : '🔒 Khoản chi do H&L duyệt'); return; }
-  if(!confirm((e.kind==='ret' ? 'Xác nhận ĐÃ NHẬN tiền nộp lại ' : 'Duyệt khoản chi ')+fmtVND(x.amount)+' — "'+(x.desc||'')+'"?')) return;
-  x.ok = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
+  who = who || (x.kind==='ret' ? 'T' : 'H');
+  const stamp = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
+  if(who==='D'){
+    if(currentRole!=='dung'){ showToast('🔒 Ô này của Dũng'); return; }
+    if(x.okD){ showToast('Đã duyệt rồi'); return; }
+    if(!confirm('D duyệt khoản chi '+fmtVND(x.amount)+' — "'+(x.desc||'')+'"?')) return;
+    x.okD = stamp; logEdit(p, 'D duyệt khoản chi tạm ứng '+fmtVND(x.amount)+' — '+(x.desc||''));
+  } else if(who==='T'){
+    if(currentRole!=='toan' && currentRole!=='dung'){ showToast('🔒 Tiền nộp lại do thủ quỹ (Toàn) xác nhận'); return; }
+    if(x.ok){ showToast('Đã xác nhận rồi'); return; }
+    if(!confirm('Xác nhận ĐÃ NHẬN tiền nộp lại '+fmtVND(x.amount)+'?')) return;
+    x.ok = stamp; logEdit(p, 'xác nhận nộp lại '+fmtVND(x.amount));
+  } else {
+    if(currentRole!=='hien'){ showToast('🔒 Ô này của Hiền / Lam (H&L)'); return; }
+    if(x.ok){ showToast('Đã duyệt rồi'); return; }
+    if(!confirm('H&L duyệt khoản chi '+fmtVND(x.amount)+' — "'+(x.desc||'')+'"?')) return;
+    x.ok = stamp; logEdit(p, 'H&L duyệt khoản chi tạm ứng '+fmtVND(x.amount)+' — '+(x.desc||''));
+  }
   p.settlement = {...p.settlement, ts:Date.now()};
-  logEdit(p, (e.kind==='ret'?'xác nhận nộp lại ':'duyệt khoản chi tạm ứng ')+fmtVND(x.amount)+' — '+(x.desc||''));
   _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){}
-  showToast('✅ Đã duyệt');
-  sendPushNotif('✅ '+(getCurrentUserName()||'')+(e.kind==='ret'?' xác nhận nộp lại ':' duyệt khoản chi ')+fmtVND(x.amount), (p.person||'')+': '+(x.desc||''), ['dung','hien','toan','kt']);
+  showToast('✅ Đã ghi duyệt');
+  sendPushNotif('✅ '+(getCurrentUserName()||'')+(who==='T'?' xác nhận nộp lại ':' duyệt khoản chi ')+fmtVND(x.amount), (p.person||'')+': '+(x.desc||''), ['dung','hien','toan','kt']);
 }
 function advApproveAll(person){
-  if(currentRole!=='hien' && currentRole!=='dung'){ showToast('🔒 Khoản chi do H&L duyệt'); return; }
-  const list = (proposals||[]).filter(p=>p.costType==='tamung' && (p.person||'')===person && p.settlement && Array.isArray(p.settlement.items));
-  let n=0, tot=0; list.forEach(p=>p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !x.ok){ n++; tot+=parseFloat(x.amount)||0; } }));
-  if(!n){ showToast('Không còn khoản chi chờ duyệt'); return; }
-  if(!confirm('Duyệt tất cả '+n+' khoản chi chờ của '+person+' (tổng '+fmtVND(tot)+')?')) return;
-  const ok = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
-  list.forEach(p=>{ let ch=false; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !x.ok){ x.ok = {...ok}; ch=true; } }); if(ch){ p.settlement = {...p.settlement, ts:Date.now()}; logEdit(p, 'duyệt các khoản chi tạm ứng chờ'); } });
+  const isD = currentRole==='dung', isH = currentRole==='hien';
+  if(!isD && !isH){ showToast('🔒 Chỉ H&L (và ô D của Dũng)'); return; }
+  const list = (proposals||[]).filter(p=>p.costType==='tamung' && advWho(p)===person && p.settlement && Array.isArray(p.settlement.items));
+  let n=0, tot=0; list.forEach(p=>{ if(isD && _advDSelf(p)) return; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !(isD ? x.okD : x.ok)){ n++; tot+=parseFloat(x.amount)||0; } }); });
+  if(!n){ showToast('Không còn khoản chi chờ ở ô của bạn'); return; }
+  if(!confirm((isD?'D':'H&L')+' duyệt tất cả '+n+' khoản chi chờ của '+person+' (tổng '+fmtVND(tot)+')? Nên bấm 🔍 Xem từng món trước.')) return;
+  const stamp = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
+  list.forEach(p=>{ if(isD && _advDSelf(p)) return; let ch=false; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !(isD ? x.okD : x.ok)){ if(isD) x.okD = {...stamp}; else x.ok = {...stamp}; ch=true; } }); if(ch){ p.settlement = {...p.settlement, ts:Date.now()}; logEdit(p, (isD?'D':'H&L')+' duyệt các khoản chi tạm ứng chờ'); } });
   _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){}
   showToast('✅ Đã duyệt '+n+' khoản');
   sendPushNotif('✅ '+(getCurrentUserName()||'')+' duyệt '+n+' khoản chi tạm ứng', person+': tổng '+fmtVND(tot), ['dung','hien','toan','kt']);
@@ -5351,7 +5556,7 @@ function openContractModal(id){
   document.getElementById('ct-inp-name').value = c ? (c.name||'') : '';
   document.getElementById('ct-inp-partner').value = c ? (c.partner||'') : '';
   document.getElementById('ct-inp-kind').value = c && CONTRACT_KIND[c.kind] ? c.kind : 'vattu';
-  document.getElementById('ct-inp-value').value = c && c.value ? fmtVND(c.value).replace(' đ','') : '';
+  document.getElementById('ct-inp-value').value = c && c.value ? fmtVND(c.value).replace(/\s*đ\s*$/,'') : '';
   document.getElementById('ct-inp-date').value = c ? (c.date||'') : ymdLocal();
   document.getElementById('ct-inp-note').value = c ? (c.note||'') : '';
   document.getElementById('ct-modal-overlay').style.display = 'flex';
@@ -5434,6 +5639,7 @@ function openEditProposal(id){
       _ct.value = p.costType || 'congtruong';
       { const _tx=document.getElementById('edit-tax'), _txW=document.getElementById('edit-tax-wrap'); if(_txW) _txW.style.display = (p.costType==='tamung') ? 'none' : _ctW.style.display; if(_tx) _tx.value = p.tax || ''; } // v40 (v44: tạm ứng ẩn ô thuế)
       { populateContractSelects(); const _cc=document.getElementById('edit-contract'), _ccW=document.getElementById('edit-contract-wrap'); if(_ccW) _ccW.style.display = (contracts.length && _ctW.style.display!=='none') ? 'block' : 'none'; if(_cc) _cc.value = p.contractId || ''; } // v41
+      { const _ap=document.getElementById('edit-adv-person'), _apW=document.getElementById('edit-adv-wrap'); if(_apW) _apW.style.display = (p.costType==='tamung') ? '' : 'none'; if(_ap) _ap.value = p.advPerson || ''; const _apo=document.getElementById('edit-adv-position'); if(_apo) _apo.value = p.advPosition || advPosOf(p.advPerson||''); _fillAdvList(); } // v51/v53
       // v41 (D chốt 25/09): H&L / Dũng đổi được loại chi phí cả sau duyệt (chưa chuyển tiền); người lập chỉ khi chưa duyệt
       const _hasTr = !!(Array.isArray(p.transfers)&&p.transfers.length);
       const _apv = !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
@@ -5463,7 +5669,7 @@ function openEditProposal(id){
   // v41 (D chốt 25/09): NỘI DUNG chỉ NGƯỜI LẬP PHIẾU sửa. Dũng / H&L mở khung này chỉ ghi ý kiến (+ thuế).
   {
     const mine = _isMyProposal(p);
-    ['edit-person','edit-site','edit-desc','edit-amount','edit-note'].forEach(i=>{ const el=document.getElementById(i); if(el && !mine) el.disabled = true; });
+    ['edit-person','edit-site','edit-desc','edit-amount','edit-note','edit-adv-person','edit-adv-position'].forEach(i=>{ const el=document.getElementById(i); if(el && !mine) el.disabled = true; });
     { const _ct=document.getElementById('edit-costtype'); if(_ct && !mine && currentRole!=='hien' && currentRole!=='dung') _ct.disabled = true; }
     { const _cc=document.getElementById('edit-contract'); if(_cc) _cc.disabled = !(mine || currentRole==='dung' || currentRole==='hien'); }   // v41: hợp đồng = người lập / D / H&L (Kế toán ở khung Rà soát)
     document.querySelectorAll('input[name="edit-priority"]').forEach(r=>{ r.disabled = !mine; });
@@ -5625,6 +5831,7 @@ function saveEditProposal(){
     if(person !== (p.person||'')) _chg.push('người đề xuất');
     if(site !== (p.site||'')) _chg.push('công trường');
     if(note !== (p.note||'')) _chg.push('ghi chú');
+    { const _ap=document.getElementById('edit-adv-person'); const _ct2=document.getElementById('edit-costtype'); const _ctv=(_ct2&&!_ct2.disabled)?(_ct2.value||p.costType):p.costType; if(_ap && _ctv==='tamung'){ const v=(_ap.value||'').trim(); if(!v){ showToast('Vui lòng ghi NGƯỜI NHẬN TẠM ỨNG'); return; } if(v!==(p.advPerson||'')){ _chg.push('người nhận tạm ứng → '+v); p.advPerson = v; } const _po=((document.getElementById('edit-adv-position')||{}).value||'').trim(); if(_po!==(p.advPosition||'')){ p.advPosition=_po; _chg.push('chức vụ → '+_po); } saveAdvPerson(v, _po); } }   // v51/v53
     if(editingImages.length !== ((Array.isArray(p.imgImages)&&p.imgImages.length) ? p.imgImages.length : (p.imgB64?1:0))) _chg.push('ảnh đính kèm');
     p.person = person;
     p.site = site;
@@ -6116,6 +6323,8 @@ function submitProposal(){
     }
     if(!desc){ showToast('Vui lòng nhập nội dung'); document.getElementById('inp-desc').focus(); return; }
     { const _tx=document.getElementById('inp-tax'), _ct0=(document.getElementById('inp-costtype')||{}).value; if(_tx && !_tx.value && _ct0!=='tamung'){ showToast('Vui lòng chọn Chi phí thuế (Có thuế VAT / Không có thuế / Không HL)'); _tx.focus(); return; } } // v40: D bắt buộc (v41: tạm ứng ghi thuế lúc hoàn ứng)
+    const _advName = ((document.getElementById('inp-costtype')||{}).value==='tamung') ? ((document.getElementById('inp-adv-person')||{}).value||'').trim() : '';   // v51
+    if((document.getElementById('inp-costtype')||{}).value==='tamung' && !_advName){ showToast('Vui lòng ghi NGƯỜI NHẬN TẠM ỨNG (ai sẽ cầm tiền)'); try{ document.getElementById('inp-adv-person').focus(); }catch(e){} return; }
     if(!amountRaw){ showToast('Vui lòng nhập số tiền'); document.getElementById('inp-amount').focus(); return; }
 
     // v95: chọn GẤP bắt buộc có lý do — không có thì mở bảng đòi lý do và chặn gửi
@@ -6129,6 +6338,8 @@ function submitProposal(){
       costType: (document.getElementById('inp-costtype')||{}).value || 'congtruong',
       tax: (document.getElementById('inp-tax')||{}).value || '',   // v40: chi phí thuế
       contractId: (document.getElementById('inp-contract')||{}).value || '',   // v41: thuộc hợp đồng (rỗng = không)
+      advPerson: _advName,   // v51: người nhận tạm ứng (khác người đề xuất hộ)
+      advPosition: _advName ? (((document.getElementById('inp-adv-position')||{}).value||'').trim()) : '',   // v53: chức vụ người nhận
       amount: amountRaw,
       amountUnit: 'dong',
       note: document.getElementById('inp-note').value.trim(),
@@ -6137,6 +6348,7 @@ function submitProposal(){
       status:'pending',
       ts: Date.now(),
       createdByUid: (currentUser&&currentUser.uid)||'',   // v41: người lập phiếu — chỉ người này sửa/xoá (luật máy chủ kiểm)
+      createdByRole: currentRole||'',   // v50: vai người lập (sổ tạm ứng: phiếu do chính Dũng ứng thì không có ô D duyệt)
       imgB64: uploadedImages[0]||null, // giữ để tương thích phiếu cũ
       imgImages: uploadedImages.slice(),
       proofImages: [],
@@ -6149,6 +6361,7 @@ function submitProposal(){
       transfers: [],
     };
     proposals.unshift(p);
+    if(p.advPerson) saveAdvPerson(p.advPerson, p.advPosition);   // v53: nhớ tên + chức vụ cho lần sau
     save();
     syncToSheet(p);
     // Nếu vừa bấm "Tạo đề xuất chi" từ 1 kế hoạch vật tư → nối kế hoạch đó với phiếu vừa tạo
@@ -6164,6 +6377,7 @@ function submitProposal(){
     { const _tx=document.getElementById('inp-tax'); if(_tx) _tx.value=''; }
     taxWrapToggle();
     { const _cc=document.getElementById('inp-contract'); if(_cc) _cc.value=''; }
+    { const _ap=document.getElementById('inp-adv-person'); if(_ap) _ap.value=''; const _apo=document.getElementById('inp-adv-position'); if(_apo) _apo.value=''; }
     document.getElementById('inp-amount').value='';
     document.getElementById('inp-note').value='';
     document.getElementById('inp-person').value='';
@@ -6217,11 +6431,34 @@ function taxWrapToggle(){
   const ct = (document.getElementById('inp-costtype')||{}).value, w = document.getElementById('inp-tax-wrap'), tx = document.getElementById('inp-tax');
   if(!w) return;
   if(ct==='tamung'){ w.style.display='none'; if(tx) tx.value=''; } else w.style.display='';
+  { const a=document.getElementById('inp-adv-wrap'); if(a) a.style.display = ct==='tamung' ? '' : 'none'; }   // v51: ô người nhận tạm ứng
+  _fillAdvList();
 }
 function editTaxToggle(){
   const ct = (document.getElementById('edit-costtype')||{}).value, w = document.getElementById('edit-tax-wrap'), tx = document.getElementById('edit-tax');
   if(!w) return;
   if(ct==='tamung'){ w.style.display='none'; if(tx) tx.value=''; } else w.style.display='';
+  { const a=document.getElementById('edit-adv-wrap'); if(a) a.style.display = ct==='tamung' ? '' : 'none'; }
+  _fillAdvList();
+}
+let advPeople = [];   // v53: sổ người nhận tạm ứng đã dùng {name, position, ts, by} — ngăn duyetchi/advPeople
+function _advKey(name){ return String(name||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,60) || 'x'; }
+function advPosOf(name){ const k=_advKey(name); const r=advPeople.find(x=>_advKey(x.name)===k); if(r && r.position) return r.position; const pp=(proposals||[]).filter(x=>x.advPerson && _advKey(x.advPerson)===k && x.advPosition).sort((a,b)=>(b.ts||0)-(a.ts||0))[0]; return pp ? pp.advPosition : ''; }
+function _fillAdvList(){
+  const dl=document.getElementById('adv-person-list'); if(!dl) return;
+  const names = {};
+  advPeople.forEach(x=>{ if(x&&x.name) names[x.name]=x.position||''; });
+  (proposals||[]).forEach(x=>{ if(x.advPerson && !(x.advPerson in names)) names[x.advPerson]=x.advPosition||''; });
+  (persons||[]).forEach(x=>{ if(x&&x.name && !(x.name in names)) names[x.name]=x.role||''; });
+  dl.innerHTML = Object.keys(names).sort().map(n=>`<option value="${esc(n)}">${esc(names[n]||'')}</option>`).join('');
+  const pl=document.getElementById('adv-position-list'); if(pl){ const pos={}; advPeople.forEach(x=>{ if(x&&x.position) pos[x.position]=1; }); (typeof employees!=='undefined'?employees:[]).forEach(e=>{ if(e&&e.position) pos[e.position]=1; }); ['Thợ sắt','Thợ bê tông','Thợ hồ','Lái máy','Lái xe','Đội trưởng','Kỹ thuật','Bảo vệ','Cấp dưỡng'].forEach(x=>{ pos[x]=1; }); pl.innerHTML = Object.keys(pos).sort().map(n=>`<option value="${esc(n)}">`).join(''); }
+}
+function _advAutoPos(nameId, posId){ const n=(document.getElementById(nameId)||{}).value||'', el=document.getElementById(posId); if(!el || !n.trim()) return; const pos=advPosOf(n.trim()); if(pos && !el.value.trim()) el.value = pos; }
+function saveAdvPerson(name, position){   // ghi/cập nhật sổ người nhận tạm ứng (ai đã duyệt cũng ghi được)
+  name=(name||'').trim(); position=(position||'').trim(); if(!name) return;
+  const k=_advKey(name); const old=advPeople.find(x=>_advKey(x.name)===k);
+  if(old && old.name===name && (old.position||'')===(position||(old.position||''))) return;
+  try{ db.ref('duyetchi/advPeople/'+k).update({name, position: position||(old&&old.position)||'', ts:Date.now(), by:(currentUser&&currentUser.uid)||''}).catch(()=>{}); }catch(e){}
 }
 
 // ══════════════════════════════════════════
@@ -7111,7 +7348,39 @@ async function purgeTrash(kind, id){
   try{ await db.ref('duyetchi/trash/'+kind+'/'+id).remove(); showToast('🗑 Đã xóa hẳn'); }
   catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
 }
+// ══ v48 XEM THỬ VAI KHÁC (chỉ D; chỉ xem; không ghi máy chủ; tải lại trang là hết) ══
+let _viewAs = null, _viewAsOrig = null;
+function viewAs(role, label){
+  if(!_viewAs){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng'); return; } _viewAsOrig = {role: currentRole, name: currentUserName}; _viewAsInstallGuard(); }
+  _viewAs = {role, label};
+  currentRole = role; currentUserName = label;
+  _cardCache.clear(); try{ populateSelects(); }catch(e){} renderAll(); try{ renderSettings(); }catch(e){} try{ updateNavBadges(); }catch(e){}
+  let b = document.getElementById('viewas-banner');
+  if(!b){ b = document.createElement('div'); b.id = 'viewas-banner'; b.style.cssText = 'position:fixed;left:10px;right:10px;bottom:66px;z-index:8500;padding:9px 12px;background:#111827;color:#fff;border-radius:10px;font-size:12.5px;font-weight:700;text-align:center;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)'; b.onclick = viewAsExit; document.body.appendChild(b); }
+  b.textContent = '👁 Đang xem thử với vai ' + label + ' — không ghi thật. Bấm đây để về vai Dũng';
+  showPage('home', document.querySelector('.nav-item'));
+  showToast('👁 Đang xem với vai ' + label);
+}
+function viewAsExit(){
+  if(!_viewAs){ showToast('Đang ở vai của anh'); return; }
+  currentRole = _viewAsOrig.role; currentUserName = _viewAsOrig.name; _viewAs = null;
+  const b = document.getElementById('viewas-banner'); if(b) b.remove();
+  _cardCache.clear(); try{ populateSelects(); }catch(e){} renderAll(); try{ renderSettings(); }catch(e){} try{ updateNavBadges(); }catch(e){}
+  showToast('↩️ Đã về vai Dũng — nên tải lại trang để dữ liệu về đúng máy chủ');
+}
+function _viewAsInstallGuard(){   // chặn MỌI lệnh ghi qua db.ref() trong lúc xem thử (set/update/remove/push/transaction, cả .child())
+  if(db._viewAsGuarded) return; db._viewAsGuarded = true;
+  const orig = db.ref.bind(db);
+  const wrap = r => {
+    ['set','update','remove','push','transaction'].forEach(m=>{ if(typeof r[m]!=='function') return; const o = r[m].bind(r);
+      r[m] = function(){ if(_viewAs){ showToast('👁 Đang xem thử — không ghi thật'); const pr = Promise.reject(new Error('view-as')); pr.catch(()=>{}); return pr; } return o.apply(r, arguments); }; });
+    if(typeof r.child==='function'){ const oc = r.child.bind(r); r.child = function(c){ return wrap(oc(c)); }; }
+    return r;
+  };
+  db.ref = function(p){ return wrap(orig(p)); };
+}
 function renderSettings(){
+  { const v=document.getElementById('viewas-card'); if(v) v.style.display = (currentRole==='dung' || _viewAs) ? '' : 'none'; }   // v48
   renderTrash();   // v41
   // Hiển thị thông tin tài khoản
   const infoEl = document.getElementById('auth-account-info');
@@ -7788,7 +8057,8 @@ function downloadSummaryExcel(){
 function sheetNoteOf(p){
   const ct = (p && p.costType && p.costType!=='congtruong' && COST_TYPES[p.costType]) ? '['+COST_TYPES[p.costType].label+'] ' : '';
   const tx = (p && TAX_TYPES[p.tax]) ? '['+TAX_TYPES[p.tax].label+'] ' : '';   // v40
-  return ct + tx + ((p && p.note) || '');
+  const ap = (p && p.advPerson) ? '[Ứng cho '+p.advPerson+(p.advPosition?' - '+p.advPosition:'')+'] ' : '';   // v51/v53
+  return ct + tx + ap + ((p && p.note) || '');
 }
 // ── GOOGLE SHEETS ──
 function saveSheet(){
@@ -10616,7 +10886,7 @@ function cashTotals(){
     if(p.costType!=='kyquy') (p.transfers||[]).forEach(t=>add(t.acct, -num(t.amount)));   // ký quỹ đã trừ qua khoản 'dep'
     if(p.costType==='kyquy'){ /* tiền đi đã ghi thành khoản dep */ }
     else if(p.costType==='tamung'){   // v43: sổ theo NGƯỜI — cộng dồn, chi vượt cho âm
-      const chi = settleSpent(p), ret = settleRet(p), who = p.person||'—';
+      const chi = settleSpent(p), ret = settleRet(p), who = advWho(p);
       daChi += chi; hoanUngChi += chi;
       advAcc[who] = (advAcc[who]||0) + tr - chi - ret;
       if(ret) add('quy', ret);   // tiền nộp lại về quỹ của Toàn
@@ -10966,7 +11236,7 @@ function renderCashBook(){
         </div>
         <div style="display:flex;gap:6px;margin-top:7px;align-items:center">
           <input id="cash-bank-inp-${a}" class="form-input" inputmode="numeric" placeholder="Số dư ngân hàng thật" ${canBank?'':'disabled'}
-                 value="${real!==null?fmtVND(real).replace(' đ',''):''}" oninput="fmtAmountInput(this)" style="flex:1;font-size:14px;margin:0">
+                 value="${real!==null?fmtVND(real).replace(/\s*đ\s*$/,''):''}" oninput="fmtAmountInput(this)" style="flex:1;font-size:14px;margin:0">
           ${canBank ? `<button onclick="saveBankBalance('${a}')" style="padding:9px 14px;font-size:13px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Lưu</button>` : ''}
         </div>
         ${diff===null ? `<div style="font-size:11px;color:var(--text-sub);margin-top:5px">${canBank?'Nhập số dư thật theo sao kê để app tự so':'Chưa có số dư thật (Toàn nhập)'}</div>`
@@ -11386,7 +11656,7 @@ function updateCashBadge(){
 </div>
 <!-- v41: MODAL HOÀN ỨNG -->
 <div class="role-screen" id="settle-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
-  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:760px;margin-top:auto;max-height:88vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
       <div style="font-size:15px;font-weight:800;color:var(--text)">🧾 Kê vào sổ tạm ứng</div>
       <button onclick="closeSettleModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
@@ -11397,6 +11667,25 @@ function updateCashBadge(){
     <button onclick="settleAddRow()" style="width:100%;padding:7px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:12px;font-weight:700;cursor:pointer;margin-bottom:10px">➕ Thêm dòng</button>
     <div class="form-group"><label class="form-label">Tiền thừa nộp lại quỹ</label>
       <div style="display:flex;gap:6px"><input class="form-input" id="settle-ret" type="text" inputmode="numeric" placeholder="0" oninput="fmtAmountInput(this);settleRecalc()" style="flex:1;margin:0"><button onclick="settleFillReturn()" style="padding:0 10px;font-size:11px;font-weight:700;background:var(--gray-light);border:1px solid var(--gray-border);border-radius:8px;cursor:pointer;white-space:nowrap">= phần còn lại</button></div></div>
+    <div class="form-group" style="margin-top:4px">
+      <label class="form-label">📊 Nhập nhanh từ Excel theo mẫu</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" onclick="settleDownloadTemplate()" style="flex:1;padding:8px;border:1.5px solid #0e7490;border-radius:8px;background:#ecfeff;color:#0e7490;font-size:12.5px;font-weight:700;cursor:pointer">⬇️ Tải mẫu Excel</button>
+        <button type="button" onclick="document.getElementById('settle-xlsx-input').click()" style="flex:1;padding:8px;border:1.5px solid #0e7490;border-radius:8px;background:#0e7490;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">📂 Chọn file đã ghi</button>
+      </div>
+      <input type="file" id="settle-xlsx-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="settleImportExcel(this)">
+      <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Mẫu có cột: Ngày · Nội dung · Số tiền · Thuế (Có thuế VAT / Không thuế VAT / Không HL) · Ghi chú. Ghi xong chọn file, các dòng tự điền vào trên, kiểm tra rồi bấm Ghi vào sổ.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">📎 Ảnh hóa đơn / chứng từ (đính vào phiếu tạm ứng, ai cũng xem được)</label>
+      <div id="settle-img-preview" class="img-preview-grid" style="display:none"></div>
+      <div style="display:flex;gap:6px;margin-top:4px">
+        <button type="button" onclick="document.getElementById('settle-file-input').click()" style="flex:1;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:12.5px;font-weight:700;cursor:pointer">📸 Thêm ảnh</button>
+        <button type="button" onclick="settlePasteImages()" style="flex:1;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:12.5px;font-weight:700;cursor:pointer">📋 Dán ảnh từ clipboard</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Máy tính: copy ảnh (Zalo, chụp màn hình) rồi bấm "Dán ảnh" hoặc nhấn Ctrl+V ngay trong khung này.</div>
+      <input type="file" id="settle-file-input" accept="image/*" multiple style="display:none" onchange="settleAddImages(this)">
+    </div>
     <div id="settle-sum" style="font-size:12px;color:var(--text);margin-bottom:12px"></div>
     <button onclick="saveSettlement()" class="btn-full btn-primary-full" style="font-size:15px;padding:13px">Ghi vào sổ</button>
   </div>

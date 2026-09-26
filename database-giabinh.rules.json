@@ -104,6 +104,10 @@
           // v41: THUẾ = người lập / Kế toán / Dũng / H&L. HỢP ĐỒNG gắn vào phiếu = như thuế. RÀ SOÁT (review) chỉ Kế toán / Dũng đặt (ai đổi thuế thì xoá được).
           "tax":        { ".validate": "(newData.val() === data.val() || !data.parent().exists() || newData.parent().child('createdByUid').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'ketoan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien') && (!newData.isString() || newData.val().length <= 20)" },
           "contractId": { ".validate": "(newData.val() === data.val() || !data.parent().exists() || newData.parent().child('createdByUid').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'ketoan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien') && (!newData.isString() || newData.val().length <= 40)" },
+          // v51: NGƯỜI NHẬN TẠM ỨNG — như nội dung: người lập sửa khi chưa duyệt, sau duyệt đóng băng
+          "advPerson":  { ".validate": "(newData.val() === data.val() || (!(data.parent().child('approvedD').exists() || data.parent().child('approvedH').exists() || data.parent().child('approvedDHistory').exists() || data.parent().child('approvedHHistory').exists()) && (newData.parent().child('createdByUid').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'))) && (!newData.isString() || newData.val().length <= 200)" },
+          "createdByRole": { ".validate": "!newData.isString() || newData.val().length <= 20" },
+          "advPosition": { ".validate": "!newData.isString() || newData.val().length <= 200" },
           "review":     { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'ketoan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'" },
           // v41: HOÀN ỨNG (phiếu tạm ứng) = người lập / Kế toán / Dũng; v47: + H&L (duyệt khoản chi) + Toàn (xác nhận nộp lại)
           "settlement": { ".validate": "newData.parent().child('createdByUid').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'ketoan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'toan'" },
@@ -293,6 +297,20 @@
           "ts":      { ".validate": "newData.isNumber()" },
           "editLog": { "$i": { ".validate": "(data.exists() && newData.child('ts').val() === data.child('ts').val() && newData.child('what').val() === data.child('what').val() && newData.child('by').val() === data.child('by').val()) || (!data.exists() && newData.child('by').val() === auth.uid && newData.child('what').isString() && newData.child('what').val().length <= 600)" } },
           "$other":  { ".validate": false }
+        }
+      },
+
+      "advPeople": {
+        // v53 (26/09/2026): sổ NGƯỜI NHẬN TẠM ỨNG (tên + chức vụ) để gợi ý lần sau — ai đã duyệt cũng đọc/ghi; khoá = tên không dấu.
+        ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com')",
+        "$key": {
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com')",
+          ".validate": "newData.hasChildren(['name'])",
+          "name":     { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200" },
+          "position": { ".validate": "!newData.isString() || newData.val().length <= 200" },
+          "ts":       { ".validate": "newData.isNumber()" },
+          "by":       { ".validate": "newData.isString() && newData.val().length <= 200" },
+          "$other":   { ".validate": false }
         }
       },
 
