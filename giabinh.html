@@ -29,14 +29,16 @@
   --text:#111827;--text-sub:#6b7280;--white:#ffffff;
   --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.08);
 }
-body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:18px;touch-action:manipulation}   /* v74: bỏ double-tap zoom trên điện thoại */
-.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+html{height:100%;height:-webkit-fill-available}
+/* v76: KHUNG APP — body cao đúng màn hình, không cuộn; trang (.main) tự cuộn; thanh điều hướng nằm trong luồng ở đáy (không còn position:fixed → hết lỗi iOS trôi thanh) */
+body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);height:100vh;height:-webkit-fill-available;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column;font-size:18px;touch-action:manipulation}   /* v74: bỏ double-tap zoom trên điện thoại */
+.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:relative;flex-shrink:0;z-index:100}   /* v76: đứng yên trên đầu khung */
 .app-header h1{font-size:16px;font-weight:700;letter-spacing:-0.3px}
 /* v173: iOS Safari vẽ lại position:fixed trễ khi cuộn (thanh địa chỉ co giãn làm
    đổi cỡ màn hình) → thanh menu nhảy ra giữa màn hình. translateZ(0) đẩy thanh menu
    sang lớp vẽ riêng của GPU nên nó đứng yên, không vẽ lại theo nội dung đang cuộn. */
 body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên điện thoại → ẩn thanh điều hướng (iOS đẩy nó lên giữa màn) */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.bottom-nav{position:relative;flex-shrink:0;width:100%;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}   /* v76: nằm trong luồng ở đáy khung, không fixed */
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:10px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
 /* v96: chấm số đỏ trên nút điều hướng — biết đang có việc chờ duyệt/chuyển ở khu nào */
 .nav-badge{position:absolute;top:2px;left:calc(50% + 6px);background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;box-shadow:0 0 0 2px #fff}
@@ -58,7 +60,7 @@ body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên đi�
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
 /* v173: cộng thêm vạch home iPhone — nav tự đẩy cao lên bằng safe-area nên chỗ chừa
    phải cộng theo, không thì phần cuối danh sách bị che trên máy có vạch home. */
-.main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
+.main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px 10px 18px}   /* v76: trang = khung cuộn riêng */
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
 .card-header{padding:12px 14px 8px;border-bottom:1px solid var(--gray-border);font-size:13px;font-weight:700;color:var(--text)}
 .card-body{padding:10px 14px}
@@ -1813,7 +1815,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v75';
+const APP_VERSION = '20260927-v76';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5406,7 +5408,7 @@ function advMakeTopUp(person, amount){
   const ds=document.getElementById('inp-desc'); if(ds && !ds.value) ds.value = 'Chi bù tạm ứng (sổ âm) cho '+person;
   const ap=document.getElementById('inp-adv-person'); if(ap) ap.value = person;   // v51: người nhận = người đang âm sổ
   showToast('Đã điền sẵn phiếu tạm ứng chi bù — kiểm tra rồi bấm Gửi đề xuất');
-  try{ window.scrollTo(0,0); }catch(e){}
+  _scrollMainTop();
 }
 // v47: DUYỆT khoản kê — khoản chi: H&L / Dũng; tiền nộp lại: Toàn (đã nhận tiền) / Dũng. Duyệt xong mới trừ sổ + tính chi phí.
 function advApproveItem(pid, idx, who){
@@ -5605,7 +5607,7 @@ function contractStageProposal(cid, sid){   // nút "Lập phiếu chi" trên đ
   const ct=document.getElementById('inp-costtype'); if(ct && ct.value==='tamung'){ ct.value='congtruong'; try{ taxWrapToggle(); }catch(e){} }
   _ctStageHint();
   showToast('Đã điền sẵn theo đợt "'+(st.name||'')+'" — kiểm tra thuế, ảnh rồi bấm Gửi đề xuất');
-  try{ window.scrollTo(0,0); }catch(e){}
+  _scrollMainTop();
 }
 // khung hợp đồng: bảng đợt (thêm / xoá dòng)
 function ctStageAdd(v){
@@ -6698,6 +6700,7 @@ function assetPendingBox(a){
     ${btns ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</div>` : ''}
   </div>`;
 }
+function _scrollMainTop(){ try{ const m=[...document.querySelectorAll('.main')].find(e=>e.style.display!=='none'); if(m) m.scrollTop=0; window.scrollTo(0,0); }catch(e){} }   // v76: trang là khung cuộn riêng
 function fmtQty(n){ n = parseFloat(n)||0; return Number.isInteger(n) ? String(n) : String(Math.round(n*100)/100); }
 
 function renderAssets(){
@@ -7294,7 +7297,7 @@ function jumpToPlanCard(id){
   setTimeout(()=>{
     const card = document.getElementById('plancard-'+id);
     if(!card) return;
-    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.scrollIntoView({block:'center'});
     card.classList.remove('card-highlighted');
     void card.offsetWidth;
     card.classList.add('card-highlighted');
@@ -7766,7 +7769,7 @@ function jumpToProposal(id){
   const _scrollTo = ()=>{
     const card = document.getElementById('card-'+id);
     if(!card) return false;
-    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.scrollIntoView({block:'center'});
     card.classList.remove('card-highlighted');
     void card.offsetWidth;
     card.classList.add('card-highlighted');
@@ -9356,7 +9359,7 @@ function jumpToKhProposal(id){
   const idx=proposals.filter(p=>p.kind==='kh').findIndex(p=>p.id===id);
   if(idx>=0 && idx+20>_khRenderLimit){ _khRenderLimit=idx+20; }
   renderKhList();
-  const tryScroll=()=>{ const el=document.getElementById('card-'+id); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.outline='3px solid var(--blue)'; setTimeout(()=>{el.style.outline='';},2500); } };
+  const tryScroll=()=>{ const el=document.getElementById('card-'+id); if(el){ el.scrollIntoView({block:'center'}); el.style.outline='3px solid var(--blue)'; setTimeout(()=>{el.style.outline='';},2500); } };
   setTimeout(tryScroll,250); setTimeout(tryScroll,700);
 }
 function _khMonthKey(ts){ const d=new Date(ts||0); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
@@ -9449,7 +9452,7 @@ function khStatsSiteGo(site){
   const fp=document.getElementById('kh-filter-person'); if(fp) fp.value='';
   const fs=document.getElementById('kh-filter-site'); if(fs) fs.value=site;
   renderKhList();
-  const el=document.getElementById('kh-list'); if(el) el.scrollIntoView({behavior:'smooth',block:'start'});
+  const el=document.getElementById('kh-list'); if(el) el.scrollIntoView({block:'start'});
   // v130: KHÔNG toast — chạm kép trên điện thoại kích hoạt 2 lần (touchend + dblclick) làm toast
   // hiện 2 lần ("thông báo nhảy 2 lần" user báo). Nhảy trang im lặng giống báo cáo kế toán → kép vô hại.
 }
@@ -10045,7 +10048,7 @@ function renderChatPinBar(){
 }
 function scrollToChatMsg(k){
   const el=document.getElementById('chatmsg-'+k); if(!el) return;
-  el.scrollIntoView({behavior:'smooth', block:'center'});
+  el.scrollIntoView({block:'center'});
   el.style.transition='background .3s'; el.style.background='#fff3cd';
   setTimeout(()=>{ el.style.background=''; }, 1500);
 }
@@ -10872,7 +10875,7 @@ function jumpToSalaryAdvance(id){
   setTimeout(()=>{
     const card=document.getElementById('card-'+id);
     if(!card) return;
-    card.scrollIntoView({behavior:'smooth', block:'center'});
+    card.scrollIntoView({block:'center'});
     card.classList.remove('card-highlighted'); void card.offsetWidth; card.classList.add('card-highlighted');
     card.addEventListener('animationend', ()=>card.classList.remove('card-highlighted'), {once:true});
   }, 180);
@@ -10954,7 +10957,7 @@ function renderSalaryStats(){
 // Báo cáo Tóm tắt: cuộn tới bảng tương ứng trong cùng trang + nháy sáng cho dễ thấy.
 function _rptScrollTo(id){
   const el=document.getElementById(id); if(!el) return;
-  el.scrollIntoView({behavior:'smooth', block:'start'});
+  el.scrollIntoView({block:'start'});
   el.style.transition='outline .2s'; el.style.outline='3px solid #f59e0b'; el.style.borderRadius='10px';
   setTimeout(()=>{ el.style.outline='none'; }, 1600);
 }
@@ -11094,7 +11097,7 @@ function salMonthJump(month,name){ if(month && month!=='?') salaryMonth=month; s
   // Nếu vẫn bị zoom bằng cách nào đó: ghim thanh điều hướng vào đáy VÙNG NHÌN THẤY (visualViewport) thay vì khung bố cục gốc
   const nav = document.querySelector('.bottom-nav'), vv = window.visualViewport; if(!nav || !vv) return;
   let raf = 0;
-  const pin = ()=>{ raf = 0;
+  const pin = ()=>{ raf = 0; if(getComputedStyle(nav).position!=='fixed') return;   // v76: thanh không còn fixed
     const zoomed = (vv.scale||1) > 1.02 || vv.offsetLeft > 1 || vv.width < document.documentElement.clientWidth - 1;
     if(!zoomed){ if(nav.dataset.pinned){ nav.style.left=''; nav.style.right=''; nav.style.width=''; nav.style.top=''; nav.style.bottom=''; delete nav.dataset.pinned; } return; }
     nav.dataset.pinned = '1'; nav.style.left = vv.offsetLeft+'px'; nav.style.right = 'auto'; nav.style.width = vv.width+'px'; nav.style.bottom = 'auto';
