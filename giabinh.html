@@ -1814,7 +1814,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v60';
+const APP_VERSION = '20260926-v61';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -6545,7 +6545,38 @@ function assetOverdue(a){ if(a.from!=='thue' || !a.due || assetLeft(a)<=0) retur
 function assetReturned(a){ return Array.isArray(a.returned) ? a.returned.reduce((t,x)=>t+(parseFloat(x.qty)||0),0) : 0; }
 function assetLeft(a){ return Math.max(0, (parseFloat(a.qty)||0) - assetReturned(a)); }
 function assetFromLabel(a){ const f = ASSET_FROM[a.from] || ASSET_FROM.other; return (a.from==='other' && a.fromName) ? a.fromName : (a.from==='thue' && a.fromName) ? 'Thuê: '+a.fromName : f.label; }
-function assetCanDelete(a){ return currentRole==='dung' || currentRole==='toan' || currentRole==='trang' || !!(currentUser && a.by===currentUser.uid); }
+function assetCanDelete(a){ return currentRole==='dung'; }   // v61 (D 26/09): xóa mục luân chuyển phải có Hiền và Lan đồng ý — người khác chỉ "Đề nghị xóa" (như Cân đối v25)
+function assetDelReq(a){ return (a && a.deleteReq && typeof a.deleteReq==='object') ? a.deleteReq : null; }
+function assetLabel(a){ return '"'+(a.name||'')+'" ('+fmtQty(a.qty)+' '+(a.unit||'')+' · '+assetFromLabel(a)+')'; }
+function assetDelBtn(a){
+  if(assetDelReq(a)) return '';   // đang có đề nghị xoá → hộp assetDelReqBox lo
+  if(currentRole==='dung') return `<button onclick="deleteAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>`;
+  return `<button onclick="requestAssetDelete('${sid(a.id)}')" title="Mục chỉ bị xóa khi Hiền và Lan cùng đồng ý" style="${_CASH_BTN}background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">🗑 Đề nghị xóa</button>`;
+}
+// Hộp "đang có đề nghị xoá" của mục luân chuyển: ai đã đồng ý, còn thiếu ai, nút cho đúng người (bản sao của cashDelReqBox)
+function assetDelReqBox(a){
+  const q = assetDelReq(a); if(!q) return '';
+  const ok = q.ok || {}, names = q.names || {};
+  const uid = (currentUser && currentUser.uid) || '';
+  const nm = u => esc(names[u] || 'Hiền/Lan');
+  const hienDone = [ok.hien1, ok.hien2].filter(Boolean);
+  const full = !!(ok.hien1 && ok.hien2);
+  const parts = hienDone.map(u => '✅ ' + nm(u));
+  for(let i = hienDone.length; i < 2; i++) parts.push('⏳ Hiền/Lan');
+  const mineDone = !!uid && (ok.hien1===uid || ok.hien2===uid);
+  const canOk = !mineDone && currentRole==='hien' && hienDone.length < 2;
+  const canCancel = currentRole==='dung' || (!!uid && q.by===uid);
+  let btns = '';
+  if(full && (currentRole==='dung' || currentRole==='hien')) btns += `<button onclick="finishAssetDelete('${sid(a.id)}')" style="${_CASH_BTN}background:var(--red);color:#fff;border:none">🗑 Đủ 2 đồng ý — Xóa</button>`;
+  else if(canOk) btns += `<button onclick="approveAssetDelete('${sid(a.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Tôi đồng ý xóa</button>`;
+  if(currentRole==='dung' && !full) btns += `<button onclick="deleteAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa ngay</button>`;
+  if(canCancel) btns += `<button onclick="cancelAssetDelete('${sid(a.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">✕ Hủy đề nghị</button>`;
+  return `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px">
+    <div style="font-weight:700;color:#92400e">🗑 ${esc(q.byName||'?')} đề nghị XÓA mục này${q.ts?' · '+fmtFull(q.ts):''}</div>
+    <div style="color:#78350f;margin-top:3px">${full ? 'Hiền và Lan đã đồng ý' : 'Cần cả Hiền và Lan đồng ý'}: ${parts.join(' · ')}</div>
+    ${btns ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</div>` : ''}
+  </div>`;
+}
 function fmtQty(n){ n = parseFloat(n)||0; return Number.isInteger(n) ? String(n) : String(Math.round(n*100)/100); }
 
 function renderAssets(){
@@ -6601,13 +6632,13 @@ function renderAssets(){
         <div style="text-align:right;white-space:nowrap"><div style="font-size:16px;font-weight:900;color:${done?'var(--text-sub)':'var(--blue-dark)'}">${fmtQty(qty)} ${esc(a.unit||'')}</div></div>
       </div>
       ${a.note ? `<div style="font-size:12px;color:var(--text);margin-top:6px;background:#f8fafc;border-radius:6px;padding:5px 8px">📝 ${esc(a.note)}</div>` : ''}
-      <div style="font-size:12px;margin-top:6px">${st}</div>${dueTxt}${hist}${logH}
+      <div style="font-size:12px;margin-top:6px">${st}</div>${dueTxt}${hist}${logH}${assetDelReqBox(a)}
       <div style="display:flex;gap:6px;margin-top:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">
         <span style="font-size:10px;color:var(--text-sub)">${a.byName?'✍️ '+esc(a.byName)+' ghi':''}${a.fromProposal?' · <a href="#" onclick="jumpToProposal(\''+sid(a.fromProposal)+'\');return false" style="color:var(--blue)">xem phiếu chi</a>':''}</span>
         <span style="display:flex;gap:6px;flex-wrap:wrap">
           ${done ? '' : `<button onclick="returnAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">➖ Giảm</button>`}
           <button onclick="openAssetModal('${sid(a.id)}')" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">✏️ Sửa</button>
-          ${assetCanDelete(a) ? `<button onclick="deleteAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>` : ''}
+          ${assetDelBtn(a)}
         </span>
       </div>
     </div></div>`;
@@ -6736,10 +6767,65 @@ async function saveAssetDec(){
 
 async function deleteAsset(id){
   const a = assets.find(x=>x.id===id); if(!a) return;
-  if(!assetCanDelete(a)){ showToast('🔒 Chỉ Toàn, phụ trách vật tư hoặc người ghi mới xóa được'); return; }
-  if(!confirm('Xóa mục "'+(a.name||'')+'" ('+fmtQty(a.qty)+' '+(a.unit||'')+' · '+assetFromLabel(a)+')?\n\n(vào Thùng rác — chỉ Dũng khôi phục được)')) return;
+  if(!assetCanDelete(a)) return requestAssetDelete(id);   // v61: người thường → đề nghị xóa (cần Hiền và Lan đồng ý)
+  if(!confirm('Xóa mục '+assetLabel(a)+'?\n\n(vào Thùng rác — chỉ Dũng khôi phục được)')) return;
   try{ const {id:_i, ...rest} = a; await moveToTrash('assets', id, rest); await db.ref('duyetchi/assets/'+id).remove(); try{ syncAssetDeleteToSheet(id); }catch(e){} showToast('🗑 Đã xóa'); }
   catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
+}
+// ── v61 ĐỀ NGHỊ XÓA mục luân chuyển (như Cân đối v25): ghi deleteReq; Hiền + Lan mỗi người bấm đồng ý 1 lần; đủ 2 ô → xoá.
+async function requestAssetDelete(id){
+  const a = assets.find(x=>x.id===id); if(!a) return;
+  if(currentRole==='dung') return deleteAsset(id);
+  if(assetDelReq(a)){ showToast('Đã có đề nghị xóa rồi — chờ đủ người đồng ý'); return; }
+  if(!confirm('Đề nghị XÓA mục '+assetLabel(a)+'?\n\nMục chỉ bị xóa khi cả Hiền và Lan đồng ý.')) return;
+  const uid = (currentUser && currentUser.uid) || '', name = getCurrentUserName() || '';
+  const q = { by: uid, byName: name, ts: Date.now(), names: {} };
+  q.names[uid] = name;
+  if(currentRole==='hien') q.ok = { hien1: uid };   // người đề nghị là Hiền/Lan → tính luôn là 1 phiếu đồng ý
+  try{
+    await db.ref('duyetchi/assets/'+id+'/deleteReq').set(q);
+    showToast('📨 Đã gửi đề nghị xóa — chờ Hiền và Lan đồng ý');
+    sendPushNotif('🗑 Đề nghị xóa mục luân chuyển', name+': '+assetLabel(a)+' — cần Hiền và Lan đồng ý', ['dung','hien']);
+  }catch(e){ showToast('❌ Không gửi được: '+(e.message||e.code||'')); }
+}
+async function approveAssetDelete(id){
+  const a = assets.find(x=>x.id===id), q = assetDelReq(a); if(!a || !q) return;
+  const uid = (currentUser && currentUser.uid) || '', name = getCurrentUserName() || '';
+  const ok = q.ok || {};
+  if(currentRole==='dung') return deleteAsset(id);
+  if(ok.hien1===uid || ok.hien2===uid){ showToast('Bạn đã đồng ý rồi'); return; }
+  let slot = null;
+  if(currentRole==='hien') slot = !ok.hien1 ? 'hien1' : (!ok.hien2 ? 'hien2' : null);
+  if(!slot){ showToast('🔒 Chỉ Hiền, Lan mới đồng ý được (và đã đủ người)'); return; }
+  if(!confirm('Đồng ý XÓA mục '+assetLabel(a)+'?')) return;
+  const base = 'duyetchi/assets/'+id+'/deleteReq/';
+  const write = async(sl)=>{ const up = {}; up[base+'ok/'+sl] = uid; up[base+'names/'+uid] = name; await db.ref().update(up); };
+  try{
+    try{ await write(slot); }
+    catch(e){ if(slot==='hien1' && !ok.hien2) await write('hien2'); else throw e; }   // 2 người bấm cùng lúc → nhường ô 1, lấy ô 2
+    const now = (await db.ref(base+'ok').get()).val() || {};
+    if(now.hien1 && now.hien2){ await finishAssetDelete(id, true); return; }
+    showToast('✅ Đã ghi đồng ý của bạn — còn chờ người kia');
+    sendPushNotif('✅ '+name+' đồng ý xóa mục luân chuyển', assetLabel(a)+' — còn thiếu 1 người (Hiền/Lan)', ['dung','hien']);
+  }catch(e){ showToast('❌ Không ghi được: '+(e.message||e.code||'')); }
+}
+async function finishAssetDelete(id, silent){
+  const a = assets.find(x=>x.id===id), q = assetDelReq(a); if(!a || !q) return;
+  if(!silent && !confirm('Hiền và Lan đã đồng ý. Xóa mục '+assetLabel(a)+'? (vào Thùng rác)')) return;
+  try{
+    const {id:_i, ...rest} = a;
+    await moveToTrash('assets', id, rest);
+    await db.ref('duyetchi/assets/'+id).remove();
+    try{ syncAssetDeleteToSheet(id); }catch(e){}
+    showToast('🗑 Đã xóa (Hiền và Lan đồng ý)');
+    sendPushNotif('🗑 Đã xóa mục luân chuyển', assetLabel(a)+' — Hiền và Lan đã đồng ý', ['dung','hien','toan']);
+  }catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
+}
+async function cancelAssetDelete(id){
+  const a = assets.find(x=>x.id===id), q = assetDelReq(a); if(!a || !q) return;
+  if(!confirm('Hủy đề nghị xóa mục "'+(a.name||'')+'"? (mục vẫn giữ nguyên)')) return;
+  try{ await db.ref('duyetchi/assets/'+id+'/deleteReq').remove(); showToast('✕ Đã hủy đề nghị xóa'); }
+  catch(e){ showToast('❌ Không hủy được: '+(e.message||e.code||'')); }
 }
 
 function setPlanTab(tab, btn){

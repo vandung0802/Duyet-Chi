@@ -248,10 +248,10 @@
 
       "assets": {
         // v40 (24/09/2026): VẬT TƯ / THIẾT BỊ LUÂN CHUYỂN — sổ theo dõi đơn vị nào chuyển gì đến công trường để còn thu hồi.
-        // Không phải tiền. Ai đã duyệt cũng đọc / ghi / sửa / thu hồi; XOÁ chỉ Dũng, Toàn, phụ trách vật tư (trang) hoặc chính người ghi.
+        // Không phải tiền. Ai đã duyệt cũng đọc / ghi / sửa / thu hồi; XOÁ (v61, D 26/09): chỉ Dũng, hoặc Hiền/Lan khi đề nghị xoá đã đủ 2 phiếu đồng ý deleteReq/ok/hien1 + hien2 (2 tài khoản vai hien khác nhau); người khác chỉ ghi được deleteReq.
         ".read": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com')",
         "$id": {
-          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'toan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'trang' || data.child('by').val() === auth.uid)",
+          ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && data.child('deleteReq/ok/hien1').exists() && data.child('deleteReq/ok/hien2').exists()))",
           ".validate": "newData.hasChildren(['name', 'qty', 'from', 'by', 'ts'])",
           "by":       { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
           "name":     { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 200" },
@@ -276,6 +276,18 @@
               "note": { ".validate": "!newData.isString() || newData.val().length <= 500" },
               "$o":   { ".validate": false }
             }
+          },
+          "deleteReq": {
+            "by":     { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
+            "byName": { ".validate": "newData.isString() && newData.val().length <= 200" },
+            "ts":     { ".validate": "newData.isNumber()" },
+            "names":  { "$u": { ".validate": "newData.isString() && newData.val().length <= 200" } },
+            "ok": {
+              "hien1": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && newData.val() !== newData.parent().child('hien2').val())" },
+              "hien2": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && newData.val() !== newData.parent().child('hien1').val())" },
+              "$o":    { ".validate": false }
+            },
+            "$o": { ".validate": false }
           },
           "$other": { ".validate": false }
         }
