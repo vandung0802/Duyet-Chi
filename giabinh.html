@@ -1814,7 +1814,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v62';
+const APP_VERSION = '20260926-v63';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5142,14 +5142,15 @@ function advPersons(){   // sổ từng người: {name, tr, chi, ret, bal, entr
   const M = {};
   (proposals||[]).forEach(p=>{
     if(p.costType!=='tamung' || p.kind==='kh' || p.status==='rejected') return;
-    const name = advWho(p); const o = M[name] || (M[name] = {name, tr:0, chi:0, ret:0, bal:0, pendChi:0, pendRet:0, pend:0, entries:[], phieu:0, by:{}});
+    const name = advWho(p); const o = M[name] || (M[name] = {name, tr:0, chi:0, ret:0, bal:0, pendChi:0, pendRet:0, pend:0, rejN:0, entries:[], phieu:0, by:{}});
     if(p.person) o.by[p.person] = 1;   // ai đề xuất hộ
     o.phieu++;
     (p.transfers||[]).forEach(t=>{ const a=parseFloat(t.amount)||0; o.tr+=a; o.entries.push({ts:t.ts||0, date:ymdLocal(t.ts), kind:'ung', desc:'Ứng: '+(p.desc||''), amount:a, pid:p.id}); });
     const st = p.settlement; if(!st) return;
     (st.items||[]).forEach((x,idx)=>{ const a=parseFloat(x.amount)||0, ok=!!x.ok;   // v47: chưa duyệt → chờ, chưa trừ sổ
-      if(x.kind==='ret'){ if(ok) o.ret+=a; else o.pendRet+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'ret', desc:x.desc||'Nộp lại quỹ', amount:a, pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null, img:x.img||null}); }
-      else { if(ok) o.chi+=a; else o.pendChi+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'chi', desc:x.desc||'', amount:a, tax:x.tax||'', pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null, okD:x.okD||null, img:x.img||null}); } });
+      if(x.rej) o.rejN++;   // v63: khoản bị từ chối — không tính chờ duyệt, không trừ sổ
+      if(x.kind==='ret'){ if(ok) o.ret+=a; else if(!x.rej) o.pendRet+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'ret', desc:x.desc||'Nộp lại quỹ', amount:a, pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null, rej:x.rej||null, img:x.img||null}); }
+      else { if(ok) o.chi+=a; else if(!x.rej) o.pendChi+=a; o.entries.push({ts:x.ts||st.ts||0, date:x.date||ymdLocal(st.ts), kind:'chi', desc:x.desc||'', amount:a, tax:x.tax||'', pid:p.id, idx, by:x.by||st.byName||'', ok:x.ok||null, okD:x.okD||null, rej:x.rej||null, img:x.img||null}); } });
     if(st.returned){ const a=parseFloat(st.returned)||0; o.ret+=a; o.entries.push({ts:st.ts||0, date:ymdLocal(st.ts), kind:'ret', desc:'Nộp lại quỹ', amount:a, pid:p.id, legacy:true}); }
   });
   Object.values(M).forEach(o=>{ o.bal = o.tr - o.chi - o.ret; o.pend = o.pendChi + o.pendRet; o.entries.sort((a,b)=>(a.ts||0)-(b.ts||0)); });
@@ -5162,12 +5163,14 @@ function advBalHtml(bal, o){
 // v50: ô duyệt từng món — khoản chi: ô D (khi người khác ứng) + ô H&L (quyết định); tiền nộp lại: ô Toàn xác nhận
 function _advOkCan(e){ return e.kind==='ret' ? (currentRole==='toan'||currentRole==='dung') : (currentRole==='hien'||currentRole==='dung'); }
 function _advDSelf(target){ return !!(target && ((target.createdByRole==='dung' && (!target.advPerson || advWho(target)===(target.createdBy||''))) || (currentRole==='dung' && advWho(target)===(currentUserName||'')))); }   // người NHẬN tạm ứng là chính Dũng → không có ô D
-function _advBox(lbl, ok, canBtn, onclick, waitTxt){
-  if(ok) return `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#dcfce7;color:#047857;white-space:nowrap">✅ ${esc(lbl)}${ok.byName?' '+esc(shortName(ok.byName)||ok.byName):''}</span>`;
+function _advBox(lbl, ok, canBtn, onclick, waitTxt){   // v63: chip "đã duyệt" (xanh nhạt) ≠ NÚT bấm (viền xanh, ô trống) ≠ chờ (vàng)
+  const doneTxt = lbl==='D' ? 'D đã duyệt' : lbl==='H&L' ? 'H&L đã duyệt' : 'Toàn đã nhận tiền';
+  if(ok) return `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#dcfce7;color:#047857;white-space:nowrap">✅ ${doneTxt}${ok.byName?' · '+esc(shortName(ok.byName)||ok.byName):''}</span>`;
   const who = lbl==='D' ? 'Dũng' : lbl==='H&L' ? 'Hiền hoặc Lam' : 'Toàn';
-  return canBtn ? `<a href="#" onclick="${onclick};return false" style="font-size:10.5px;padding:2px 8px;border-radius:8px;background:#047857;color:#fff;text-decoration:none;white-space:nowrap">✅ ${esc(lbl)} duyệt</a>` : `<span title="Ô này do ${who} bấm khi đăng nhập bằng tài khoản của mình" onclick="showToast('Ô này do ${who} bấm (đăng nhập bằng tài khoản của ${who})')" style="font-size:10px;padding:1px 6px;border-radius:8px;background:#fef3c7;color:#b45309;white-space:nowrap;cursor:help">⏳ ${esc(waitTxt||lbl)}</span>`;
+  const btnTxt = lbl==='D' ? 'D duyệt' : lbl==='H&L' ? 'H&L duyệt' : 'Toàn xác nhận đã nhận';
+  return canBtn ? `<a href="#" onclick="${onclick};return false" title="Bấm để duyệt" style="font-size:10.5px;padding:2px 8px;border-radius:8px;background:#fff;color:#047857;border:1.5px solid #047857;font-weight:700;text-decoration:none;white-space:nowrap">☐ ${esc(btnTxt)}</a>` : `<span title="Ô này do ${who} bấm khi đăng nhập bằng tài khoản của mình" onclick="showToast('Ô này do ${who} bấm (đăng nhập bằng tài khoản của ${who})')" style="font-size:10px;padding:1px 6px;border-radius:8px;background:#fef3c7;color:#b45309;white-space:nowrap;cursor:help">⏳ ${esc(waitTxt||lbl)}</span>`;
 }
-function _advOkLabel(e){ return e.ok ? `<span style="font-size:10px;color:#047857">✅ ${esc(shortName(e.ok.byName||'')||e.ok.byName||'')}</span>` : `<span style="font-size:10px;color:#b45309">⏳ chờ ${e.kind==='ret'?'Toàn xác nhận':'H&L duyệt'}</span>`; }
+function _advOkLabel(e){ if(e.rej) return `<span style="font-size:10px;color:#b91c1c">❌ từ chối</span>`; return e.ok ? `<span style="font-size:10px;color:#047857">✅ ${esc(shortName(e.ok.byName||'')||e.ok.byName||'')}</span>` : `<span style="font-size:10px;color:#b45309">⏳ chờ ${e.kind==='ret'?'Toàn xác nhận':'H&L duyệt'}</span>`; }
 let _advDetail = '';
 function advToggleDetail(key){ _advDetail = (_advDetail===key) ? '' : key; renderAdvLedger(); }
 function _settleHtml(p){   // trên thẻ phiếu tạm ứng
@@ -5199,9 +5202,14 @@ function renderAdvLedger(){
     const rows = o.entries.slice().reverse().map(e=>{
       if(e.kind==='ung') return `<div style="display:flex;justify-content:space-between;gap:6px;font-size:11.5px;padding:4px 0;border-top:1px dashed var(--gray-border)"><span style="min-width:0;word-break:break-word"><span style="color:var(--text-sub)">${esc(e.date||'')}</span> 💸 ${esc(e.desc)}</span><span style="white-space:nowrap;word-break:normal;font-weight:700;color:#047857">+${fmtVND(e.amount)}</span></div>`;
       const key = e.pid+'|'+e.idx, openD = _advDetail===key, tp = proposals.find(x=>x.id===e.pid), dSelf = _advDSelf(tp);
-      const boxes = e.kind==='ret'
-        ? _advBox('Toàn', e.ok, (!e.ok && (currentRole==='toan'||currentRole==='dung')), `advApproveItem('${sid(e.pid)}',${e.idx},'T')`, 'chờ Toàn xác nhận')
-        : (dSelf ? '' : _advBox('D', e.okD, (!e.okD && currentRole==='dung'), `advApproveItem('${sid(e.pid)}',${e.idx},'D')`, 'D chờ duyệt') + ' ') + _advBox('H&L', e.ok, (!e.ok && currentRole==='hien'), `advApproveItem('${sid(e.pid)}',${e.idx},'H')`, 'H&L chờ duyệt');
+      const rejWho = e.kind==='ret' ? 'T' : (currentRole==='hien' ? 'H' : 'D');
+      const canRej = !e.legacy && !e.ok && !e.rej && (e.kind==='ret' ? (currentRole==='toan'||currentRole==='dung') : (currentRole==='hien'||currentRole==='dung'));
+      const rejLink = canRej ? ` <a href="#" onclick="advRejectItem('${sid(e.pid)}',${e.idx},'${rejWho}');return false" title="Từ chối khoản này (ghi lý do)" style="font-size:10px;color:#b91c1c;text-decoration:none;white-space:nowrap">✕ Từ chối</a>` : '';
+      const boxes = e.rej
+        ? `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#fee2e2;color:#b91c1c">❌ Từ chối${e.rej.byName?' ('+esc(shortName(e.rej.byName)||e.rej.byName)+')':''}: ${esc(e.rej.reason||'')}</span>${(currentRole==='dung'||(currentUser&&e.rej.by===currentUser.uid))?` <a href="#" onclick="advUnrejectItem('${sid(e.pid)}',${e.idx});return false" style="font-size:10px;color:var(--text-sub);text-decoration:none;white-space:nowrap">↩ bỏ từ chối</a>`:''}`
+        : (e.kind==='ret'
+          ? _advBox('Toàn', e.ok, (!e.ok && (currentRole==='toan'||currentRole==='dung')), `advApproveItem('${sid(e.pid)}',${e.idx},'T')`, 'chờ Toàn xác nhận đã nhận')
+          : (dSelf ? '' : _advBox('D', e.okD, (!e.okD && currentRole==='dung'), `advApproveItem('${sid(e.pid)}',${e.idx},'D')`, 'chờ D duyệt') + ' ') + _advBox('H&L', e.ok, (!e.ok && currentRole==='hien'), `advApproveItem('${sid(e.pid)}',${e.idx},'H')`, 'chờ H&L duyệt')) + rejLink;   // v63
       const canDel = !e.legacy && (!e.ok || currentRole==='dung') && can;
       let detail = '';
       if(openD){
@@ -5211,7 +5219,7 @@ function renderAdvLedger(){
         detail = `<div style="margin:4px 0 6px 8px;padding:7px 9px;background:#f8fafc;border-radius:8px;font-size:11.5px;line-height:1.5">
           <div><b>${esc(e.desc)}</b></div>
           <div>Số tiền: <b>${fmtVND(e.amount)}</b>${e.kind==='chi'?' · Thuế: '+(TAX_TYPES[e.tax]?TAX_TYPES[e.tax].icon+' '+esc(TAX_TYPES[e.tax].label):'<span style="color:#b91c1c">chưa chọn</span>'):''} · Ngày: ${esc(e.date||'')}</div>
-          <div style="color:var(--text-sub)">Người kê: ${esc(e.by||'')}${e.okD?' · D duyệt: '+esc(e.okD.byName||'')+' '+fmtFull(e.okD.ts):''}${e.ok?' · '+(e.kind==='ret'?'Toàn xác nhận: ':'H&L duyệt: ')+esc(e.ok.byName||'')+' '+fmtFull(e.ok.ts):''}</div>
+          <div style="color:var(--text-sub)">Người kê: ${esc(e.by||'')}${e.okD?' · D duyệt: '+esc(e.okD.byName||'')+' '+fmtFull(e.okD.ts):''}${e.ok?' · '+(e.kind==='ret'?'Toàn xác nhận: ':'H&L duyệt: ')+esc(e.ok.byName||'')+' '+fmtFull(e.ok.ts):''}${e.rej?' · <span style="color:#b91c1c">Từ chối: '+esc(e.rej.byName||'')+' '+fmtFull(e.rej.ts)+' — '+esc(e.rej.reason||'')+'</span>':''}</div>
           ${showImgs.length ? `<div class="proof-grid" style="margin-top:6px">${showImgs.map(k=>`<div class="proof-thumb"><img src="${esc(imgs[k])}" loading="lazy" onclick="openImg('${sid(e.pid)}','invoice',${k})" alt="Chứng từ"></div>`).join('')}</div>`
             : (imgs.length ? `<div style="margin-top:4px;color:var(--text-sub)">Món này không kèm ảnh riêng — phiếu tạm ứng có ${imgs.length} ảnh chứng từ: <a href="#" onclick="openImg('${sid(e.pid)}','invoice',0);return false" style="color:var(--blue)">xem</a></div>` : '<div style="margin-top:4px;color:#b91c1c">Chưa có ảnh chứng từ</div>')}
         </div>`;
@@ -5219,7 +5227,7 @@ function renderAdvLedger(){
       return `<div style="padding:4px 0;border-top:1px dashed var(--gray-border);font-size:11.5px">
         <div style="display:flex;justify-content:space-between;gap:6px">
           <span style="min-width:0;word-break:break-word"><span style="color:var(--text-sub)">${esc(e.date||'')}</span> ${e.kind==='ret'?'↩️':'🧾'} ${esc(e.desc)}${e.kind==='chi'&&TAX_TYPES[e.tax]?' <span style="color:'+TAX_TYPES[e.tax].color+'">'+TAX_TYPES[e.tax].icon+'</span>':''}${(Array.isArray(e.img)&&e.img.length)?' 📎':''}</span>
-          <span style="white-space:nowrap;word-break:normal;font-weight:700;color:${e.ok?'#b91c1c':'#9ca3af'}">−${fmtVND(e.amount)}</span>
+          <span style="white-space:nowrap;word-break:normal;font-weight:700;color:${e.ok?'#b91c1c':'#9ca3af'};${e.rej?'text-decoration:line-through;':''}">−${fmtVND(e.amount)}</span>
         </div>
         <div style="display:flex;justify-content:flex-end;align-items:center;gap:5px;flex-wrap:wrap;margin-top:3px">
           <a href="#" onclick="advToggleDetail('${sid(e.pid)}|${e.idx}');return false" style="font-size:10.5px;color:var(--blue);text-decoration:none">${openD?'▲ Ẩn':'🔍 Xem'}</a>
@@ -5229,7 +5237,7 @@ function renderAdvLedger(){
     }).join('');
     return `<div class="card"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;cursor:pointer" onclick="_advOpen=_advOpen==='${esc(n).replace(/'/g,'&#39;')}'?'':'${esc(n).replace(/'/g,'&#39;')}';renderAdvLedger()">
-        <div style="min-width:0;flex:1"><div style="font-size:14px;font-weight:700">👛 ${esc(n)}${advPosOf(n)?` <span style="font-size:11px;font-weight:600;color:var(--text-sub)">— ${esc(advPosOf(n))}</span>`:''}</div><div style="font-size:10.5px;color:var(--text-sub)">${(()=>{ const bs=Object.keys(o.by||{}).filter(b=>b!==n); return bs.length?'đề xuất hộ: '+esc(bs.join(', '))+' · ':''; })()}${o.phieu} phiếu · ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}${o.pend>0?' · <b style="color:#b45309">chờ duyệt '+fmtShortMoney(o.pend)+'</b>':''}</div></div>
+        <div style="min-width:0;flex:1"><div style="font-size:14px;font-weight:700">👛 ${esc(n)}${advPosOf(n)?` <span style="font-size:11px;font-weight:600;color:var(--text-sub)">— ${esc(advPosOf(n))}</span>`:''}</div><div style="font-size:10.5px;color:var(--text-sub)">${(()=>{ const bs=Object.keys(o.by||{}).filter(b=>b!==n); return bs.length?'đề xuất hộ: '+esc(bs.join(', '))+' · ':''; })()}${o.phieu} phiếu · ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}${o.pend>0?' · <b style="color:#b45309">chờ duyệt '+fmtShortMoney(o.pend)+'</b>':''}${o.rejN?' · <span style="color:#b91c1c">'+o.rejN+' khoản bị từ chối</span>':''}</div></div>
         <div style="text-align:right;font-size:14px">${advBalHtml(o.bal, o)}<div style="font-size:10px;color:var(--text-sub)">${open?'▲ thu gọn':'▼ xem sổ'}</div></div>
       </div>
       ${open ? `<div style="margin-top:6px">${rows||'<div style="font-size:12px;color:var(--text-sub)">Chưa có dòng nào</div>'}</div>` : ''}
@@ -5405,6 +5413,7 @@ function advMakeTopUp(person, amount){
 function advApproveItem(pid, idx, who){
   const p = proposals.find(x=>x.id===pid); const x = p && p.settlement && Array.isArray(p.settlement.items) ? p.settlement.items[idx] : null; if(!x) return;
   who = who || (x.kind==='ret' ? 'T' : 'H');
+  if(x.rej){ showToast('❌ Khoản này đã bị từ chối — bấm "bỏ từ chối" trước nếu muốn duyệt'); return; }   // v63
   const stamp = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
   if(who==='D'){
     if(currentRole!=='dung'){ showToast('🔒 Ô này của Dũng'); return; }
@@ -5431,21 +5440,48 @@ function advApproveAll(person){
   const isD = currentRole==='dung', isH = currentRole==='hien';
   if(!isD && !isH){ showToast('🔒 Chỉ H&L (và ô D của Dũng)'); return; }
   const list = (proposals||[]).filter(p=>p.costType==='tamung' && advWho(p)===person && p.settlement && Array.isArray(p.settlement.items));
-  let n=0, tot=0; list.forEach(p=>{ if(isD && _advDSelf(p)) return; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !(isD ? x.okD : x.ok)){ n++; tot+=parseFloat(x.amount)||0; } }); });
+  let n=0, tot=0; list.forEach(p=>{ if(isD && _advDSelf(p)) return; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !x.rej && !(isD ? x.okD : x.ok)){ n++; tot+=parseFloat(x.amount)||0; } }); });
   if(!n){ showToast('Không còn khoản chi chờ ở ô của bạn'); return; }
   if(!confirm((isD?'D':'H&L')+' duyệt tất cả '+n+' khoản chi chờ của '+person+' (tổng '+fmtVND(tot)+')? Nên bấm 🔍 Xem từng món trước.')) return;
   const stamp = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now() };
-  list.forEach(p=>{ if(isD && _advDSelf(p)) return; let ch=false; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !(isD ? x.okD : x.ok)){ if(isD) x.okD = {...stamp}; else x.ok = {...stamp}; ch=true; } }); if(ch){ p.settlement = {...p.settlement, ts:Date.now()}; logEdit(p, (isD?'D':'H&L')+' duyệt các khoản chi tạm ứng chờ'); try{ syncAdvToSheet(p); }catch(e2){} } });
+  list.forEach(p=>{ if(isD && _advDSelf(p)) return; let ch=false; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !x.rej && !(isD ? x.okD : x.ok)){ if(isD) x.okD = {...stamp}; else x.ok = {...stamp}; ch=true; } }); if(ch){ p.settlement = {...p.settlement, ts:Date.now()}; logEdit(p, (isD?'D':'H&L')+' duyệt các khoản chi tạm ứng chờ'); try{ syncAdvToSheet(p); }catch(e2){} } });
   _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){}
   showToast('✅ Đã duyệt '+n+' khoản');
   sendPushNotif('✅ '+(getCurrentUserName()||'')+' duyệt '+n+' khoản chi tạm ứng', person+': tổng '+fmtVND(tot), ['dung','hien','toan']);   // v62
+}
+// v63: TỪ CHỐI từng món kèm lý do — khoản chi: H&L (hoặc D); tiền nộp lại: Toàn (hoặc D). Khoản từ chối KHÔNG tính vào sổ, không trừ, không tính chờ duyệt;
+// người kê thấy lý do để kê lại khoản khác (hoặc xoá dòng). Người từ chối / Dũng bỏ từ chối được.
+function advRejectItem(pid, idx, who){
+  const p = proposals.find(x=>x.id===pid); const x = p && p.settlement && Array.isArray(p.settlement.items) ? p.settlement.items[idx] : null; if(!x) return;
+  const isRet = x.kind==='ret';
+  if(isRet ? !(currentRole==='toan'||currentRole==='dung') : !(currentRole==='hien'||currentRole==='dung')){ showToast(isRet ? '🔒 Tiền nộp lại do Toàn xác nhận / từ chối' : '🔒 Chỉ H&L (Hiền / Lam) từ chối khoản chi'); return; }
+  if(x.ok){ showToast('Khoản này đã duyệt rồi — không từ chối được'); return; }
+  if(x.rej){ showToast('Đã từ chối rồi'); return; }
+  let reason = prompt('Lý do từ chối khoản "'+(x.desc||'')+'" '+fmtVND(x.amount)+' (bắt buộc):', '');
+  if(reason===null) return; reason = String(reason).trim().slice(0,300);
+  if(!reason){ showToast('⚠️ Cần ghi lý do từ chối'); return; }
+  x.rej = { by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', ts:Date.now(), who: who || (isRet?'T':(currentRole==='dung'?'D':'H')), reason };
+  p.settlement = {...p.settlement, ts:Date.now()};
+  logEdit(p, 'từ chối khoản '+(isRet?'nộp lại ':'chi ')+fmtVND(x.amount)+' — '+(x.desc||'')+': '+reason);
+  _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){} try{ syncAdvToSheet(p); }catch(e2){}
+  showToast('❌ Đã từ chối — người kê sẽ thấy lý do');
+  sendPushNotif('❌ '+(getCurrentUserName()||'')+' từ chối khoản '+(isRet?'nộp lại ':'chi ')+fmtVND(x.amount), (advWho(p)||'')+': "'+(x.desc||'')+'" — '+reason, ['dung','hien','toan','kt']);
+}
+function advUnrejectItem(pid, idx){
+  const p = proposals.find(x=>x.id===pid); const x = p && p.settlement && Array.isArray(p.settlement.items) ? p.settlement.items[idx] : null; if(!x || !x.rej) return;
+  if(!(currentRole==='dung' || (currentUser && x.rej.by===currentUser.uid))){ showToast('🔒 Chỉ người đã từ chối (hoặc Dũng) mới bỏ từ chối'); return; }
+  if(!confirm('Bỏ từ chối khoản "'+(x.desc||'')+'" '+fmtVND(x.amount)+'? (khoản về trạng thái chờ duyệt)')) return;
+  delete x.rej; p.settlement = {...p.settlement, ts:Date.now()};
+  logEdit(p, 'bỏ từ chối khoản '+fmtVND(x.amount)+' — '+(x.desc||''));
+  _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){} try{ syncAdvToSheet(p); }catch(e2){}
+  showToast('↩️ Đã bỏ từ chối');
 }
 function advDeleteItem(pid, idx){
   const p = proposals.find(x=>x.id===pid); if(!p || !p.settlement || !Array.isArray(p.settlement.items) || !p.settlement.items[idx]) return;
   if(!_settleCan(p)){ showToast('🔒 Không có quyền'); return; }
   const x = p.settlement.items[idx];
   if(x.ok && currentRole!=='dung'){ showToast('🔒 Khoản đã duyệt — không xóa được'); return; }   // v47
-  if(currentRole!=='dung' && p.settlement.items.slice(idx+1).some(y=>y.ok||y.okD)){ showToast('🔒 Không xóa được khoản đứng TRƯỚC khoản đã duyệt — nhờ Dũng xóa'); return; }   // v62: luật máy chủ khoá từng món đã duyệt theo thứ tự
+  if(currentRole!=='dung' && p.settlement.items.slice(idx+1).some(y=>y.ok||y.okD||y.rej)){ showToast('🔒 Không xóa được khoản đứng TRƯỚC khoản đã duyệt — nhờ Dũng xóa'); return; }   // v62: luật máy chủ khoá từng món đã duyệt theo thứ tự
   if(!confirm('Xóa dòng "'+(x.desc||'')+'" '+fmtVND(x.amount)+' khỏi sổ?')) return;
   p.settlement.items.splice(idx,1); p.settlement.ts = Date.now(); p.settlement.byName = getCurrentUserName()||'';
   logEdit(p, 'xóa dòng sổ tạm ứng: '+(x.desc||'')+' '+fmtVND(x.amount));
@@ -8776,7 +8812,7 @@ function doGet(e){
     if(tlr>=2){ var s5=[]; for(var k5=1;k5<=tlr-1;k5++) s5.push([k5]); ts_.getRange(2,1,tlr-1,1).setValues(s5); ts_.getRange(2,8,tlr-1,1).setNumberFormat('#,##0" đ"'); ts_.getRange(2,1,tlr-1,1).setHorizontalAlignment('center'); }
     // tổng theo người → sheet "Tạm ứng - số dư"
     var sum={}; var tv2=ts_.getDataRange().getValues();
-    for(var si=1;si<tv2.length;si++){ var w=String(tv2[si][3]||''); if(!w) continue; var o=sum[w]||(sum[w]={pos:tv2[si][4]||'',ung:0,chi:0,nop:0,cho:0}); var a=Math.abs(num_(tv2[si][7])); var lo=String(tv2[si][5]); var okc=String(tv2[si][9]||''); if(lo==='Ứng') o.ung+=a; else if(okc.indexOf('⏳ H&L')>=0 || okc.indexOf('⏳ chờ Toàn')>=0) o.cho+=a; else if(lo==='Nộp lại') o.nop+=a; else o.chi+=a; }
+    for(var si=1;si<tv2.length;si++){ var w=String(tv2[si][3]||''); if(!w) continue; var o=sum[w]||(sum[w]={pos:tv2[si][4]||'',ung:0,chi:0,nop:0,cho:0}); var a=Math.abs(num_(tv2[si][7])); var lo=String(tv2[si][5]); var okc=String(tv2[si][9]||''); if(lo==='Ứng') o.ung+=a; else if(okc.indexOf('❌')===0) {} else if(okc.indexOf('⏳ H&L')>=0 || okc.indexOf('⏳ chờ Toàn')>=0) o.cho+=a; else if(lo==='Nộp lại') o.nop+=a; else o.chi+=a; }
     var ss2=ss.getSheetByName('Tạm ứng - số dư')||ss.insertSheet('Tạm ứng - số dư'); ss2.clear();
     var h2=['STT','Người nhận','Chức vụ','Tổng ứng','Chi đã duyệt','Nộp lại','Chờ duyệt','Số dư (dương: còn giữ · âm: cty nợ)'];
     var o2=[h2]; var names=Object.keys(sum).sort(); names.forEach(function(w,i){ var o=sum[w]; o2.push([i+1,w,o.pos,o.ung,o.chi,o.nop,o.cho,o.ung-o.chi-o.nop]); });
@@ -10019,7 +10055,7 @@ function syncAdvToSheet(p){
   const st = p.settlement;
   if(st) (st.items||[]).forEach((x,i)=>{ const ret = x.kind==='ret';
     rows.push({id:p.id+'_i'+i, date:x.date||ymdLocal(x.ts||st.ts), who, pos, loai: ret?'Nộp lại':'Chi đã kê', desc:x.desc||'', amount:+x.amount||0, sign:-1, tax: ret?'':((TAX_TYPES[x.tax]||{}).label||''),
-      ok: ret ? (x.ok ? '✅ Toàn '+(shortName(x.ok.byName||'')||'') : '⏳ chờ Toàn') : ((x.okD ? '✅ D' : '⏳ D')+' · '+(x.ok ? '✅ H&L '+(shortName(x.ok.byName||'')||'') : '⏳ H&L')), by:x.by||st.byName||'', by2}); });
+      ok: x.rej ? ('❌ Từ chối ('+(shortName(x.rej.byName||'')||'')+'): '+(x.rej.reason||'')) : ret ? (x.ok ? '✅ Toàn '+(shortName(x.ok.byName||'')||'') : '⏳ chờ Toàn') : ((x.okD ? '✅ D' : '⏳ D')+' · '+(x.ok ? '✅ H&L '+(shortName(x.ok.byName||'')||'') : '⏳ H&L')), by:x.by||st.byName||'', by2}); });   // v63: từ chối
   const CH = 8, chunks = []; for(let i=0;i<rows.length;i+=CH) chunks.push(rows.slice(i,i+CH)); if(!chunks.length) chunks.push([]);   // v62: từng lô 8 dòng; lô đầu xoá dòng cũ, lô cuối mới sắp xếp + tính số dư (Apps Script v7)
   const send = i => { if(i>=chunks.length) return;
     const params = new URLSearchParams({action:'advSync', pid:p.id, first: i===0?'1':'0', last: i===chunks.length-1?'1':'0', rows: JSON.stringify(chunks[i])});
