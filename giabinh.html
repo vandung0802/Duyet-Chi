@@ -199,6 +199,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 /* v66 (D 26/09): nút hành động ở trang = nút nhỏ cỡ nút tên người dùng trên đầu app; !important để thắng style inline cũ (font-size/padding/width) */
 .btn-sm{width:auto!important;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px!important;font-size:13px!important;font-weight:700;border-radius:20px!important;cursor:pointer;line-height:1.25;white-space:nowrap;vertical-align:middle}
 .btn-sm.btn-outline-full{margin-top:0}
+.btn-xs2{padding:5px 10px!important;font-size:12px!important;gap:4px}   /* v67: cỡ nhỏ hơn để 4 nút Báo cáo vừa 1 hàng */
 
 /* Upload */
 /* display:block BẮT BUỘC: .upload-zone là thẻ <label>, mặc định inline nên khung
@@ -817,13 +818,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card report-tab-panel" id="report-tab-summary">
     <div class="card-body" style="padding:0">
       <div id="report-summary-content" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
-      <div style="padding:12px 12px 4px;display:flex;gap:8px">
-        <button class="btn-sm btn-outline-full" onclick="copyReport()" style="margin-top:4px;flex:0 1 auto">📋 Sao chép gửi Zalo</button>
-        <button class="btn-sm btn-outline-full" onclick="downloadSummaryExcel()" style="margin-top:4px;flex:0 1 auto;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button>
-      </div>
-      <div style="padding:4px 12px 12px;display:flex;gap:8px;align-items:center">
-        <select id="rep-month" class="form-input form-select" style="flex:0 1 200px;margin:0;font-size:13px;padding:7px 10px"></select>
-        <button class="btn-sm btn-outline-full" onclick="downloadMonthExcel()" style="margin:0;flex:0 1 auto;color:#0e7490;border-color:#0e7490">📅 Excel báo cáo tháng</button>
+      <div style="padding:10px 12px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><!-- v67: 4 điều khiển 1 hàng (điện thoại tự xuống dòng) -->
+        <button class="btn-sm btn-xs2 btn-outline-full" onclick="copyReport()" style="margin:0;flex:0 1 auto">📋 Gửi Zalo</button>
+        <button class="btn-sm btn-xs2 btn-outline-full" onclick="downloadSummaryExcel()" style="margin:0;flex:0 1 auto;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button>
+        <select id="rep-month" class="form-input form-select" style="flex:0 1 140px;width:auto;margin:0;font-size:12px;padding:5px 8px;border-radius:20px"></select>
+        <button class="btn-sm btn-xs2 btn-outline-full" onclick="downloadMonthExcel()" style="margin:0;flex:0 1 auto;color:#0e7490;border-color:#0e7490">📅 Excel tháng</button>
       </div>
     </div>
   </div>
@@ -1814,7 +1813,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v66';
+const APP_VERSION = '20260926-v67';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
