@@ -1812,7 +1812,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v72';
+const APP_VERSION = '20260927-v73';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5571,8 +5571,8 @@ function contractWarnBeforeTransfer(p, val){
   if(v>0 && paid + val > v + 0.5) return confirm('⚠️ VƯỢT GIÁ TRỊ HỢP ĐỒNG\n\nHợp đồng "'+(c.name||'')+'" giá trị '+fmtVND(v)+'.\nĐã trả '+fmtVND(paid)+' + lần này '+fmtVND(val)+' = '+fmtVND(paid+val)+'.\n\nVẫn chuyển? (nên có phụ lục / hợp đồng bổ sung)');
   return true;
 }
-function _contractCanEdit(c){ return currentRole==='dung' || currentRole==='ketoan' || currentRole==='hien' || !!(currentUser && c.by===currentUser.uid); }
-function _contractCanDelete(c){ return currentRole==='dung' || currentRole==='ketoan' || !!(currentUser && c.by===currentUser.uid); }
+function _contractCanEdit(c){ return !!currentUser; }   // v73 (D 27/09): sổ hợp đồng — ai đã duyệt (Hương, Thắm…) cũng sửa được; có nhật ký sửa
+function _contractCanDelete(c){ return !!currentUser; }   // v73: xoá vào Thùng rác (Dũng khôi phục được)
 function populateContractSelects(){
   const list = contracts.slice().sort((a,b)=>String(a.name||'').localeCompare(String(b.name||'')));
   const opts = '<option value="">— Không —</option>' + list.map(c=>`<option value="${esc(c.id)}">${esc(c.name||'')}${c.partner?' · '+esc(c.partner):''} (${fmtShortMoney(c.value||0)})</option>`).join('');
