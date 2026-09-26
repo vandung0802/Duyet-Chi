@@ -1758,7 +1758,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v44';
+const APP_VERSION = '20260926-v45';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5109,7 +5109,10 @@ function renderAdvLedger(){
         <div style="text-align:right;font-size:14px">${advBalHtml(o.bal)}<div style="font-size:10px;color:var(--text-sub)">${open?'▲ thu gọn':'▼ xem sổ'}</div></div>
       </div>
       ${open ? `<div style="margin-top:6px">${rows||'<div style="font-size:12px;color:var(--text-sub)">Chưa có dòng nào</div>'}</div>` : ''}
-      ${can ? `<div style="margin-top:8px;text-align:right"><button onclick="openTamUngModal('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#f59e0b;color:#fff;border:none">🧾 Kê khoản đã chi / nộp lại</button></div>` : ''}
+      <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+        ${o.bal < -0.5 ? `<button onclick="advMakeTopUp('${esc(n).replace(/'/g,'&#39;')}', ${Math.round(-o.bal)})" style="${_CASH_BTN}background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">➕ Lập phiếu chi bù ${fmtShortMoney(-o.bal)}</button>` : ''}
+        ${can ? `<button onclick="openTamUngModal('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#f59e0b;color:#fff;border:none">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
+      </div>
     </div></div>`; }).join('');
 }
 // ── Khung kê khoản đã chi (THÊM vào sổ; dòng cũ xóa bằng ✕ trong sổ) ──
@@ -5174,6 +5177,16 @@ function saveSettlement(){
   _cardCache.clear(); save(); renderAll(); closeSettleModal(); try{ renderAdvLedger(); }catch(e){}
   showToast('✅ Đã ghi vào sổ tạm ứng');
   sendPushNotif('🧾 Sổ tạm ứng '+_advPerson, by+' kê chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+' · số dư '+fmtVND(after), ['dung','hien','toan','kt']);
+}
+// v45: sổ âm (công ty nợ người tạm ứng) → giảm nợ bằng cách lập phiếu tạm ứng mới ("chi bù"); duyệt + Toàn chuyển xong thì sổ về 0
+function advMakeTopUp(person, amount){
+  showPage('add', document.querySelector('.nav-item'));
+  const ct=document.getElementById('inp-costtype'); if(ct){ ct.value='tamung'; taxWrapToggle(); }
+  const am=document.getElementById('inp-amount'); if(am){ am.value = Number(amount||0).toLocaleString('vi-VN',{maximumFractionDigits:0}); }
+  const ds=document.getElementById('inp-desc'); if(ds && !ds.value) ds.value = 'Chi bù tạm ứng (sổ âm) cho '+person;
+  const ps=document.getElementById('inp-person'); if(ps && currentRole==='dung'){ ps.value = person; }
+  showToast('Đã điền sẵn phiếu tạm ứng chi bù — kiểm tra rồi bấm Gửi đề xuất');
+  try{ window.scrollTo(0,0); }catch(e){}
 }
 function advDeleteItem(pid, idx){
   const p = proposals.find(x=>x.id===pid); if(!p || !p.settlement || !Array.isArray(p.settlement.items) || !p.settlement.items[idx]) return;
@@ -10634,7 +10647,7 @@ function renderCashSummary(){
     ${t.vay>0 ? row('Tiền vay đã nhận', t.vay, {color:'#dc2626', sub:'Vay ngân hàng, vay cá nhân về tài khoản dự án. Xem tab "Vay".'}) : ''}
     ${row('Đã chi ra (thật sự)', -t.daChi, {color:'#b91c1c', sub:'Tổng tiền thủ quỹ ĐÃ chuyển đi theo các phiếu chi + ứng lương (không tính ký quỹ).'})}
     ${t.dangTamUng>0 ? row('Đang tạm ứng (chưa kê chi)', -t.dangTamUng, {color:'#b45309', sub:'Tiền đã ứng cho người đi công trường, chưa kê khoản chi. Kê xong mới thành chi phí. Xem tab "Tạm ứng".'}) : ''}
-    ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#b91c1c', sub:'Người đi công trường đã chi vượt số ứng — chi phí đã tính, tiền chưa chuyển; lập phiếu tạm ứng mới để chi bù. Không trừ vào tài khoản.'}) : ''}
+    ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#b91c1c', sub:'Người đi công trường đã chi vượt số ứng — chi phí đã tính, tiền chưa chuyển. Giảm nợ: tab "Tạm ứng" → nút "Lập phiếu chi bù" (Toàn chuyển xong là hết nợ). Không trừ vào tài khoản.'}) : ''}
     ${t.vay>0 ? row('Đã trả nợ vay (gốc + lãi)', -(t.traGoc+t.laiVay), {color:'#dc2626', sub:`Gốc ${fmtShortMoney(t.traGoc)} · lãi ${fmtShortMoney(t.laiVay)} · còn nợ ${fmtShortMoney(t.noVay)}. Lãi vay tính là chi phí nội nghiệp.`}) : ''}
     ${row('Đang gửi ngoài (ký quỹ / cọc)', -t.dangGuiNgoai, {color:'#b45309', sub:'Tiền cọc, ký quỹ ngân hàng… — chưa mất, sẽ lấy về. Xem tab "Ký quỹ".'})}
     ${line}
