@@ -815,7 +815,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button class="btn-full btn-outline-full" onclick="downloadSummaryExcel()" style="margin-top:4px;flex:1;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button>
       </div>
       <div style="padding:4px 12px 12px;display:flex;gap:8px;align-items:center">
-        <input type="month" id="rep-month" class="form-input" style="flex:1;margin:0;font-size:13px">
+        <select id="rep-month" class="form-input form-select" style="flex:1;margin:0;font-size:13px"></select>
         <button class="btn-full btn-outline-full" onclick="downloadMonthExcel()" style="margin:0;flex:1.4;color:#0e7490;border-color:#0e7490">📅 Excel báo cáo tháng</button>
       </div>
     </div>
@@ -1810,7 +1810,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v55';
+const APP_VERSION = '20260926-v56';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -7748,7 +7748,20 @@ function renderExcelTable(containerId, items, kind){
   attachReportDoubleTap(el);
 }
 
+// v56: danh sách tháng cho báo cáo Excel tháng — các tháng có dữ liệu (chuyển tiền, thu/ký quỹ, kê tạm ứng) + 12 tháng gần đây; mặc định tháng này
+function _fillRepMonths(){
+  const sel = document.getElementById('rep-month'); if(!sel) return;
+  const cur = sel.value; const set = {};
+  const add = m => { if(m && /^\d{4}-\d{2}$/.test(m)) set[m]=1; };
+  (proposals||[]).forEach(p=>{ (p.transfers||[]).forEach(t=>add(ymdLocal(t.ts).slice(0,7))); if(p.settlement) (p.settlement.items||[]).forEach(x=>add((x.date||ymdLocal(x.ts||p.settlement.ts)).slice(0,7))); });
+  (typeof cashflow!=='undefined'?cashflow:[]).forEach(r=>add(String(r.date||'').slice(0,7)));
+  const now = new Date(); for(let i=0;i<12;i++){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
+  const list = Object.keys(set).sort().reverse();
+  sel.innerHTML = list.map(m=>`<option value="${m}">Tháng ${m.slice(5)}/${m.slice(0,4)}</option>`).join('');
+  sel.value = (cur && set[cur]) ? cur : ymdLocal().slice(0,7);
+}
 function renderReportSummary(){
+  try{ _fillRepMonths(); }catch(e){}
   const el = document.getElementById('report-summary-content');
   if(!el) return;
   const fp = getFilteredProposals();
