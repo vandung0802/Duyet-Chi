@@ -431,7 +431,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div class="form-group" id="edit-costtype-wrap">
       <label class="form-label">Loại chi phí</label>
-      <select class="form-input form-select" id="edit-costtype">
+      <select class="form-input form-select" id="edit-costtype" onchange="editTaxToggle()">
         <option value="congtruong">🏗️ Chi phí công trường</option>
         <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
         <option value="noinghiep">📋 Chi phí nội nghiệp</option>
@@ -688,7 +688,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
       <div class="form-group">
         <label class="form-label">Loại chi phí <span class="req">*</span></label>
-        <select class="form-input form-select" id="inp-costtype">
+        <select class="form-input form-select" id="inp-costtype" onchange="taxWrapToggle()">
           <option value="congtruong">🏗️ Chi phí công trường</option>
           <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
           <option value="noinghiep">📋 Chi phí nội nghiệp</option>
@@ -696,7 +696,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <option value="tamung">💼 Tạm ứng (hoàn ứng sau)</option>
           <option value="khac">📦 Khác</option>
         </select>
-        <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chọn <b>đặt cọc / ký quỹ</b> thì khi Toàn chuyển tiền, app tự ghi sang tab Cân đối → Ký quỹ. Chọn <b>tạm ứng</b> thì tiền chưa tính là chi phí — người nhận tiền bấm <b>Hoàn ứng</b> trên phiếu sau khi chi xong.</div>
+        <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chọn <b>đặt cọc / ký quỹ</b> thì khi Toàn chuyển tiền, app tự ghi sang tab Cân đối → Ký quỹ. Chọn <b>tạm ứng</b> thì tiền vào sổ tạm ứng của người nhận, chưa tính là chi phí — chi xong kê từng khoản trong sổ (thuế ghi lúc kê).</div>
       </div>
 
       <div class="form-group" id="inp-contract-wrap" style="display:none">
@@ -704,7 +704,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <select class="form-input form-select" id="inp-contract"><option value="">— Không —</option></select>
         <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chi theo hợp đồng đã ký thì chọn để app cộng dồn "đã trả" và báo khi vượt giá trị. Thêm hợp đồng ở Báo cáo → Hợp đồng.</div>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="inp-tax-wrap">
         <label class="form-label">Chi phí thuế <span class="req">*</span></label>
         <select class="form-input form-select" id="inp-tax">
           <option value="">— Chọn —</option>
@@ -1758,7 +1758,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v43';
+const APP_VERSION = '20260926-v44';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5384,7 +5384,7 @@ function openEditProposal(id){
     if(_ctW && _ct){
       _ctW.style.display = (p.kind==='salary'||p.kind==='kh') ? 'none' : 'block';   // ứng lương không có loại chi phí
       _ct.value = p.costType || 'congtruong';
-      { const _tx=document.getElementById('edit-tax'), _txW=document.getElementById('edit-tax-wrap'); if(_txW) _txW.style.display = _ctW.style.display; if(_tx) _tx.value = p.tax || ''; } // v40
+      { const _tx=document.getElementById('edit-tax'), _txW=document.getElementById('edit-tax-wrap'); if(_txW) _txW.style.display = (p.costType==='tamung') ? 'none' : _ctW.style.display; if(_tx) _tx.value = p.tax || ''; } // v40 (v44: tạm ứng ẩn ô thuế)
       { populateContractSelects(); const _cc=document.getElementById('edit-contract'), _ccW=document.getElementById('edit-contract-wrap'); if(_ccW) _ccW.style.display = (contracts.length && _ctW.style.display!=='none') ? 'block' : 'none'; if(_cc) _cc.value = p.contractId || ''; } // v41
       // v41 (D chốt 25/09): H&L / Dũng đổi được loại chi phí cả sau duyệt (chưa chuyển tiền); người lập chỉ khi chưa duyệt
       const _hasTr = !!(Array.isArray(p.transfers)&&p.transfers.length);
@@ -6114,6 +6114,7 @@ function submitProposal(){
     document.getElementById('inp-desc').value='';
     { const _ct=document.getElementById('inp-costtype'); if(_ct) _ct.value='congtruong'; }
     { const _tx=document.getElementById('inp-tax'); if(_tx) _tx.value=''; }
+    taxWrapToggle();
     { const _cc=document.getElementById('inp-contract'); if(_cc) _cc.value=''; }
     document.getElementById('inp-amount').value='';
     document.getElementById('inp-note').value='';
@@ -6161,6 +6162,18 @@ function populateSelects(){
   ss.innerHTML='<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   if(sites.length===1) ss.value = sites[0];   // v41: chỉ có 1 công trường → chọn sẵn (vẫn đổi được khi có thêm dự án)
   populateContractSelects();
+  taxWrapToggle();
+}
+// v44: Tạm ứng thì KHÔNG chọn thuế ở phiếu (thuế ghi lúc kê từng khoản chi trong sổ tạm ứng) → ẩn ô thuế
+function taxWrapToggle(){
+  const ct = (document.getElementById('inp-costtype')||{}).value, w = document.getElementById('inp-tax-wrap'), tx = document.getElementById('inp-tax');
+  if(!w) return;
+  if(ct==='tamung'){ w.style.display='none'; if(tx) tx.value=''; } else w.style.display='';
+}
+function editTaxToggle(){
+  const ct = (document.getElementById('edit-costtype')||{}).value, w = document.getElementById('edit-tax-wrap'), tx = document.getElementById('edit-tax');
+  if(!w) return;
+  if(ct==='tamung'){ w.style.display='none'; if(tx) tx.value=''; } else w.style.display='';
 }
 
 // ══════════════════════════════════════════
