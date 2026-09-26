@@ -218,7 +218,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* Toast */
-.toast{position:fixed;top:66px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:9px 16px;border-radius:20px;font-size:12px;font-weight:500;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
+.toast{position:fixed;top:66px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:9px 16px;border-radius:20px;font-size:12px;font-weight:500;z-index:100001;opacity:0;transition:opacity .2s;pointer-events:none;white-space:normal;max-width:calc(100vw - 32px);text-align:center;box-sizing:border-box}   /* v62: nổi trên mọi modal, câu dài xuống dòng */
 .toast.show{opacity:1}
 
 /* Image modal */
@@ -246,9 +246,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .report-box{background:var(--gray-light);border-radius:var(--radius);padding:12px;font-size:12px;line-height:1.8;white-space:pre-wrap;color:var(--text);margin-top:10px;min-height:60px}
 
 /* Report sub-tabs */
-.report-subtabs{display:flex;gap:5px;padding:0 4px 10px}
+.report-subtabs{display:flex;flex-wrap:wrap;gap:5px;padding:0 4px 10px}   /* v62: điện thoại xuống dòng, không cắt tab */
 /* v122: nút tab có nền + viền nhẹ để nhìn rõ là NÚT BẤM (trước đây trong suốt trông như chữ) */
-.report-subtab{flex:1;padding:8px 4px;border-radius:10px;font-size:11px;font-weight:700;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;cursor:pointer;white-space:nowrap;transition:filter .15s,box-shadow .15s}
+.report-subtab{flex:1 1 auto;min-width:0;padding:8px 4px;border-radius:10px;font-size:11px;font-weight:700;border:1px solid #e2e8f0;background:#f1f5f9;color:#475569;cursor:pointer;white-space:nowrap;transition:filter .15s,box-shadow .15s}
 .report-subtab:hover{filter:brightness(.97)}
 .report-subtab.active{background:var(--blue-light);color:var(--blue-dark);border-color:#bfdbfe;box-shadow:0 1px 4px rgba(37,99,235,.18)}
 /* Màu nhẹ theo ý nghĩa cho các tab ở trang Báo cáo (data-tab này chỉ có ở Báo cáo) */
@@ -1814,7 +1814,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v61';
+const APP_VERSION = '20260926-v62';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -1923,6 +1923,7 @@ setInterval(function(){
 // (Đã bỏ tự-reload sau 15 phút — thay bằng thanh "Cập nhật phần mềm mới" để người dùng chủ động, không bị gián đoạn)
 // Gọi trạm trung chuyển. Ném lỗi nếu chưa đăng nhập / trạm từ chối → nơi gọi tự quyết bỏ qua hay thử lại.
 async function gbRelay(action, data){
+  if(typeof _viewAs!=='undefined' && _viewAs) throw new Error('Đang xem thử vai — không gọi máy chủ');   // v62
   const u = firebase.auth().currentUser;
   if(!u) throw new Error('Chưa đăng nhập');
   const idToken = await u.getIdToken();
@@ -2568,6 +2569,7 @@ async function cancelOtp(){
 
 // ── ONLINE PRESENCE ──
 function trackOnline(uid, name, role){
+  if(trackOnline._uid===uid) return; trackOnline._uid = uid;   // v62: chỉ chạy 1 lần / tài khoản (trước đây 2-3 setInterval + listener trùng)
   const ref = db.ref('duyetchi/online/'+uid);
   const ROLE_LABEL = {dung:'Dũng',hien:'Hiền/Lan',toan:'Toàn',trang:'Trang',ketoan:'Kế toán',other:'Khác'};
   const displayName = (name && name !== 'undefined') ? name : (ROLE_LABEL[role] || role || 'Ẩn danh');
@@ -2579,6 +2581,7 @@ function trackOnline(uid, name, role){
 }
 
 function listenOnlineUsers(){
+  db.ref('duyetchi/online').off('value');   // v62
   db.ref('duyetchi/online').on('value', snap=>{
     const el = document.getElementById('online-users-list');
     if(!el) return;
@@ -2868,6 +2871,7 @@ function updateNotifSettingsStatus() {
 }
 
 async function sendPushNotif(title, body, targetRoles) {
+  if(typeof _viewAs!=='undefined' && _viewAs) return;   // v62: đang xem thử vai → không gửi thông báo thật
   if(!Array.isArray(targetRoles) || targetRoles.length === 0) return;
   // Dedup: không gửi lại cùng 1 nội dung trong vòng 10 giây
   const key = 'gb_notif_' + btoa(unescape(encodeURIComponent(title + body))).substring(0, 20);
@@ -2946,7 +2950,7 @@ function pushToFirebase(){
 
   // 1) Phần meta gồm người đề xuất, công trình, link Sheets — thường nhỏ và ít đổi, gộp chung 1 node
   const metaNow = JSON.stringify({persons, sites, sheetUrl});
-  if(!lastPushedSnapshot || lastPushedSnapshot.meta !== metaNow){
+  if(currentRole==='dung' && (!lastPushedSnapshot || lastPushedSnapshot.meta !== metaNow)){   // v62: meta chỉ Dũng ghi được — người khác gộp vào là cả gói bị từ chối
     // v167: ghi TỪNG KHÓA thay vì set đè cả nhánh meta — kẻo xoá mất các khóa khác
     // (telegramBotToken/telegramChatId do D thêm tay trong Firebase Console).
     updates['duyetchi/meta/persons'] = persons;
@@ -3187,8 +3191,8 @@ function initFirebaseSync(){
     _tgToken = meta.telegramBotToken || ''; _tgChatId = meta.telegramChatId || ''; // v167: cấu hình bot Telegram (chỉ nằm trong Firebase, không nằm trong file)
     sheetViewUrl = sanitizeViewUrl(meta.sheetViewUrl);   // v41
     { const _iv=document.getElementById('inp-sheet-view'); if(_iv && document.activeElement!==_iv) _iv.value = sheetViewUrl; const _bv=document.getElementById('btn-sheet-view'); if(_bv) _bv.style.display = sheetViewUrl ? '' : 'none'; }
-    if(meta.sheetUrl){
-      sheetUrl = sanitizeSheetUrl(meta.sheetUrl); // v78: chặn URL lạ từ Firebase
+    if(('sheetUrl' in meta) && !(typeof _viewAs!=='undefined' && _viewAs)){   // v62: Dũng xoá link thì máy khác cũng xoá theo; đang xem thử không nạp lại link
+      sheetUrl = sanitizeSheetUrl(meta.sheetUrl||'') || ''; // v78: chặn URL lạ từ Firebase
       localStorage.setItem('gb_sheetUrl', sheetUrl);
       const inp = document.getElementById('inp-sheet-url');
       if(inp) inp.value = sheetUrl;
@@ -3335,6 +3339,7 @@ function initFirebaseSync(){
       _proposalsData = raw || {};
       _proposalsLoaded = true;
       try{ if(window.__BT&&__BT.prop==null)__BT.prop=performance.now(); }catch(e){}
+      _cardCache.clear();   // v62: dữ liệu chéo phiếu (hợp đồng đã trả, sổ tạm ứng, từ chối) đổi từ máy khác → thẻ phải vẽ lại
       _mergeAndRender();
     }, err=>{
       if(err && (err.code==='PERMISSION_DENIED' || /permission/i.test(err.message||''))){
@@ -3414,6 +3419,7 @@ function initFirebaseSync(){
       const raw = snap.val() || {};
       assets = Object.keys(raw).map(k=>({id:k, ...raw[k]}));
       _assetsLoaded = true;
+      _cardCache.clear();   // v62: thẻ phiếu hiện "đã ghi vào Luân chuyển" theo assets
       const pg = document.getElementById('page-plan');
       if(pg && pg.style.display!=='none' && (document.querySelector('#page-plan .report-subtab.active')||{}).dataset && document.querySelector('#page-plan .report-subtab.active').dataset.tab==='rotate') renderAssets();
     }, ()=>{});
@@ -3804,7 +3810,7 @@ function showPage(pg, btn){
   if(pg==='settings') renderSettings();
   if(pg==='plan'){
     const activePlanTab = document.querySelector('#page-plan .report-subtab.active')?.dataset.tab || 'list';
-    if(activePlanTab==='list') renderPlans(); else renderPlanStats();
+    if(activePlanTab==='list') renderPlans(); else if(activePlanTab==='rotate') renderAssets(); else renderPlanStats();   // v62
   }
   if(pg==='luong'){
     const activeLuongTab = document.querySelector('#page-luong .report-subtab.active')?.dataset.tab || 'adv';
@@ -3852,6 +3858,9 @@ function renderAll(){
     // đứng ở tab P.KH sửa công trình phải F5 mới thấy — renderAll trước đây quên tab này)
     const pgK = document.getElementById('page-kh');
     if(pgK && pgK.style.display!=='none'){ try{ renderKhActive(); }catch(e){} }
+    // v62: Cân đối (tổng quan, sổ tạm ứng…) cũng đọc từ proposals → đang mở thì vẽ lại (trước đây đứng im, bấm duyệt lệch dòng)
+    const pgC = document.getElementById('page-cash');
+    if(pgC && pgC.style.display!=='none'){ try{ renderCashActive(); }catch(e){} }
     // v93: banner gửi ảnh Zalo — bọc try/catch để lỗi (nếu có) KHÔNG thể ảnh hưởng luồng render chính
     try{ renderZaloBanners(); }catch(e){}
     // v96: chấm số đỏ trên thanh điều hướng
@@ -4126,7 +4135,7 @@ const _cardCache = new Map();
 function _cardHash(p){
   // v126: thêm desc/person/site vào hash — trước đây SỬA nội dung/người/công trình mà thẻ vẫn hiện
   // bản cũ (cache không biết có thay đổi; lỗi user báo trên phiếu P.KH, nhưng ảnh hưởng mọi loại phiếu)
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.tax||'')+'|'+(p.costType||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0)+'|'+(p.desc||'')+'|'+(p.person||'')+'|'+(p.site||'')+'|'+(p.costType||'')+'|'+(p.advPerson||'')+'|'+(p.advPosition||'')+'|'+(p.editLog?p.editLog.length:0)+'|'+(p.settlement?(p.settlement.ts||1):0)+'|'+(p.invoiceImages?p.invoiceImages.length:0)+'|'+(p.contractId||'')+'|'+(p.review?(p.review.ts||1):0)+'|'+(p.hd||'');   // v41; v59 hd
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.tax||'')+'|'+(p.costType||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0)+'|'+(p.desc||'')+'|'+(p.person||'')+'|'+(p.site||'')+'|'+(p.costType||'')+'|'+(p.advPerson||'')+'|'+(p.advPosition||'')+'|'+(p.editLog?p.editLog.length:0)+'|'+(p.settlement?(p.settlement.ts||1):0)+'|'+(p.invoiceImages?p.invoiceImages.length:0)+'|'+(p.contractId||'')+'|'+(p.review?(p.review.ts||1):0)+'|'+(p.hd||'')+'|'+((p.rejectedByD&&p.rejectedByD.ts)||0)+'|'+((p.rejectedByH&&p.rejectedByH.ts)||0)+'|'+(p.rejectedBy||'');   // v41; v59 hd; v62 từ chối
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -4757,8 +4766,7 @@ function undoApproveFromModal(){
   _cardCache.delete(id);
   renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
-  syncApprovalToSheet(id, field, null);
-  syncApprovalAmountToSheet(p);
+  syncApprovalAmountToSheet(p);   // v62: cột 9/10 do lệnh này ghi đủ lịch sử (bỏ updateApproval thừa)
   renderAll();
   showToast(`↩ Đã bỏ toàn bộ phần duyệt của ${who} — giờ có thể duyệt lại từ đầu`);
 }
@@ -4823,8 +4831,7 @@ function confirmApproveAmount(){
   _cardCache.delete(id);
   renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
-  syncApprovalToSheet(id, field, p[timeField]);
-  syncApprovalAmountToSheet(p);
+  syncApprovalAmountToSheet(p);   // v62: cột 9/10 do lệnh này ghi đủ lịch sử (bỏ updateApproval thừa)
   renderAll();
   closeApproveAmountModal();
   const full = val >= p.amount;
@@ -4857,8 +4864,7 @@ function undoApprove(id, field){
       _cardCache.delete(id);
       renderProposals(); renderStats(); updateNotifBadge();
       syncStatusToSheet(id, p.status);
-      syncApprovalToSheet(id, field, null);
-      syncApprovalAmountToSheet(p);
+      syncApprovalAmountToSheet(p);   // v62: cột 9/10 do lệnh này ghi đủ lịch sử (bỏ updateApproval thừa)
       renderAll();
       showToast(`↩ Đã bỏ phần duyệt của ${who}`);
       return;
@@ -4890,8 +4896,7 @@ function undoApprove(id, field){
   _cardCache.delete(id);
   renderProposals(); renderStats(); updateNotifBadge();
   syncStatusToSheet(id, p.status);
-  syncApprovalToSheet(id, field, p[field] || null);
-  syncApprovalAmountToSheet(p);
+  syncApprovalAmountToSheet(p);   // v62: cột 9/10 do lệnh này ghi đủ lịch sử (bỏ updateApproval thừa)
   renderAll();
   const who = field==='approvedD' ? 'Dũng' : 'H&L';
   showToast(hist.length > 0
@@ -5082,9 +5087,9 @@ function undoReject(id){
 // Dùng để CHẶN người khác sửa/xóa đề xuất của nhau (đặc biệt phòng Kế hoạch — user báo).
 function _isMyProposal(p){
   if(!p) return false;
-  if(p.createdByUid && currentUser && p.createdByUid===currentUser.uid) return true;
+  if(p.createdByUid) return !!(currentUser && p.createdByUid===currentUser.uid);   // v62: đã có uid người lập thì CHỈ so uid (luật máy chủ cũng chỉ nhận uid)
   const me=getCurrentUserName();
-  return !!(me && (p.person===me || p.createdBy===me));
+  return !!(me && (p.person===me || p.createdBy===me));   // phiếu cũ chưa có uid: so tên
 }
 // v41 (D chốt 25/09/2026): SỬA nội dung + XOÁ phiếu = CHỈ NGƯỜI LẬP PHIẾU. Dũng giữ quyền xoá quản trị (KHÔNG nêu trên app — D dặn 26/09)
 // (phiếu đã duyệt/đã chuyển vẫn chỉ Dũng xoá). D/H&L mở khung Sửa chỉ để GHI Ý KIẾN, không đổi nội dung.
@@ -5156,7 +5161,7 @@ function advBalHtml(bal, o){
 }
 // v50: ô duyệt từng món — khoản chi: ô D (khi người khác ứng) + ô H&L (quyết định); tiền nộp lại: ô Toàn xác nhận
 function _advOkCan(e){ return e.kind==='ret' ? (currentRole==='toan'||currentRole==='dung') : (currentRole==='hien'||currentRole==='dung'); }
-function _advDSelf(target){ return !!(target && ((target.createdByRole==='dung' && !target.advPerson) || (currentRole==='dung' && advWho(target)===(currentUserName||'')))); }   // người NHẬN tạm ứng là chính Dũng → không có ô D
+function _advDSelf(target){ return !!(target && ((target.createdByRole==='dung' && (!target.advPerson || advWho(target)===(target.createdBy||''))) || (currentRole==='dung' && advWho(target)===(currentUserName||'')))); }   // người NHẬN tạm ứng là chính Dũng → không có ô D
 function _advBox(lbl, ok, canBtn, onclick, waitTxt){
   if(ok) return `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#dcfce7;color:#047857;white-space:nowrap">✅ ${esc(lbl)}${ok.byName?' '+esc(shortName(ok.byName)||ok.byName):''}</span>`;
   const who = lbl==='D' ? 'Dũng' : lbl==='H&L' ? 'Hiền hoặc Lam' : 'Toàn';
@@ -5244,7 +5249,7 @@ function openTamUngModal(person){
   if(!_settleCan(target)){ showToast('🔒 Chỉ người lập phiếu tạm ứng hoặc Kế toán mới kê được'); return; }
   _advPerson = person;
   const o = advPersons()[person] || {bal:0};
-  document.getElementById('settle-sub').innerHTML = `Sổ tạm ứng <b>${esc(person)}</b> · số dư hiện tại: ${advBalHtml(o.bal)}`;
+  document.getElementById('settle-sub').innerHTML = `Sổ tạm ứng <b>${esc(person)}</b> · số dư hiện tại: ${advBalHtml(o.bal)}${((o.pendChi||0)+(o.pendRet||0))>0 ? ' · đang chờ duyệt '+fmtVND((o.pendChi||0)+(o.pendRet||0))+' → còn '+fmtVND(o.bal-(o.pendChi||0)-(o.pendRet||0)) : ''}`;
   document.getElementById('settle-rows').innerHTML = ''; settleAddRow();
   document.getElementById('settle-ret').value = '';
   _settleImgs = []; settleRenderImgs();   // v49
@@ -5354,24 +5359,25 @@ function _settleRead(){
 function settleRecalc(){
   if(!_advPerson) return;
   const o = advPersons()[_advPerson] || {bal:0}; const {items, returned} = _settleRead();
-  const spent = items.reduce((a,x)=>a+x.amount,0), after = o.bal - spent - returned;
+  const spent = items.reduce((a,x)=>a+x.amount,0), after = o.bal - (o.pendChi||0) - (o.pendRet||0) - spent - returned;   // v62: trừ cả khoản đang chờ duyệt
   document.getElementById('settle-sum').innerHTML = `Kê thêm chi <b>${fmtVND(spent)}</b> · nộp lại <b>${fmtVND(returned)}</b> → sau khi H&L duyệt (nộp lại: Toàn xác nhận) số dư sẽ là: ${advBalHtml(after)}`;
 }
 function settleFillReturn(){
   if(!_advPerson) return;
   const o = advPersons()[_advPerson] || {bal:0}; const {items} = _settleRead();
-  const left = Math.max(0, o.bal - items.reduce((a,x)=>a+x.amount,0));
+  const left = Math.max(0, o.bal - (o.pendChi||0) - (o.pendRet||0) - items.reduce((a,x)=>a+x.amount,0));   // v62
   document.getElementById('settle-ret').value = left ? fmtVND(left).replace(/\s*đ\s*$/,'') : '';
   settleRecalc();
 }
-function saveSettlement(){
+async function saveSettlement(){
   const target = advTargetOf(_advPerson||''); if(!target){ showToast('Không thấy phiếu tạm ứng'); return; }
+  if(_settleImgs.length) await _ensureImagesFor(target);   // v62
   if(!_settleCan(target)){ showToast('🔒 Không có quyền'); return; }
   const {items, returned} = _settleRead();
   if(!items.length && returned<=0){ showToast('⚠️ Kê ít nhất 1 khoản đã chi hoặc số tiền nộp lại'); return; }
   if(items.some(x=>!x.desc || x.amount<=0)){ showToast('⚠️ Mỗi dòng cần có nội dung và số tiền'); return; }
   if(items.some(x=>!x.tax)){ showToast('⚠️ Chọn thuế cho từng khoản (VAT / Không / Không HL)'); return; }
-  const o = advPersons()[_advPerson] || {bal:0}; const spent = items.reduce((a,x)=>a+x.amount,0), after = o.bal - spent - returned;
+  const o = advPersons()[_advPerson] || {bal:0}; const spent = items.reduce((a,x)=>a+x.amount,0), after = o.bal - (o.pendChi||0) - (o.pendRet||0) - spent - returned;   // v62: trừ cả khoản đang chờ duyệt
   if(after < -0.5 && !confirm('Sau khi kê, sổ của '+_advPerson+' sẽ ÂM '+fmtVND(-after)+' (chi vượt số ứng, công ty còn nợ người này). Vẫn lưu?')) return;
   const now = Date.now(), by = getCurrentUserName()||'', d = ymdLocal();
   const st = target.settlement || {items:[]}; const arr = Array.isArray(st.items) ? st.items.slice() : [];
@@ -5383,7 +5389,7 @@ function saveSettlement(){
   logEdit(target, 'kê sổ tạm ứng: chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+(_settleImgs.length?', '+_settleImgs.length+' ảnh chứng từ':''));
   _cardCache.clear(); save(); renderAll(); closeSettleModal(); try{ renderAdvLedger(); }catch(e){} try{ syncAdvToSheet(target); }catch(e){}
   showToast('✅ Đã ghi vào sổ — chờ H&L duyệt'+(returned?' (nộp lại: chờ Toàn xác nhận)':''));
-  sendPushNotif('🧾 Sổ tạm ứng '+_advPerson+' — cần duyệt', by+' kê chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+' · vào Cân đối → Tạm ứng để duyệt', ['dung','hien','toan','kt']);
+  sendPushNotif('🧾 Sổ tạm ứng '+_advPerson+' — cần duyệt', by+' kê chi '+fmtVND(spent)+(returned?', nộp lại '+fmtVND(returned):'')+' · vào Cân đối → Tạm ứng để duyệt', ['dung','hien','toan']);   // v62
 }
 // v45: sổ âm (công ty nợ người tạm ứng) → giảm nợ bằng cách lập phiếu tạm ứng mới ("chi bù"); duyệt + Toàn chuyển xong thì sổ về 0
 function advMakeTopUp(person, amount){
@@ -5419,7 +5425,7 @@ function advApproveItem(pid, idx, who){
   p.settlement = {...p.settlement, ts:Date.now()};
   _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){} try{ syncAdvToSheet(p); }catch(e2){}
   showToast('✅ Đã ghi duyệt');
-  sendPushNotif('✅ '+(getCurrentUserName()||'')+(who==='T'?' xác nhận nộp lại ':' duyệt khoản chi ')+fmtVND(x.amount), (p.person||'')+': '+(x.desc||''), ['dung','hien','toan','kt']);
+  sendPushNotif('✅ '+(getCurrentUserName()||'')+(who==='T'?' xác nhận nộp lại ':' duyệt khoản chi ')+fmtVND(x.amount), (p.person||'')+': '+(x.desc||''), ['dung','hien','toan']);   // v62
 }
 function advApproveAll(person){
   const isD = currentRole==='dung', isH = currentRole==='hien';
@@ -5432,13 +5438,14 @@ function advApproveAll(person){
   list.forEach(p=>{ if(isD && _advDSelf(p)) return; let ch=false; p.settlement.items.forEach(x=>{ if(x.kind!=='ret' && !(isD ? x.okD : x.ok)){ if(isD) x.okD = {...stamp}; else x.ok = {...stamp}; ch=true; } }); if(ch){ p.settlement = {...p.settlement, ts:Date.now()}; logEdit(p, (isD?'D':'H&L')+' duyệt các khoản chi tạm ứng chờ'); try{ syncAdvToSheet(p); }catch(e2){} } });
   _cardCache.clear(); save(); renderAll(); try{ renderAdvLedger(); }catch(e2){}
   showToast('✅ Đã duyệt '+n+' khoản');
-  sendPushNotif('✅ '+(getCurrentUserName()||'')+' duyệt '+n+' khoản chi tạm ứng', person+': tổng '+fmtVND(tot), ['dung','hien','toan','kt']);
+  sendPushNotif('✅ '+(getCurrentUserName()||'')+' duyệt '+n+' khoản chi tạm ứng', person+': tổng '+fmtVND(tot), ['dung','hien','toan']);   // v62
 }
 function advDeleteItem(pid, idx){
   const p = proposals.find(x=>x.id===pid); if(!p || !p.settlement || !Array.isArray(p.settlement.items) || !p.settlement.items[idx]) return;
   if(!_settleCan(p)){ showToast('🔒 Không có quyền'); return; }
   const x = p.settlement.items[idx];
   if(x.ok && currentRole!=='dung'){ showToast('🔒 Khoản đã duyệt — không xóa được'); return; }   // v47
+  if(currentRole!=='dung' && p.settlement.items.slice(idx+1).some(y=>y.ok||y.okD)){ showToast('🔒 Không xóa được khoản đứng TRƯỚC khoản đã duyệt — nhờ Dũng xóa'); return; }   // v62: luật máy chủ khoá từng món đã duyệt theo thứ tự
   if(!confirm('Xóa dòng "'+(x.desc||'')+'" '+fmtVND(x.amount)+' khỏi sổ?')) return;
   p.settlement.items.splice(idx,1); p.settlement.ts = Date.now(); p.settlement.byName = getCurrentUserName()||'';
   logEdit(p, 'xóa dòng sổ tạm ứng: '+(x.desc||'')+' '+fmtVND(x.amount));
@@ -5487,8 +5494,9 @@ function renderKtPanel(){
   const paid = fp.filter(p=>(getTotalTransferred(p)||0) > 0);
   const noInv = fp.filter(invoiceNeeded);
   const done = paid.filter(p=>p.review), noRv = paid.filter(p=>!p.review);
-  const hdCo = paid.filter(p=>p.contractId), hdKhong = paid.filter(p=>!p.contractId && p.hd==='khong'), hdThieu = paid.filter(p=>!p.contractId && p.hd==='thieu'), hdChua = paid.filter(p=>!p.contractId && !p.hd && p.costType!=='tamung');
-  const hdTxt = p => p.contractId ? contractChip(p) : p.hd==='thieu' ? ' <span style="font-size:10px;font-weight:700;color:#b45309">⚠️ HĐ chưa nhập sổ</span>' : p.hd==='khong' ? ' <span style="font-size:10px;color:var(--text-sub)">không HĐ</span>' : '';
+  const hasC = p=>!!contractOf(p);   // v62: hợp đồng đã bị xoá khỏi sổ → coi như thiếu
+  const hdCo = paid.filter(hasC), hdKhong = paid.filter(p=>!hasC(p) && !p.contractId && p.hd==='khong'), hdThieu = paid.filter(p=>!hasC(p) && (p.hd==='thieu' || !!p.contractId)), hdChua = paid.filter(p=>!hasC(p) && !p.contractId && !p.hd && p.costType!=='tamung');
+  const hdTxt = p => hasC(p) ? contractChip(p) : (p.hd==='thieu' || p.contractId) ? ' <span style="font-size:10px;font-weight:700;color:#b45309">⚠️ HĐ chưa nhập sổ</span>' : p.hd==='khong' ? ' <span style="font-size:10px;color:var(--text-sub)">không HĐ</span>' : '';
   const row = (p, extra) => `<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--gray-border);align-items:center">
     <div style="min-width:0;flex:1;font-size:12.5px"><a href="#" onclick="jumpToProposal('${sid(p.id)}');return false" style="color:var(--blue-dark);font-weight:700;text-decoration:none">${esc(p.desc||'')}</a><div style="font-size:10.5px;color:var(--text-sub);line-height:1.5">${esc(p.person||'')} · ${fmtVND(getTotalTransferred(p))}${taxChip(p)}${hdTxt(p)}${extra||''}</div></div>
     <button onclick="openReviewModal('${sid(p.id)}')" style="${_CASH_BTN}white-space:nowrap;${p.review ? 'background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc' : 'background:#fff7ed;color:#c2410c;border:1px solid #fed7aa'}">${p.review ? '✔ Xem / rà lại' : '🔍 Rà soát'}</button></div>`;
@@ -5618,6 +5626,7 @@ async function deleteContract(id){
 // ── SỬA ĐỀ XUẤT (chỉ khi đang Chờ duyệt) ──
 let editingProposalId = null;
 let editingImages = []; // ảnh đang chỉnh sửa tạm thời trong modal Sửa, chỉ ghi vào phiếu thật khi bấm Lưu
+let _editingPidV62 = null;   // v62: phiếu đang mở ở khung Sửa (nạp lại ảnh khi kho ảnh về muộn)
 
 function openEditProposal(id){
   const p = proposals.find(x=>x.id===id);
@@ -5686,6 +5695,8 @@ function openEditProposal(id){
   const existing = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
   editingImages = existing.slice();
   renderEditImgPreview();
+  _editingPidV62 = p.id;
+  if(!_imagesLoaded && !(typeof _imagesData!=='undefined' && _imagesData && _imagesData[p.id])) _ensureImagesFor(p).then(()=>{ const em=document.getElementById('edit-modal'); if(_editingPidV62===p.id && em && em.style.display!=='none'){ editingImages = (Array.isArray(p.imgImages)?p.imgImages:[]).slice(); renderEditImgPreview(); } });   // v62
 
   // v41 (D chốt 25/09): NỘI DUNG chỉ NGƯỜI LẬP PHIẾU sửa. Dũng / H&L mở khung này chỉ ghi ý kiến (+ thuế).
   {
@@ -5839,7 +5850,9 @@ function saveEditProposal(){
   // và thiết bị này bị kẹt đồng bộ. Vẫn cho sửa ý kiến/mức ưu tiên/ảnh (không thuộc phần đóng băng).
   const _frozen = !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
   const _contentChanged = desc !== (p.desc||'') || note !== (p.note||'') || amountRaw !== (p.amount||0) || person !== (p.person||'') || site !== (p.site||'');
-  if(_frozen && _contentChanged){
+  const _apEl = document.getElementById('edit-adv-person');
+  const _apChanged = !!(_apEl && p.costType==='tamung' && (_apEl.value||'').trim() !== (p.advPerson||''));   // v62: người nhận tạm ứng cũng đóng băng sau duyệt
+  if(_frozen && (_contentChanged || _apChanged)){
     showToast('🔒 Phiếu đã được duyệt — không sửa được nội dung/số tiền/người/công trường. Cần người duyệt bỏ duyệt trước, sửa xong duyệt lại.');
     return;
   }
@@ -6208,9 +6221,23 @@ function uploadInvoice(id){
   inp.click();
   showToast('📎 Chọn ảnh hóa đơn (hoặc Ctrl+V dán ảnh)');
 }
-function addInvoiceImages(id, files){
+// v62: mở app trên mạng chậm, kho ảnh chưa tải xong mà đã thêm ảnh / sửa phiếu → trước đây pushToFirebase ghi node ảnh với mảng cũ RỖNG → MẤT ảnh trên máy chủ.
+async function _ensureImagesFor(p){
+  if(!p || _imagesLoaded || (typeof _imagesData!=='undefined' && _imagesData && _imagesData[p.id])) return;
+  try{
+    const snap = await db.ref(_imgNodeFor(p.id)+p.id).get(); const val = snap.exists() ? (snap.val()||{}) : {};
+    if(typeof _imagesData!=='undefined' && _imagesData) _imagesData[p.id] = val;
+    p.imgImages = Array.isArray(val.imgImages) ? val.imgImages : (Array.isArray(p.imgImages)?p.imgImages:[]);
+    p.proofImages = Array.isArray(val.proofImages) ? val.proofImages : (Array.isArray(p.proofImages)?p.proofImages:[]);
+    p.invoiceImages = Array.isArray(val.invoiceImages) ? val.invoiceImages : (Array.isArray(p.invoiceImages)?p.invoiceImages:[]);
+    if(p.imgStamp) _imagesStamps[p.id] = p.imgStamp;
+    _cardCache.delete(p.id);
+  }catch(e){}
+}
+async function addInvoiceImages(id, files){
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(!_isMyProposal(p)){ showToast('🔒 Chỉ người lập phiếu mới đính kèm hóa đơn'); return; }
+  await _ensureImagesFor(p);   // v62
   if(!Array.isArray(p.invoiceImages)) p.invoiceImages = [];
   const validFiles = files.filter(f=>f.type && f.type.startsWith('image/')); if(!validFiles.length) return;
   showToast('⏳ Đang tải ảnh hóa đơn...');
@@ -6240,9 +6267,10 @@ function uploadProof(id){
   inp.click();
 }
 
-function addProofImages(id, files){
+async function addProofImages(id, files){
   const p=proposals.find(x=>x.id===id);
   if(!p) return;
+  await _ensureImagesFor(p);   // v62
   if(!Array.isArray(p.proofImages)) p.proofImages = p.proofB64 ? [p.proofB64] : [];
   const validFiles = files.filter(f=>f.type && f.type.startsWith('image/'));
   if(!validFiles.length) return;
@@ -6253,8 +6281,7 @@ function addProofImages(id, files){
       p.proofImages.push(dataUrl);
       done++;
       if(done===validFiles.length){
-        if(p.status==='approved') p.status='transferred';
-        save();
+        save();   // v62: KHÔNG tự đặt 'đã chuyển' khi đính ảnh CK — trạng thái do SỐ TIỀN đã chuyển quyết định (confirmTransferAmount)
         renderAll();
         showToast(validFiles.length>1 ? `✅ Đã đính kèm ${validFiles.length} ảnh chứng từ` : '✅ Đã đính kèm chứng từ');
       }
@@ -7053,7 +7080,7 @@ function openPlanModal(id){
   document.getElementById('plan-inp-material').value = p ? p.material : '';
   document.getElementById('plan-inp-qty').value = p ? (p.quantity||'') : '';
   document.getElementById('plan-inp-amount').value = (p && p.estimatedAmount) ? Number(p.estimatedAmount).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
-  document.getElementById('plan-inp-date').value = p ? new Date(p.neededDate).toISOString().slice(0,10) : '';
+  document.getElementById('plan-inp-date').value = p ? ymdLocal(p.neededDate) : '';   // v62: toISOString lùi 1 ngày (UTC)
   document.getElementById('plan-inp-assignee').value = p ? (p.assignee||'') : '';
   document.getElementById('plan-inp-note').value = p ? (p.note||'') : '';
   planImages = (p && Array.isArray(p.images)) ? p.images.slice() : [];
@@ -7434,7 +7461,7 @@ async function restoreTrash(kind, id){
   const t = trashItems.find(x=>x.kind===kind && x.id===id), K = TRASH_KIND[kind]; if(!t || !K) return;
   if(!confirm('Khôi phục "'+_trashTitle(t)+'"?')) return;
   try{
-    const rec = Object.assign({}, t.rec||{});
+    const rec = Object.assign({}, t.rec||{}); delete rec.deleteReq;   // v62: đề nghị xoá cũ không đi theo
     if(kind==='proposals'){
       const {imgImages, proofImages, invoiceImages, ...light} = rec;
       const up = {}; up[K.node+id] = light;
@@ -7445,6 +7472,7 @@ async function restoreTrash(kind, id){
       const up = {}; up[K.node+id] = rec; up['duyetchi/trash/'+kind+'/'+id] = null;
       await db.ref().update(up);
     }
+    try{ const pp = {id, ...rec}; if(kind==='proposals'){ if(pp.kind==='salary') syncLuongToSheet(pp); else if(pp.kind!=='kh') syncMainFull(pp, false, true); } else if(kind==='cashflow') syncCashToSheet(pp); else if(kind==='assets') syncAssetToSheet(pp); }catch(e){}   // v62: dòng Sheet đã bị xoá → ghi lại
     showToast('↩️ Đã khôi phục');
   }catch(e){ showToast('❌ Không khôi phục được: '+(e.message||e.code||'')); }
 }
@@ -7458,7 +7486,7 @@ async function purgeTrash(kind, id){
 // ══ v48 XEM THỬ VAI KHÁC (chỉ D; chỉ xem; không ghi máy chủ; tải lại trang là hết) ══
 let _viewAs = null, _viewAsOrig = null;
 function viewAs(role, label){
-  if(!_viewAs){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng'); return; } _viewAsOrig = {role: currentRole, name: currentUserName}; _viewAsInstallGuard(); }
+  if(!_viewAs){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng'); return; } _viewAsOrig = {role: currentRole, name: currentUserName, sheetUrl: sheetUrl}; sheetUrl = ''; _viewAsInstallGuard(); }   // v62: sheetUrl='' → mọi sync*ToSheet tự bỏ qua
   _viewAs = {role, label};
   currentRole = role; currentUserName = label;
   _cardCache.clear(); try{ populateSelects(); }catch(e){} renderAll(); try{ renderSettings(); }catch(e){} try{ updateNavBadges(); }catch(e){}
@@ -7473,7 +7501,8 @@ function viewAsExit(){
   currentRole = _viewAsOrig.role; currentUserName = _viewAsOrig.name; _viewAs = null;
   const b = document.getElementById('viewas-banner'); if(b) b.remove();
   _cardCache.clear(); try{ populateSelects(); }catch(e){} renderAll(); try{ renderSettings(); }catch(e){} try{ updateNavBadges(); }catch(e){}
-  showToast('↩️ Đã về vai Dũng — nên tải lại trang để dữ liệu về đúng máy chủ');
+  showToast('↩️ Đã về vai Dũng — đang tải lại trang…');
+  setTimeout(()=>{ try{ location.reload(); }catch(e){} }, 700);   // v62: thao tác giả còn trong bộ nhớ → tải lại kẻo lần lưu thật kế tiếp đẩy lên máy chủ
 }
 function _viewAsInstallGuard(){   // chặn MỌI lệnh ghi qua db.ref() trong lúc xem thử (set/update/remove/push/transaction, cả .child())
   if(db._viewAsGuarded) return; db._viewAsGuarded = true;
@@ -7545,6 +7574,7 @@ function renderSettings(){
 }
 
 function addPerson(){
+  if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa được danh sách này — nhắn Dũng thêm giúp'); return; }   // v62: luật máy chủ chỉ cho Dũng ghi meta
   const name=document.getElementById('new-person-name').value.trim();
   const role=document.getElementById('new-person-role').value.trim();
   if(!name){ showToast('Vui lòng nhập tên'); return; }
@@ -7553,19 +7583,20 @@ function addPerson(){
   document.getElementById('new-person-name').value='';
   document.getElementById('new-person-role').value='';
 }
-function delPerson(i){ persons.splice(i,1); save(); renderSettings(); }
+function delPerson(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa được danh sách này'); return; } persons.splice(i,1); save(); renderSettings(); }   // v62
 
 function addSite(){
+  if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa được danh sách này — nhắn Dũng thêm giúp'); return; }   // v62
   const s=document.getElementById('new-site').value.trim();
   if(!s){ showToast('Vui lòng nhập tên công trình'); return; }
   sites.push(s); save(); renderSettings(); showToast('Đã thêm: '+s);
   document.getElementById('new-site').value='';
 }
-function delSite(i){ sites.splice(i,1); save(); renderSettings(); }
+function delSite(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa được danh sách này'); return; } sites.splice(i,1); save(); renderSettings(); }   // v62
 
 // ── REPORT SUB-TABS ──
 function setReportTab(tab, btn){
-  document.querySelectorAll('.report-subtab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#page-report .report-subtab').forEach(t=>t.classList.remove('active'));   // v62: chỉ tab của Báo cáo
   btn.classList.add('active');
   ['summary','list','done','pending','rejected','kt','contracts'].forEach(t=>{
     const el = document.getElementById('report-tab-'+t); if(el) el.style.display = (t===tab) ? 'block' : 'none';
@@ -7582,8 +7613,9 @@ function fmtTr(n){
   if(!n) return '—';
   const m = n/1000000;
   if(m < 1) return fmtVND(n); // dưới 1 triệu vẫn hiện nguyên số đồng cho rõ, tránh "0.5 tr" khó đọc
-  if(m >= 1000) return (Math.round(m)/1000).toLocaleString('vi-VN',{maximumFractionDigits:3}) + ' tỷ'; // v58: 22.008 tr → "22,008 tỷ" (D tưởng lỗi)
-  return (Math.round(m*100)/100).toLocaleString('vi-VN',{maximumFractionDigits:2}) + ' tr'; // nbsp để "tr" không rớt dòng riêng trong bảng hẹp; v58: dấu phẩy thập phân kiểu Việt
+  const m2 = Math.round(m*100)/100;   // v62: làm tròn trước rồi mới so mốc 1 tỷ
+  if(m2 >= 1000) return (Math.round(m)/1000).toLocaleString('vi-VN',{maximumFractionDigits:3}) + ' tỷ'; // v58: 22.008 tr → "22,008 tỷ" (D tưởng lỗi)
+  return m2.toLocaleString('vi-VN',{maximumFractionDigits:2}) + ' tr'; // nbsp để "tr" không rớt dòng riêng trong bảng hẹp; v58: dấu phẩy thập phân kiểu Việt
 }
 
 function _renderReportTab(tab){
@@ -8013,18 +8045,18 @@ function generateReport(){
   lines.push(`📊 BÁO CÁO TỔNG HỢP — ${new Date().toLocaleDateString('vi-VN')}`);
   lines.push(`Tổng: ${_exp.length} đề xuất · ${fmtVND(tot)} · Đã chuyển: ${fmtVND(transTotal)}`);
   lines.push('');
-  lines.push(`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản, ${fmt(hasTrans.reduce((a,p)=>a+getTotalTransferred(p),0))}tr):`);
+  lines.push(`💸 ĐÃ CHUYỂN (${hasTrans.length} khoản, ${fmtTr(hasTrans.reduce((a,p)=>a+getTotalTransferred(p),0))}):`);
   lines.push(hasTrans.length ? hasTrans.map(fLine).join('\n') : '(không có)');
   lines.push('');
   lines.push(`✅ ĐÃ DUYỆT, CHƯA CHUYỂN ĐỦ (${appd.length} khoản):`);
   lines.push(appd.length ? appd.map(fLine).join('\n') : '(không có)');
   lines.push('');
-  lines.push(`⏳ CHỜ DUYỆT (${pend.length} khoản, ${fmt(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}tr):`);
+  lines.push(`⏳ CHỜ DUYỆT (${pend.length} khoản, ${fmtTr(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}):`);
   lines.push(pend.length ? pend.map(fLine).join('\n') : '(không có)');
   lines.push('');
   lines.push(`❌ TỪ CHỐI (${rej.length} khoản):`);
   lines.push(rej.length ? rej.map(fLine).join('\n') : '(không có)');
-  if(pend.length) lines.push(`\n⚠️ CẦN XỬ LÝ GẤP: còn ${pend.length} khoản chờ duyệt, tổng ${fmt(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}tr.`);
+  if(pend.length) lines.push(`\n⚠️ CẦN XỬ LÝ GẤP: còn ${pend.length} khoản chờ duyệt, tổng ${fmtTr(pend.reduce((a,p)=>a+(parseFloat(p.amount)||0),0))}.`);
   return lines.join('\n');
 }
 
@@ -8069,8 +8101,8 @@ async function downloadMonthExcel(){
   const rows = [];
   (proposals||[]).forEach(p=>{
     if(p.kind==='kh' || p.status==='rejected') return;
-    (p.transfers||[]).forEach(t=>{ if(!inM(t.ts)) return;
-      rows.push([ymdLocal(t.ts), (p.costType==='tamung'?'[Tạm ứng] ':'')+(p.desc||''), p.person||'', p.site||'', ctName(p.costType), p.costType==='tamung'?'':txName(p.tax), acctLabel(acctOf(t)), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.review?'Có':'Chưa']); });
+    if(p.costType!=='tamung') (p.transfers||[]).forEach(t=>{ if(!inM(t.ts)) return;   // v62: tiền ỨNG chưa phải chi phí — chỉ các khoản KÊ đã duyệt (bên dưới) mới tính, tránh cộng 2 lần
+      rows.push([ymdLocal(t.ts), p.desc||'', p.person||'', p.site||'', p.kind==='salary'?'Ứng lương':ctName(p.costType), p.kind==='salary'?'':txName(p.tax), acctLabel(acctOf(t)), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.kind==='salary'?'—':(p.review?'Có':'Chưa')]); });
     if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || !x.ok || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', hdName(p), +x.amount||0, '', p.review?'Có':'Chưa']); });   // v43
   });
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
@@ -8561,6 +8593,7 @@ async function _tgMakePdf(){
 }
 async function sendTelegramReport(){
   if(_tgSending) return;
+  if(typeof _viewAs!=='undefined' && _viewAs){ showToast('👁 Đang xem thử — không gửi thật'); return; }   // v62
   // v170: chỉ D/H/Trang gửi — kế toán thường KHÔNG đọc được phiếu P.KH (kín 2 chiều),
   // họ gửi thì báo cáo thiếu phần P.KH mà không ai biết
   if(currentRole!=='dung' && currentRole!=='hien' && currentRole!=='toan' && currentRole!=='trang'){ showToast('Chỉ người duyệt hoặc thủ quỹ gửi được báo cáo này'); return; }
@@ -8575,7 +8608,7 @@ async function sendTelegramReport(){
     const sumCon=d.chua.reduce((s,r)=>s+r.m2,0), sumDa=d.da.reduce((s,r)=>s+r.m1,0);
     const fd=new FormData();
     fd.append('chat_id', String(_tgChatId));
-    fd.append('document', blob, 'BaoCao-DuyetChi-'+now.toISOString().slice(0,10)+'.pdf');
+    fd.append('document', blob, 'BaoCao-DuyetChi-'+ymdLocal(now)+'.pdf');   // v62
     fd.append('caption', '📊 Báo cáo Duyệt chi '+dstr+'\n⏳ Chưa chuyển: '+d.chua.length+' khoản · còn '+fmtVND(sumCon)+'\n✅ Đã chuyển 5 ngày: '+d.da.length+' khoản · '+fmtVND(sumDa));
     showToast('⏳ Đang gửi sang Telegram...');
     const r=await fetch('https://api.telegram.org/bot'+_tgToken+'/sendDocument',{method:'POST',body:fd});
@@ -8731,13 +8764,13 @@ function doGet(e){
       for(var twi=0;twi<TW.length;twi++){ if(TW[twi]>0) ts_.setColumnWidth(twi+1,TW[twi]); }
     }
     var pid=String(e.parameter.pid||'');
-    var tv=ts_.getDataRange().getValues();
-    for(var ti=tv.length-1;ti>=1;ti--){ if(String(tv[ti][12])===pid) ts_.deleteRow(ti+1); }
+    if(String(e.parameter.first||'1')!=='0'){ var tv=ts_.getDataRange().getValues(); for(var ti=tv.length-1;ti>=1;ti--){ if(String(tv[ti][12])===pid) ts_.deleteRow(ti+1); } }   // v62: lô đầu mới xoá dòng cũ
     if(act==='advSync'){
       var rows_=[]; try{ rows_=JSON.parse(e.parameter.rows||'[]'); }catch(er){ rows_=[]; }
       var out=[]; rows_.forEach(function(r){ out.push(['', "'"+String(r.id||''), r.date||'', r.who||'', r.pos||'', r.loai||'', r.desc||'', num_(r.amount)*(String(r.sign)==='-1'?-1:1), r.tax||'', r.ok||'', r.by||'', r.by2||'', pid, now]); });
       if(out.length) ts_.getRange(ts_.getLastRow()+1,1,out.length,14).setValues(out);
     }
+    if(String(e.parameter.last||'1')==='0') return ContentService.createTextOutput('ok');   // v62: chưa phải lô cuối → chờ
     var tlr=ts_.getLastRow();
     if(tlr>=3) ts_.getRange(2,1,tlr-1,14).sort([{column:4,ascending:true},{column:3,ascending:true}]);
     if(tlr>=2){ var s5=[]; for(var k5=1;k5<=tlr-1;k5++) s5.push([k5]); ts_.getRange(2,1,tlr-1,1).setValues(s5); ts_.getRange(2,8,tlr-1,1).setNumberFormat('#,##0" đ"'); ts_.getRange(2,1,tlr-1,1).setHorizontalAlignment('center'); }
@@ -9987,8 +10020,13 @@ function syncAdvToSheet(p){
   if(st) (st.items||[]).forEach((x,i)=>{ const ret = x.kind==='ret';
     rows.push({id:p.id+'_i'+i, date:x.date||ymdLocal(x.ts||st.ts), who, pos, loai: ret?'Nộp lại':'Chi đã kê', desc:x.desc||'', amount:+x.amount||0, sign:-1, tax: ret?'':((TAX_TYPES[x.tax]||{}).label||''),
       ok: ret ? (x.ok ? '✅ Toàn '+(shortName(x.ok.byName||'')||'') : '⏳ chờ Toàn') : ((x.okD ? '✅ D' : '⏳ D')+' · '+(x.ok ? '✅ H&L '+(shortName(x.ok.byName||'')||'') : '⏳ H&L')), by:x.by||st.byName||'', by2}); });
-  const params = new URLSearchParams({action:'advSync', pid:p.id, rows: JSON.stringify(rows)});
-  var sc=document.createElement('script'); sc.src = sheetUrl+'?'+params.toString(); document.head.appendChild(sc); setTimeout(()=>sc.remove(), 4000);
+  const CH = 8, chunks = []; for(let i=0;i<rows.length;i+=CH) chunks.push(rows.slice(i,i+CH)); if(!chunks.length) chunks.push([]);   // v62: từng lô 8 dòng; lô đầu xoá dòng cũ, lô cuối mới sắp xếp + tính số dư (Apps Script v7)
+  const send = i => { if(i>=chunks.length) return;
+    const params = new URLSearchParams({action:'advSync', pid:p.id, first: i===0?'1':'0', last: i===chunks.length-1?'1':'0', rows: JSON.stringify(chunks[i])});
+    var sc=document.createElement('script'); sc.src = sheetUrl+'?'+params.toString();
+    sc.onload = sc.onerror = ()=>{ try{ sc.remove(); }catch(e){} send(i+1); };
+    document.head.appendChild(sc); setTimeout(()=>{ try{ sc.remove(); }catch(e){} }, 20000); };
+  send(0);
 }
 function syncAdvDeleteToSheet(pid){
   if(!sheetUrl) return;
@@ -10042,6 +10080,7 @@ async function autoAddDepositFromProposal(p, amount){
   if(cashflow.some(r => r.id === id)) return;   // đã ghi rồi thì thôi
   const rec = {
     type: 'dep', amount: amt,
+    acct: acctOf((p.transfers||[])[n-1]),   // v62: trừ đúng tài khoản vừa chuyển (trước đây luôn trừ TK công ty)
     desc: p.desc || 'Ký quỹ / cọc',
     holder: p.person || '',
     date: ymdLocal(),
@@ -11066,8 +11105,8 @@ function cashTotals(){
   });
 
   Object.values(advAcc).forEach(v=>{ if(v>0) dangTamUng += v; else noTamUng += -v; });   // v43: dương = còn giữ tiền ứng; âm = công ty nợ (chưa trừ tài khoản)
-  const tienTrongTk = thu - daChi - dangGuiNgoai - traLai - dangTamUng + vay - traGoc - laiVay;
-  const conDuocTieu = tienTrongTk - daDuyetChuaChuyen;
+  const tienTrongTk = thu - daChi - dangGuiNgoai - traLai - dangTamUng + noTamUng + vay - traGoc - laiVay;   // v62: phần chi VƯỢT ứng đã nằm trong daChi nhưng tiền CHƯA ra khỏi tài khoản → cộng lại cho khớp ngân hàng (= TK cty + TK quỹ)
+  const conDuocTieu = tienTrongTk - daDuyetChuaChuyen - noTamUng;   // còn nợ người tạm ứng = tiền đã hứa chi
   return {thu, thuBySrc, traLai, traLaiBySrc, daChi, dangGuiNgoai, kyQuyDaChi, kyQuyDaVe,
           vay, traGoc, laiVay, noVay, dangTamUng, noTamUng, hoanUngChi, byAcct,
           tienTrongTk, daDuyetChuaChuyen, conDuocTieu};
@@ -11122,12 +11161,13 @@ function renderCashSummary(){
     ${t.vay>0 ? row('Tiền vay đã nhận', t.vay, {color:'#dc2626', sub:'Vay ngân hàng, vay cá nhân về tài khoản dự án. Xem tab "Vay".'}) : ''}
     ${row('Đã chi ra (thật sự)', -t.daChi, {color:'#b91c1c', sub:'Tổng tiền thủ quỹ ĐÃ chuyển đi theo các phiếu chi + ứng lương (không tính ký quỹ).'})}
     ${t.dangTamUng>0 ? row('Đang tạm ứng (chưa kê chi)', -t.dangTamUng, {color:'#b45309', sub:'Tiền đã ứng cho người đi công trường, chưa kê khoản chi. Kê xong mới thành chi phí. Xem tab "Tạm ứng".'}) : ''}
-    ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#b91c1c', sub:'Người đi công trường đã chi vượt số ứng — chi phí đã tính, tiền chưa chuyển. Giảm nợ: tab "Tạm ứng" → nút "Lập phiếu chi bù" (Toàn chuyển xong là hết nợ). Không trừ vào tài khoản.'}) : ''}
+    ${t.noTamUng>0 ? row('Chi vượt ứng, tiền vẫn trong tài khoản', t.noTamUng, {color:'#b45309', sub:'Người đi công trường đã chi vượt số ứng: chi phí đã tính vào "Đã chi ra" nhưng tiền CHƯA ra khỏi tài khoản (công ty còn nợ họ) — cộng lại để khớp ngân hàng.'}) : ''}
     ${t.vay>0 ? row('Đã trả nợ vay (gốc + lãi)', -(t.traGoc+t.laiVay), {color:'#dc2626', sub:`Gốc ${fmtShortMoney(t.traGoc)} · lãi ${fmtShortMoney(t.laiVay)} · còn nợ ${fmtShortMoney(t.noVay)}. Lãi vay tính là chi phí nội nghiệp.`}) : ''}
     ${row('Đang gửi ngoài (ký quỹ / cọc)', -t.dangGuiNgoai, {color:'#b45309', sub:'Tiền cọc, ký quỹ ngân hàng… — chưa mất, sẽ lấy về. Xem tab "Ký quỹ".'})}
     ${line}
     ${row('= TIỀN TRONG TÀI KHOẢN', t.tienTrongTk, {big:true, color:'var(--blue-dark)', sub:`<b style="color:${CASH_ACCT.cty.color}">TK công ty</b> ${fmtShortMoney(t.byAcct.cty)} · <b style="color:${CASH_ACCT.quy.color}">TK quỹ (Toàn)</b> ${fmtShortMoney(t.byAcct.quy)}. Phải khớp số dư ngân hàng thật, Toàn đối chiếu ở tab "Sổ quỹ".`})}
     ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, {color:'#b91c1c', sub:'Tiền đã hứa chi nhưng thủ quỹ chưa chuyển — coi như không còn để tiêu.'})}
+    ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#b91c1c', sub:'Giảm nợ: tab "Tạm ứng" → nút "Lập phiếu chi bù" (Toàn chuyển xong là hết nợ).'}) : ''}
     ${line}
     ${row('= CÒN ĐƯỢC TIÊU', t.conDuocTieu, {big:true, color: t.conDuocTieu<0 ? '#b91c1c' : '#047857', sub:'Số tiền còn duyệt chi thêm được mà quỹ không bị âm. Phiếu chưa duyệt không tính vào đây.'})}
     ${t.conDuocTieu<0 ? '<div style="margin-top:8px;padding:8px 10px;background:#fef2f2;border-left:3px solid #dc2626;border-radius:6px;font-size:12px;color:#991b1b;font-weight:700">⚠️ Quỹ đang âm — đã duyệt chi nhiều hơn tiền có</div>' : ''}
@@ -11157,6 +11197,7 @@ function renderCashChart(){
     if(p.status==='rejected' || p.kind==='kh') return;
     if(p.costType==='kyquy') return;   // đã tính qua khoản 'dep' ở trên
     (p.transfers||[]).forEach(t=>{ const m = mOf(t.ts); if(m) touch(m).out += parseFloat(t.amount)||0; });
+    if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ if(x.kind!=='ret' || !x.ok) return; const mm = x.date ? String(x.date).slice(0,7) : mOf(x.ts||p.settlement.ts); if(mm) touch(mm).in += parseFloat(x.amount)||0; });   // v62: nộp lại (Toàn đã xác nhận) = tiền vào
   });
 
   const months = Object.keys(byMonth).sort();
