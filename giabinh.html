@@ -1815,7 +1815,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v76';
+const APP_VERSION = '20260927-v77';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5603,6 +5603,7 @@ function contractStageProposal(cid, sid){   // nút "Lập phiếu chi" trên đ
   try{ populateContractSelects(); }catch(e){}
   const ds=document.getElementById('inp-desc'); if(ds) ds.value = (c.name||'')+' — '+(st.name||'');
   const am=document.getElementById('inp-amount'); if(am) am.value = Number(st.amount||0).toLocaleString('vi-VN',{maximumFractionDigits:0});
+  const nt=document.getElementById('inp-note'); if(nt) nt.value = 'Lập từ hợp đồng: '+(c.name||'')+' — '+(st.name||'')+(st.cond?' ('+st.cond+')':'')+(c.partner?' · đối tác: '+c.partner:'')+(st.amount?' · theo đợt '+fmtVND(st.amount):'');   // v77 (D): ghi chú nêu rõ phiếu lập từ hợp đồng
   const cc=document.getElementById('inp-contract'); if(cc){ cc.value = cid; const w=document.getElementById('inp-contract-wrap'); if(w) w.style.display='block'; }
   const ct=document.getElementById('inp-costtype'); if(ct && ct.value==='tamung'){ ct.value='congtruong'; try{ taxWrapToggle(); }catch(e){} }
   _ctStageHint();
