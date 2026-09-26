@@ -1811,7 +1811,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v70';
+const APP_VERSION = '20260927-v71';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5583,7 +5583,7 @@ function renderContracts(){
   const list = contracts.slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
   const tot = list.reduce((a,c)=>a+(parseFloat(c.value)||0),0), paidAll = list.reduce((a,c)=>a+contractPaid(c.id),0);
   el.innerHTML = `<div style="padding:10px 12px">
-    <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Sổ theo dõi <b>hợp đồng đã ký</b> (mua vật tư, thuê máy, thầu phụ…). Phiếu chi chọn "Thuộc hợp đồng" thì app tự cộng <b>đã trả</b> và báo khi vượt giá trị. Hợp đồng đứng tên Công ty 134.</div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Sổ theo dõi <b>hợp đồng đã ký</b> (mua vật tư, thuê máy, thầu phụ…). Phiếu chi chọn "Thuộc hợp đồng" thì app tự cộng <b>đã trả</b> và báo khi vượt giá trị.</div>
     <button onclick="openContractModal()" class="btn-sm btn-primary-full">➕ Thêm hợp đồng</button>
     ${list.length ? `<div style="font-size:12px;color:var(--text);margin:10px 0 4px"><b>${list.length}</b> hợp đồng · tổng giá trị <b>${fmtVND(tot)}</b> · đã trả <b>${fmtVND(paidAll)}</b></div>` : '<div style="font-size:12px;color:var(--text-sub);text-align:center;padding:14px 0">Chưa có hợp đồng nào</div>'}
     ${list.map(c=>{ const v = parseFloat(c.value)||0, paid = contractPaid(c.id), pct = v>0 ? Math.min(100, Math.round(paid/v*100)) : 0, over = v>0 && paid > v+0.5, K = CONTRACT_KIND[c.kind]||CONTRACT_KIND.khac;
