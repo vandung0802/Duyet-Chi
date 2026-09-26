@@ -464,8 +464,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div class="form-group" id="edit-adv-wrap" style="display:none">
       <label class="form-label">Người nhận tạm ứng <span class="req">*</span></label>
-      <input class="form-input" id="edit-adv-person" list="adv-person-list" type="text" placeholder="Tên người cầm tiền ứng" autocomplete="off" oninput="_advAutoPos('edit-adv-person','edit-adv-position')">
-      <input class="form-input" id="edit-adv-position" list="adv-position-list" type="text" placeholder="Chức vụ / công việc" autocomplete="off" style="margin-top:6px">
+      <div style="display:flex;gap:6px">
+        <input class="form-input" id="edit-adv-person" list="adv-person-list" type="text" placeholder="Tên người cầm tiền ứng" autocomplete="off" oninput="_advAutoPos('edit-adv-person','edit-adv-position')" style="flex:3;min-width:0">
+        <input class="form-input" id="edit-adv-position" list="adv-position-list" type="text" placeholder="Chức vụ" autocomplete="off" style="flex:2;min-width:0">
+      </div>
     </div>
     <div class="form-group" id="edit-contract-wrap" style="display:none">
       <label class="form-label">Thuộc hợp đồng</label>
@@ -718,9 +720,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
       <div class="form-group" id="inp-adv-wrap" style="display:none">
         <label class="form-label">Người nhận tạm ứng <span class="req">*</span></label>
-        <input class="form-input" id="inp-adv-person" list="adv-person-list" type="text" placeholder="Gõ tên người sẽ cầm tiền ứng (VD: Trần Văn Hòa)" autocomplete="off" oninput="_advAutoPos('inp-adv-person','inp-adv-position')">
+        <div style="display:flex;gap:6px">
+          <input class="form-input" id="inp-adv-person" list="adv-person-list" type="text" placeholder="Tên người cầm tiền" autocomplete="off" oninput="_advAutoPos('inp-adv-person','inp-adv-position')" style="flex:3;min-width:0">
+          <input class="form-input" id="inp-adv-position" list="adv-position-list" type="text" placeholder="Chức vụ" autocomplete="off" style="flex:2;min-width:0">
+        </div>
         <datalist id="adv-person-list"></datalist>
-        <input class="form-input" id="inp-adv-position" list="adv-position-list" type="text" placeholder="Chức vụ / công việc (VD: Thợ sắt, Đội trưởng, Lái máy)" autocomplete="off" style="margin-top:6px">
         <datalist id="adv-position-list"></datalist>
         <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Người đề xuất ở trên = người lập phiếu hộ. Sổ tạm ứng ghi theo <b>người nhận tiền</b>. Tên và chức vụ gõ một lần, app nhớ cho lần sau.</div>
       </div>
@@ -1810,7 +1814,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v59';
+const APP_VERSION = '20260926-v60';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
