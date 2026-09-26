@@ -109,6 +109,7 @@
           "createdByRole": { ".validate": "!newData.isString() || newData.val().length <= 20" },
           "advPosition": { ".validate": "!newData.isString() || newData.val().length <= 200" },
           "review":     { ".validate": "root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'ketoan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'" },
+          "hd":         { ".validate": "(newData.val() === data.val() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'ketoan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && newData.isString() && (newData.val() === 'khong' || newData.val() === 'thieu')" },
           // v41: HOÀN ỨNG (phiếu tạm ứng) = người lập / Kế toán / Dũng; v47: + H&L (duyệt khoản chi) + Toàn (xác nhận nộp lại)
           "settlement": { ".validate": "newData.parent().child('createdByUid').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'ketoan' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'toan'" },
           // v41: NGƯỜI LẬP PHIẾU — ghi lúc tạo = chính mình, sau đó bất biến (Dũng sửa được cho phiếu cũ)
