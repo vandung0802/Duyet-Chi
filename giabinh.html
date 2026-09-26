@@ -196,6 +196,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .btn-primary-full{background:var(--blue);color:#fff}
 .btn-success-full{background:var(--green);color:#fff}
 .btn-outline-full{background:#fff;color:var(--text);border:1.5px solid var(--gray-border);margin-top:8px}
+/* v66 (D 26/09): nút hành động ở trang = nút nhỏ cỡ nút tên người dùng trên đầu app; !important để thắng style inline cũ (font-size/padding/width) */
+.btn-sm{width:auto!important;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 14px!important;font-size:13px!important;font-weight:700;border-radius:20px!important;cursor:pointer;line-height:1.25;white-space:nowrap;vertical-align:middle}
+.btn-sm.btn-outline-full{margin-top:0}
 
 /* Upload */
 /* display:block BẮT BUỘC: .upload-zone là thẻ <label>, mặc định inline nên khung
@@ -662,7 +665,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 
   <!-- v142: nút Thêm mới đưa vào trong tab (bỏ nút Thêm mới ở thanh dưới) -->
-  <button class="btn-full btn-primary-full" onclick="showPage('add', document.getElementById('nav-home'))" style="margin-bottom:8px">➕ Thêm phiếu chi mới</button>
+  <button class="btn-sm btn-primary-full" onclick="showPage('add', document.getElementById('nav-home'))" style="margin-bottom:8px">➕ Thêm phiếu chi mới</button>
   <div style="position:relative;margin-bottom:8px">
     <input id="search-input" type="text" name="dc-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm kiếm đề xuất..." oninput="renderProposals()" style="width:100%;padding:9px 12px 9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit">
   </div>
@@ -815,12 +818,12 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-body" style="padding:0">
       <div id="report-summary-content" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
       <div style="padding:12px 12px 4px;display:flex;gap:8px">
-        <button class="btn-full btn-outline-full" onclick="copyReport()" style="margin-top:4px;flex:1">📋 Sao chép gửi Zalo</button>
-        <button class="btn-full btn-outline-full" onclick="downloadSummaryExcel()" style="margin-top:4px;flex:1;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button>
+        <button class="btn-sm btn-outline-full" onclick="copyReport()" style="margin-top:4px;flex:0 1 auto">📋 Sao chép gửi Zalo</button>
+        <button class="btn-sm btn-outline-full" onclick="downloadSummaryExcel()" style="margin-top:4px;flex:0 1 auto;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button>
       </div>
       <div style="padding:4px 12px 12px;display:flex;gap:8px;align-items:center">
-        <select id="rep-month" class="form-input form-select" style="flex:1;margin:0;font-size:13px"></select>
-        <button class="btn-full btn-outline-full" onclick="downloadMonthExcel()" style="margin:0;flex:1.4;color:#0e7490;border-color:#0e7490">📅 Excel báo cáo tháng</button>
+        <select id="rep-month" class="form-input form-select" style="flex:0 1 200px;margin:0;font-size:13px;padding:7px 10px"></select>
+        <button class="btn-sm btn-outline-full" onclick="downloadMonthExcel()" style="margin:0;flex:0 1 auto;color:#0e7490;border-color:#0e7490">📅 Excel báo cáo tháng</button>
       </div>
     </div>
   </div>
@@ -945,7 +948,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
             <option value="">-- Chọn tên của bạn --</option>
           </select>
           <div id="update-role-msg" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
-          <button onclick="doUpdateRole()" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">Cập nhật</button>
+          <button onclick="doUpdateRole()" class="btn-sm btn-primary-full">Cập nhật</button>
         </div>
       </details>
       <div style="border-top:1px solid var(--gray-border);padding-top:12px;margin-top:4px">
@@ -954,7 +957,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <input type="password" id="chpw-new" class="form-input" placeholder="Mật khẩu mới (tối thiểu 6 ký tự)" style="margin-bottom:8px;font-size:14px">
         <input type="password" id="chpw-confirm" class="form-input" placeholder="Nhập lại mật khẩu mới" style="margin-bottom:8px;font-size:14px">
         <div id="chpw-msg" style="font-size:12px;min-height:16px;margin-bottom:8px"></div>
-        <button onclick="doChangePassword()" class="btn-full btn-primary-full" style="font-size:14px;padding:10px">Đổi mật khẩu</button>
+        <button onclick="doChangePassword()" class="btn-sm btn-primary-full">🔑 Đổi mật khẩu</button>
       </div>
     </div>
   </div>
@@ -966,7 +969,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <p style="font-size:13px;color:var(--text-sub);margin-bottom:10px">Nhận thông báo khi có phiếu mới được duyệt hoặc chuyển tiền. Yêu cầu: mở app từ biểu tượng SQ (Sổ Quỹ) ngoài màn hình (không phải Safari).</p>
       <div id="notif-status-text" style="font-size:13px;margin-bottom:10px;font-weight:600">Đang kiểm tra...</div>
       <div id="notif-debug" style="font-size:11px;color:#64748b;margin-bottom:10px;line-height:1.6"></div>
-      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-full btn-primary-full" style="font-size:14px;padding:10px;margin-bottom:8px">🔔 Bật thông báo</button>
+      <button onclick="enableNotifications()" id="btn-enable-notif" class="btn-sm btn-primary-full" style="margin-bottom:8px">🔔 Bật thông báo</button>
       <button onclick="updateNotifSettingsStatus()" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569">🔄 Kiểm tra lại trạng thái</button>
       <button onclick="fcmRegister(currentRole).then(updateNotifSettingsStatus)" style="width:100%;padding:8px;font-size:13px;background:#f1f5f9;border:1px solid #cbd5e1;border-radius:8px;color:#475569;margin-top:6px">📡 Đăng ký FCM thủ công</button>
     </div>
@@ -1026,11 +1029,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         </div>
       </div>
       <input class="form-input" id="inp-sheet-url" type="url" placeholder="https://script.google.com/macros/s/..." style="font-size:12px;margin-bottom:8px">
-      <button class="btn-full btn-primary-full" onclick="saveSheet()">Lưu &amp; Kiểm tra kết nối</button>
+      <button class="btn-sm btn-primary-full" onclick="saveSheet()">Lưu &amp; Kiểm tra kết nối</button>
       <div style="margin-top:12px;padding-top:10px;border-top:1px dashed var(--gray-border)">
         <div class="step-title" style="font-size:13px">Link bảng tính (để mọi người bấm "Mở bảng tính Google" ở Báo cáo)</div>
         <input class="form-input" id="inp-sheet-view" type="url" placeholder="https://docs.google.com/spreadsheets/d/..." style="font-size:12px;margin:6px 0 8px">
-        <button class="btn-full btn-outline-full" onclick="saveSheetView()">Lưu link bảng tính</button>
+        <button class="btn-sm btn-outline-full" onclick="saveSheetView()">Lưu link bảng tính</button>
       </div>
     </div>
   </div>
@@ -1075,7 +1078,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Đăng xuất — dời từ thanh dưới vào đây để nhường chỗ cho nút Kế hoạch -->
   <div class="card">
     <div class="card-body">
-      <button class="btn-full btn-outline-full" style="color:var(--red);border-color:var(--red)" onclick="logoutRole()">🚪 Thoát / Đăng xuất</button>
+      <button class="btn-sm btn-outline-full" style="color:var(--red);border-color:var(--red)" onclick="logoutRole()">🚪 Thoát / Đăng xuất</button>
     </div>
   </div>
 
@@ -1101,7 +1104,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
         <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Ghi trước nhu cầu vật tư sắp tới cho từng công trình (bê tông, thép, cát...) để chủ động chuẩn bị — đây chỉ là kế hoạch nhắc nhở, KHÔNG phải đề xuất chi tiền. Máy móc, thiết bị của PVA / 134 / thuê ngoài đưa đến công trường thì ghi ở tab <b>Luân chuyển</b>.</p>
-        <button class="btn-full btn-primary-full" onclick="openPlanModal()" style="margin-bottom:10px">➕ Thêm đề xuất vật tư</button>
+        <button class="btn-sm btn-primary-full" onclick="openPlanModal()" style="margin-bottom:10px">➕ Thêm đề xuất vật tư</button>
         <!-- v141: bộ lọc 2 ô Người phụ trách + Công trình (giống tab P.KH) -->
         <div style="display:flex;gap:6px">
           <select id="plan-filter-person" onchange="renderPlans()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
@@ -1133,7 +1136,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card">
       <div class="card-body" style="padding:12px">
         <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Ghi lại <b>vật tư, thiết bị</b> mà PVA, 134, đơn vị khác <b>chuyển đến công trường</b>, đồ <b>dự án mua</b> bằng tiền chung, hay <b>thuê ngoài</b> (có hạn trả) — để biết của ai, còn ở công trường bao nhiêu, đã giảm bao nhiêu (thu hồi / chuyển đi / hỏng / mất). Chỉ là sổ theo dõi, không tính tiền.<br>💡 Mua thiết bị bằng tiền dự án: sau khi Toàn chuyển tiền, bấm <b>"Ghi vào Luân chuyển"</b> ngay trên phiếu chi, không cần gõ lại.</div>
-        <button onclick="openAssetModal()" class="btn-full btn-primary-full" style="font-size:15px;padding:12px">➕ Ghi vật tư / thiết bị chuyển đến</button>
+        <button onclick="openAssetModal()" class="btn-sm btn-primary-full">➕ Ghi vật tư / thiết bị chuyển đến</button>
         <div style="display:flex;gap:6px;margin-top:10px">
           <select id="rot-filter-from" onchange="renderAssets()" style="flex:1;min-width:0;padding:8px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
             <option value="">🏢 Tất cả đơn vị</option>
@@ -1271,7 +1274,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="cash-tab-loan" style="display:none">
     <div class="card"><div class="card-body" style="padding:12px">
       <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Tiền <b>vay ngân hàng, vay cá nhân</b> về tài khoản dự án và các lần <b>trả nợ</b> (tách gốc, lãi). Thủ quỹ (Toàn) ghi. Lãi vay tính là chi phí nội nghiệp. Sắp đến hạn trả thì nút Cân đối có chấm đỏ.</div>
-      <button onclick="openLoanModal()" class="btn-full btn-primary-full" style="font-size:15px;padding:12px">➕ Ghi khoản VAY</button>
+      <button onclick="openLoanModal()" class="btn-sm btn-primary-full">➕ Ghi khoản VAY</button>
     </div></div>
     <div id="cash-loan-list"></div>
   </div>
@@ -1345,8 +1348,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <button id="sal-view-card" onclick="salSetView('card')" style="padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer">🗂 Thẻ</button>
           <button id="sal-view-table" onclick="salSetView('table')" style="padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer">📊 Bảng</button>
         </div>
-        <button class="btn-full btn-primary-full" onclick="openAdvModal()">➕ Đề xuất ứng lương</button>
-        <button class="btn-full" onclick="openLuongExcelPick()" style="margin-top:8px;background:#0f766e;color:#fff;border:none;font-weight:800">📥 Nhập nhiều từ Excel</button>
+        <button class="btn-sm btn-primary-full" onclick="openAdvModal()">➕ Đề xuất ứng lương</button>
+        <button class="btn-sm" onclick="openLuongExcelPick()" style="margin-left:6px;background:#0f766e;color:#fff;border:none;font-weight:800">📥 Nhập nhiều từ Excel</button>
         <input id="luong-excel-file" type="file" accept=".xlsx,.xls" style="display:none" onchange="onLuongExcelFile(event)">
       </div>
     </div>
@@ -1364,7 +1367,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <button id="emp-sort-az" onclick="setEmpSort('az')" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer">🔤 Tên A→Z</button>
           <button onclick="exportEmployeesExcel()" style="padding:7px 10px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid #bbf7d0;background:#f0fdf4;color:#166534;cursor:pointer">📤 Excel</button>
         </div>
-        <button class="btn-full btn-primary-full" onclick="openEmpModal()">➕ Thêm nhân viên</button>
+        <button class="btn-sm btn-primary-full" onclick="openEmpModal()">➕ Thêm nhân viên</button>
       </div>
     </div>
     <div id="sal-emp-list"></div>
@@ -1699,7 +1702,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
             <option value="">🏗 Tất cả CT</option>
           </select>
         </div>
-        <button class="btn-full btn-primary-full" onclick="openKhModal()">➕ Đề xuất chi phí Kế hoạch</button>
+        <button class="btn-sm btn-primary-full" onclick="openKhModal()">➕ Đề xuất chi phí Kế hoạch</button>
       </div>
     </div>
     <div id="kh-list"></div>
@@ -1811,7 +1814,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v65';
+const APP_VERSION = '20260926-v66';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5584,7 +5587,7 @@ function renderContracts(){
   const tot = list.reduce((a,c)=>a+(parseFloat(c.value)||0),0), paidAll = list.reduce((a,c)=>a+contractPaid(c.id),0);
   el.innerHTML = `<div style="padding:10px 12px">
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Sổ theo dõi <b>hợp đồng đã ký</b> (mua vật tư, thuê máy, thầu phụ…). Phiếu chi chọn "Thuộc hợp đồng" thì app tự cộng <b>đã trả</b> và báo khi vượt giá trị. Hợp đồng đứng tên Công ty 134.</div>
-    <button onclick="openContractModal()" class="btn-full btn-primary-full" style="font-size:14px;padding:11px">➕ Thêm hợp đồng</button>
+    <button onclick="openContractModal()" class="btn-sm btn-primary-full">➕ Thêm hợp đồng</button>
     ${list.length ? `<div style="font-size:12px;color:var(--text);margin:10px 0 4px"><b>${list.length}</b> hợp đồng · tổng giá trị <b>${fmtVND(tot)}</b> · đã trả <b>${fmtVND(paidAll)}</b></div>` : '<div style="font-size:12px;color:var(--text-sub);text-align:center;padding:14px 0">Chưa có hợp đồng nào</div>'}
     ${list.map(c=>{ const v = parseFloat(c.value)||0, paid = contractPaid(c.id), pct = v>0 ? Math.min(100, Math.round(paid/v*100)) : 0, over = v>0 && paid > v+0.5, K = CONTRACT_KIND[c.kind]||CONTRACT_KIND.khac;
       const n = (proposals||[]).filter(p=>p.contractId===c.id && p.status!=='rejected').length;
@@ -11496,7 +11499,7 @@ function renderCashBook(){
         <span style="font-size:17px;font-weight:900;color:var(--blue-dark);white-space:nowrap;word-break:normal">${fmtVND(t.tienTrongTk)}</span>
       </div>
       ${acctBox('cty')}${acctBox('quy')}
-      ${(currentRole==='toan'||currentRole==='dung') ? `<button onclick="openXferModal()" class="btn-full" style="margin-top:10px;font-size:14px;padding:11px;background:#f0f9ff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:10px;font-weight:700;cursor:pointer">🔁 Ghi chuyển tiền giữa 2 tài khoản</button>` : ''}
+      ${(currentRole==='toan'||currentRole==='dung') ? `<button onclick="openXferModal()" class="btn-sm" style="margin-top:10px;background:#f0f9ff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:10px;font-weight:700;cursor:pointer">🔁 Ghi chuyển tiền giữa 2 tài khoản</button>` : ''}
     </div></div>`;
   }
 
