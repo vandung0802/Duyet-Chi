@@ -1813,7 +1813,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v67';
+const APP_VERSION = '20260926-v68';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -6682,20 +6682,18 @@ function renderAssets(){
     const dueTxt = (a.from==='thue' && a.due && !done) ? (()=>{ const d = daysTo(a.due); return d===null ? '' : d<0 ? `<div style="font-size:12px;font-weight:800;color:#dc2626;margin-top:4px">⏰ Thuê QUÁ HẠN ${-d} ngày (hạn ${esc(a.due)}) — trả hoặc gia hạn</div>` : d<=7 ? `<div style="font-size:12px;font-weight:700;color:#b45309;margin-top:4px">⏰ Còn ${d} ngày hết hạn thuê (${esc(a.due)})</div>` : `<div style="font-size:11px;color:var(--text-sub);margin-top:4px">Hạn thuê: ${esc(a.due)}</div>`; })() : '';   // v41
     const hist = Array.isArray(a.returned) && a.returned.length ? `<div style="font-size:11px;color:var(--text-sub);margin-top:4px">${a.returned.map(x=>`${(ASSET_DEC[x.reason]||ASSET_DEC.thuhoi).icon} ${fmtQty(x.qty)} ${esc(a.unit||'')} · ${esc((ASSET_DEC[x.reason]||ASSET_DEC.thuhoi).label)} · ${esc(x.date||'')}${x.by?' · '+esc(x.by):''}${x.note?' · '+esc(x.note):''}`).join('<br>')}</div>` : '';
     const logH = editLogHtml(a);
-    return `<div class="card" style="${done?'opacity:.75':assetOverdue(a)?'border-left:4px solid #dc2626':''}"><div class="card-body" style="padding:11px 13px">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-        <div style="min-width:0;flex:1">
-          <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${esc(a.name||'')}</div>
-          <div style="font-size:11px;margin-top:3px">
-            <span style="background:${f.color}22;color:${f.color};padding:1px 8px;border-radius:8px;font-weight:700">${esc(assetFromLabel(a))}</span>
-            <span style="color:var(--text-sub);margin-left:6px">đến ${esc(a.date||'')}</span>
-          </div>
-        </div>
-        <div style="text-align:right;white-space:nowrap"><div style="font-size:16px;font-weight:900;color:${done?'var(--text-sub)':'var(--blue-dark)'}">${fmtQty(qty)} ${esc(a.unit||'')}</div></div>
+    return `<div class="card" style="${done?'opacity:.75':assetOverdue(a)?'border-left:4px solid #dc2626':''}"><div class="card-body" style="padding:9px 12px"><!-- v68: thẻ gọn -->
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">
+        <div style="font-size:14px;font-weight:700;color:var(--text);min-width:0;word-break:break-word">${esc(a.name||'')}</div>
+        <div style="font-size:14px;font-weight:800;white-space:nowrap;color:${done?'var(--text-sub)':'var(--blue-dark)'}">${fmtQty(qty)} ${esc(a.unit||'')}</div>
       </div>
-      ${a.note ? `<div style="font-size:12px;color:var(--text);margin-top:6px;background:#f8fafc;border-radius:6px;padding:5px 8px">📝 ${esc(a.note)}</div>` : ''}
-      <div style="font-size:12px;margin-top:6px">${st}</div>${dueTxt}${hist}${logH}${assetDelReqBox(a)}
-      <div style="display:flex;gap:6px;margin-top:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:6px 10px;flex-wrap:wrap;align-items:center;margin-top:4px;font-size:11.5px;line-height:1.5">
+        <span style="background:${f.color}22;color:${f.color};padding:1px 8px;border-radius:8px;font-weight:700;font-size:11px">${esc(assetFromLabel(a))}</span>
+        <span style="color:var(--text-sub)">đến ${esc(a.date||'')}</span>
+        <span>${st}</span>
+        ${a.note ? `<span style="color:var(--text-sub)">📝 ${esc(a.note)}</span>` : ''}
+      </div>${dueTxt}${hist}${logH}${assetDelReqBox(a)}
+      <div style="display:flex;gap:6px;margin-top:6px;justify-content:space-between;align-items:center;flex-wrap:wrap">
         <span style="font-size:10px;color:var(--text-sub)">${a.byName?'✍️ '+esc(a.byName)+' ghi':''}${a.fromProposal?' · <a href="#" onclick="jumpToProposal(\''+sid(a.fromProposal)+'\');return false" style="color:var(--blue)">xem phiếu chi</a>':''}</span>
         <span style="display:flex;gap:6px;flex-wrap:wrap">
           ${done ? '' : `<button onclick="returnAsset('${sid(a.id)}')" style="${_CASH_BTN}background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">➖ Giảm</button>`}
