@@ -1234,10 +1234,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- Tab con: TỔNG QUAN -->
   <div id="cash-tab-sum">
     <div id="cash-summary"></div>
-    <div class="card"><div class="card-body" style="padding:10px 12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="openCashModal('in')" style="flex:1;padding:12px 8px;font-size:14px;font-weight:700;background:#047857;color:#fff;border:none;border-radius:10px;cursor:pointer">📥 Ghi tiền THU về</button>
-      <button onclick="openCashModal('dep')" style="flex:1;padding:12px 8px;font-size:14px;font-weight:700;background:#b45309;color:#fff;border:none;border-radius:10px;cursor:pointer">🔒 Ghi KÝ QUỸ</button>
-    </div></div>
+    <!-- v64: bỏ 2 nút Ghi THU / Ghi KÝ QUỸ ở đây (D 26/09) — đã có trong tab Thu và tab Ký quỹ -->
     <div class="card">
       <div class="card-header">📈 Tiền còn lại theo tháng</div>
       <div class="card-body" style="padding:12px"><div id="cash-chart"></div></div>
@@ -1814,7 +1811,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v63';
+const APP_VERSION = '20260926-v64';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -11192,7 +11189,7 @@ function renderCashSummary(){
     .map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtShortMoney(t.traLaiBySrc[k])}`).join(' · ');
 
   el.innerHTML = `<div class="card"><div class="card-body" style="padding:12px 14px">
-    ${row('Đã thu về', t.thu, {color:'#047857', sub: srcLine || 'Tiền chủ đầu tư trả + tiền 2 công ty góp vào. Ghi ở nút "Ghi tiền THU về" bên dưới.'})}
+    ${row('Đã thu về', t.thu, {color:'#047857', sub: srcLine || 'Tiền chủ đầu tư trả + tiền 2 công ty góp vào. Toàn ghi ở tab "Thu".'})}
     ${t.traLai>0 ? row('Đã trả lại vốn góp', -t.traLai, {color:'#6d28d9', sub:(retLine?retLine+' — ':'')+'tiền trả lại cho công ty đã góp, không phải chi phí công trình.'}) : ''}
     ${t.vay>0 ? row('Tiền vay đã nhận', t.vay, {color:'#dc2626', sub:'Vay ngân hàng, vay cá nhân về tài khoản dự án. Xem tab "Vay".'}) : ''}
     ${row('Đã chi ra (thật sự)', -t.daChi, {color:'#b91c1c', sub:'Tổng tiền thủ quỹ ĐÃ chuyển đi theo các phiếu chi + ứng lương (không tính ký quỹ).'})}
