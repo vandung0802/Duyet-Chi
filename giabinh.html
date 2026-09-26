@@ -819,10 +819,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-body" style="padding:0">
       <div id="report-summary-content" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
       <div style="padding:10px 12px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><!-- v67: 4 điều khiển 1 hàng (điện thoại tự xuống dòng) -->
-        <button class="btn-sm btn-xs2 btn-outline-full" onclick="copyReport()" style="margin:0;flex:0 1 auto">📋 Gửi Zalo</button>
-        <button class="btn-sm btn-xs2 btn-outline-full" onclick="downloadSummaryExcel()" style="margin:0;flex:0 1 auto;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button>
-        <select id="rep-month" class="form-input form-select" style="flex:0 1 140px;width:auto;margin:0;font-size:12px;padding:5px 8px;border-radius:20px"></select>
-        <button class="btn-sm btn-xs2 btn-outline-full" onclick="downloadMonthExcel()" style="margin:0;flex:0 1 auto;color:#0e7490;border-color:#0e7490">📅 Excel tháng</button>
+        <select id="rep-month" class="form-input form-select" title="Chọn phạm vi tải Excel" style="flex:0 1 150px;width:auto;margin:0;font-size:12px;padding:5px 8px;border-radius:20px"></select>
+        <button class="btn-sm btn-xs2 btn-outline-full" onclick="downloadExcelAuto()" style="margin:0;flex:0 1 auto;color:#16a34a;border-color:#16a34a">⬇️ Tải Excel</button><!-- v70: 1 nút, chọn Tất cả / tháng (D bỏ Gửi Zalo + Excel tháng) -->
       </div>
     </div>
   </div>
@@ -1813,7 +1811,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260926-v69';
+const APP_VERSION = '20260927-v70';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -7948,8 +7946,12 @@ function _fillRepMonths(){
   (typeof cashflow!=='undefined'?cashflow:[]).forEach(r=>add(String(r.date||'').slice(0,7)));
   const now = new Date(); for(let i=0;i<12;i++){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
   const list = Object.keys(set).sort().reverse();
-  sel.innerHTML = list.map(m=>`<option value="${m}">Tháng ${m.slice(5)}/${m.slice(0,4)}</option>`).join('');
-  sel.value = (cur && set[cur]) ? cur : ymdLocal().slice(0,7);
+  sel.innerHTML = '<option value="">Tất cả (tổng hợp)</option>' + list.map(m=>`<option value="${m}">Tháng ${m.slice(5)}/${m.slice(0,4)}</option>`).join('');   // v70: "Tất cả" = bảng tổng hợp; chọn tháng = Excel báo cáo tháng
+  sel.value = (cur && set[cur]) ? cur : '';
+}
+function downloadExcelAuto(){   // v70: 1 nút Tải Excel — theo ô chọn: Tất cả → bảng tổng hợp; 1 tháng → Excel báo cáo tháng
+  const m = (document.getElementById('rep-month')||{}).value || '';
+  if(m) downloadMonthExcel(); else downloadSummaryExcel();
 }
 function renderReportSummary(){
   try{ _fillRepMonths(); }catch(e){}
