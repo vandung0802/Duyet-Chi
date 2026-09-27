@@ -1561,7 +1561,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="zalo-list-modal" style="display:none;z-index:9250;background:rgba(0,0,0,0.55)">
   <div style="background:#fff;border-radius:18px;padding:18px 14px;width:100%;max-width:420px;max-height:84vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <div style="font-size:16px;font-weight:800;color:var(--text)" id="zalo-list-title">📤 Chờ gửi Zalo</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text)" id="zalo-list-title">📤 Gửi ảnh chuyển khoản lên Zalo</div>
       <button onclick="closeZaloListModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
     </div>
     <div id="zalo-list-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:10px"></div>
@@ -1815,7 +1815,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v77';
+const APP_VERSION = '20260927-v78';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -9140,7 +9140,7 @@ function renderZaloBanners(){
   if(miss.length) tB.textContent = `📷 Bạn chưa upload ảnh chuyển tiền cho ${miss.length} món — bấm để xem`;
   const pend=_zaloPendingForMe();
   pB.style.display = pend.length ? 'block':'none';
-  if(pend.length) pB.textContent = `🔔 Còn ${pend.length} món chưa gửi Zalo — bấm để xem danh sách`;
+  if(pend.length) pB.textContent = `📤 ${pend.length} phiếu đã chuyển tiền, chưa gửi ảnh chuyển khoản lên Zalo — bấm để xem`;   // v78
 }
 function _zaloLastTransferTs(p){ const t=Array.isArray(p.transfers)?p.transfers:[]; return t.length?t[t.length-1].ts:(p.transferredAt||p.ts||0); }
 function _zaloJump(id){
@@ -9177,17 +9177,19 @@ function renderZaloListModal(){
       : '<div style="text-align:center;padding:24px;color:#16a34a;font-size:13px">✅ Tất cả món đã chuyển đều có ảnh</div>';
     return;
   }
-  title.textContent='📤 Chờ gửi Zalo';
+  title.textContent='📤 Gửi ảnh chuyển khoản lên Zalo';
   const pend=_zaloPendingForMe();
   const done=_zaloDoneForMe();
-  sub.textContent='Bấm "Gửi Zalo" → nhấn giữ ảnh → Copy → dán vào nhóm Zalo công trường → quay lại bấm "Đã gửi".';
+  sub.innerHTML='<b>Phiếu của bạn đã được Toàn chuyển tiền.</b> Việc của người đề xuất: gửi <b>ảnh chuyển khoản</b> lên nhóm Zalo công trường để mọi người biết tiền đã đi.<br>'
+    +'<b>Cách làm:</b> bấm <b>🖼 Lấy ảnh CK</b> → nhấn giữ ảnh → Sao chép → dán vào nhóm Zalo → quay lại bấm <b>✅ Đã gửi Zalo</b>.<br>'
+    +'<span style="color:var(--text-sub)">⏳ "Toàn chưa đính ảnh" = chưa có ảnh chuyển khoản để gửi, chờ Toàn. 🔕 = món này không cần gửi, tắt nhắc.</span>';   // v78: ghi rõ cho mọi người
   const pendHtml = pend.length ? pend.map(p=>{
     // Kho ảnh chưa tải xong thì coi như CÓ ảnh (tránh hiện "Chờ ảnh" sai) — bấm vào zaloShowImg sẽ kiểm thật
     const hasImg = (typeof _imagesLoaded!=='undefined' && !_imagesLoaded) ? true : _zaloProofs(p).length>0;
     return row(p,
-      `<button onclick="zaloShowImg('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:${hasImg?'var(--blue)':'#94a3b8'};color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">${hasImg?'📸 Gửi Zalo':'⏳ Chờ ảnh'}</button>
-       <button onclick="zaloMarkSent('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">✅ Đã gửi</button>
-       <button onclick="zaloMute('${sid(p.id)}')" title="Tắt thông báo món này" style="padding:7px 8px;font-size:12px;background:#f1f5f9;color:var(--text-sub);border:none;border-radius:8px;cursor:pointer;flex-shrink:0">🔕</button>`)
+      `<button onclick="zaloShowImg('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:${hasImg?'var(--blue)':'#94a3b8'};color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">${hasImg?'🖼 Lấy ảnh CK':'⏳ Toàn chưa đính ảnh'}</button>
+       <button onclick="zaloMarkSent('${sid(p.id)}')" style="padding:7px 9px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">✅ Đã gửi Zalo</button>
+       <button onclick="zaloMute('${sid(p.id)}')" title="Món này không cần gửi — tắt nhắc" style="padding:7px 8px;font-size:12px;background:#f1f5f9;color:var(--text-sub);border:none;border-radius:8px;cursor:pointer;flex-shrink:0">🔕</button>`)
   }).join('') : '<div style="text-align:center;padding:20px;color:#16a34a;font-size:13px">✅ Không còn món nào chờ gửi 🎉</div>';
   const doneHtml = done.length ? `<div style="font-size:12px;font-weight:800;color:var(--text-sub);margin:14px 0 2px">ĐÃ XỬ LÝ (xem lại)</div>` + done.map(p=>row(p,
       `<button onclick="zaloUndo('${sid(p.id)}')" title="Đưa lại vào danh sách chờ" style="padding:7px 9px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">↩</button>`,
