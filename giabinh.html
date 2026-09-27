@@ -58,6 +58,19 @@ body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên đi�
 #nav-settings .nav-icon{background:#eef2f6} /* Cài đặt   xám nhạt */
 #nav-kh       .nav-icon{background:#f3e8ff} /* P.KH (Gia Bình không dùng) */
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
+/* v79 (D chốt 27/09): thanh dưới 4 nút + Khác — nút Vật tư / Lương / Cài đặt vẫn trong DOM (code cũ dùng) nhưng ẩn, mở qua menu Khác */
+#nav-plan,#nav-luong,#nav-settings{display:none}
+.nav-item{font-size:11px}
+#more-sheet{display:none;position:fixed;inset:0;z-index:5000;background:rgba(15,23,42,.45)}
+#more-sheet.open{display:block}
+#more-panel{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:18px 18px 0 0;padding:10px 12px calc(14px + env(safe-area-inset-bottom));max-height:82vh;overflow-y:auto}
+.more-grab{width:38px;height:4px;border-radius:2px;background:#cbd5e1;margin:0 auto 8px}
+.more-group{font-size:11px;font-weight:800;color:#64748b;letter-spacing:.3px;margin:10px 2px 6px}
+.more-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.more-tile{position:relative;display:flex;flex-direction:column;align-items:center;gap:5px;padding:11px 4px 9px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:12px;font-weight:700;color:#334155;cursor:pointer;font-family:inherit;text-align:center;line-height:1.2}
+.more-tile:active{transform:scale(.97)}
+.more-tile .ico{font-size:24px;line-height:1}
+.more-badge{position:absolute;top:6px;right:8px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;display:none}
 /* v173: cộng thêm vạch home iPhone — nav tự đẩy cao lên bằng safe-area nên chỗ chừa
    phải cộng theo, không thì phần cuối danh sách bị che trên máy có vạch home. */
 .main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px 10px 18px}   /* v76: trang = khung cuộn riêng */
@@ -803,7 +816,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button class="report-subtab" data-tab="done" onclick="setReportTab('done',this)">💸 Đã chuyển</button>
         <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">⏳ Chưa chuyển</button>
         <button class="report-subtab" data-tab="rejected" onclick="setReportTab('rejected',this)">❌ Từ chối</button>
-        <button class="report-subtab" data-tab="contracts" onclick="setReportTab('contracts',this)">📑 Hợp đồng</button>
         <button class="report-subtab" data-tab="kt" id="report-subtab-kt" onclick="setReportTab('kt',this)" style="display:none">📒 Kế toán</button>
       </div>
       <!-- Hàng lọc -->
@@ -833,10 +845,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card report-tab-panel" id="report-tab-kt" style="display:none">
     <div class="card-body" style="padding:0"><div id="report-kt-content" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div></div>
   </div>
-  <!-- v41 Tab con: Hợp đồng -->
-  <div class="card report-tab-panel" id="report-tab-contracts" style="display:none">
-    <div class="card-body" style="padding:0"><div id="report-contracts-content" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div></div>
-  </div>
 
   <!-- Tab con: Danh sách tất cả -->
   <div class="card report-tab-panel" id="report-tab-list" style="display:none">
@@ -865,6 +873,12 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div id="report-table-rejected" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     </div>
   </div>
+</div>
+
+<!-- v79: SỔ HỢP ĐỒNG — trang riêng, mở từ menu Khác (trước là tab con của Báo cáo) -->
+<div id="page-contracts" class="main" style="display:none">
+  <div class="card"><div class="card-header">📑 Sổ hợp đồng</div></div>
+  <div class="card"><div class="card-body" style="padding:0"><div id="report-contracts-content"></div></div></div>
 </div>
 
 <!-- PAGE: SETTINGS -->
@@ -1764,7 +1778,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 </div>
 
 <nav class="bottom-nav">
-  <!-- Thứ tự do D chốt: Đề xuất · Vật tư · Lương · Báo cáo · Cân đối · Cài đặt -->
+  <!-- Thứ tự do D chốt: Đề xuất · Vật tư · Lương · Báo cáo · Cân đối · Cài đặt. v79: chỉ hiện Đề xuất · Báo cáo · Cân đối · Khác; nút ẩn vẫn giữ cho code cũ -->
   <button class="nav-item active" id="nav-home" onclick="showPage('home',this)">
     <span class="nav-badge" id="nav-badge-home" style="display:none"></span>
     <span class="nav-icon">📋</span><span>Đề xuất</span>
@@ -1787,12 +1801,43 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <button class="nav-item" id="nav-settings" onclick="showPage('settings',this)">
     <span class="nav-icon">⚙️</span><span>Cài đặt</span>
   </button>
+  <button class="nav-item" id="nav-more" onclick="toggleMoreSheet()">
+    <span class="nav-badge" id="nav-badge-more" style="display:none"></span>
+    <span class="nav-icon">☰</span><span>Khác</span>
+  </button>
   <!-- P.Kế hoạch: Gia Bình không dùng (_khCanSee luôn false), giữ nút để file không lệch với 379 -->
   <button class="nav-item" id="nav-kh" style="display:none" onclick="showPage('kh',this)">
     <span class="nav-badge" id="nav-badge-kh" style="display:none"></span>
     <span class="nav-icon">📐</span><span>P. Kế Hoạch</span>
   </button>
 </nav>
+<!-- v79: menu Khác — sổ từ dưới lên; bấm nền tối hoặc ✕ để đóng -->
+<div id="more-sheet" onclick="if(event.target===this) closeMoreSheet()">
+  <div id="more-panel">
+    <div class="more-grab"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800;color:var(--text)">Tất cả chức năng</div><button onclick="closeMoreSheet()" style="border:none;background:#f1f5f9;border-radius:50%;width:30px;height:30px;font-size:15px;cursor:pointer">✕</button></div>
+    <div class="more-group">CÔNG VIỆC</div>
+    <div class="more-grid">
+      <button class="more-tile" onclick="moreGo('plan')"><span class="more-badge" id="more-badge-plan"></span><span class="ico">📦</span>Vật tư</button>
+      <button class="more-tile" onclick="moreGo('luong')"><span class="more-badge" id="more-badge-luong"></span><span class="ico">💵</span>Ứng lương</button>
+      <button class="more-tile" onclick="moreGo('contracts')"><span class="ico">📑</span>Hợp đồng</button>
+      <button class="more-tile" onclick="moreGo('rotate')"><span class="ico">🔁</span>Luân chuyển</button>
+      <button class="more-tile" onclick="moreGo('adv')"><span class="ico">👛</span>Tạm ứng nhân viên</button>
+      <button class="more-tile" onclick="moreGo('kt')"><span class="ico">📒</span>Kế toán rà soát</button>
+    </div>
+    <div class="more-group">GỬI RA NGOÀI</div>
+    <div class="more-grid">
+      <button class="more-tile" onclick="closeMoreSheet();openSheetView()"><span class="ico">📊</span>Bảng tính Google</button>
+      <button class="more-tile" onclick="closeMoreSheet();sendTelegramReport()"><span class="ico">📤</span>Gửi Telegram</button>
+      <button class="more-tile" onclick="closeMoreSheet();downloadExcelAuto()"><span class="ico">⬇️</span>Tải Excel</button>
+    </div>
+    <div class="more-group">KHÁC</div>
+    <div class="more-grid">
+      <button class="more-tile" onclick="moreGo('trash')"><span class="ico">🗑</span>Thùng rác</button>
+      <button class="more-tile" onclick="moreGo('settings')"><span class="ico">⚙️</span>Cài đặt</button>
+    </div>
+  </div>
+</div>
 
 <script>
 // ══════════════════════════════════════════
@@ -1815,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v78';
+const APP_VERSION = '20260927-v79';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -3412,8 +3457,8 @@ function initFirebaseSync(){
       contracts = Object.keys(raw).map(k=>({id:k, ...raw[k]}));
       _cardCache.clear();
       try{ populateContractSelects(); }catch(e){}
-      const pg = document.getElementById('page-report');
-      if(pg && pg.style.display!=='none' && (document.querySelector('.report-subtab.active')||{}).dataset && document.querySelector('.report-subtab.active').dataset.tab==='contracts') renderContracts();
+      const pg = document.getElementById('page-contracts');
+      if(pg && pg.style.display!=='none') renderContracts();   // v79: trang riêng
     }, ()=>{});
     db.ref('duyetchi/assets').off('value');
     db.ref('duyetchi/assets').on('value', snap=>{
@@ -3797,16 +3842,39 @@ document.addEventListener('DOMContentLoaded',()=>{
 });
 
 // ── NAVIGATION ──
+// ══ v79: MENU KHÁC (D chốt 27/09) — thanh dưới 4 nút, các mục còn lại sổ ra từ nút Khác ══
+function toggleMoreSheet(){ const s=document.getElementById('more-sheet'); if(s) s.classList.toggle('open'); }
+function closeMoreSheet(){ const s=document.getElementById('more-sheet'); if(s) s.classList.remove('open'); }
+function moreGo(k){
+  closeMoreSheet();
+  const q=sel=>document.querySelector(sel), g=id=>document.getElementById(id);
+  if(k==='plan') showPage('plan', g('nav-plan'));
+  else if(k==='luong') showPage('luong', g('nav-luong'));
+  else if(k==='contracts') showPage('contracts', null);
+  else if(k==='rotate'){ showPage('plan', g('nav-plan')); setPlanTab('rotate', q('#page-plan .report-subtab[data-tab="rotate"]')); }
+  else if(k==='adv'){ showPage('cash', g('nav-cash')); setCashTab('adv', q('#page-cash .report-subtab[data-tab="adv"]')); }
+  else if(k==='kt'){ showPage('report', g('nav-report')); setReportTab('kt', g('report-subtab-kt')); }
+  else if(k==='settings') showPage('settings', g('nav-settings'));
+  else if(k==='trash'){ showPage('settings', g('nav-settings')); setTimeout(()=>{ const t=g('trash-card'); if(t) t.scrollIntoView(); },60); }
+}
+// Chấm đỏ của các nút ẩn (Vật tư, Ứng lương, P.KH) gộp lên nút Khác + từng ô trong menu
+function _syncMoreBadges(){
+  let total=0;
+  ['plan','luong','kh'].forEach(k=>{ const b=document.getElementById('nav-badge-'+k); const n=(b&&b.style.display!=='none')?(parseInt(b.textContent)||0):0; total+=n; const t=document.getElementById('more-badge-'+k); if(t){ t.textContent=n>99?'99+':n; t.style.display=n>0?'block':'none'; } });
+  const m=document.getElementById('nav-badge-more'); if(m){ m.textContent=total>99?'99+':total; m.style.display=total>0?'block':'none'; }
+}
 function showPage(pg, btn){
   // v126: người P.KH thuần — "Thêm mới" mở phiếu P.KH; các trang kế toán chuyển hướng về tab P.KH
   if(typeof _isKehoachOnly==='function' && _isKehoachOnly()){
     if(pg==='add'){ try{ openKhModal(); }catch(e){} return; }
     if(pg==='home'||pg==='report'||pg==='luong'){ pg='kh'; btn=document.getElementById('nav-kh'); }
   }
-  ['home','add','report','settings','plan','luong','kh','cash'].forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display='none'; });
+  ['home','add','report','settings','plan','luong','kh','cash','contracts'].forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display='none'; });
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+pg).style.display='block';
   if(btn) btn.classList.add('active');
+  { const more=document.getElementById('nav-more'); if(more && ['plan','luong','settings','contracts','kh'].includes(pg)){ document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); more.classList.add('active'); } try{ closeMoreSheet(); }catch(e){} }   // v79: trang trong menu → sáng nút Khác
+  if(pg==='contracts'){ try{ renderContracts(); }catch(e){} }   // v79
   if(pg==='add') populateSelects();
   if(pg==='settings') renderSettings();
   if(pg==='plan'){
@@ -3855,6 +3923,8 @@ function renderAll(){
     // Tab Lương đọc từ chính 'proposals' (phiếu kind='salary') → nếu đang mở thì vẽ lại cho đồng bộ
     const pgL = document.getElementById('page-luong');
     if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} }
+    const pgCt = document.getElementById('page-contracts');   // v79: sổ hợp đồng đọc 'proposals' (đã trả / đợt) → đang mở thì vẽ lại (tên pgCt: pgC đã dùng cho Cân đối bên dưới)
+    if(pgCt && pgCt.style.display!=='none'){ try{ renderContracts(); }catch(e){} }
     // v127: tab P.KH cũng đọc từ 'proposals' (kind='kh') → đang mở thì vẽ lại ngay (sửa lỗi user:
     // đứng ở tab P.KH sửa công trình phải F5 mới thấy — renderAll trước đây quên tab này)
     const pgK = document.getElementById('page-kh');
@@ -9293,6 +9363,7 @@ function _setNavBadge(id, n){
   const el=document.getElementById(id); if(!el) return;
   if(n>0){ el.textContent = n>99?'99+':n; el.style.display='block'; }
   else el.style.display='none';
+  if(id!=='nav-badge-more') _syncMoreBadges();   // v79
 }
 // ══════════════════════════════════════════════════════════════════════════
 // ── v125 MODULE P.KẾ HOẠCH ── phiếu chi phí phòng Kế hoạch (kind='kh', kho riêng khProposals).
