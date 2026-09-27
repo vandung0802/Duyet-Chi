@@ -1822,7 +1822,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <button class="more-tile" onclick="moreGo('luong')"><span class="more-badge" id="more-badge-luong"></span><span class="ico">💵</span>Ứng lương</button>
       <button class="more-tile" onclick="moreGo('contracts')"><span class="ico">📑</span>Hợp đồng</button>
       <button class="more-tile" onclick="moreGo('rotate')"><span class="ico">🔁</span>Luân chuyển</button>
-      <button class="more-tile" onclick="moreGo('adv')"><span class="ico">👛</span>Tạm ứng nhân viên</button>
+      <button class="more-tile" onclick="moreGo('adv')"><span class="ico">👛</span>Tạm ứng chi phí</button>
       <button class="more-tile" onclick="moreGo('kt')"><span class="ico">📒</span>Kế toán rà soát</button>
     </div>
     <div class="more-group">GỬI RA NGOÀI</div>
@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v79';
+const APP_VERSION = '20260927-v80';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
