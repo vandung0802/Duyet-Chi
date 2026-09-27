@@ -467,7 +467,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <option value="congtruong">🏗️ Chi phí công trường</option>
         <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
         <option value="noinghiep">📋 Chi phí nội nghiệp</option>
-        <option value="thietbi">🛠️ Chi phí mua thiết bị, dụng cụ</option>
+        <option value="thietbi">🛠️ Máy móc thiết bị (mua sắm, dụng cụ)</option>
         <option value="tamung">💼 Tạm ứng (hoàn ứng sau)</option>
         <option value="khac">📦 Khác</option>
       </select>
@@ -731,7 +731,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <option value="congtruong">🏗️ Chi phí công trường</option>
           <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
           <option value="noinghiep">📋 Chi phí nội nghiệp</option>
-          <option value="thietbi">🛠️ Chi phí mua thiết bị, dụng cụ</option>
+          <option value="thietbi">🛠️ Máy móc thiết bị (mua sắm, dụng cụ)</option>
           <option value="tamung">💼 Tạm ứng (hoàn ứng sau)</option>
           <option value="khac">📦 Khác</option>
         </select>
@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v80';
+const APP_VERSION = '20260927-v81';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2380,11 +2380,18 @@ let currentUser = null; // Firebase Auth user
 // không ai bấm nhầm nút chuyển tiền của người khác.
 // Gia Bình: loại chi phí của phiếu. 'kyquy' được app đối xử KHÁC HẲN — khi Toàn
 // chuyển tiền thì tự sinh khoản bên tab Cân đối → Ký quỹ, và KHÔNG tính vào "đã chi".
+// v81 (ý Kế toán 27/09): hạng mục chi phí hiện trên MỌI thẻ phiếu, ngay cạnh công trường — để thấy phiếu đang hạch toán vào mục nào
+function _costChip(p){
+  if(!p || p.kind==='salary' || p.kind==='kh') return '';
+  const c = COST_TYPES[p.costType] || COST_TYPES.congtruong;
+  const lbl = (p.costType && p.costType!=='congtruong' && COST_TYPES[p.costType]) ? c.label : 'Chi phí công trường';
+  return `<span style="color:${c.color};font-weight:800;background:${c.color}18;padding:1px 7px;border-radius:8px;white-space:nowrap">${c.icon} ${esc(lbl)}</span>`;
+}
 const COST_TYPES = {
   congtruong: {label:'Công trường', icon:'🏗️', color:'#047857'},
   kyquy:      {label:'Ký quỹ/Cọc',  icon:'🔒', color:'#b45309'},
   noinghiep:  {label:'Nội nghiệp',  icon:'📋', color:'#0e7490'},
-  thietbi:    {label:'Mua thiết bị, dụng cụ', icon:'🛠️', color:'#7c3aed'},   // v40
+  thietbi:    {label:'Máy móc thiết bị', icon:'🛠️', color:'#7c3aed'},   // v40; v81: tên theo Kế toán
   tamung:     {label:'Tạm ứng', icon:'💼', color:'#b45309'},   // v41: tiền ứng cho người đi công trường — CHƯA phải chi phí, hoàn ứng xong mới tính
   khac:       {label:'Khác',        icon:'📦', color:'#6b7280'},
 };
@@ -4364,11 +4371,12 @@ function _buildCard(p){
     <div class="proposal-top">
       <div class="proposal-top-row">
         <div class="proposal-left-col">
-          <div class="proposal-desc">${esc(p.desc)}${(p.costType && p.costType!=='congtruong' && COST_TYPES[p.costType]) ? ` <span style="font-size:10px;font-weight:700;background:${COST_TYPES[p.costType].color}22;color:${COST_TYPES[p.costType].color};padding:1px 7px;border-radius:8px;white-space:nowrap">${COST_TYPES[p.costType].icon} ${COST_TYPES[p.costType].label}</span>` : ''}${taxChip(p)}${contractChip(p)}</div>
+          <div class="proposal-desc">${esc(p.desc)}${taxChip(p)}${contractChip(p)}</div><!-- v81: hạng mục chuyển xuống dòng công trường -->
           <div class="proposal-meta">
             <span>👤 ${esc(p.person||'—')}</span>
             ${_salPos?`<span>💼 ${esc(_salPos)}</span>`:''}
             ${p.site?`<span>📍 ${esc(p.site)}</span>`:''}
+            ${_costChip(p)}
             <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
