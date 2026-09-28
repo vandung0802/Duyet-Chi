@@ -248,8 +248,9 @@ firebase.auth().onAuthStateChanged(async user=>{
 // ══ DỮ LIỆU ══
 let items={}, issues={}, filterStatus='';
 function attach(){
-  db.ref(ROOT+'/items').on('value',s=>{ items=s.val()||{}; renderAll(); });
-  db.ref(ROOT+'/issues').on('value',s=>{ issues=s.val()||{}; renderAll(); });
+  const denied=e=>{ $('list').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh thietbi) có thể chưa được đưa lên máy chủ.</div>'; };
+  db.ref(ROOT+'/items').on('value',s=>{ items=s.val()||{}; renderAll(); },denied);
+  db.ref(ROOT+'/issues').on('value',s=>{ issues=s.val()||{}; renderAll(); },denied);
 }
 const who=()=>({by:userName,uid:currentUser.uid,ts:Date.now()});
 function log(itemId,type,text,extra){ return db.ref(ROOT+'/log/'+itemId).push(Object.assign({type,text},who(),extra||{})); }
