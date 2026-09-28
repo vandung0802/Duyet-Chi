@@ -361,7 +361,7 @@ async function onPics(ev,key){
   $('pp-'+key).innerHTML=_pending[key].map(u=>`<img src="${u}">`).join('');
 }
 async function uploadPics(key,dir){
-  const out=[]; for(const d of (_pending[key]||[])) out.push(await uploadToStorage(d,ROOT+'/'+dir+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)));
+  const out=[]; for(const d of (_pending[key]||[])) out.push(await uploadToStorage(d,'duyetchi/'+ROOT+'/'+dir+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,7))); // luật Storage hiện chỉ mở thư mục duyetchi/ → ảnh để duyetchi/thietbi/
   return out;
 }
 function compressImage(file){
