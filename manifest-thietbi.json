@@ -1,0 +1,10 @@
+{
+  "id": "tb-v1",
+  "name": "Thiết bị PVA",
+  "short_name": "Thiết bị",
+  "start_url": "/Duyet-Chi/thietbi.html?t=pwa",
+  "scope": "/Duyet-Chi/thietbi.html",
+  "display": "standalone",
+  "background_color": "#b45309",
+  "theme_color": "#b45309"
+}

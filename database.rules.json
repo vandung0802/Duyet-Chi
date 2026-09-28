@@ -375,6 +375,20 @@
       }
     },
 
+    // ══ APP THIẾT BỊ (thietbi.html) — dùng chung tài khoản + danh sách "được duyệt" của 379 ══
+    // Ai đã được duyệt (approved) hoặc 3 người nhà đều đọc/ghi được: D chốt "bất kỳ ai cũng cập nhật".
+    // Mỗi bản ghi đều có tên người sửa (by/updatedBy) nên vẫn tra được ai làm gì.
+    "thietbi": {
+      ".read":  "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+      ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+      "items":  { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['code', 'name']) && newData.child('code').isString() && newData.child('code').val().length <= 100 && newData.child('name').isString() && newData.child('name').val().length <= 300)",
+                           "note": { ".validate": "newData.isString() && newData.val().length <= 4000" },
+                           "photo": { ".validate": "newData.isString() && newData.val().length <= 2000" } } },
+      "issues": { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['itemId', 'desc', 'status']) && newData.child('desc').val().length <= 4000)" } },
+      "log":    { "$item": { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['type', 'text']) && newData.child('text').val().length <= 4000)" } } },
+      "$other": { ".validate": false }
+    },
+
     // ══ NHÁNH NỘI BỘ của Cloud Functions — CẤM mọi client (chỉ admin SDK chạm được) ══
     // Vốn đã bị cấm mặc định vì không có luật nào mở; khai TƯỜNG MINH ở đây để (a) ai đọc file cũng thấy,
     // (b) lỡ sau này có người thêm luật mở ở cấp gốc thì nhìn vào đây biết ngay là KHÔNG ĐƯỢC.

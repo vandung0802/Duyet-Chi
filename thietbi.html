@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#b45309">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Thiết bị">
+<link rel="manifest" href="manifest-thietbi.json">
+<title>Thiết bị PVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#b45309;--blue-light:#fef3c7;--blue-dark:#92400e; /* app Thiết bị: tông cam đất, khác 379 (xanh) và Gia Bình (xanh lá) */
+  --green:#057a55;--green-light:#def7ec;
+  --yellow:#9f580a;--yellow-light:#fdf6b2;
+  --red:#c81e1e;--red-light:#fde8e8;
+  --gray:#6b7280;--gray-light:#f3f4f6;--gray-border:#e5e7eb;
+  --text:#111827;--text-sub:#6b7280;--white:#fff;
+  --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,.08);
+}
+body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:17px}
+[hidden]{display:none!important}
+.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.app-header h1{font-size:16px;font-weight:700}
+.app-header small{font-size:11px;opacity:.85;margin-left:6px;font-weight:400}
+.hdr-user{font-size:12px;opacity:.9}
+#update-banner{display:none;background:#f59e0b;color:#111;font-weight:700;text-align:center;padding:10px;cursor:pointer;font-size:15px}
+.main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:11px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
+.nav-item.active{color:var(--blue);font-weight:700}
+.nav-icon{font-size:20px;line-height:1;width:44px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#eef2f7}
+.nav-item.active .nav-icon{box-shadow:0 0 0 2px var(--blue)}
+.nav-badge{position:absolute;top:2px;left:calc(50% + 8px);background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;box-shadow:0 0 0 2px #fff}
+.card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
+.card-body{padding:12px 14px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1;min-width:0}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--gray-border);border-radius:var(--radius);background:#fff;color:var(--text)}
+textarea{min-height:70px;resize:vertical}
+label.f{display:block;font-size:13px;color:var(--text-sub);font-weight:600;margin:10px 0 4px}
+.btn{font:inherit;font-size:15px;font-weight:700;padding:11px 14px;border-radius:var(--radius);border:none;background:var(--blue);color:#fff;cursor:pointer;width:100%}
+.btn.sec{background:var(--gray-light);color:var(--text)}
+.btn.red{background:var(--red)}.btn.green{background:var(--green)}.btn.yel{background:#d97706}
+.btn:disabled{opacity:.6}
+.btn.sm{width:auto;padding:7px 12px;font-size:13px}
+.stats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px}
+.stat{flex:0 0 auto;background:#fff;border-radius:var(--radius);padding:8px 12px;box-shadow:var(--shadow);cursor:pointer;text-align:center;min-width:78px;border:2px solid transparent}
+.stat.on{border-color:var(--blue)}
+.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--text-sub)}
+.item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--gray-border);cursor:pointer;align-items:center}
+.item:last-child{border-bottom:none}
+.thumb{width:54px;height:54px;border-radius:8px;background:var(--gray-light);object-fit:cover;flex:0 0 54px;display:flex;align-items:center;justify-content:center;font-size:26px}
+.item-main{flex:1;min-width:0}
+.item-name{font-weight:700;font-size:16px}
+.item-sub{font-size:13px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.s-run{background:var(--green-light);color:var(--green)}
+.s-idle{background:var(--yellow-light);color:var(--yellow)}
+.s-broken{background:var(--red-light);color:var(--red)}
+.s-repair{background:#e0e7ff;color:#3730a3}
+.s-sold{background:var(--gray-light);color:var(--gray)}
+.empty{text-align:center;color:var(--text-sub);padding:30px 10px;font-size:15px}
+.overlay{position:fixed;inset:0;background:#f0f2f5;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.modal h3{font-size:17px;margin-bottom:6px}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:15px}
+.kv div:nth-child(odd){color:var(--text-sub)}
+.tl{border-left:3px solid var(--gray-border);margin-left:8px;padding-left:14px}
+.tl-e{position:relative;padding-bottom:14px}
+.tl-e::before{content:'';position:absolute;left:-21px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--blue);border:2px solid #fff}
+.tl-e.iss::before{background:var(--red)}.tl-e.ok::before{background:var(--green)}
+.tl-t{font-size:12px;color:var(--text-sub)}
+.tl-b{font-size:15px}
+.pics{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.pics img{width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer}
+.warn{background:var(--red-light);color:var(--red);padding:8px 12px;border-radius:var(--radius);font-size:14px;margin-bottom:8px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:999;max-width:90vw;text-align:center}
+.login{max-width:420px;margin:40px auto;padding:20px}
+.login h2{text-align:center;margin-bottom:16px;color:var(--blue-dark)}
+.err{color:var(--red);font-size:14px;margin-top:8px;min-height:20px}
+a.lnk{color:var(--blue);font-size:14px;display:block;text-align:center;margin-top:12px}
+table.x{width:100%;border-collapse:collapse;font-size:13px}
+table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-align:left}
+</style>
+</head>
+<body>
+
+<!-- ĐĂNG NHẬP (dùng chung tài khoản app Duyệt Chi 379) -->
+<div id="login-screen" class="login">
+  <h2>🚜 Thiết bị PVA</h2>
+  <div class="card"><div class="card-body">
+    <label class="f">Email</label><input id="l-email" type="email" autocomplete="username">
+    <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password">
+    <div style="margin-top:14px"><button class="btn" id="l-btn" onclick="doLogin()">Đăng nhập</button></div>
+    <div class="err" id="l-err"></div>
+    <p style="font-size:13px;color:var(--text-sub);margin-top:10px">Dùng đúng email + mật khẩu của app <b>Duyệt Chi</b>. Chưa có tài khoản → đăng ký trong app Duyệt Chi trước.</p>
+  </div></div>
+</div>
+
+<div id="wait-screen" class="login" hidden>
+  <h2>⏳ Chờ cấp quyền</h2>
+  <div class="card"><div class="card-body" style="font-size:15px">
+    Tài khoản của bạn chưa được duyệt xem dữ liệu. Nhờ quản trị bấm "Cho xem" trong app Duyệt Chi, rồi mở lại app này.
+    <div style="margin-top:14px"><button class="btn sec" onclick="doLogout()">Đăng xuất</button></div>
+  </div></div>
+</div>
+
+<div id="app" hidden>
+  <div id="update-banner" onclick="doUpdateNow()">⬆️ Có bản mới — bấm để cập nhật</div>
+  <header class="app-header"><h1>🚜 Thiết bị PVA <small id="ver-label"></small></h1><span class="hdr-user" id="hdr-user"></span></header>
+  <main class="main">
+
+    <section id="tab-list">
+      <div class="stats" id="stats"></div>
+      <div class="card"><div class="card-body" style="padding:8px 10px">
+        <input id="q" placeholder="🔍 Tìm tên, mã, biển số, người giữ…" oninput="renderList()">
+        <div class="row" style="margin-top:6px">
+          <select id="f-site" onchange="renderList()"></select>
+          <select id="f-type" onchange="renderList()"></select>
+        </div>
+      </div></div>
+      <div class="card" id="list"></div>
+      <button class="btn" onclick="itemForm()">＋ Thêm thiết bị</button>
+    </section>
+
+    <section id="tab-issues" hidden>
+      <div class="card" id="issues"></div>
+    </section>
+
+    <section id="tab-more" hidden>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">📥 Nhập danh sách từ Excel</h3>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">Tải file mẫu, điền thiết bị (mỗi dòng 1 máy), rồi chọn file để nhập. Mã trùng → cập nhật, mã mới → thêm.</p>
+        <div class="row">
+          <button class="btn sec" onclick="downloadTemplate()">⬇️ File mẫu</button>
+          <button class="btn" onclick="document.getElementById('xl-file').click()">📂 Chọn file</button>
+        </div>
+        <input id="xl-file" type="file" accept=".xlsx,.xls" hidden onchange="onExcel(event)">
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">📤 Xuất Excel</h3>
+        <div class="row">
+          <button class="btn sec" onclick="exportItems()">Danh sách thiết bị</button>
+          <button class="btn sec" onclick="exportIssues()">Sổ sửa chữa</button>
+        </div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div style="font-size:14px;color:var(--text-sub)" id="more-info"></div>
+        <div style="margin-top:10px"><button class="btn sec" onclick="doLogout()">Đăng xuất</button></div>
+      </div></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="list" onclick="showTab('list')"><span class="nav-icon">🚜</span>Thiết bị</button>
+    <button class="nav-item" data-tab="issues" onclick="showTab('issues')"><span class="nav-icon">🔧</span>Sự cố<span class="nav-badge" id="iss-badge" hidden></span></button>
+    <button class="nav-item" data-tab="more" onclick="showTab('more')"><span class="nav-icon">⚙️</span>Khác</button>
+  </nav>
+</div>
+
+<div id="detail" class="overlay" hidden></div>
+<div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div id="viewer" class="modal-bg" hidden onclick="this.hidden=true" style="align-items:center"><img id="viewer-img" style="max-width:96vw;max-height:92vh;border-radius:8px"></div>
+
+<script>
+// ══ CẤU HÌNH — dùng CHUNG project Firebase với app Duyệt Chi 379 (cùng tài khoản, cùng danh sách người được duyệt) ══
+const firebaseConfig = {
+  apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
+  authDomain: "duyetchi-pva379.firebaseapp.com",
+  databaseURL: "https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "duyetchi-pva379",
+  storageBucket: "duyetchi-pva379.firebasestorage.app",
+  messagingSenderId: "366275914302",
+  appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
+};
+const APP_VERSION = '20260928-v1';
+document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database(), storage = firebase.storage();
+const ROOT = 'thietbi'; // nhánh riêng trong RTDB, luật ở database.rules.json
+
+// ── kiểm tra bản mới (giống 379: so version-thietbi.txt, chỉ báo khi server MỚI HƠN) ──
+function _verNum(v){ var m=/^(\d{8})-v(\d+)$/.exec(String(v||'').trim()); return m?parseInt(m[1],10)*1000+parseInt(m[2],10):0; }
+function checkForUpdate(){
+  fetch('version-thietbi.txt?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(txt=>{
+    if(!txt) return; var sv=_verNum(txt), lv=_verNum(APP_VERSION);
+    if(sv>0&&lv>0?sv>lv:txt.trim()!==APP_VERSION) document.getElementById('update-banner').style.display='block';
+  }).catch(()=>{});
+}
+function doUpdateNow(){ location.replace(location.origin+location.pathname+'?u='+Date.now()); }
+setTimeout(checkForUpdate,4000); setInterval(checkForUpdate,3*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') checkForUpdate(); });
+
+// ══ TIỆN ÍCH ══
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+function fmtDate(ts){ if(!ts) return ''; const d=new Date(ts); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
+function fmtDT(ts){ if(!ts) return ''; const d=new Date(ts); return fmtDate(ts)+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
+function toISO(ts){ const d=new Date(ts); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function fromISO(s){ if(!s) return 0; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d,12).getTime(); }
+function fmtMoney(n){ n=Number(n)||0; return n?n.toLocaleString('vi-VN')+' đ':''; }
+function parseMoney(s){ return Number(String(s||'').replace(/[^\d]/g,''))||0; }
+function days(a,b){ return Math.max(0,Math.round(((b||Date.now())-a)/86400000)); }
+let _toastT; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=m; t.hidden=false; clearTimeout(_toastT); _toastT=setTimeout(()=>t.hidden=true,3000); }
+
+const STATUS={run:'🟢 Đang chạy',idle:'🟡 Chờ việc',broken:'🔴 Hỏng',repair:'🔧 Đang sửa',sold:'⚫ Thanh lý'};
+const ISS={new:'🔴 Mới báo',repair:'🔧 Đang sửa',done:'✅ Đã sửa'};
+const TYPES=['Máy xúc','Máy ủi','Máy lu','Xe tải','Xe con','Máy phát điện','Máy bơm','Máy hàn','Máy khoan','Máy cắt','Máy trộn','Cẩu','Dụng cụ','Khác'];
+const badge=s=>`<span class="badge s-${s}">${STATUS[s]||s}</span>`;
+
+// ══ ĐĂNG NHẬP ══
+let currentUser=null, userName='';
+async function doLogin(){
+  const email=$('l-email').value.trim(), pass=$('l-pass').value, btn=$('l-btn'), err=$('l-err');
+  if(!email||!pass){ err.textContent='Nhập email và mật khẩu'; return; }
+  btn.disabled=true; btn.textContent='⏳ Đang đăng nhập...'; err.textContent='';
+  try{ await firebase.auth().signInWithEmailAndPassword(email,pass); }
+  catch(e){
+    err.textContent = /user-not-found|wrong-password|invalid-credential/.test(e.code)?'Email hoặc mật khẩu không đúng'
+      : e.code==='auth/network-request-failed'?'Lỗi mạng — kiểm tra WiFi/4G':'Đăng nhập thất bại';
+  }
+  btn.disabled=false; btn.textContent='Đăng nhập';
+}
+function doLogout(){ firebase.auth().signOut(); }
+firebase.auth().onAuthStateChanged(async user=>{
+  currentUser=user;
+  $('login-screen').hidden=!!user; $('app').hidden=true; $('wait-screen').hidden=true;
+  if(!user) return;
+  let prof={};
+  try{ prof=(await db.ref('duyetchi/userRoles/'+user.uid).get()).val()||{}; }catch(e){}
+  userName=prof.name||user.email||'';
+  if(prof.approved!==true && prof.role!=='dung'){ $('wait-screen').hidden=false; return; }
+  $('app').hidden=false; $('hdr-user').textContent=userName;
+  $('more-info').textContent='Đăng nhập: '+userName+' · Bản '+APP_VERSION;
+  attach();
+});
+
+// ══ DỮ LIỆU ══
+let items={}, issues={}, filterStatus='';
+function attach(){
+  db.ref(ROOT+'/items').on('value',s=>{ items=s.val()||{}; renderAll(); });
+  db.ref(ROOT+'/issues').on('value',s=>{ issues=s.val()||{}; renderAll(); });
+}
+const who=()=>({by:userName,uid:currentUser.uid,ts:Date.now()});
+function log(itemId,type,text,extra){ return db.ref(ROOT+'/log/'+itemId).push(Object.assign({type,text},who(),extra||{})); }
+function openIssuesOf(id){ return Object.entries(issues).filter(([k,v])=>v.itemId===id&&v.status!=='done'); }
+
+// ══ MÀN CHÍNH ══
+function showTab(t){
+  ['list','issues','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
+}
+function renderAll(){ renderStats(); renderFilters(); renderList(); renderIssues(); if(curId&&_logRef) renderDetail(_logs); }
+function renderStats(){
+  const c={all:0}; Object.values(items).forEach(it=>{ if(it.status==='sold') return; c.all++; c[it.status]=(c[it.status]||0)+1; });
+  $('stats').innerHTML=[['','Tất cả',c.all],['run','Đang chạy',c.run||0],['idle','Chờ việc',c.idle||0],['broken','Hỏng',c.broken||0],['repair','Đang sửa',c.repair||0],['sold','Thanh lý',Object.values(items).filter(i=>i.status==='sold').length]]
+    .map(([k,l,n])=>`<div class="stat ${filterStatus===k?'on':''}" onclick="filterStatus='${k}';renderAll()"><b>${n}</b><span>${l}</span></div>`).join('');
+}
+function renderFilters(){
+  const opt=(id,vals,lbl)=>{ const cur=$(id).value; $(id).innerHTML=`<option value="">${lbl}</option>`+[...vals].filter(Boolean).sort().map(v=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`).join(''); };
+  opt('f-site',new Set(Object.values(items).map(i=>i.site)),'— Mọi công trình —');
+  opt('f-type',new Set(Object.values(items).map(i=>i.type)),'— Mọi loại —');
+}
+function renderList(){
+  const q=$('q').value.trim().toLowerCase(), site=$('f-site').value, type=$('f-type').value;
+  const rows=Object.entries(items).filter(([id,it])=>{
+    if(filterStatus? it.status!==filterStatus : it.status==='sold') return false;
+    if(site&&it.site!==site) return false; if(type&&it.type!==type) return false;
+    return !q||[it.code,it.name,it.plate,it.keeper,it.site,it.serial].join(' ').toLowerCase().includes(q);
+  }).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
+  $('list').innerHTML=rows.length?rows.map(([id,it])=>`<div class="item" onclick="openDetail('${id}')">
+    ${it.photo?`<img class="thumb" src="${esc(it.photo)}">`:`<div class="thumb">🚜</div>`}
+    <div class="item-main"><div class="item-name">${esc(it.code)} · ${esc(it.name)}</div>
+    <div class="item-sub">📍 ${esc(it.site||'—')}${it.keeper?' · 👤 '+esc(it.keeper):''}</div></div>${badge(it.status)}</div>`).join('')
+    :'<div class="empty">Chưa có thiết bị nào. Bấm "Thêm thiết bị" hoặc nhập từ Excel (tab Khác).</div>';
+}
+function renderIssues(){
+  const rows=Object.entries(issues).filter(([k,v])=>v.status!=='done').sort((a,b)=>a[1].ts-b[1].ts);
+  $('iss-badge').hidden=!rows.length; $('iss-badge').textContent=rows.length;
+  $('issues').innerHTML=rows.length?rows.map(([id,v])=>{ const it=items[v.itemId]||{}; return `<div class="item" onclick="openDetail('${v.itemId}')">
+    <div class="item-main"><div class="item-name">${esc(it.code||'?')} · ${esc(it.name||'(đã xoá)')}</div>
+    <div class="item-sub">${esc(v.desc)}</div>
+    <div class="item-sub">📍 ${esc(it.site||'—')} · báo ${fmtDate(v.ts)} · nằm <b>${days(v.ts)} ngày</b></div></div>
+    <span class="badge ${v.status==='new'?'s-broken':'s-repair'}">${ISS[v.status]}</span></div>`; }).join('')
+    :'<div class="empty">🎉 Không có máy nào đang hỏng.</div>';
+}
+
+// ══ CHI TIẾT 1 THIẾT BỊ ══
+let curId=null, _logRef=null, _logs={};
+function openDetail(id){
+  curId=id; $('detail').hidden=false; _logs={};
+  if(_logRef) _logRef.off();
+  _logRef=db.ref(ROOT+'/log/'+id); _logRef.on('value',s=>{ _logs=s.val()||{}; renderDetail(_logs); });
+}
+function closeDetail(){ $('detail').hidden=true; if(_logRef) _logRef.off(); _logRef=null; curId=null; }
+function renderDetail(logs){
+  const id=curId, it=items[id]; if(!it){ closeDetail(); return; }
+  const open=openIssuesOf(id);
+  const exp=[['warrantyEnd','Bảo hành'],['insuranceEnd','Bảo hiểm'],['inspectionEnd','Đăng kiểm']].filter(([k])=>it[k]);
+  const warn=exp.filter(([k])=>it[k]-Date.now()<30*86400000).map(([k,l])=>l+' '+(it[k]<Date.now()?'ĐÃ HẾT HẠN':'sắp hết hạn')+' ('+fmtDate(it[k])+')');
+  // dòng thời gian = nhật ký + sự cố, mới nhất trên
+  const tl=Object.values(logs).map(l=>({ts:l.ts,cls:'',html:esc(l.text),by:l.by,pics:l.photos}));
+  Object.entries(issues).filter(([k,v])=>v.itemId===id).forEach(([k,v])=>{
+    tl.push({ts:v.ts,cls:'iss',by:v.by,html:'🔴 <b>Báo hỏng:</b> '+esc(v.desc),pics:v.photos});
+    if(v.repairTs) tl.push({ts:v.repairTs,cls:'',by:v.repairBy,html:'🔧 Bắt đầu sửa'+(v.repairer?' — '+esc(v.repairer):'')});
+    if(v.doneTs) tl.push({ts:v.doneTs,cls:'ok',by:v.doneBy,html:'✅ <b>Đã sửa</b> (nằm '+days(v.ts,v.doneTs)+' ngày): '+esc(v.repairDesc)+(v.repairer?' · thợ: '+esc(v.repairer):'')+(v.cost?' · <b>'+fmtMoney(v.cost)+'</b>':''),pics:v.invoicePhotos});
+  });
+  tl.sort((a,b)=>b.ts-a.ts);
+  const pics=p=>p&&p.length?`<div class="pics">${p.map(u=>`<img src="${esc(u)}" onclick="viewImg('${esc(u)}')">`).join('')}</div>`:'';
+  $('detail').innerHTML=`
+  <header class="app-header"><button class="btn sm sec" onclick="closeDetail()">‹ Quay lại</button><h1 style="flex:1;text-align:center">${esc(it.code)}</h1><button class="btn sm sec" onclick="itemForm('${id}')">✏️ Sửa</button></header>
+  <div class="main">
+    ${warn.map(w=>`<div class="warn">⚠️ ${esc(w)}</div>`).join('')}
+    <div class="card"><div class="card-body">
+      <div class="row" style="align-items:flex-start">
+        ${it.photo?`<img class="thumb" style="width:90px;height:90px;flex:0 0 90px" src="${esc(it.photo)}" onclick="viewImg('${esc(it.photo)}')">`:''}
+        <div><div style="font-size:19px;font-weight:800">${esc(it.name)}</div><div style="margin:4px 0">${badge(it.status)}</div>
+        <div style="font-size:14px;color:var(--text-sub)">${esc(it.type||'')}${it.year?' · '+esc(it.year):''}</div></div>
+      </div>
+      <div class="kv" style="margin-top:12px">
+        <div>Công trình</div><div><b>${esc(it.site||'—')}</b></div>
+        <div>Người giữ</div><div>${esc(it.keeper||'—')}</div>
+        ${it.plate?`<div>Biển số</div><div>${esc(it.plate)}</div>`:''}
+        ${it.serial?`<div>Số khung/máy</div><div>${esc(it.serial)}</div>`:''}
+        ${exp.map(([k,l])=>`<div>${l} đến</div><div>${fmtDate(it[k])}</div>`).join('')}
+        ${it.note?`<div>Ghi chú</div><div>${esc(it.note)}</div>`:''}
+      </div>
+    </div></div>
+    <div class="row">
+      <button class="btn" onclick="moveForm('${id}')">📦 Điều chuyển</button>
+      ${open.length?`<button class="btn yel" onclick="repairForm('${open[0][0]}')">🔧 Cập nhật sửa</button>`:`<button class="btn red" onclick="issueForm('${id}')">🔴 Báo hỏng</button>`}
+    </div>
+    ${it.status!=='broken'&&it.status!=='repair'?`<div style="margin-top:8px"><button class="btn sec" onclick="statusForm('${id}')">Đổi tình trạng (chờ việc / thanh lý…)</button></div>`:''}
+    <h3 style="margin:16px 0 10px;font-size:16px">🕘 Lịch sử</h3>
+    <div class="tl">${tl.map(e=>`<div class="tl-e ${e.cls}"><div class="tl-t">${fmtDT(e.ts)} · ${esc(e.by||'')}</div><div class="tl-b">${e.html}</div>${pics(e.pics)}</div>`).join('')||'<div class="empty">Chưa có gì.</div>'}</div>
+    <div style="margin-top:20px"><button class="btn sec" style="color:var(--red)" onclick="delItem('${id}')">🗑 Xoá thiết bị này</button></div>
+  </div>`;
+}
+function viewImg(u){ $('viewer-img').src=u; $('viewer').hidden=false; }
+
+// ══ MODAL & ẢNH ══
+function openModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
+function closeModal(){ $('modal-bg').hidden=true; }
+const dl=(id,vals)=>`<datalist id="${id}">${[...new Set(vals.filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
+const sites=()=>Object.values(items).map(i=>i.site), keepers=()=>Object.values(items).map(i=>i.keeper);
+// ô chọn ảnh: nén rồi giữ dataUrl trong _pending[key]; upload lúc lưu
+let _pending={};
+function picInput(key,label){ _pending[key]=[]; return `<label class="f">${label}</label><input type="file" accept="image/*" multiple onchange="onPics(event,'${key}')"><div class="pics" id="pp-${key}"></div>`; }
+async function onPics(ev,key){
+  for(const f of ev.target.files){ try{ _pending[key].push(await compressImage(f)); }catch(e){ toast('❌ '+e.message); } }
+  $('pp-'+key).innerHTML=_pending[key].map(u=>`<img src="${u}">`).join('');
+}
+async function uploadPics(key,dir){
+  const out=[]; for(const d of (_pending[key]||[])) out.push(await uploadToStorage(d,ROOT+'/'+dir+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,7)));
+  return out;
+}
+function compressImage(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader(); r.onerror=()=>reject(new Error('Không đọc được ảnh'));
+    r.onload=e=>{ const img=new Image(); img.onerror=()=>reject(new Error('Ảnh hỏng'));
+      img.onload=()=>{ const MAX=1000; let w=img.naturalWidth,h=img.naturalHeight;
+        if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;} else {w=Math.round(w*MAX/h);h=MAX;} }
+        const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+        const webp=c.toDataURL('image/webp',0.65); resolve(webp.startsWith('data:image/webp')?webp:c.toDataURL('image/jpeg',0.55)); };
+      img.src=e.target.result; };
+    r.readAsDataURL(file);
+  });
+}
+async function uploadToStorage(dataUrl,path){
+  const [h,b64]=dataUrl.split(','); const mime=(h.match(/:(.*?);/)||[])[1]||'image/jpeg';
+  const bin=atob(b64), arr=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) arr[i]=bin.charCodeAt(i);
+  const ref=storage.ref(path); await ref.put(new Blob([arr],{type:mime}),{contentType:mime}); return ref.getDownloadURL();
+}
+async function busy(btn,fn){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await fn(); closeModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
+
+// ══ FORM THIẾT BỊ (thêm / sửa) ══
+function itemForm(id){
+  const it=id?items[id]:{status:'run'};
+  const d=k=>it[k]?toISO(it[k]):'';
+  openModal(`<h3>${id?'✏️ Sửa thông tin':'＋ Thêm thiết bị'}</h3>
+    <label class="f">Mã thiết bị *</label><input id="m-code" value="${esc(it.code||'')}" placeholder="VD: MX-01">
+    <label class="f">Tên thiết bị *</label><input id="m-name" value="${esc(it.name||'')}" placeholder="VD: Máy xúc Komatsu PC200">
+    <label class="f">Loại</label><input id="m-type" list="dl-type" value="${esc(it.type||'')}">${dl('dl-type',TYPES.concat(Object.values(items).map(i=>i.type)))}
+    <div class="row"><div><label class="f">Biển số</label><input id="m-plate" value="${esc(it.plate||'')}"></div><div><label class="f">Năm SX/mua</label><input id="m-year" value="${esc(it.year||'')}"></div></div>
+    <label class="f">Số khung / số máy</label><input id="m-serial" value="${esc(it.serial||'')}">
+    ${id?'':`<label class="f">Đang ở công trình</label><input id="m-site" list="dl-site" value="">${dl('dl-site',sites())}
+    <label class="f">Người giữ</label><input id="m-keeper" list="dl-keeper">${dl('dl-keeper',keepers())}
+    <label class="f">Tình trạng</label><select id="m-status">${Object.entries(STATUS).filter(([k])=>k!=='broken'&&k!=='repair').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`}
+    <div class="row"><div><label class="f">Bảo hành đến</label><input id="m-w" type="date" value="${d('warrantyEnd')}"></div><div><label class="f">Bảo hiểm đến</label><input id="m-i" type="date" value="${d('insuranceEnd')}"></div></div>
+    <label class="f">Đăng kiểm đến</label><input id="m-k" type="date" value="${d('inspectionEnd')}">
+    <label class="f">Ghi chú</label><textarea id="m-note">${esc(it.note||'')}</textarea>
+    ${picInput('photo','Ảnh thiết bị (1 ảnh)')}
+    <div style="margin-top:14px"><button class="btn" onclick="saveItem('${id||''}',this)">💾 Lưu</button></div>`);
+}
+async function saveItem(id,btn){
+  await busy(btn,async()=>{
+    const v=k=>$(k).value.trim();
+    if(!v('m-code')||!v('m-name')) throw new Error('Cần nhập Mã và Tên thiết bị');
+    const dup=Object.entries(items).find(([k,i])=>i.code===v('m-code')&&k!==id); if(dup) throw new Error('Mã '+v('m-code')+' đã có (máy: '+dup[1].name+')');
+    const data={code:v('m-code'),name:v('m-name'),type:v('m-type'),plate:v('m-plate'),year:v('m-year'),serial:v('m-serial'),note:v('m-note'),
+      warrantyEnd:fromISO(v('m-w')),insuranceEnd:fromISO(v('m-i')),inspectionEnd:fromISO(v('m-k')),updatedAt:Date.now(),updatedBy:userName};
+    const ph=await uploadPics('photo','items'); if(ph[0]) data.photo=ph[0];
+    if(id){ await db.ref(ROOT+'/items/'+id).update(data); await log(id,'edit','✏️ Sửa thông tin thiết bị'); }
+    else{
+      Object.assign(data,{site:v('m-site'),keeper:v('m-keeper'),status:$('m-status').value,createdAt:Date.now(),createdBy:userName});
+      const ref=db.ref(ROOT+'/items').push(); await ref.set(data);
+      await log(ref.key,'create','🆕 Thêm vào danh sách'+(data.site?' — tại '+data.site:''));
+    }
+    toast('✅ Đã lưu');
+  });
+}
+async function delItem(id){
+  const it=items[id]; if(!confirm('Xoá "'+it.code+' · '+it.name+'" cùng toàn bộ lịch sử? Không hoàn tác được.')) return;
+  const up={}; up['items/'+id]=null; up['log/'+id]=null; Object.entries(issues).forEach(([k,v])=>{ if(v.itemId===id) up['issues/'+k]=null; });
+  await db.ref(ROOT).update(up); closeDetail(); toast('🗑 Đã xoá');
+}
+
+// ══ ĐIỀU CHUYỂN ══
+function moveForm(id){
+  const it=items[id];
+  openModal(`<h3>📦 Điều chuyển ${esc(it.code)}</h3><p style="font-size:14px;color:var(--text-sub)">Đang ở: <b>${esc(it.site||'—')}</b>${it.keeper?' · '+esc(it.keeper):''}</p>
+    <label class="f">Chuyển đến công trình *</label><input id="mv-site" list="dl-site">${dl('dl-site',sites())}
+    <label class="f">Người nhận / giữ máy</label><input id="mv-keeper" list="dl-keeper" value="${esc(it.keeper||'')}">${dl('dl-keeper',keepers())}
+    <label class="f">Ngày chuyển</label><input id="mv-date" type="date" value="${toISO(Date.now())}">
+    <label class="f">Ghi chú</label><input id="mv-note" placeholder="Xe chở, lý do…">
+    <div style="margin-top:14px"><button class="btn" onclick="saveMove('${id}',this)">💾 Lưu</button></div>`);
+}
+async function saveMove(id,btn){
+  await busy(btn,async()=>{
+    const site=$('mv-site').value.trim(), keeper=$('mv-keeper').value.trim(); if(!site) throw new Error('Nhập công trình đến');
+    const it=items[id];
+    await db.ref(ROOT+'/items/'+id).update({site,keeper,updatedAt:Date.now(),updatedBy:userName});
+    await log(id,'move','📦 Chuyển từ '+(it.site||'—')+' → '+site+(keeper?' · giao '+keeper:'')+($('mv-note').value?' · '+$('mv-note').value.trim():''),{ts:fromISO($('mv-date').value)||Date.now(),from:it.site||'',to:site});
+    toast('✅ Đã điều chuyển');
+  });
+}
+function statusForm(id){
+  openModal(`<h3>Đổi tình trạng</h3><label class="f">Tình trạng mới</label><select id="st">${Object.entries(STATUS).filter(([k])=>k!=='broken'&&k!=='repair').map(([k,v])=>`<option value="${k}" ${items[id].status===k?'selected':''}>${v}</option>`).join('')}</select>
+    <label class="f">Ghi chú</label><input id="st-note"><div style="margin-top:14px"><button class="btn" onclick="saveStatus('${id}',this)">💾 Lưu</button></div>`);
+}
+async function saveStatus(id,btn){
+  await busy(btn,async()=>{ const s=$('st').value;
+    await db.ref(ROOT+'/items/'+id).update({status:s,updatedAt:Date.now(),updatedBy:userName});
+    await log(id,'status','Đổi tình trạng → '+STATUS[s]+($('st-note').value?' · '+$('st-note').value.trim():'')); });
+}
+
+// ══ SỰ CỐ: báo hỏng → đang sửa → đã sửa ══
+function issueForm(id){
+  openModal(`<h3>🔴 Báo hỏng ${esc(items[id].code)}</h3>
+    <label class="f">Hỏng gì? *</label><textarea id="is-desc" placeholder="VD: gãy xích, chảy dầu thủy lực, không nổ máy…"></textarea>
+    <label class="f">Ngày phát hiện</label><input id="is-date" type="date" value="${toISO(Date.now())}">
+    ${picInput('iss','Ảnh chỗ hỏng')}
+    <div style="margin-top:14px"><button class="btn red" onclick="saveIssue('${id}',this)">🔴 Ghi nhận hỏng</button></div>`);
+}
+async function saveIssue(id,btn){
+  await busy(btn,async()=>{
+    const desc=$('is-desc').value.trim(); if(!desc) throw new Error('Mô tả hỏng gì');
+    const photos=await uploadPics('iss','issues');
+    await db.ref(ROOT+'/issues').push(Object.assign({itemId:id,desc,photos,status:'new',site:items[id].site||''},who(),{ts:fromISO($('is-date').value)||Date.now()}));
+    await db.ref(ROOT+'/items/'+id).update({status:'broken',updatedAt:Date.now(),updatedBy:userName});
+    toast('✅ Đã ghi nhận');
+  });
+}
+function repairForm(isId){
+  const v=issues[isId];
+  openModal(`<h3>🔧 ${esc(items[v.itemId].code)} — ${esc(v.desc)}</h3><p style="font-size:14px;color:var(--text-sub)">Báo hỏng ${fmtDate(v.ts)} · đã nằm ${days(v.ts)} ngày · ${ISS[v.status]}</p>
+    ${v.status==='new'?`<div class="card" style="background:var(--gray-light)"><div class="card-body"><label class="f" style="margin-top:0">Ai sửa (thợ / xưởng)</label><input id="rp-who">
+      <div style="margin-top:10px"><button class="btn yel" onclick="startRepair('${isId}',this)">🔧 Bắt đầu sửa</button></div></div></div><p style="text-align:center;color:var(--text-sub);font-size:13px;margin:10px 0">— hoặc đã sửa xong luôn —</p>`:''}
+    <label class="f">Đã sửa / thay những gì? *</label><textarea id="rp-desc"></textarea>
+    <label class="f">Ai sửa</label><input id="rp-who2" value="${esc(v.repairer||'')}">
+    <div class="row"><div><label class="f">Chi phí (đ)</label><input id="rp-cost" inputmode="numeric" oninput="this.value=parseMoney(this.value)?parseMoney(this.value).toLocaleString('vi-VN'):''"></div><div><label class="f">Ngày sửa xong</label><input id="rp-date" type="date" value="${toISO(Date.now())}"></div></div>
+    ${picInput('inv','Ảnh hóa đơn / máy sau sửa')}
+    <label class="f">Tình trạng máy sau sửa</label><select id="rp-st"><option value="run">🟢 Đang chạy</option><option value="idle">🟡 Chờ việc</option><option value="sold">⚫ Thanh lý (không sửa được)</option></select>
+    <div style="margin-top:14px"><button class="btn green" onclick="doneRepair('${isId}',this)">✅ Sửa xong</button></div>`);
+}
+async function startRepair(isId,btn){
+  await busy(btn,async()=>{ const v=issues[isId], repairer=$('rp-who').value.trim();
+    await db.ref(ROOT+'/issues/'+isId).update({status:'repair',repairer,repairTs:Date.now(),repairBy:userName});
+    await db.ref(ROOT+'/items/'+v.itemId).update({status:'repair',updatedAt:Date.now(),updatedBy:userName}); });
+}
+async function doneRepair(isId,btn){
+  await busy(btn,async()=>{
+    const v=issues[isId], desc=$('rp-desc').value.trim(); if(!desc) throw new Error('Ghi đã sửa gì');
+    const invoicePhotos=await uploadPics('inv','issues');
+    await db.ref(ROOT+'/issues/'+isId).update({status:'done',repairDesc:desc,repairer:$('rp-who2').value.trim(),cost:parseMoney($('rp-cost').value),invoicePhotos,doneTs:fromISO($('rp-date').value)||Date.now(),doneBy:userName});
+    await db.ref(ROOT+'/items/'+v.itemId).update({status:$('rp-st').value,updatedAt:Date.now(),updatedBy:userName});
+    toast('✅ Đã ghi sửa xong');
+  });
+}
+
+// ══ EXCEL (SheetJS tải khi cần, giống 379) ══
+function loadXLSX(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX);
+  const s=document.createElement('script'); s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  s.integrity='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'; s.crossOrigin='anonymous';
+  s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
+const COLS=['Mã thiết bị','Tên thiết bị','Loại','Biển số','Số khung/máy','Năm','Công trình','Người giữ','Tình trạng','Ghi chú'];
+const ST_TXT={run:'Đang chạy',idle:'Chờ việc',broken:'Hỏng',repair:'Đang sửa',sold:'Thanh lý'};
+const txtToStatus=t=>{ t=String(t||'').toLowerCase(); return Object.entries(ST_TXT).find(([k,v])=>t.includes(v.toLowerCase()))?.[0]||(t.includes('hỏng')?'broken':'run'); };
+async function downloadTemplate(){
+  try{ const X=await loadXLSX();
+    const ws=X.utils.aoa_to_sheet([COLS,['MX-01','Máy xúc Komatsu PC200','Máy xúc','','PC200-12345','2018','Cầu ABC','Nguyễn Văn A','Đang chạy','Ví dụ — xoá dòng này'],['MH-01','Máy hàn Jasic 300A','Máy hàn','','','2022','Kho','Thủ kho','Chờ việc','']]);
+    ws['!cols']=[10,30,12,12,16,7,18,16,12,25].map(w=>({wch:w}));
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Thiet bi'); X.writeFile(wb,'Mau-danh-sach-thiet-bi.xlsx');
+  }catch(e){ toast('❌ '+e.message); }
+}
+async function onExcel(ev){
+  const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  try{ const X=await loadXLSX(); const wb=X.read(await f.arrayBuffer()); const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    const hdr=rows[0].map(h=>String(h).trim().toLowerCase()); const ci=n=>hdr.findIndex(h=>h.includes(n));
+    const I={code:ci('mã'),name:ci('tên'),type:ci('loại'),plate:ci('biển'),serial:ci('số khung'),year:ci('năm'),site:ci('công trình'),keeper:ci('người'),status:ci('tình trạng'),note:ci('ghi chú')};
+    if(I.code<0||I.name<0) throw new Error('File phải có cột "Mã thiết bị" và "Tên thiết bị"');
+    const g=(r,k)=>I[k]>=0?String(r[I[k]]??'').trim():'';
+    const list=rows.slice(1).filter(r=>g(r,'code')&&g(r,'name')).map(r=>({code:g(r,'code'),name:g(r,'name'),type:g(r,'type'),plate:g(r,'plate'),serial:g(r,'serial'),year:g(r,'year'),site:g(r,'site'),keeper:g(r,'keeper'),status:txtToStatus(g(r,'status')),note:g(r,'note')}));
+    if(!list.length) throw new Error('Không thấy dòng nào có Mã + Tên');
+    const byCode={}; Object.entries(items).forEach(([k,i])=>byCode[i.code]=k);
+    const nNew=list.filter(r=>!byCode[r.code]).length;
+    openModal(`<h3>📥 Xem trước: ${list.length} dòng</h3><p style="font-size:14px">Thêm mới <b>${nNew}</b> · cập nhật <b>${list.length-nNew}</b> (mã đã có)</p>
+      <div style="max-height:45vh;overflow:auto"><table class="x"><tr><th>Mã</th><th>Tên</th><th>Công trình</th><th></th></tr>${list.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${esc(r.site)}</td><td>${byCode[r.code]?'cập nhật':'mới'}</td></tr>`).join('')}</table></div>
+      <div style="margin-top:14px"><button class="btn" onclick="importRows(this)">✅ Nhập ${list.length} thiết bị</button></div>`);
+    window._xlList=list;
+  }catch(e){ toast('❌ '+e.message); }
+}
+async function importRows(btn){
+  await busy(btn,async()=>{
+    const byCode={}; Object.entries(items).forEach(([k,i])=>byCode[i.code]=k);
+    const up={}, now=Date.now();
+    for(const r of window._xlList){
+      const id=byCode[r.code]||db.ref(ROOT+'/items').push().key;
+      const old=items[id]||{};
+      const data=Object.assign({},r,{updatedAt:now,updatedBy:userName});
+      if(old.status==='broken'||old.status==='repair') data.status=old.status; // đang có sự cố mở thì Excel không được đè
+      if(!byCode[r.code]){ data.createdAt=now; data.createdBy=userName; up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'create',text:'🆕 Nhập từ Excel'+(r.site?' — tại '+r.site:'')},who()); }
+      else if(old.site!==r.site&&r.site) up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'move',text:'📦 Excel: '+(old.site||'—')+' → '+r.site,from:old.site||'',to:r.site},who());
+      Object.keys(data).forEach(k=>{ if(byCode[r.code]&&data[k]===''&&k!=='updatedBy') delete data[k]; }); // cập nhật: ô trống không xoá dữ liệu cũ
+      Object.entries(data).forEach(([k,v])=>up['items/'+id+'/'+k]=v);
+    }
+    await db.ref(ROOT).update(up); toast('✅ Đã nhập '+window._xlList.length+' thiết bị'); showTab('list');
+  });
+}
+async function exportItems(){
+  try{ const X=await loadXLSX();
+    const aoa=[COLS.concat(['Bảo hành','Bảo hiểm','Đăng kiểm'])].concat(Object.values(items).sort((a,b)=>String(a.code).localeCompare(String(b.code),'vi',{numeric:true})).map(i=>[i.code,i.name,i.type,i.plate,i.serial,i.year,i.site,i.keeper,ST_TXT[i.status]||i.status,i.note,fmtDate(i.warrantyEnd),fmtDate(i.insuranceEnd),fmtDate(i.inspectionEnd)]));
+    const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=[10,30,12,12,16,7,18,16,12,25,12,12,12].map(w=>({wch:w}));
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Thiet bi'); X.writeFile(wb,'Thiet-bi-'+toISO(Date.now())+'.xlsx');
+  }catch(e){ toast('❌ '+e.message); }
+}
+async function exportIssues(){
+  try{ const X=await loadXLSX();
+    const aoa=[['Mã','Thiết bị','Công trình','Ngày hỏng','Hỏng gì','Tình trạng','Ngày sửa xong','Số ngày nằm','Đã sửa gì','Thợ','Chi phí','Người báo']].concat(Object.values(issues).sort((a,b)=>b.ts-a.ts).map(v=>{ const it=items[v.itemId]||{}; return [it.code,it.name,v.site||it.site,fmtDate(v.ts),v.desc,ISS[v.status].replace(/^\S+ /,''),fmtDate(v.doneTs),days(v.ts,v.doneTs),v.repairDesc||'',v.repairer||'',v.cost||'',v.by]; }));
+    const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=[10,26,16,11,30,10,11,8,30,14,12,14].map(w=>({wch:w}));
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Sua chua'); X.writeFile(wb,'So-sua-chua-'+toISO(Date.now())+'.xlsx');
+  }catch(e){ toast('❌ '+e.message); }
+}
+</script>
+</body>
+</html>
