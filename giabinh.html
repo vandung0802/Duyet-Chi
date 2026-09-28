@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260928-v82';
+const APP_VERSION = '20260928-v83';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2381,6 +2381,11 @@ let currentUser = null; // Firebase Auth user
 // Gia Bình: loại chi phí của phiếu. 'kyquy' được app đối xử KHÁC HẲN — khi Toàn
 // chuyển tiền thì tự sinh khoản bên tab Cân đối → Ký quỹ, và KHÔNG tính vào "đã chi".
 // v81 (ý Kế toán 27/09): hạng mục chi phí hiện trên MỌI thẻ phiếu, ngay cạnh công trường — để thấy phiếu đang hạch toán vào mục nào
+function _costStrip(p){   // v83: màu dải mép trái thẻ theo hạng mục
+  if(!p || p.kind==='salary' || p.kind==='kh' || p.status==='rejected') return '';
+  const c = COST_TYPES[p.costType] || COST_TYPES.congtruong;
+  return ` style="border-left:6px solid ${c.color}"`;
+}
 function _costChip(p){
   if(!p || p.kind==='salary' || p.kind==='kh') return '';
   const c = COST_TYPES[p.costType] || COST_TYPES.congtruong;
@@ -2389,10 +2394,10 @@ function _costChip(p){
 }
 const COST_TYPES = {
   congtruong: {label:'Công trường', icon:'🏗️', color:'#047857'},
-  kyquy:      {label:'Ký quỹ/Cọc',  icon:'🔒', color:'#b45309'},
-  noinghiep:  {label:'Nội nghiệp',  icon:'📋', color:'#0e7490'},
+  kyquy:      {label:'Ký quỹ/Cọc',  icon:'🔒', color:'#2563eb'},   // v83: mỗi mục 1 màu riêng (xanh dương)
+  noinghiep:  {label:'Nội nghiệp',  icon:'📋', color:'#92400e'},   // v83: nâu
   thietbi:    {label:'Máy móc thiết bị', icon:'🛠️', color:'#7c3aed'},   // v40; v81: tên theo Kế toán
-  tamung:     {label:'Tạm ứng', icon:'💼', color:'#b45309'},   // v41: tiền ứng cho người đi công trường — CHƯA phải chi phí, hoàn ứng xong mới tính
+  tamung:     {label:'Tạm ứng', icon:'💼', color:'#ea580c'},   // v41: tiền ứng cho người đi công trường — CHƯA phải chi phí, hoàn ứng xong mới tính
   khac:       {label:'Khác',        icon:'📦', color:'#6b7280'},
 };
 // v40 (D yêu cầu 24/09): "Chi phí thuế" của phiếu — có hoá đơn thuế / không có thuế / không hợp lệ (Không HL).
@@ -4367,7 +4372,7 @@ function _buildCard(p){
   if(_chMsgs){ chatHtml = `<div style="margin-top:6px;border-top:1px dashed var(--gray-border);padding-top:4px">${_chMsgs}${_chCan?_chInput:''}</div>`; }
   else if(_chCan){ chatHtml = `<div id="chat-inpwrap-${sid(p.id)}" style="margin-top:5px"><button onclick="openChatInput('${sid(p.id)}')" style="padding:4px 10px;font-size:11px;font-weight:600;background:#f8fafc;color:var(--text-sub);border:1px dashed var(--gray-border);border-radius:14px;cursor:pointer">💬 Hỏi–đáp về phiếu này</button></div>`; }
 
-  return `<div class="proposal status-${esc(p.status||'pending')}" id="card-${sid(p.id)}">
+  return `<div class="proposal status-${esc(p.status||'pending')}" id="card-${sid(p.id)}"${_costStrip(p)}>
     <div class="proposal-top">
       <div class="proposal-top-row">
         <div class="proposal-left-col">
