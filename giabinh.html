@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260927-v81';
+const APP_VERSION = '20260928-v82';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5258,7 +5258,7 @@ function _settleHtml(p){   // trên thẻ phiếu tạm ứng
   const who = advWho(p);
   const o = advPersons()[who] || {bal:tr, tr, chi:0, ret:0, pend:0, entries:[]};
   const target = advTargetOf(who);
-  return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b">
+  return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b;white-space:normal;line-height:1.35">
     <div style="font-size:12px">👛 Sổ tạm ứng <b>${esc(who)}</b>${(p.advPosition||advPosOf(who))?` <span style="font-size:10.5px;color:var(--text-sub)">— ${esc(p.advPosition||advPosOf(who))}</span>`:''}${p.advPerson&&p.advPerson!==p.person?` <span style="font-size:10.5px;color:var(--text-sub)">(đề xuất hộ: ${esc(p.person||'')})</span>`:''}: ${advBalHtml(o.bal, o)}<div style="font-size:10.5px;color:var(--text-sub)">Tổng ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}</div></div>
     <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">
       ${(target && _settleCan(target)) ? `<button onclick="openTamUngModal('${esc(who).replace(/'/g,'&#39;')}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
