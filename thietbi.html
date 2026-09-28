@@ -207,7 +207,7 @@ const pad=n=>String(n).padStart(2,'0');
 function fmtDate(ts){ if(!ts) return ''; const d=new Date(ts); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
 function fmtDT(ts){ if(!ts) return ''; const d=new Date(ts); return fmtDate(ts)+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
 function toISO(ts){ const d=new Date(ts); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-function fromISO(s){ if(!s) return 0; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d,12).getTime(); }
+function fromISO(s){ if(!s) return 0; if(s===toISO(Date.now())) return Date.now(); const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d,12).getTime(); } // hôm nay → giờ hiện tại để lịch sử đúng thứ tự
 function fmtMoney(n){ n=Number(n)||0; return n?n.toLocaleString('vi-VN')+' đ':''; }
 function parseMoney(s){ return Number(String(s||'').replace(/[^\d]/g,''))||0; }
 function days(a,b){ return Math.max(0,Math.round(((b||Date.now())-a)/86400000)); }
@@ -297,11 +297,11 @@ function renderIssues(){
 // ══ CHI TIẾT 1 THIẾT BỊ ══
 let curId=null, _logRef=null, _logs={};
 function openDetail(id){
-  curId=id; $('detail').hidden=false; _logs={};
+  curId=id; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; _logs={};
   if(_logRef) _logRef.off();
   _logRef=db.ref(ROOT+'/log/'+id); _logRef.on('value',s=>{ _logs=s.val()||{}; renderDetail(_logs); });
 }
-function closeDetail(){ $('detail').hidden=true; if(_logRef) _logRef.off(); _logRef=null; curId=null; }
+function closeDetail(){ $('detail').hidden=true; document.body.style.overflow=''; if(_logRef) _logRef.off(); _logRef=null; curId=null; }
 function renderDetail(logs){
   const id=curId, it=items[id]; if(!it){ closeDetail(); return; }
   const open=openIssuesOf(id);
