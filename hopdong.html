@@ -198,7 +198,7 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
 <div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
 
 <script>
-// ══ CẤU HÌNH — dùng CHUNG project Firebase với app Duyệt Chi 379 (cùng tài khoản, cùng danh sách người được duyệt) ══
+// ===== 1. CAU_HINH — cấu hình Firebase (dùng CHUNG project với app Duyệt Chi 379: cùng tài khoản, cùng danh sách người được duyệt) =====
 const firebaseConfig = {
   apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
   authDomain: "duyetchi-pva379.firebaseapp.com",
@@ -228,7 +228,7 @@ function doUpdateNow(){ location.replace(location.origin+location.pathname+'?u='
 setTimeout(checkForUpdate,4000); setInterval(checkForUpdate,3*60*1000);
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ checkForUpdate(); pushReminders(); } });
 
-// ══ TIỆN ÍCH ══
+// ===== TIỆN ÍCH (định dạng tiền/ngày) + 2. DU_LIEU_TINH (công ty, giai đoạn) — sẽ sắp lại theo mục 4.2 ở bước đổi cấu trúc =====
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pad=n=>String(n).padStart(2,'0');
@@ -251,7 +251,7 @@ const badge=p=>`<span class="badge s-${p}">${PHASE[p]||p}</span>`;
 // Giai đoạn tự suy ra từ ngày tháng — người dùng chỉ cần bấm "Thanh lý" khi kết thúc hợp đồng
 function phase(c){ if(c.status==='closed') return 'closed'; if(c.status==='settling') return 'settling'; if(c.status==='settled') return 'settled'; if(c.warrantyEnd&&dl(c.warrantyEnd)<0) return 'expired'; if(c.handoverDate&&dl(c.handoverDate)<=0) return 'warranty'; return 'active'; }
 
-// ══ ĐĂNG NHẬP ══
+// ===== 3. DANG_NHAP — email + mật khẩu Firebase Auth, chung với app Duyệt Chi =====
 let currentUser=null, userName='', userRole='', sites=[];
 const isDung=()=>userRole==='dung';
 async function doLogin(){
@@ -279,7 +279,7 @@ firebase.auth().onAuthStateChanged(async user=>{
   renderNotify(); attach();
 });
 
-// ══ DỮ LIỆU ══
+// ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (+ 5. LICH_SU: hàm log) =====
 let contracts={}, filterPhase='', filterCo='', _firstLoad=true;
 const coOk=c=>!filterCo||(c.company||'')===filterCo; // lọc theo công ty đang chọn
 function attach(){
@@ -303,6 +303,148 @@ async function addSite(){ const s=$('new-site').value.trim(); if(!s) return; if(
 async function delSite(i){ const s=sites[i]; if(!confirm('Xoá "'+s+'" khỏi danh sách công trình (cả app Duyệt Chi)? Hợp đồng đã ghi tên này vẫn giữ nguyên.')) return;
   try{ await db.ref('duyetchi/meta/sites').set(sites.filter((x,j)=>j!==i)); toast('🗑 Đã xoá'); }catch(e){ toast('❌ '+e.message); } }
 
+// ===== 6. TINH_TOAN — toàn bộ công thức mục 1.5 của docs/hopdong/CLAUDE.md, thuần túy, KHÔNG đụng giao diện =====
+// Cách dùng:
+//   TINH_TOAN.tinhHopDong({hopDong, phuLuc, tamUng, thanhToan, hoanTra})  → bảng số của MỘT hợp đồng
+//   TINH_TOAN.tinhTongHop(danhSachKetQua, congTyId)                        → cộng nhiều hợp đồng cho dashboard
+//   TINH_TOAN.dongTien(danhSachDuLieu, 'thang' | 'quy', congTyId)          → kế hoạch tiền về / thực tế về theo kỳ
+// Quy ước (mục 3.3): tiền = số nguyên VND; ngày = chuỗi 'YYYY-MM-DD'; bảng con = object {id: bảnGhi} như Firebase, hoặc mảng.
+// Số tổng KHÔNG lưu vào Firebase — mỗi lần hiển thị tính lại từ đây (mục 4.3). Muốn đổi công thức phải hỏi anh Dũng (quy tắc 17).
+// Kiểm tra bằng: node test-hopdong-tinhtoan.js
+const TINH_TOAN = (function () {
+  // ---------- tiện ích nhỏ ----------
+  function soNguyen(v) { const n = Math.round(Number(v) || 0); return isFinite(n) ? n : 0; } // ép về số nguyên VND, rác → 0
+  function danhSach(o) { return Array.isArray(o) ? o.filter(Boolean) : Object.values(o || {}).filter(Boolean); }
+  function tongTruong(ds, truong) { return danhSach(ds).reduce((s, x) => s + soNguyen(x[truong]), 0); }
+  function tongHoanTra(hoanTra, loai) { return danhSach(hoanTra).filter(x => x.loai === loai).reduce((s, x) => s + soNguyen(x.soTien), 0); }
+  function laNgay(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); }
+  // Cộng tháng theo lịch, giữ nguyên ngày; tháng đích không có ngày đó thì lấy ngày cuối tháng (31/01 + 1 tháng → 28/02 hoặc 29/02).
+  function congThang(ngay, soThang) {
+    if (!laNgay(ngay)) return '';
+    const [y, m, d] = ngay.split('-').map(Number);
+    const t = new Date(Date.UTC(y, m - 1 + soNguyen(soThang), 1));
+    const cuoiThang = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate();
+    t.setUTCDate(Math.min(d, cuoiThang));
+    return t.toISOString().slice(0, 10);
+  }
+  function soNgayGiua(tu, den) { // den − tu, tính bằng ngày (âm nếu den trước tu)
+    if (!laNgay(tu) || !laNgay(den)) return null;
+    return Math.round((Date.UTC(+den.slice(0, 4), +den.slice(5, 7) - 1, +den.slice(8, 10)) - Date.UTC(+tu.slice(0, 4), +tu.slice(5, 7) - 1, +tu.slice(8, 10))) / 86400000);
+  }
+  function thangCua(ngay) { return laNgay(ngay) ? ngay.slice(0, 7) : ''; }                 // '2026-03'
+  function quyCuaThang(thang) { const m = Number(String(thang || '').slice(5, 7)); return m ? String(thang).slice(0, 4) + '-Q' + (Math.floor((m - 1) / 3) + 1) : ''; } // '2026-03' → '2026-Q1'
+  function quyCua(ngay) { return quyCuaThang(thangCua(ngay)); }
+  function kyCua(ngay, ky) { return ky === 'quy' ? quyCua(ngay) : thangCua(ngay); }
+
+  // ---------- công thức mục 1.5 ----------
+  // "Đang thực hiện" = mọi trạng thái trừ 2 trạng thái kết thúc (đang chờ anh Dũng chốt — câu hỏi 5 trong BANGIAO.md)
+  const TRANG_THAI_KET_THUC = ['daXong', 'biChamDut'];
+
+  // giaTriHienHanh = giaTriGoc + Σ phuLuc.giaTriDieuChinh (phụ lục có thể âm)
+  function giaTriHienHanh(hopDong, phuLuc) { return soNguyen(hopDong && hopDong.giaTriGoc) + tongTruong(phuLuc, 'giaTriDieuChinh'); }
+
+  // Ngày hoàn thành hiện hành = ngày trong phụ lục sau cùng có gia hạn (xếp theo ngày ký phụ lục); không có → ngày theo hợp đồng
+  function ngayHoanThanhHienHanh(hopDong, phuLuc) {
+    const ds = danhSach(phuLuc).filter(p => laNgay(p.ngayHoanThanhMoi)).sort((a, b) => String(a.ngayKy || '').localeCompare(String(b.ngayKy || '')));
+    return ds.length ? ds[ds.length - 1].ngayHoanThanhMoi : ((hopDong && hopDong.ngayHoanThanhHopDong) || '');
+  }
+
+  // ngayHetBaoHanh = ngayNghiemThuBanGiao + thoiGianBaoHanhThang
+  function ngayHetBaoHanh(ngayNghiemThuBanGiao, soThang) { return soNguyen(soThang) > 0 ? congThang(ngayNghiemThuBanGiao, soThang) : ''; }
+
+  // Đã duyệt quyết toán = có ngày duyệt VÀ giá trị duyệt > 0 (có ngày mà chưa có số thì chưa tính là duyệt)
+  function daDuyetQuyetToan(hopDong) { const q = (hopDong && hopDong.quyetToan) || {}; return laNgay(q.ngayDuyet) && soNguyen(q.giaTriDuyet) > 0; }
+
+  // doanhThuCuoiCung = quyetToan.giaTriDuyet nếu đã duyệt, ngược lại = giaTriHienHanh
+  function doanhThuCuoiCung(hopDong, phuLuc) { return daDuyetQuyetToan(hopDong) ? soNguyen(hopDong.quyetToan.giaTriDuyet) : giaTriHienHanh(hopDong, phuLuc); }
+
+  // Bảng số của MỘT hợp đồng. du = {hopDong, phuLuc, tamUng, thanhToan, hoanTra}
+  function tinhHopDong(du) {
+    du = du || {}; const hd = du.hopDong || {};
+    const giaTriHH = giaTriHienHanh(hd, du.phuLuc);
+    const nghiemThuLuyKe = tongTruong(du.thanhToan, 'giaTriNghiemThu');
+    const tamUngLuyKe = tongTruong(du.tamUng, 'soTien');
+    const thuHoiTamUngLuyKe = tongTruong(du.thanhToan, 'thuHoiTamUng');
+    const thucNhanLuyKe = tongTruong(du.thanhToan, 'soTienThucNhan');
+    const giuBaoHanhLuyKe = tongTruong(du.thanhToan, 'giuBaoHanh'), hoanTraBaoHanh = tongHoanTra(du.hoanTra, 'baoHanh');
+    const giuQuyetToanLuyKe = tongTruong(du.thanhToan, 'giuQuyetToan'), hoanTraQuyetToan = tongHoanTra(du.hoanTra, 'quyetToan');
+    const giuBaoHanhDangGiu = giuBaoHanhLuyKe - hoanTraBaoHanh;       // Σ thanhToan.giuBaoHanh − Σ hoanTra.baoHanh
+    const giuQuyetToanDangGiu = giuQuyetToanLuyKe - hoanTraQuyetToan; // Σ thanhToan.giuQuyetToan − Σ hoanTra.quyetToan
+    // conPhaiThu = nghiemThuLuyKe − thuHoiTamUngLuyKe − thucNhanLuyKe — ĐÚNG NGUYÊN VĂN mục 1.5.
+    // Lưu ý: công thức này CHƯA trừ tiền hoàn trả (hoanTra) → đang hỏi anh Dũng (câu hỏi 3 trong BANGIAO.md). Chưa đổi khi chưa được chốt.
+    const conPhaiThu = nghiemThuLuyKe - thuHoiTamUngLuyKe - thucNhanLuyKe;
+    const bh = hd.baoHanh || {};
+    const ngayHetBH = ngayHetBaoHanh(bh.ngayNghiemThuBanGiao, bh.soThang) || (laNgay(bh.ngayHetBaoHanh) ? bh.ngayHetBaoHanh : '');
+    return {
+      congTyId: hd.congTyId || '', noiBo: !!(hd.noiBo && hd.noiBo.co), trangThai: hd.trangThai || '',
+      dangThucHien: !TRANG_THAI_KET_THUC.includes(hd.trangThai),
+      giaTriGoc: soNguyen(hd.giaTriGoc), dieuChinhPhuLuc: tongTruong(du.phuLuc, 'giaTriDieuChinh'), giaTriHienHanh: giaTriHH,
+      nghiemThuLuyKe: nghiemThuLuyKe, deNghiLuyKe: tongTruong(du.thanhToan, 'soTienDeNghi'),
+      tamUngLuyKe: tamUngLuyKe, thuHoiTamUngLuyKe: thuHoiTamUngLuyKe, tamUngChuaThuHoi: tamUngLuyKe - thuHoiTamUngLuyKe,
+      thucNhanLuyKe: thucNhanLuyKe, tienDaVe: tamUngLuyKe + thucNhanLuyKe,                    // tienDaVe = tamUngLuyKe + thucNhanLuyKe
+      giuBaoHanhLuyKe: giuBaoHanhLuyKe, hoanTraBaoHanh: hoanTraBaoHanh, giuBaoHanhDangGiu: giuBaoHanhDangGiu,
+      giuQuyetToanLuyKe: giuQuyetToanLuyKe, hoanTraQuyetToan: hoanTraQuyetToan, giuQuyetToanDangGiu: giuQuyetToanDangGiu,
+      conPhaiThu: conPhaiThu,
+      conPhaiThuTrongDo: { giuBaoHanh: giuBaoHanhDangGiu, giuQuyetToan: giuQuyetToanDangGiu, khac: conPhaiThu - giuBaoHanhDangGiu - giuQuyetToanDangGiu },
+      conLaiChuaNghiemThu: giaTriHH - nghiemThuLuyKe, // tham khảo (không thuộc 6 ô dashboard): phần hợp đồng chưa nghiệm thu
+      daDuyetQuyetToan: daDuyetQuyetToan(hd), doanhThuCuoiCung: doanhThuCuoiCung(hd, du.phuLuc),
+      ngayHoanThanhHienHanh: ngayHoanThanhHienHanh(hd, du.phuLuc), ngayHetBaoHanh: ngayHetBH,
+      soPhuLuc: danhSach(du.phuLuc).length, soDotTamUng: danhSach(du.tamUng).length, soDotThanhToan: danhSach(du.thanhToan).length
+    };
+  }
+
+  // Cộng nhiều hợp đồng (đầu vào = mảng kết quả của tinhHopDong).
+  //   congTyId = 'PVA' | '379' | '279' → chỉ công ty đó (kể cả hợp đồng nội bộ công ty đó nhận từ công ty anh em)
+  //   congTyId = '' | 'all'            → CẢ 3 công ty, LOẠI hợp đồng nội bộ để doanh thu không bị tính 2 lần (mục 1.4)
+  function tinhTongHop(danhSachKq, congTyId) {
+    const caBa = !congTyId || congTyId === 'all';
+    const ds = danhSach(danhSachKq).filter(k => caBa ? !k.noiBo : k.congTyId === congTyId);
+    const t = { soHopDong: ds.length, soDangThucHien: 0, giaTriDangThucHien: 0, soChoQuyetToan: 0, conDongChoQuyetToan: 0 };
+    ['giaTriHienHanh', 'nghiemThuLuyKe', 'tienDaVe', 'tamUngLuyKe', 'thuHoiTamUngLuyKe', 'tamUngChuaThuHoi', 'thucNhanLuyKe',
+      'conPhaiThu', 'giuBaoHanhDangGiu', 'giuQuyetToanDangGiu', 'conLaiChuaNghiemThu', 'doanhThuCuoiCung'].forEach(f => t[f] = 0);
+    ds.forEach(k => {
+      Object.keys(t).forEach(f => { if (typeof k[f] === 'number' && f !== 'soHopDong') t[f] += soNguyen(k[f]); });
+      if (k.dangThucHien) { t.soDangThucHien++; t.giaTriDangThucHien += soNguyen(k.giaTriHienHanh); }
+      if (k.trangThai === 'choQuyetToan') { t.soChoQuyetToan++; t.conDongChoQuyetToan += soNguyen(k.conPhaiThu); } // "tiền còn đọng" = còn phải thu
+    });
+    return t;
+  }
+
+  // Dòng tiền theo kỳ cho dashboard (mục 1.4): mỗi phần tử {ky, keHoach, thucTe}, ky = 'YYYY-MM' hoặc 'YYYY-Qn', xếp tăng dần.
+  //   keHoach: hopDong.keHoachTienVe/{YYYY-MM} (nhập trong từng hợp đồng), gộp thành quý khi ky = 'quy'
+  //   thucTe : tiền về thật = tạm ứng theo ngày tạm ứng + thực nhận theo ngày tiền về (đúng thành phần của tienDaVe mục 1.5)
+  //            đợt thanh toán chưa có ngày tiền về thì chưa rơi vào kỳ nào. Tiền hoàn trả chưa cộng (câu hỏi 3).
+  function dongTien(danhSachDu, ky, congTyId) {
+    const caBa = !congTyId || congTyId === 'all', gop = {};
+    const cong = (k, truong, tien) => { if (!k) return; (gop[k] = gop[k] || { ky: k, keHoach: 0, thucTe: 0 })[truong] += soNguyen(tien); };
+    danhSach(danhSachDu).forEach(du => {
+      const hd = (du && du.hopDong) || {};
+      if (caBa ? (hd.noiBo && hd.noiBo.co) : hd.congTyId !== congTyId) return;
+      Object.entries(hd.keHoachTienVe || {}).forEach(([thang, tien]) => cong(ky === 'quy' ? quyCuaThang(thang) : (/^\d{4}-\d{2}$/.test(thang) ? thang : ''), 'keHoach', tien));
+      danhSach(du.tamUng).forEach(x => cong(kyCua(x.ngay, ky), 'thucTe', x.soTien));
+      danhSach(du.thanhToan).forEach(x => cong(kyCua(x.ngayTienVe, ky), 'thucTe', x.soTienThucNhan));
+    });
+    return Object.values(gop).sort((a, b) => a.ky.localeCompare(b.ky));
+  }
+
+  // Các mốc cần nhắc của 1 hợp đồng (mục 1.4 "Nhắc hạn"): hết bảo hành, hết bảo lãnh (3 loại), ngày hoàn thành theo hợp đồng.
+  // Chỉ liệt kê mốc có ngày; việc "nhắc trước 30 ngày, lặp 5 ngày, Đã xong" làm ở khối 10 (MÀN HÌNH: Nhắc hạn).
+  function cacMoc(du) {
+    du = du || {}; const kq = tinhHopDong(du), moc = [];
+    if (kq.ngayHetBaoHanh) moc.push({ loai: 'hetBaoHanh', ngayMoc: kq.ngayHetBaoHanh, thamChieuId: '' });
+    danhSach(du.baoLanh).forEach(b => { if (laNgay(b.ngayHetHan)) moc.push({ loai: 'hetBaoLanh', ngayMoc: b.ngayHetHan, thamChieuId: b.id || '', loaiBaoLanh: b.loai || '' }); });
+    if (laNgay(kq.ngayHoanThanhHienHanh) && kq.dangThucHien) moc.push({ loai: 'hoanThanhHopDong', ngayMoc: kq.ngayHoanThanhHienHanh, thamChieuId: '' });
+    return moc.sort((a, b) => a.ngayMoc.localeCompare(b.ngayMoc));
+  }
+
+  return { soNguyen, danhSach, tongTruong, laNgay, congThang, soNgayGiua, thangCua, quyCua, quyCuaThang, kyCua,
+    TRANG_THAI_KET_THUC, giaTriHienHanh, ngayHoanThanhHienHanh, ngayHetBaoHanh, daDuyetQuyetToan, doanhThuCuoiCung,
+    tinhHopDong, tinhTongHop, dongTien, cacMoc };
+})();
+// ===== HẾT 6. TINH_TOAN =====
+
+// (TẠM) calc() cũ của giao diện hiện tại, tính trên cấu trúc dữ liệu cũ (contracts/addenda/advances/payments).
+// Bước tiếp theo (đổi cấu trúc dữ liệu theo mục 4.3) sẽ thay toàn bộ calc()/sumOf() bằng TINH_TOAN ở trên.
 // Tính toán tài chính 1 hợp đồng.
 //  - Tổng giá trị = HĐ + Σ phụ lục (phụ lục giảm ghi số âm)
 //  - Đã thanh toán = Σ giá trị các lần thanh toán khối lượng (chưa trừ gì) → so với tổng giá trị

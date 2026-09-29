@@ -18,6 +18,7 @@
 - Từ 29/09/2026: sửa `database.rules.json` rồi gộp vào `main` → GitHub Actions (`.github/workflows/deploy-rules.yml`) tự chạy `firebase deploy --only database`. KHÔNG cần bảo D bấm `DUA-LUAT-LEN.bat` nữa (file đó chỉ là dự phòng).
 - Cần secret `FIREBASE_TOKEN` (D lấy 1 lần bằng `LAY-KHOA-TU-DONG.bat`) hoặc `FIREBASE_SERVICE_ACCOUNT` trong GitHub → Settings → Secrets → Actions. Nếu tác vụ Actions đỏ vì thiếu khoá → nhắc D làm bước đó.
 - Các app phụ cùng repo: `thietbi.html` (nhánh RTDB `thietbi`), `hopdong.html` (nhánh `hopdong`, đọc `duyetchi/meta/sites` dùng chung danh sách công trình). Mỗi app có `version-<app>.txt` + `manifest-<app>.json`.
+- **App Hợp đồng có SPEC riêng**: `docs/hopdong/CLAUDE.md` (bản chốt 30/09/2026, công thức mục 1.5, cấu trúc dữ liệu mục 4.3) + nhật ký `docs/hopdong/BANGIAO.md`. Sửa `hopdong.html` thì ĐỌC 2 file đó trước; mã phải theo spec, mâu thuẫn thì hỏi D. Kiểm tra công thức: `node test-hopdong-tinhtoan.js`.
 
 ## Test tối thiểu trước khi push app3.html
 ```
