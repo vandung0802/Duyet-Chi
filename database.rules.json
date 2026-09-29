@@ -389,6 +389,21 @@
       "$other": { ".validate": false }
     },
 
+    // ══ APP HỢP ĐỒNG (hopdong.html) — cùng cơ chế với thietbi: ai đã được duyệt (approved) hoặc 3 người nhà đều đọc/ghi ══
+    // contracts/{id} = 1 hợp đồng A-B; bên trong có addenda (phụ lục), advances (tạm ứng), payments (thanh toán từng lần).
+    // log/{id}/{k} = lịch sử ai làm gì. Mọi bản ghi đều có by/updatedBy.
+    "hopdong": {
+      ".read":  "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+      ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+      "contracts": { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['code', 'name']) && newData.child('code').isString() && newData.child('code').val().length <= 100 && newData.child('name').isString() && newData.child('name').val().length <= 300)",
+                              "note":     { ".validate": "newData.isString() && newData.val().length <= 4000" },
+                              "addenda":  { "$k": { ".validate": "!newData.exists() || newData.hasChildren(['value'])", "note": { ".validate": "newData.isString() && newData.val().length <= 2000" } } },
+                              "advances": { "$k": { ".validate": "!newData.exists() || newData.hasChildren(['value'])", "note": { ".validate": "newData.isString() && newData.val().length <= 2000" } } },
+                              "payments": { "$k": { ".validate": "!newData.exists() || newData.hasChildren(['value'])", "note": { ".validate": "newData.isString() && newData.val().length <= 2000" } } } } },
+      "log":    { "$c": { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['type', 'text']) && newData.child('text').val().length <= 4000)" } } },
+      "$other": { ".validate": false }
+    },
+
     // ══ NHÁNH NỘI BỘ của Cloud Functions — CẤM mọi client (chỉ admin SDK chạm được) ══
     // Vốn đã bị cấm mặc định vì không có luật nào mở; khai TƯỜNG MINH ở đây để (a) ai đọc file cũng thấy,
     // (b) lỡ sau này có người thêm luật mở ở cấp gốc thì nhìn vào đây biết ngay là KHÔNG ĐƯỢC.

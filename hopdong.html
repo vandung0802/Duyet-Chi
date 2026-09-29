@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#4338ca">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hợp đồng">
+<link rel="manifest" href="manifest-hopdong.json">
+<title>Hợp đồng PVA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --blue:#4338ca;--blue-light:#e0e7ff;--blue-dark:#3730a3; /* app Hợp đồng: tông chàm, khác 379 (xanh), Gia Bình (xanh lá), Thiết bị (cam) */
+  --green:#057a55;--green-light:#def7ec;
+  --yellow:#9f580a;--yellow-light:#fdf6b2;
+  --red:#c81e1e;--red-light:#fde8e8;
+  --gray:#6b7280;--gray-light:#f3f4f6;--gray-border:#e5e7eb;
+  --text:#111827;--text-sub:#6b7280;--white:#fff;
+  --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,.08);
+}
+body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:17px}
+[hidden]{display:none!important}
+.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.app-header h1{font-size:16px;font-weight:700}
+.app-header small{font-size:11px;opacity:.85;margin-left:6px;font-weight:400}
+.hdr-user{font-size:12px;opacity:.9}
+#update-banner{display:none;background:#f59e0b;color:#111;font-weight:700;text-align:center;padding:10px;cursor:pointer;font-size:15px}
+.main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0)}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:11px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
+.nav-item.active{color:var(--blue);font-weight:700}
+.nav-icon{font-size:20px;line-height:1;width:44px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#eef2f7}
+.nav-item.active .nav-icon{box-shadow:0 0 0 2px var(--blue)}
+.nav-badge{position:absolute;top:2px;left:calc(50% + 8px);background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;box-shadow:0 0 0 2px #fff}
+.card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
+.card-body{padding:12px 14px}
+.row{display:flex;gap:8px;align-items:center}
+.row>*{flex:1;min-width:0}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--gray-border);border-radius:var(--radius);background:#fff;color:var(--text)}
+textarea{min-height:70px;resize:vertical}
+label.f{display:block;font-size:13px;color:var(--text-sub);font-weight:600;margin:10px 0 4px}
+.btn{font:inherit;font-size:15px;font-weight:700;padding:11px 14px;border-radius:var(--radius);border:none;background:var(--blue);color:#fff;cursor:pointer;width:100%}
+.btn.sec{background:var(--gray-light);color:var(--text)}
+.btn.red{background:var(--red)}.btn.green{background:var(--green)}.btn.yel{background:#d97706}
+.btn:disabled{opacity:.6}
+.btn.sm{width:auto;padding:7px 12px;font-size:13px}
+.stats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px}
+.stat{flex:0 0 auto;background:#fff;border-radius:var(--radius);padding:8px 12px;box-shadow:var(--shadow);cursor:pointer;text-align:center;min-width:78px;border:2px solid transparent}
+.stat.on{border-color:var(--blue)}
+.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--text-sub)}
+.item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--gray-border);cursor:pointer;align-items:center}
+.item:last-child{border-bottom:none}
+.item-main{flex:1;min-width:0}
+.item-name{font-weight:700;font-size:16px}
+.item-sub{font-size:13px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.s-active{background:#dbeafe;color:#1d4ed8}
+.s-warranty{background:var(--green-light);color:var(--green)}
+.s-expired{background:var(--yellow-light);color:var(--yellow)}
+.s-closed{background:var(--gray-light);color:var(--gray)}
+.bar{height:6px;background:var(--gray-light);border-radius:3px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--blue)}
+.al{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-border);cursor:pointer;align-items:center}
+.al:last-child{border-bottom:none}
+.al .ic{font-size:24px;flex:0 0 auto}
+.al.warn{background:#fffbeb}.al.due{background:#fff7ed}.al.over{background:var(--red-light)}
+.al-h{padding:8px 14px;font-size:13px;font-weight:700;color:var(--text-sub);background:var(--gray-light);text-transform:uppercase}
+.fin{width:100%;border-collapse:collapse;font-size:15px}
+.fin td{padding:6px 0;border-bottom:1px dashed var(--gray-border)}
+.fin td:last-child{text-align:right;font-weight:600;white-space:nowrap}
+.fin tr.tot td{font-weight:800;border-bottom:2px solid var(--gray-border)}
+.fin td.sub{color:var(--text-sub);font-size:14px}
+table.p{width:100%;border-collapse:collapse;font-size:13px}
+table.p th,table.p td{border-bottom:1px solid var(--gray-border);padding:6px 4px;text-align:right;white-space:nowrap}
+table.p th:first-child,table.p td:first-child{text-align:left}
+table.p th{color:var(--text-sub);font-weight:600;font-size:12px}
+table.p tbody tr{cursor:pointer}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.sec-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sec-h h3{font-size:15px}
+.neg{color:var(--red)}.pos{color:var(--green)}
+.empty{text-align:center;color:var(--text-sub);padding:30px 10px;font-size:15px}
+.overlay{position:fixed;inset:0;background:#f0f2f5;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.modal{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.modal h3{font-size:17px;margin-bottom:6px}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:15px}
+.kv div:nth-child(odd){color:var(--text-sub)}
+.tl{border-left:3px solid var(--gray-border);margin-left:8px;padding-left:14px}
+.tl-e{position:relative;padding-bottom:14px}
+.tl-e::before{content:'';position:absolute;left:-21px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--blue);border:2px solid #fff}
+.tl-t{font-size:12px;color:var(--text-sub)}
+.tl-b{font-size:15px}
+.warn{background:var(--red-light);color:var(--red);padding:8px 12px;border-radius:var(--radius);font-size:14px;margin-bottom:8px;font-weight:600}
+.warn.soft{background:#fffbeb;color:#92400e}
+.hint{font-size:13px;color:var(--text-sub);margin-top:4px}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:999;max-width:90vw;text-align:center}
+.login{max-width:420px;margin:40px auto;padding:20px}
+.login h2{text-align:center;margin-bottom:16px;color:var(--blue-dark)}
+.err{color:var(--red);font-size:14px;margin-top:8px;min-height:20px}
+table.x{width:100%;border-collapse:collapse;font-size:13px}
+table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-align:left}
+</style>
+</head>
+<body>
+
+<!-- ĐĂNG NHẬP (dùng chung tài khoản app Duyệt Chi 379) -->
+<div id="login-screen" class="login">
+  <h2>📑 Hợp đồng PVA</h2>
+  <div class="card"><div class="card-body">
+    <label class="f">Email</label><input id="l-email" type="email" autocomplete="username">
+    <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password">
+    <div style="margin-top:14px"><button class="btn" id="l-btn" onclick="doLogin()">Đăng nhập</button></div>
+    <div class="err" id="l-err"></div>
+    <p style="font-size:13px;color:var(--text-sub);margin-top:10px">Dùng đúng email + mật khẩu của app <b>Duyệt Chi</b>. Chưa có tài khoản → đăng ký trong app Duyệt Chi trước.</p>
+  </div></div>
+</div>
+
+<div id="wait-screen" class="login" hidden>
+  <h2>⏳ Chờ cấp quyền</h2>
+  <div class="card"><div class="card-body" style="font-size:15px">
+    Tài khoản của bạn chưa được duyệt xem dữ liệu. Nhờ quản trị bấm "Cho xem" trong app Duyệt Chi, rồi mở lại app này.
+    <div style="margin-top:14px"><button class="btn sec" onclick="doLogout()">Đăng xuất</button></div>
+  </div></div>
+</div>
+
+<div id="app" hidden>
+  <div id="update-banner" onclick="doUpdateNow()">⬆️ Có bản mới — bấm để cập nhật</div>
+  <header class="app-header"><h1>📑 Hợp đồng PVA <small id="ver-label"></small></h1><span class="hdr-user" id="hdr-user"></span></header>
+  <main class="main">
+
+    <section id="tab-list">
+      <div id="top-alert" hidden></div>
+      <div class="stats" id="stats"></div>
+      <div class="card"><div class="card-body" style="padding:8px 10px">
+        <input id="q" placeholder="🔍 Tìm số HĐ, tên công trình, bên A/B…" oninput="renderList()">
+      </div></div>
+      <div class="card" id="list"></div>
+      <button class="btn" onclick="contractForm()">＋ Thêm hợp đồng</button>
+    </section>
+
+    <section id="tab-alerts" hidden>
+      <div class="card"><div class="card-body" style="font-size:14px;color:var(--text-sub)">Nhắc trước <b>10 ngày</b> ngày bàn giao và ngày hết bảo hành. Hợp đồng đã hết bảo hành nằm ở đây cho tới khi bấm <b>Thanh lý</b>.</div></div>
+      <div class="card" id="alerts"></div>
+    </section>
+
+    <section id="tab-more" hidden>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">🔔 Thông báo trên máy này</h3>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px" id="notify-info"></p>
+        <button class="btn" id="notify-btn" onclick="enableNotify()">Bật thông báo</button>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">📥 Nhập danh sách hợp đồng từ Excel</h3>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">Tải file mẫu, điền mỗi dòng 1 hợp đồng, rồi chọn file để nhập. Số HĐ trùng → cập nhật thông tin chung (không đụng phụ lục/tạm ứng/thanh toán đã ghi), số mới → thêm.</p>
+        <div class="row">
+          <button class="btn sec" onclick="downloadTemplate()">⬇️ File mẫu</button>
+          <button class="btn" onclick="document.getElementById('xl-file').click()">📂 Chọn file</button>
+        </div>
+        <input id="xl-file" type="file" accept=".xlsx,.xls" hidden onchange="onExcel(event)">
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">📤 Xuất Excel</h3>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">1 file, 3 sheet: Hợp đồng (tổng hợp tài chính) · Thanh toán · Tạm ứng &amp; Phụ lục.</p>
+        <button class="btn sec" onclick="exportAll()">Xuất toàn bộ</button>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div style="font-size:14px;color:var(--text-sub)" id="more-info"></div>
+        <div style="margin-top:10px"><button class="btn sec" onclick="doLogout()">Đăng xuất</button></div>
+      </div></div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-tab="list" onclick="showTab('list')"><span class="nav-icon">📑</span>Hợp đồng</button>
+    <button class="nav-item" data-tab="alerts" onclick="showTab('alerts')"><span class="nav-icon">🔔</span>Nhắc nhở<span class="nav-badge" id="al-badge" hidden></span></button>
+    <button class="nav-item" data-tab="more" onclick="showTab('more')"><span class="nav-icon">⚙️</span>Khác</button>
+  </nav>
+</div>
+
+<div id="detail" class="overlay" hidden></div>
+<div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+
+<script>
+// ══ CẤU HÌNH — dùng CHUNG project Firebase với app Duyệt Chi 379 (cùng tài khoản, cùng danh sách người được duyệt) ══
+const firebaseConfig = {
+  apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
+  authDomain: "duyetchi-pva379.firebaseapp.com",
+  databaseURL: "https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "duyetchi-pva379",
+  storageBucket: "duyetchi-pva379.firebasestorage.app",
+  messagingSenderId: "366275914302",
+  appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
+};
+const APP_VERSION = '20260929-v1';
+document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const ROOT = 'hopdong';      // nhánh riêng trong RTDB, luật ở database.rules.json
+const REMIND_DAYS = 10;      // nhắc trước 10 ngày (bàn giao + hết bảo hành)
+
+// ── kiểm tra bản mới (giống 379: so version-hopdong.txt, chỉ báo khi server MỚI HƠN) ──
+function _verNum(v){ var m=/^(\d{8})-v(\d+)$/.exec(String(v||'').trim()); return m?parseInt(m[1],10)*1000+parseInt(m[2],10):0; }
+function checkForUpdate(){
+  fetch('version-hopdong.txt?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(txt=>{
+    if(!txt) return; var sv=_verNum(txt), lv=_verNum(APP_VERSION);
+    if(sv>0&&lv>0?sv>lv:txt.trim()!==APP_VERSION) document.getElementById('update-banner').style.display='block';
+  }).catch(()=>{});
+}
+function doUpdateNow(){ location.replace(location.origin+location.pathname+'?u='+Date.now()); }
+setTimeout(checkForUpdate,4000); setInterval(checkForUpdate,3*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ checkForUpdate(); pushReminders(); } });
+
+// ══ TIỆN ÍCH ══
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad=n=>String(n).padStart(2,'0');
+function fmtDate(ts){ if(!ts) return ''; const d=new Date(ts); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
+function fmtDT(ts){ if(!ts) return ''; const d=new Date(ts); return fmtDate(ts)+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
+function toISO(ts){ const d=new Date(ts); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function fromISO(s){ if(!s) return 0; const [y,m,d]=s.split('-').map(Number); if(!y||!m||!d) return 0; return new Date(y,m-1,d,12).getTime(); } // luôn 12h trưa → so ngày không lệch múi giờ
+function today0(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+function dl(ts){ return Math.floor((ts-today0())/86400000); } // số ngày còn lại (âm = đã qua)
+function addMonths(ts,m){ const d=new Date(ts); return new Date(d.getFullYear(),d.getMonth()+m,d.getDate(),12).getTime(); }
+function fmtMoney(n){ n=Number(n)||0; return n.toLocaleString('vi-VN')+' đ'; }
+function fmtShort(n){ n=Number(n)||0; const a=Math.abs(n), s=n<0?'-':''; if(a>=1e9) return s+(a/1e9).toLocaleString('vi-VN',{maximumFractionDigits:2})+' tỷ'; if(a>=1e6) return s+(a/1e6).toLocaleString('vi-VN',{maximumFractionDigits:1})+' tr'; return s+a.toLocaleString('vi-VN')+' đ'; }
+function parseMoney(s){ return Number(String(s||'').replace(/[^\d]/g,''))||0; }
+function fmtIn(el){ const n=parseMoney(el.value); el.value=n?n.toLocaleString('vi-VN'):''; }
+const money=n=>n?Number(n).toLocaleString('vi-VN'):'';
+let _toastT; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=m; t.hidden=false; clearTimeout(_toastT); _toastT=setTimeout(()=>t.hidden=true,3000); }
+
+const PHASE={active:'🔵 Đang thi công',warranty:'🟢 Đang bảo hành',expired:'🟠 Hết bảo hành',closed:'⚫ Đã thanh lý'};
+const badge=p=>`<span class="badge s-${p}">${PHASE[p]||p}</span>`;
+// Giai đoạn tự suy ra từ ngày tháng — người dùng chỉ cần bấm "Thanh lý" khi kết thúc hợp đồng
+function phase(c){ if(c.status==='closed') return 'closed'; if(c.warrantyEnd&&dl(c.warrantyEnd)<0) return 'expired'; if(c.handoverDate&&dl(c.handoverDate)<=0) return 'warranty'; return 'active'; }
+
+// ══ ĐĂNG NHẬP ══
+let currentUser=null, userName='';
+async function doLogin(){
+  const email=$('l-email').value.trim(), pass=$('l-pass').value, btn=$('l-btn'), err=$('l-err');
+  if(!email||!pass){ err.textContent='Nhập email và mật khẩu'; return; }
+  btn.disabled=true; btn.textContent='⏳ Đang đăng nhập...'; err.textContent='';
+  try{ await firebase.auth().signInWithEmailAndPassword(email,pass); }
+  catch(e){
+    err.textContent = /user-not-found|wrong-password|invalid-credential/.test(e.code)?'Email hoặc mật khẩu không đúng'
+      : e.code==='auth/network-request-failed'?'Lỗi mạng — kiểm tra WiFi/4G':'Đăng nhập thất bại';
+  }
+  btn.disabled=false; btn.textContent='Đăng nhập';
+}
+function doLogout(){ firebase.auth().signOut(); }
+firebase.auth().onAuthStateChanged(async user=>{
+  currentUser=user;
+  $('login-screen').hidden=!!user; $('app').hidden=true; $('wait-screen').hidden=true;
+  if(!user) return;
+  let prof={};
+  try{ prof=(await db.ref('duyetchi/userRoles/'+user.uid).get()).val()||{}; }catch(e){}
+  userName=prof.name||user.email||'';
+  if(prof.approved!==true && prof.role!=='dung'){ $('wait-screen').hidden=false; return; }
+  $('app').hidden=false; $('hdr-user').textContent=userName;
+  $('more-info').textContent='Đăng nhập: '+userName+' · Bản '+APP_VERSION;
+  renderNotify(); attach();
+});
+
+// ══ DỮ LIỆU ══
+let contracts={}, filterPhase='', _firstLoad=true;
+function attach(){
+  db.ref(ROOT+'/contracts').on('value',s=>{ contracts=s.val()||{}; renderAll(); if(_firstLoad){ _firstLoad=false; pushReminders(); } },
+    e=>{ $('list').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh hopdong) có thể chưa được đưa lên máy chủ.</div>'; });
+}
+const who=()=>({by:userName,uid:currentUser.uid,ts:Date.now()});
+function log(cid,type,text){ return db.ref(ROOT+'/log/'+cid).push(Object.assign({type,text},who())); }
+const parties=k=>Object.values(contracts).map(c=>c[k]);
+
+// Tính toán tài chính 1 hợp đồng.
+//  - Tổng giá trị = HĐ + Σ phụ lục (phụ lục giảm ghi số âm)
+//  - Đã thanh toán = Σ giá trị các lần thanh toán khối lượng (chưa trừ gì) → so với tổng giá trị
+//  - Mỗi lần thanh toán KL: trừ thu hồi tạm ứng + giữ lại bảo hành → thực nhận
+//  - Lần "hoàn trả tiền bảo hành" (type=bh): chỉ cộng vào thực nhận, trừ khỏi số đang bị giữ
+function calc(c){
+  const val=Number(c.value)||0;
+  const add=Object.values(c.addenda||{}).reduce((s,a)=>s+(Number(a.value)||0),0);
+  const total=val+add;
+  const adv=Object.values(c.advances||{}).reduce((s,a)=>s+(Number(a.value)||0),0);
+  let paid=0,recov=0,retain=0,refund=0,net=0,nPay=0;
+  Object.values(c.payments||{}).forEach(p=>{ const v=Number(p.value)||0;
+    if(p.type==='bh'){ refund+=v; net+=v; }
+    else { const r=Number(p.recover)||0, h=Number(p.retain)||0; nPay++; paid+=v; recov+=r; retain+=h; net+=v-r-h; } });
+  return {val,add,total,adv,paid,recov,retain,refund,nPay,advLeft:adv-recov,retainLeft:retain-refund,remain:total-paid,received:adv+net,
+    pct:total>0?Math.max(0,Math.min(100,Math.round(paid/total*100))):0,nAdd:Object.keys(c.addenda||{}).length,nAdv:Object.keys(c.advances||{}).length};
+}
+// Nhắc nhở của 1 hợp đồng (bỏ qua HĐ đã thanh lý)
+function alertsOf(id,c){
+  const out=[]; if(c.status==='closed') return out;
+  if(c.handoverDate){ const d=dl(c.handoverDate); if(d>=0&&d<=REMIND_DAYS) out.push({id,kind:'handover',days:d,level:'warn',icon:'🏁',text:'Bàn giao công trình '+(d===0?'HÔM NAY':'sau '+d+' ngày')+' ('+fmtDate(c.handoverDate)+')'}); }
+  if(c.warrantyEnd){ const d=dl(c.warrantyEnd), k=calc(c);
+    if(d<0) out.push({id,kind:'expired',days:d,level:'over',icon:'🔴',text:'Đã hết bảo hành '+(-d)+' ngày ('+fmtDate(c.warrantyEnd)+')'+(k.retainLeft>0?' · đang bị giữ '+fmtShort(k.retainLeft)+' tiền BH':'')});
+    else if(d<=REMIND_DAYS) out.push({id,kind:'warranty',days:d,level:'due',icon:'⚠️',text:'Hết bảo hành '+(d===0?'HÔM NAY':'sau '+d+' ngày')+' ('+fmtDate(c.warrantyEnd)+')'+(k.retainLeft>0?' · còn '+fmtShort(k.retainLeft)+' tiền giữ BH':'')}); }
+  return out;
+}
+function allAlerts(){ const out=[]; Object.entries(contracts).forEach(([id,c])=>alertsOf(id,c).forEach(a=>out.push(a))); return out.sort((a,b)=>a.days-b.days); }
+
+// ══ MÀN CHÍNH ══
+function showTab(t){
+  ['list','alerts','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
+}
+function renderAll(){ renderStats(); renderList(); renderAlerts(); if(curId&&_logRef) renderDetail(_logs); }
+function renderStats(){
+  const c={all:0,active:0,warranty:0,expired:0,closed:0}; Object.values(contracts).forEach(x=>{ const p=phase(x); c[p]++; if(p!=='closed') c.all++; });
+  $('stats').innerHTML=[['','Tất cả',c.all],['active','Đang thi công',c.active],['warranty','Đang bảo hành',c.warranty],['expired','Hết bảo hành',c.expired],['closed','Đã thanh lý',c.closed]]
+    .map(([k,l,n])=>`<div class="stat ${filterPhase===k?'on':''}" onclick="filterPhase='${k}';renderAll()"><b>${n}</b><span>${l}</span></div>`).join('');
+}
+function renderList(){
+  const q=$('q').value.trim().toLowerCase();
+  const rows=Object.entries(contracts).filter(([id,c])=>{
+    const p=phase(c); if(filterPhase? p!==filterPhase : p==='closed') return false;
+    return !q||[c.code,c.name,c.partyA,c.partyB].join(' ').toLowerCase().includes(q);
+  }).sort((a,b)=>(b[1].signDate||b[1].createdAt||0)-(a[1].signDate||a[1].createdAt||0));
+  $('list').innerHTML=rows.length?rows.map(([id,c])=>{ const k=calc(c), al=alertsOf(id,c); return `<div class="item" onclick="openDetail('${id}')">
+    <div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div>
+    <div class="item-sub">🏢 ${esc(c.partyA||'—')}${c.signDate?' · ký '+fmtDate(c.signDate):''}</div>
+    <div class="item-sub">💰 ${fmtShort(k.total)} · đã TT <b>${k.pct}%</b>${k.advLeft>0?' · TƯ còn '+fmtShort(k.advLeft):''}${k.retainLeft>0?' · giữ BH '+fmtShort(k.retainLeft):''}</div>
+    <div class="bar"><i style="width:${k.pct}%"></i></div>
+    ${al.map(a=>`<div class="item-sub" style="color:var(--red);white-space:normal;margin-top:4px">${a.icon} ${esc(a.text)}</div>`).join('')}
+    </div>${badge(phase(c))}</div>`; }).join('')
+    :'<div class="empty">Chưa có hợp đồng nào. Bấm "Thêm hợp đồng" hoặc nhập từ Excel (tab Khác).</div>';
+}
+function renderAlerts(){
+  const list=allAlerts(), n=list.length;
+  $('al-badge').hidden=!n; $('al-badge').textContent=n;
+  $('top-alert').hidden=!n; $('top-alert').innerHTML=n?`<div class="warn" style="cursor:pointer" onclick="showTab('alerts')">🔔 ${n} việc cần lưu ý (bàn giao / bảo hành) — bấm xem</div>`:'';
+  const G=[['handover','⏰ Sắp bàn giao công trình'],['warranty','⚠️ Sắp hết bảo hành'],['expired','🔴 Đã hết bảo hành — thu hồi tiền giữ lại BH, thanh lý hợp đồng']];
+  $('alerts').innerHTML=n?G.map(([k,t])=>{ const rows=list.filter(a=>a.kind===k); if(!rows.length) return ''; return `<div class="al-h">${t}</div>`+rows.map(a=>{ const c=contracts[a.id]; return `<div class="al ${a.level}" onclick="openDetail('${a.id}')"><div class="ic">${a.icon}</div><div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div><div class="item-sub">🏢 ${esc(c.partyA||'—')}</div><div class="item-sub" style="white-space:normal;color:var(--text)">${esc(a.text)}</div></div></div>`; }).join(''); }).join('')
+    :'<div class="empty">🎉 Không có gì cần nhắc trong '+REMIND_DAYS+' ngày tới.</div>';
+}
+
+// ══ CHI TIẾT 1 HỢP ĐỒNG ══
+let curId=null, _logRef=null, _logs={};
+function openDetail(id){
+  curId=id; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; _logs={};
+  if(_logRef) _logRef.off();
+  _logRef=db.ref(ROOT+'/log/'+id); _logRef.on('value',s=>{ _logs=s.val()||{}; renderDetail(_logs); });
+}
+function closeDetail(){ $('detail').hidden=true; document.body.style.overflow=''; if(_logRef) _logRef.off(); _logRef=null; curId=null; }
+const sortNo=o=>Object.entries(o||{}).sort((a,b)=>(Number(a[1].no)||0)-(Number(b[1].no)||0)||(a[1].date||0)-(b[1].date||0));
+function renderDetail(logs){
+  const id=curId, c=contracts[id]; if(!c){ closeDetail(); return; }
+  const k=calc(c), p=phase(c), al=alertsOf(id,c);
+  const pays=sortNo(c.payments), adds=sortNo(c.addenda), advs=sortNo(c.advances);
+  const tl=Object.values(logs).sort((a,b)=>b.ts-a.ts);
+  const rowBtns=(kind,key)=>`<button class="btn sm sec" onclick="event.stopPropagation();subForm('${id}','${kind}','${key}')">✏️</button>`;
+  $('detail').innerHTML=`
+  <header class="app-header"><button class="btn sm sec" onclick="closeDetail()">‹ Quay lại</button><h1 style="flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px">${esc(c.code)}</h1><button class="btn sm sec" onclick="contractForm('${id}')">✏️ Sửa</button></header>
+  <div class="main">
+    ${al.map(a=>`<div class="warn ${a.level==='warn'?'soft':''}">${a.icon} ${esc(a.text)}</div>`).join('')}
+    <div class="card"><div class="card-body">
+      <div style="font-size:19px;font-weight:800">${esc(c.name)}</div><div style="margin:4px 0">${badge(p)}</div>
+      <div class="kv" style="margin-top:10px">
+        <div>Bên A</div><div><b>${esc(c.partyA||'—')}</b></div>
+        <div>Bên B</div><div><b>${esc(c.partyB||'—')}</b></div>
+        <div>Ngày ký</div><div>${fmtDate(c.signDate)||'—'}</div>
+        ${c.note?`<div>Ghi chú</div><div>${esc(c.note)}</div>`:''}
+      </div>
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <div class="sec-h"><h3>💰 Tài chính</h3><b>${k.pct}%</b></div>
+      <div class="bar" style="margin:0 0 10px"><i style="width:${k.pct}%"></i></div>
+      <table class="fin">
+        <tr><td>Giá trị hợp đồng</td><td>${fmtMoney(k.val)}</td></tr>
+        <tr><td>Phụ lục (${k.nAdd})</td><td class="${k.add<0?'neg':''}">${k.add>=0?'+':''}${fmtMoney(k.add)}</td></tr>
+        <tr class="tot"><td>Tổng giá trị</td><td>${fmtMoney(k.total)}</td></tr>
+        <tr><td>Tạm ứng (${k.nAdv} lần)</td><td>${fmtMoney(k.adv)}</td></tr>
+        <tr><td class="sub">Đã thu hồi tạm ứng</td><td class="sub">${fmtMoney(k.recov)}</td></tr>
+        <tr><td>Tạm ứng còn phải thu hồi</td><td class="${k.advLeft>0?'neg':'pos'}">${fmtMoney(k.advLeft)}</td></tr>
+        <tr><td>Đã thanh toán (${k.nPay} lần)</td><td>${fmtMoney(k.paid)}</td></tr>
+        <tr><td>Còn lại chưa thanh toán</td><td class="${k.remain>0?'':'pos'}">${fmtMoney(k.remain)}</td></tr>
+        <tr><td>Tiền giữ lại bảo hành</td><td>${fmtMoney(k.retain)}${k.refund?'<div class="hint">đã hoàn '+fmtMoney(k.refund)+' · còn giữ '+fmtMoney(k.retainLeft)+'</div>':''}</td></tr>
+        <tr class="tot"><td>Thực nhận (tạm ứng + các lần)</td><td>${fmtMoney(k.received)}</td></tr>
+      </table>
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <div class="sec-h"><h3>🧾 Thanh toán</h3><button class="btn sm" onclick="subForm('${id}','payments')">＋ Thêm lần</button></div>
+      ${pays.length?`<div class="tw"><table class="p"><thead><tr><th>Lần</th><th>Ngày</th><th>Giá trị TT</th><th>Trừ TƯ</th><th>Giữ BH</th><th>Thực nhận</th><th></th></tr></thead><tbody>
+        ${pays.map(([key,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0; return x.type==='bh'
+          ?`<tr onclick="subForm('${id}','payments','${key}')"><td>↩️ Hoàn BH</td><td>${fmtDate(x.date)}</td><td>—</td><td>—</td><td class="pos">-${money(v)}</td><td><b>${money(v)}</b></td><td>${rowBtns('payments',key)}</td></tr>`
+          :`<tr onclick="subForm('${id}','payments','${key}')"><td>Lần ${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${money(v)}</td><td>${r?money(r):'—'}</td><td>${h?money(h):'—'}</td><td><b>${money(v-r-h)}</b></td><td>${rowBtns('payments',key)}</td></tr>`; }).join('')}
+        </tbody></table></div><div class="hint">Đơn vị: đồng. Bấm vào dòng để sửa.</div>`:'<div class="hint">Chưa có lần thanh toán nào.</div>'}
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <div class="sec-h"><h3>💵 Tạm ứng</h3><button class="btn sm" onclick="subForm('${id}','advances')">＋ Thêm</button></div>
+      ${advs.length?`<table class="p"><thead><tr><th>Lần</th><th>Ngày</th><th>Số tiền</th><th>Ghi chú</th><th></th></tr></thead><tbody>
+        ${advs.map(([key,x])=>`<tr onclick="subForm('${id}','advances','${key}')"><td>Lần ${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td><b>${money(x.value)}</b></td><td style="white-space:normal;text-align:left">${esc(x.note||'')}</td><td>${rowBtns('advances',key)}</td></tr>`).join('')}
+        </tbody></table>`:'<div class="hint">Chưa tạm ứng.</div>'}
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <div class="sec-h"><h3>📎 Phụ lục hợp đồng</h3><button class="btn sm" onclick="subForm('${id}','addenda')">＋ Thêm</button></div>
+      ${adds.length?`<table class="p"><thead><tr><th>Số PL</th><th>Ngày</th><th>Giá trị</th><th>Nội dung</th><th></th></tr></thead><tbody>
+        ${adds.map(([key,x])=>`<tr onclick="subForm('${id}','addenda','${key}')"><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td class="${x.value<0?'neg':'pos'}"><b>${x.value>=0?'+':''}${money(x.value)}</b></td><td style="white-space:normal;text-align:left">${esc(x.note||'')}</td><td>${rowBtns('addenda',key)}</td></tr>`).join('')}
+        </tbody></table>`:'<div class="hint">Chưa có phụ lục.</div>'}
+    </div></div>
+
+    <div class="card"><div class="card-body">
+      <div class="sec-h"><h3>🏁 Bàn giao &amp; bảo hành</h3>${c.status==='closed'?'':`<button class="btn sm" onclick="handoverForm('${id}')">${c.handoverDate?'✏️ Sửa':'🏁 Bàn giao'}</button>`}</div>
+      <div class="kv">
+        <div>Ngày bàn giao</div><div>${c.handoverDate?'<b>'+fmtDate(c.handoverDate)+'</b>'+(dl(c.handoverDate)>0?' · còn '+dl(c.handoverDate)+' ngày':''):'<span class="hint">chưa bàn giao</span>'}</div>
+        <div>Thời gian BH</div><div>${c.warrantyMonths?c.warrantyMonths+' tháng':'—'}</div>
+        <div>Hết bảo hành</div><div>${c.warrantyEnd?'<b>'+fmtDate(c.warrantyEnd)+'</b>'+(dl(c.warrantyEnd)>=0?' · còn <b>'+dl(c.warrantyEnd)+' ngày</b>':' · <span class="neg">đã hết '+(-dl(c.warrantyEnd))+' ngày</span>'):'—'}</div>
+      </div>
+      <div style="margin-top:12px">${c.status==='closed'
+        ?`<button class="btn sec" onclick="toggleClose('${id}')">↩️ Mở lại hợp đồng (đã thanh lý ${fmtDate(c.closedAt)})</button>`
+        :`<button class="btn sec" onclick="toggleClose('${id}')">⚫ Thanh lý / kết thúc hợp đồng</button>`}</div>
+    </div></div>
+
+    <h3 style="margin:16px 0 10px;font-size:16px">🕘 Lịch sử</h3>
+    <div class="tl">${tl.map(e=>`<div class="tl-e"><div class="tl-t">${fmtDT(e.ts)} · ${esc(e.by||'')}</div><div class="tl-b">${esc(e.text)}</div></div>`).join('')||'<div class="empty">Chưa có gì.</div>'}</div>
+    <div style="margin-top:20px"><button class="btn sec" style="color:var(--red)" onclick="delContract('${id}')">🗑 Xoá hợp đồng này</button></div>
+  </div>`;
+}
+
+// ══ MODAL ══
+function openModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
+function closeModal(){ $('modal-bg').hidden=true; }
+const dlist=(id,vals)=>`<datalist id="${id}">${[...new Set(vals.filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
+async function busy(btn,fn){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await fn(); closeModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
+function autoWE(ho,wm,we){ const h=fromISO($(ho).value), m=parseInt($(wm).value,10); if(h&&m>0) $(we).value=toISO(addMonths(h,m)); }
+
+// ══ FORM HỢP ĐỒNG (thêm / sửa) ══
+function contractForm(id){
+  const c=id?contracts[id]:{};
+  const d=k=>c[k]?toISO(c[k]):'';
+  openModal(`<h3>${id?'✏️ Sửa hợp đồng':'＋ Thêm hợp đồng'}</h3>
+    <label class="f">Số hợp đồng *</label><input id="m-code" value="${esc(c.code||'')}" placeholder="VD: 12/2026/HĐXD">
+    <label class="f">Tên công trình / gói thầu *</label><input id="m-name" value="${esc(c.name||'')}" placeholder="VD: Cầu ABC – gói thầu số 3">
+    <label class="f">Bên A (chủ đầu tư / bên giao thầu)</label><input id="m-pa" list="dl-pa" value="${esc(c.partyA||'')}">${dlist('dl-pa',parties('partyA'))}
+    <label class="f">Bên B (nhà thầu / bên nhận thầu)</label><input id="m-pb" list="dl-pb" value="${esc(c.partyB||'')}" placeholder="VD: Công ty Phúc Vinh An">${dlist('dl-pb',parties('partyB'))}
+    <div class="row"><div><label class="f">Ngày ký</label><input id="m-sign" type="date" value="${d('signDate')}"></div><div><label class="f">Giá trị hợp đồng (đ)</label><input id="m-val" inputmode="numeric" value="${money(c.value)}" oninput="fmtIn(this)"></div></div>
+    ${id?'':`<div class="row"><div><label class="f">Tạm ứng lần 1 (đ)</label><input id="m-adv" inputmode="numeric" oninput="fmtIn(this)" placeholder="để trống nếu chưa"></div><div><label class="f">Ngày tạm ứng</label><input id="m-advd" type="date"></div></div>`}
+    <div class="row"><div><label class="f">Ngày bàn giao</label><input id="m-ho" type="date" value="${d('handoverDate')}" onchange="autoWE('m-ho','m-wm','m-we')"></div><div><label class="f">Bảo hành (tháng)</label><input id="m-wm" inputmode="numeric" value="${esc(c.warrantyMonths||'')}" oninput="autoWE('m-ho','m-wm','m-we')"></div></div>
+    <label class="f">Ngày hết bảo hành</label><input id="m-we" type="date" value="${d('warrantyEnd')}"><div class="hint">Tự tính = ngày bàn giao + số tháng bảo hành; có thể sửa tay.</div>
+    <label class="f">Ghi chú</label><textarea id="m-note">${esc(c.note||'')}</textarea>
+    <div style="margin-top:14px"><button class="btn" onclick="saveContract('${id||''}',this)">💾 Lưu</button></div>`);
+}
+async function saveContract(id,btn){
+  await busy(btn,async()=>{
+    const v=k=>$(k).value.trim();
+    if(!v('m-code')||!v('m-name')) throw new Error('Cần nhập Số hợp đồng và Tên công trình');
+    const dup=Object.entries(contracts).find(([k,c])=>c.code===v('m-code')&&k!==id); if(dup) throw new Error('Số HĐ '+v('m-code')+' đã có ('+dup[1].name+')');
+    const data={code:v('m-code'),name:v('m-name'),partyA:v('m-pa'),partyB:v('m-pb'),signDate:fromISO(v('m-sign')),value:parseMoney(v('m-val')),
+      handoverDate:fromISO(v('m-ho')),warrantyMonths:parseInt(v('m-wm'),10)||0,warrantyEnd:fromISO(v('m-we')),note:v('m-note'),updatedAt:Date.now(),updatedBy:userName};
+    if(id){
+      const o=contracts[id], ch=[];
+      if((o.value||0)!==data.value) ch.push('giá trị '+fmtMoney(o.value)+' → '+fmtMoney(data.value));
+      if((o.handoverDate||0)!==data.handoverDate) ch.push('bàn giao '+(fmtDate(o.handoverDate)||'—')+' → '+(fmtDate(data.handoverDate)||'—'));
+      if((o.warrantyEnd||0)!==data.warrantyEnd) ch.push('hết BH '+(fmtDate(o.warrantyEnd)||'—')+' → '+(fmtDate(data.warrantyEnd)||'—'));
+      await db.ref(ROOT+'/contracts/'+id).update(data); await log(id,'edit','✏️ Sửa hợp đồng'+(ch.length?': '+ch.join('; '):''));
+    } else {
+      Object.assign(data,{status:'active',createdAt:Date.now(),createdBy:userName});
+      const adv=parseMoney(v('m-adv'));
+      if(adv>0) data.advances={[db.ref().push().key]:Object.assign({no:1,date:fromISO(v('m-advd'))||Date.now(),value:adv,note:''},who())};
+      const ref=db.ref(ROOT+'/contracts').push(); await ref.set(data);
+      await log(ref.key,'create','🆕 Tạo hợp đồng · giá trị '+fmtMoney(data.value)+(adv?' · tạm ứng lần 1 '+fmtMoney(adv):''));
+    }
+    toast('✅ Đã lưu');
+  });
+}
+async function delContract(id){
+  const c=contracts[id]; if(!confirm('Xoá hợp đồng "'+c.code+' · '+c.name+'" cùng toàn bộ thanh toán, tạm ứng, phụ lục và lịch sử? Không hoàn tác được.')) return;
+  const up={}; up['contracts/'+id]=null; up['log/'+id]=null;
+  await db.ref(ROOT).update(up); closeDetail(); toast('🗑 Đã xoá');
+}
+async function toggleClose(id){
+  const c=contracts[id], closing=c.status!=='closed', k=calc(c);
+  const msg=closing?'Thanh lý / kết thúc hợp đồng "'+c.code+'"?'+(k.advLeft>0?'\n⚠️ Tạm ứng chưa thu hồi hết: '+fmtMoney(k.advLeft):'')+(k.retainLeft>0?'\n⚠️ Còn bị giữ tiền bảo hành: '+fmtMoney(k.retainLeft):'')+(k.remain>0?'\n⚠️ Còn '+fmtMoney(k.remain)+' chưa thanh toán':''):'Mở lại hợp đồng "'+c.code+'"?';
+  if(!confirm(msg)) return;
+  await db.ref(ROOT+'/contracts/'+id).update(closing?{status:'closed',closedAt:Date.now(),updatedAt:Date.now(),updatedBy:userName}:{status:'active',closedAt:null,updatedAt:Date.now(),updatedBy:userName});
+  await log(id,'status',closing?'⚫ Thanh lý / kết thúc hợp đồng':'↩️ Mở lại hợp đồng'); toast(closing?'✅ Đã thanh lý':'✅ Đã mở lại');
+}
+
+// ══ BÀN GIAO ══
+function handoverForm(id){
+  const c=contracts[id];
+  openModal(`<h3>🏁 Bàn giao công trình</h3><p style="font-size:14px;color:var(--text-sub)">${esc(c.code)} · ${esc(c.name)}</p>
+    <label class="f">Ngày bàn giao</label><input id="h-ho" type="date" value="${toISO(c.handoverDate||Date.now())}" onchange="autoWE('h-ho','h-wm','h-we')">
+    <label class="f">Thời gian bảo hành (tháng)</label><input id="h-wm" inputmode="numeric" value="${c.warrantyMonths||12}" oninput="autoWE('h-ho','h-wm','h-we')">
+    <label class="f">Ngày hết bảo hành</label><input id="h-we" type="date" value="${c.warrantyEnd?toISO(c.warrantyEnd):''}">
+    <label class="f">Ghi chú</label><input id="h-note" placeholder="Số biên bản bàn giao…">
+    <div style="margin-top:14px"><button class="btn" onclick="saveHandover('${id}',this)">💾 Lưu</button></div>`);
+  if(!c.warrantyEnd) autoWE('h-ho','h-wm','h-we');
+}
+async function saveHandover(id,btn){
+  await busy(btn,async()=>{
+    const ho=fromISO($('h-ho').value); if(!ho) throw new Error('Chọn ngày bàn giao');
+    const wm=parseInt($('h-wm').value,10)||0, we=fromISO($('h-we').value), note=$('h-note').value.trim();
+    await db.ref(ROOT+'/contracts/'+id).update({handoverDate:ho,warrantyMonths:wm,warrantyEnd:we,updatedAt:Date.now(),updatedBy:userName});
+    await log(id,'handover','🏁 Bàn giao công trình '+fmtDate(ho)+(wm?' · bảo hành '+wm+' tháng':'')+(we?' · hết BH '+fmtDate(we):'')+(note?' · '+note:''));
+    toast('✅ Đã ghi bàn giao');
+  });
+}
+
+// ══ PHỤ LỤC / TẠM ỨNG / THANH TOÁN (chung 1 form) ══
+const KIND={addenda:{t:'📎 Phụ lục hợp đồng',no:'Số phụ lục',val:'Giá trị phụ lục (đ)'},advances:{t:'💵 Tạm ứng',no:'Lần tạm ứng',val:'Số tiền tạm ứng (đ)'},payments:{t:'🧾 Thanh toán',no:'Lần thanh toán',val:'Giá trị thanh toán đợt này (đ)'}};
+function subForm(cid,kind,key){
+  const c=contracts[cid], x=key?(c[kind]||{})[key]:null, K=KIND[kind], k=calc(c);
+  const nextNo=Object.values(c[kind]||{}).reduce((m,y)=>Math.max(m,Number(y.no)||0),0)+1;
+  const isPay=kind==='payments', isBh=x&&x.type==='bh';
+  openModal(`<h3>${x?'✏️ Sửa':'＋ Thêm'} — ${K.t}</h3><p style="font-size:14px;color:var(--text-sub)">${esc(c.code)} · ${esc(c.name)}</p>
+    ${isPay?`<label class="f">Loại</label><select id="s-type" onchange="payKind()"><option value="kl" ${isBh?'':'selected'}>Thanh toán khối lượng (lần 1, 2, 3…)</option><option value="bh" ${isBh?'selected':''}>Hoàn trả tiền giữ lại bảo hành</option></select>`:''}
+    <div class="row"><div id="s-no-w"><label class="f">${K.no}</label><input id="s-no" value="${esc(x?x.no:(kind==='addenda'?'PL'+pad(nextNo):nextNo))}"></div><div><label class="f">Ngày</label><input id="s-date" type="date" value="${toISO(x&&x.date?x.date:Date.now())}"></div></div>
+    <label class="f">${K.val}</label><input id="s-val" inputmode="numeric" value="${money(Math.abs(Number(x&&x.value)||0))}" oninput="fmtIn(this);payPreview()">
+    ${kind==='addenda'?`<label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:8px"><input type="checkbox" id="s-dec" style="width:auto" ${x&&x.value<0?'checked':''}> Phụ lục GIẢM giá trị</label>`:''}
+    ${isPay?`<div id="s-kl"><div class="row"><div><label class="f">Trừ thu hồi tạm ứng (đ)</label><input id="s-rec" inputmode="numeric" value="${money(x&&x.recover)}" oninput="fmtIn(this);payPreview()"></div><div><label class="f">Giữ lại bảo hành (đ)</label><input id="s-ret" inputmode="numeric" value="${money(x&&x.retain)}" oninput="fmtIn(this);payPreview()"></div></div>
+      <div class="hint">Tạm ứng còn phải thu hồi: <b>${fmtMoney(k.advLeft+(x&&!isBh?Number(x.recover)||0:0))}</b></div></div>
+      <div id="s-bh" class="hint">Đang bị giữ tiền bảo hành: <b>${fmtMoney(k.retainLeft+(isBh?Number(x.value)||0:0))}</b></div>
+      <div style="margin:10px 0;font-size:16px;font-weight:700" id="s-net"></div>`:''}
+    <label class="f">Ghi chú</label><input id="s-note" value="${esc(x&&x.note||'')}" placeholder="${isPay?'Đợt nghiệm thu, số hồ sơ…':'Nội dung'}">
+    <div style="margin-top:14px" class="row"><button class="btn" onclick="saveSub('${cid}','${kind}','${key||''}',this)">💾 Lưu</button>${x?`<button class="btn sec" style="color:var(--red);flex:0 0 auto;width:auto" onclick="delSub('${cid}','${kind}','${key}',this)">🗑 Xoá</button>`:''}</div>`);
+  if(isPay){ payKind(); payPreview(); }
+}
+function payKind(){ const bh=$('s-type').value==='bh'; $('s-kl').hidden=bh; $('s-bh').hidden=!bh; $('s-no-w').style.visibility=bh?'hidden':''; }
+function payPreview(){ if(!$('s-net')) return; const v=parseMoney($('s-val').value); if($('s-type').value==='bh'){ $('s-net').textContent='Thực nhận: '+fmtMoney(v); return; } const r=parseMoney($('s-rec').value), h=parseMoney($('s-ret').value); $('s-net').textContent='Thực nhận đợt này: '+fmtMoney(v-r-h); }
+async function saveSub(cid,kind,key,btn){
+  await busy(btn,async()=>{
+    const c=contracts[cid], K=KIND[kind]; let val=parseMoney($('s-val').value); if(!val) throw new Error('Nhập '+K.val.toLowerCase());
+    const data={no:$('s-no').value.trim(),date:fromISO($('s-date').value)||Date.now(),note:$('s-note').value.trim(),updatedAt:Date.now(),updatedBy:userName};
+    if(kind==='addenda'&&$('s-dec').checked) val=-val;
+    data.value=val;
+    let txt;
+    if(kind==='payments'){
+      data.type=$('s-type').value;
+      if(data.type==='bh'){ data.no=''; data.recover=0; data.retain=0; txt='↩️ Hoàn trả tiền giữ lại bảo hành '+fmtMoney(val); }
+      else { data.recover=parseMoney($('s-rec').value); data.retain=parseMoney($('s-ret').value);
+        if(data.recover+data.retain>val) throw new Error('Trừ tạm ứng + giữ bảo hành không được lớn hơn giá trị thanh toán');
+        txt='🧾 Thanh toán lần '+data.no+': '+fmtMoney(val)+(data.recover?' · trừ TƯ '+fmtMoney(data.recover):'')+(data.retain?' · giữ BH '+fmtMoney(data.retain):'')+' · thực nhận '+fmtMoney(val-data.recover-data.retain); }
+    } else if(kind==='advances') txt='💵 Tạm ứng lần '+data.no+': '+fmtMoney(val);
+    else txt='📎 Phụ lục '+data.no+': '+(val>=0?'+':'')+fmtMoney(val)+(data.note?' · '+data.note:'');
+    if(key){ await db.ref(ROOT+'/contracts/'+cid+'/'+kind+'/'+key).update(data); await log(cid,kind,'✏️ Sửa · '+txt); }
+    else { await db.ref(ROOT+'/contracts/'+cid+'/'+kind).push(Object.assign(data,who())); await log(cid,kind,txt); }
+    await db.ref(ROOT+'/contracts/'+cid).update({updatedAt:Date.now(),updatedBy:userName});
+    toast('✅ Đã lưu');
+  });
+}
+async function delSub(cid,kind,key,btn){
+  const x=contracts[cid][kind][key]; if(!confirm('Xoá dòng này ('+fmtMoney(x.value)+')?')) return;
+  await busy(btn,async()=>{
+    await db.ref(ROOT+'/contracts/'+cid+'/'+kind+'/'+key).set(null);
+    await log(cid,kind,'🗑 Xoá '+KIND[kind].t.replace(/^\S+ /,'')+(x.no?' '+x.no:'')+' · '+fmtMoney(x.value));
+    toast('🗑 Đã xoá');
+  });
+}
+
+// ══ THÔNG BÁO TRÊN MÁY (Notification API) — nhắc khi mở app / quay lại app, mỗi việc 1 lần/ngày ══
+const canNotify=()=>'Notification' in window;
+function renderNotify(){
+  const info=$('notify-info'), btn=$('notify-btn');
+  if(!canNotify()){ info.textContent='Trình duyệt này không hỗ trợ thông báo. Vẫn xem được ở tab 🔔 Nhắc nhở.'; btn.hidden=true; return; }
+  const p=Notification.permission;
+  info.textContent=p==='granted'?'✅ Đã bật. Mỗi lần mở app, việc sắp đến hạn (bàn giao / hết bảo hành trong '+REMIND_DAYS+' ngày) sẽ hiện thông báo trên máy này.'
+    :p==='denied'?'⛔ Đã bị chặn trong cài đặt trình duyệt. Mở lại quyền Thông báo cho trang này rồi tải lại.'
+    :'Bấm để cho phép app hiện thông báo nhắc bàn giao / hết bảo hành trên máy này.';
+  btn.hidden=p!=='default';
+}
+async function enableNotify(){
+  try{ const p=await Notification.requestPermission(); renderNotify();
+    if(p==='granted'){ toast('✅ Đã bật thông báo'); showNote('📑 Hợp đồng PVA','Đã bật nhắc nhở trên máy này.','test'); pushReminders(); } else toast('Chưa cho phép thông báo'); }
+  catch(e){ toast('❌ '+e.message); }
+}
+async function showNote(title,body,tag){
+  try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
+    if(reg&&reg.showNotification) return reg.showNotification(title,{body,tag,renotify:false});
+    new Notification(title,{body,tag}); }catch(e){}
+}
+function pushReminders(){
+  if(!canNotify()||Notification.permission!=='granted'||!currentUser) return;
+  const key='hd_noted_'+toISO(Date.now()); let done={}; try{ done=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
+  allAlerts().forEach(a=>{ const k=a.id+':'+a.kind; if(done[k]) return; done[k]=1; const c=contracts[a.id]; showNote(a.icon+' '+c.code+' · '+c.name,a.text,k); });
+  try{ localStorage.setItem(key,JSON.stringify(done)); Object.keys(localStorage).forEach(x=>{ if(x.startsWith('hd_noted_')&&x!==key) localStorage.removeItem(x); }); }catch(e){}
+}
+
+// ══ EXCEL (SheetJS tải khi cần, giống 379) ══
+function loadXLSX(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX);
+  const s=document.createElement('script'); s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  s.integrity='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'; s.crossOrigin='anonymous';
+  s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
+const COLS=['Số hợp đồng','Tên công trình / gói thầu','Bên A','Bên B','Ngày ký','Giá trị hợp đồng','Tạm ứng lần 1','Ngày bàn giao','Bảo hành (tháng)','Ngày hết bảo hành','Ghi chú'];
+const PH_TXT={active:'Đang thi công',warranty:'Đang bảo hành',expired:'Hết bảo hành',closed:'Đã thanh lý'};
+function xDate(v){ // ô ngày trong Excel: Date, số serial, hoặc chữ dd/mm/yyyy
+  if(!v) return 0; if(v instanceof Date) return isNaN(v)?0:new Date(v.getFullYear(),v.getMonth(),v.getDate(),12).getTime();
+  if(typeof v==='number'){ const d=new Date(Math.round((v-25569)*86400000)); return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),12).getTime(); }
+  const s=String(v).trim(); let m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); if(m) return new Date(+m[3],+m[2]-1,+m[1],12).getTime();
+  m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return new Date(+m[1],+m[2]-1,+m[3],12).getTime(); return 0; }
+const xNum=v=>typeof v==='number'?Math.round(v):parseMoney(v);
+async function downloadTemplate(){
+  try{ const X=await loadXLSX();
+    const ws=X.utils.aoa_to_sheet([COLS,['12/2026/HĐXD','Cầu ABC – gói thầu số 3','Ban QLDA huyện X','Công ty Phúc Vinh An','15/01/2026',12500000000,2500000000,'','12','','Ví dụ — xoá dòng này'],['05/2025/HĐ','Đường nội bộ KCN Y','Công ty Z','Công ty Phúc Vinh An','20/03/2025',3200000000,'','30/06/2026','12','30/06/2027','']]);
+    ws['!cols']=[16,32,22,22,11,18,16,13,10,14,25].map(w=>({wch:w}));
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Hop dong'); X.writeFile(wb,'Mau-danh-sach-hop-dong.xlsx');
+  }catch(e){ toast('❌ '+e.message); }
+}
+async function onExcel(ev){
+  const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  try{ const X=await loadXLSX(); const wb=X.read(await f.arrayBuffer(),{cellDates:true}); const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
+    const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase()); const ci=n=>hdr.findIndex(h=>h.includes(n));
+    const I={code:ci('số hợp'),name:ci('tên'),partyA:ci('bên a'),partyB:ci('bên b'),signDate:ci('ngày ký'),value:ci('giá trị'),adv:ci('tạm ứng'),handoverDate:ci('bàn giao'),warrantyMonths:ci('tháng'),warrantyEnd:ci('hết bảo'),note:ci('ghi chú')};
+    if(I.code<0||I.name<0) throw new Error('File phải có cột "Số hợp đồng" và "Tên công trình"');
+    const g=(r,k)=>I[k]>=0?r[I[k]]:''; const gs=(r,k)=>String(g(r,k)??'').trim();
+    const list=rows.slice(1).filter(r=>gs(r,'code')&&gs(r,'name')).map(r=>{ const o={code:gs(r,'code'),name:gs(r,'name'),partyA:gs(r,'partyA'),partyB:gs(r,'partyB'),signDate:xDate(g(r,'signDate')),value:xNum(g(r,'value')),adv:xNum(g(r,'adv')),
+      handoverDate:xDate(g(r,'handoverDate')),warrantyMonths:parseInt(gs(r,'warrantyMonths'),10)||0,warrantyEnd:xDate(g(r,'warrantyEnd')),note:gs(r,'note')};
+      if(!o.warrantyEnd&&o.handoverDate&&o.warrantyMonths) o.warrantyEnd=addMonths(o.handoverDate,o.warrantyMonths); return o; });
+    if(!list.length) throw new Error('Không thấy dòng nào có Số HĐ + Tên');
+    const byCode={}; Object.entries(contracts).forEach(([k,c])=>byCode[c.code]=k);
+    const nNew=list.filter(r=>!byCode[r.code]).length;
+    openModal(`<h3>📥 Xem trước: ${list.length} dòng</h3><p style="font-size:14px">Thêm mới <b>${nNew}</b> · cập nhật <b>${list.length-nNew}</b> (số HĐ đã có)</p>
+      <div style="max-height:45vh;overflow:auto"><table class="x"><tr><th>Số HĐ</th><th>Tên</th><th>Giá trị</th><th></th></tr>${list.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${fmtShort(r.value)}</td><td>${byCode[r.code]?'cập nhật':'mới'}</td></tr>`).join('')}</table></div>
+      <div style="margin-top:14px"><button class="btn" onclick="importRows(this)">✅ Nhập ${list.length} hợp đồng</button></div>`);
+    window._xlList=list;
+  }catch(e){ toast('❌ '+e.message); }
+}
+async function importRows(btn){
+  await busy(btn,async()=>{
+    const byCode={}; Object.entries(contracts).forEach(([k,c])=>byCode[c.code]=k);
+    const up={}, now=Date.now();
+    for(const r of window._xlList){
+      const isNew=!byCode[r.code], id=byCode[r.code]||db.ref(ROOT+'/contracts').push().key;
+      const data=Object.assign({},r,{updatedAt:now,updatedBy:userName}); const adv=data.adv; delete data.adv;
+      if(isNew){ Object.assign(data,{status:'active',createdAt:now,createdBy:userName});
+        if(adv>0) data.advances={[db.ref().push().key]:Object.assign({no:1,date:data.signDate||now,value:adv,note:'Nhập từ Excel'},who())};
+        up['contracts/'+id]=data; up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'create',text:'🆕 Nhập từ Excel · giá trị '+fmtMoney(data.value)+(adv>0?' · tạm ứng '+fmtMoney(adv):'')},who()); }
+      else { // cập nhật: ô trống không xoá dữ liệu cũ; KHÔNG đụng phụ lục/tạm ứng/thanh toán đã ghi
+        Object.entries(data).forEach(([k,v])=>{ if(v!==''&&v!==0||k==='updatedAt'||k==='updatedBy') up['contracts/'+id+'/'+k]=v; });
+        up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'edit',text:'✏️ Cập nhật từ Excel'},who()); }
+    }
+    await db.ref(ROOT).update(up); filterPhase=''; $('q').value=''; renderAll(); toast('✅ Đã nhập '+window._xlList.length+' hợp đồng'); showTab('list');
+  });
+}
+async function exportAll(){
+  try{ const X=await loadXLSX();
+    const all=Object.entries(contracts).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
+    const s1=[['Số hợp đồng','Tên công trình','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Tình trạng','Ghi chú']]
+      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.retain,k.refund,k.retainLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),PH_TXT[phase(c)],c.note||'']; }));
+    const s2=[['Số hợp đồng','Tên công trình','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Thực nhận','Ghi chú','Người ghi']];
+    const s3=[['Số hợp đồng','Tên công trình','Loại','Số / lần','Ngày','Giá trị','Ghi chú','Người ghi']];
+    all.forEach(([id,c])=>{
+      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0; s2.push([c.code,c.name,x.type==='bh'?'Hoàn tiền BH':'Thanh toán KL',x.no||'',fmtDate(x.date),x.type==='bh'?'':v,x.type==='bh'?'':r,x.type==='bh'?-v:h,x.type==='bh'?v:v-r-h,x.note||'',x.by||'']); });
+      sortNo(c.advances).forEach(([k,x])=>s3.push([c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
+      sortNo(c.addenda).forEach(([k,x])=>s3.push([c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
+    });
+    const wb=X.utils.book_new(), mk=(aoa,w)=>{ const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=w.map(x=>({wch:x})); return ws; };
+    X.utils.book_append_sheet(wb,mk(s1,[16,30,20,20,11,16,14,16,14,14,14,16,16,6,14,12,12,16,12,8,12,14,25]),'Hop dong');
+    X.utils.book_append_sheet(wb,mk(s2,[16,30,14,6,11,16,14,14,16,25,14]),'Thanh toan');
+    X.utils.book_append_sheet(wb,mk(s3,[16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
+    X.writeFile(wb,'Hop-dong-'+toISO(Date.now())+'.xlsx');
+  }catch(e){ toast('❌ '+e.message); }
+}
+</script>
+</body>
+</html>
