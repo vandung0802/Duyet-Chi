@@ -1,0 +1,10 @@
+{
+  "id": "hd-v1",
+  "name": "Hợp đồng PVA-379-279",
+  "short_name": "Hợp đồng",
+  "start_url": "/Duyet-Chi/hopdong.html?t=pwa",
+  "scope": "/Duyet-Chi/hopdong.html",
+  "display": "standalone",
+  "background_color": "#4338ca",
+  "theme_color": "#4338ca"
+}
