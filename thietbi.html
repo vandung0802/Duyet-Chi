@@ -102,11 +102,12 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
 <div id="login-screen" class="login">
   <h2>🚜 Thiết bị PVA</h2>
   <div class="card"><div class="card-body">
-    <label class="f">Email</label><input id="l-email" type="email" autocomplete="username">
-    <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password">
+    <label class="f">Email</label><input id="l-email" type="email" autocomplete="username" inputmode="email" autocapitalize="off" placeholder="Email đã đăng ký bên Duyệt Chi" onkeydown="if(event.key==='Enter')$('l-pass').focus()">
+    <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password" placeholder="Mật khẩu của app Duyệt Chi" onkeydown="if(event.key==='Enter')doLogin()">
     <div style="margin-top:14px"><button class="btn" id="l-btn" onclick="doLogin()">Đăng nhập</button></div>
     <div class="err" id="l-err"></div>
-    <p style="font-size:13px;color:var(--text-sub);margin-top:10px">Dùng đúng email + mật khẩu của app <b>Duyệt Chi</b>. Chưa có tài khoản → đăng ký trong app Duyệt Chi trước.</p>
+    <button type="button" onclick="doForgotPass()" style="width:100%;background:none;border:none;color:var(--blue);font-size:13px;cursor:pointer;padding:6px">Quên mật khẩu?</button>
+    <p style="font-size:13px;color:var(--text-sub);margin-top:8px">Cùng tài khoản với app <b>Duyệt Chi</b>: đúng email + mật khẩu bên đó là vào được. Chưa có tài khoản → đăng ký trong app Duyệt Chi trước (Dũng duyệt xong là dùng được cả hai app).</p>
   </div></div>
 </div>
 
@@ -206,7 +207,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v6';
+const APP_VERSION = '20260929-v7';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database(), storage = firebase.storage();
@@ -254,16 +255,28 @@ window.addEventListener('popstate',()=>{ const tag=_layers.pop(); if(tag) hideLa
 
 // ══ ĐĂNG NHẬP ══
 let currentUser=null, userName='', isDung=false; // isDung: chỉ Dũng được xoá thiết bị / duyệt đề nghị xoá
+// Đăng nhập y như app Duyệt Chi (cùng Firebase Auth, cùng email + mật khẩu): báo mạng chậm sau 4s, quá 20s trả nút để bấm lại, cùng câu báo lỗi.
 async function doLogin(){
-  const email=$('l-email').value.trim(), pass=$('l-pass').value, btn=$('l-btn'), err=$('l-err');
-  if(!email||!pass){ err.textContent='Nhập email và mật khẩu'; return; }
-  btn.disabled=true; btn.textContent='⏳ Đang đăng nhập...'; err.textContent='';
-  try{ await firebase.auth().signInWithEmailAndPassword(email,pass); }
+  const email=$('l-email').value.trim().toLowerCase(), pass=$('l-pass').value, btn=$('l-btn'), err=$('l-err');
+  if(btn.disabled) return;
+  if(!email||!pass){ err.textContent='Vui lòng nhập email và mật khẩu'; return; }
+  btn.disabled=true; btn.textContent='⏳ Đang đăng nhập...'; err.style.color=''; err.textContent='';
+  const slowT=setTimeout(()=>{ if(btn.disabled) err.textContent='🌐 Mạng chậm, vui lòng chờ thêm...'; },4000);
+  const outT=setTimeout(()=>{ if(btn.disabled){ btn.disabled=false; btn.textContent='Đăng nhập'; err.textContent='❌ Không kết nối được máy chủ (quá 20 giây). Kiểm tra WiFi/4G rồi đăng nhập lại.'; } },20000);
+  try{ await firebase.auth().signInWithEmailAndPassword(email,pass); err.textContent=''; }
   catch(e){
     err.textContent = /user-not-found|wrong-password|invalid-credential/.test(e.code)?'Email hoặc mật khẩu không đúng'
-      : e.code==='auth/network-request-failed'?'Lỗi mạng — kiểm tra WiFi/4G':'Đăng nhập thất bại';
+      : e.code==='auth/invalid-email'?'Email không hợp lệ'
+      : e.code==='auth/too-many-requests'?'Thử lại quá nhiều, vui lòng chờ'
+      : e.code==='auth/network-request-failed'?'❌ Lỗi mạng — kiểm tra WiFi/4G rồi thử lại':'Đăng nhập thất bại';
   }
-  btn.disabled=false; btn.textContent='Đăng nhập';
+  clearTimeout(slowT); clearTimeout(outT); btn.disabled=false; btn.textContent='Đăng nhập';
+}
+async function doForgotPass(){
+  const email=$('l-email').value.trim().toLowerCase(), err=$('l-err');
+  if(!email){ err.textContent='Nhập email trước rồi bấm Quên mật khẩu'; return; }
+  try{ await firebase.auth().sendPasswordResetEmail(email); err.style.color='var(--green)'; err.textContent='✅ Đã gửi email đặt lại mật khẩu (mật khẩu mới dùng cho cả app Duyệt Chi)'; setTimeout(()=>{ err.style.color=''; err.textContent=''; },6000); }
+  catch(e){ err.style.color=''; err.textContent='Không tìm thấy email này'; }
 }
 function doLogout(){ firebase.auth().signOut(); }
 firebase.auth().onAuthStateChanged(async user=>{
