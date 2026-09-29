@@ -204,7 +204,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v2';
+const APP_VERSION = '20260929-v3';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database(), storage = firebase.storage();
@@ -278,8 +278,9 @@ firebase.auth().onAuthStateChanged(async user=>{
 });
 
 // ══ DỮ LIỆU ══
-let items={}, issues={}, filterStatus='';
+let items={}, issues={}, filterStatus='', dcSites=[]; // dcSites = danh sách công trình của app Duyệt Chi (duyetchi/meta/sites)
 function attach(){
+  db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); dcSites=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); renderAll(); },()=>{});
   const denied=e=>{ $('list').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh thietbi) có thể chưa được đưa lên máy chủ.</div>'; };
   db.ref(ROOT+'/items').on('value',s=>{ items=s.val()||{}; renderAll(); },denied);
   db.ref(ROOT+'/issues').on('value',s=>{ issues=s.val()||{}; renderAll(); },denied);
@@ -300,9 +301,10 @@ function renderStats(){
 }
 function renderFilters(){
   const opt=(id,vals,lbl)=>{ const cur=$(id).value; $(id).innerHTML=`<option value="">${lbl}</option>`+[...vals].filter(Boolean).sort().map(v=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`).join(''); };
-  opt('f-site',new Set(Object.values(items).map(i=>i.site)),'— Mọi công trình —');
+  const cnt={}; Object.values(items).forEach(i=>{ if(i.site&&i.status!=='sold') cnt[i.site]=(cnt[i.site]||0)+1; });
+  const optS=id=>{ const cur=$(id).value; $(id).innerHTML='<option value="">— Mọi công trình —</option>'+allSites().map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}${cnt[v]?' ('+cnt[v]+')':''}</option>`).join(''); };
+  optS('f-site'); optS('rp-site');
   opt('f-type',new Set(Object.values(items).map(i=>i.type)),'— Mọi loại —');
-  opt('rp-site',new Set(Object.values(items).map(i=>i.site)),'— Mọi công trình —');
 }
 function renderList(){
   const q=$('q').value.trim().toLowerCase(), site=$('f-site').value, type=$('f-type').value, grp=$('f-group').value;
@@ -468,7 +470,17 @@ function closeViewer(){ if($('viewer').hidden) return; $('viewer').hidden=true; 
 function openModal(html){ $('modal').innerHTML=html; if($('modal-bg').hidden) pushLayer('modal'); $('modal-bg').hidden=false; $('modal').scrollTop=0; }
 function closeModal(){ if($('modal-bg').hidden) return; $('modal-bg').hidden=true; popLayer('modal'); }
 const dl=(id,vals)=>`<datalist id="${id}">${[...new Set(vals.filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
-const sites=()=>Object.values(items).map(i=>i.site), keepers=()=>Object.values(items).map(i=>i.keeper);
+const keepers=()=>Object.values(items).map(i=>i.keeper);
+// công trình = danh sách app Duyệt Chi (giữ đúng thứ tự D xếp) + công trình chỉ có trong app Thiết bị (xếp sau, theo ABC)
+function allSites(){ const extra=[...new Set(Object.values(items).map(i=>i.site).filter(Boolean))].filter(s=>!dcSites.includes(s)).sort((a,b)=>a.localeCompare(b,'vi')); return dcSites.concat(extra); }
+// ô chọn công trình: select đủ danh sách + dòng "Khác (nhập tay)…" mở ô gõ
+function siteField(id,cur){
+  const list=allSites(), known=!cur||list.includes(cur);
+  return `<select id="${id}" onchange="$('${id}-x').hidden=this.value!=='__x'; if(this.value==='__x') $('${id}-x').focus()">
+    <option value="">— Chọn công trình —</option>${list.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}<option value="__x" ${cur&&!known?'selected':''}>✏️ Khác (nhập tay)…</option></select>
+    <input id="${id}-x" placeholder="Tên công trình / kho" value="${known?'':esc(cur)}" style="margin-top:6px" ${cur&&!known?'':'hidden'}>`;
+}
+function siteVal(id){ const v=$(id).value; return (v==='__x'?$(id+'-x').value:v).trim(); }
 // ô chọn ảnh: nén rồi giữ dataUrl trong _pending[key]; upload lúc lưu
 let _pending={};
 function picInput(key,label){ _pending[key]=[]; return `<label class="f">${label}</label><input type="file" accept="image/*" multiple onchange="onPics(event,'${key}')"><div class="pics" id="pp-${key}"></div>`; }
@@ -509,7 +521,7 @@ function itemForm(id){
     <label class="f">Loại</label><input id="m-type" list="dl-type" value="${esc(it.type||'')}">${dl('dl-type',TYPES.concat(Object.values(items).map(i=>i.type)))}
     <div class="row"><div><label class="f">Biển số</label><input id="m-plate" value="${esc(it.plate||'')}"></div><div><label class="f">Năm SX/mua</label><input id="m-year" value="${esc(it.year||'')}"></div></div>
     <label class="f">Số khung / số máy</label><input id="m-serial" value="${esc(it.serial||'')}">
-    ${id?'':`<label class="f">Đang ở công trình</label><input id="m-site" list="dl-site" value="">${dl('dl-site',sites())}
+    ${id?'':`<label class="f">Đang ở công trình</label>${siteField('m-site','')}
     <label class="f">Người giữ</label><input id="m-keeper" list="dl-keeper">${dl('dl-keeper',keepers())}
     <label class="f">Tình trạng</label><select id="m-status">${Object.entries(STATUS).filter(([k])=>k!=='broken'&&k!=='repair').map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select>`}
     <div class="row"><div><label class="f">Bảo hành đến</label><input id="m-w" type="date" value="${d('warrantyEnd')}"></div><div><label class="f">Bảo hiểm đến</label><input id="m-i" type="date" value="${d('insuranceEnd')}"></div></div>
@@ -528,7 +540,7 @@ async function saveItem(id,btn){
     const ph=await uploadPics('photo','items'); if(ph[0]) data.photo=ph[0];
     if(id){ await db.ref(ROOT+'/items/'+id).update(data); await log(id,'edit','✏️ Sửa thông tin thiết bị'); }
     else{
-      Object.assign(data,{site:v('m-site'),keeper:v('m-keeper'),status:$('m-status').value,createdAt:Date.now(),createdBy:userName});
+      Object.assign(data,{site:siteVal('m-site'),keeper:v('m-keeper'),status:$('m-status').value,createdAt:Date.now(),createdBy:userName});
       const ref=db.ref(ROOT+'/items').push(); await ref.set(data);
       await log(ref.key,'create','🆕 Thêm vào danh sách'+(data.site?' — tại '+data.site:''));
     }
@@ -545,7 +557,7 @@ async function delItem(id){
 function moveForm(id){
   const it=items[id];
   openModal(`<h3>📦 Điều chuyển ${esc(it.code)}</h3><p style="font-size:14px;color:var(--text-sub)">Đang ở: <b>${esc(it.site||'—')}</b>${it.keeper?' · '+esc(it.keeper):''}</p>
-    <label class="f">Chuyển đến công trình *</label><input id="mv-site" list="dl-site">${dl('dl-site',sites())}
+    <label class="f">Chuyển đến công trình *</label>${siteField('mv-site','')}
     <label class="f">Người nhận / giữ máy</label><input id="mv-keeper" list="dl-keeper" value="${esc(it.keeper||'')}">${dl('dl-keeper',keepers())}
     <label class="f">Ngày chuyển</label><input id="mv-date" type="date" value="${toISO(Date.now())}">
     <label class="f">Ghi chú</label><input id="mv-note" placeholder="Xe chở, lý do…">
@@ -553,7 +565,7 @@ function moveForm(id){
 }
 async function saveMove(id,btn){
   await busy(btn,async()=>{
-    const site=$('mv-site').value.trim(), keeper=$('mv-keeper').value.trim(); if(!site) throw new Error('Nhập công trình đến');
+    const site=siteVal('mv-site'), keeper=$('mv-keeper').value.trim(); if(!site) throw new Error('Chọn công trình đến');
     const it=items[id];
     await db.ref(ROOT+'/items/'+id).update({site,keeper,updatedAt:Date.now(),updatedBy:userName});
     await log(id,'move','📦 Chuyển từ '+(it.site||'—')+' → '+site+(keeper?' · giao '+keeper:'')+($('mv-note').value?' · '+$('mv-note').value.trim():''),{ts:fromISO($('mv-date').value)||Date.now(),from:it.site||'',to:site});
