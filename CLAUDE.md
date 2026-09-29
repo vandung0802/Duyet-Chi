@@ -14,6 +14,11 @@
 1. **Deploy âm thầm**: bump `APP_VERSION` trong app3.html, GIỮ NGUYÊN `version.txt` + `sw.js` → push. Chỉ D (user) tải lại thấy bản mới để duyệt.
 2. **User nói "phát hành"** mới bump `version.txt` + `VERSION` trong sw.js = APP_VERSION → push → mọi người thấy banner cập nhật.
 
+## Luật Firebase (`database.rules.json`) — TỰ ĐỘNG deploy
+- Từ 29/09/2026: sửa `database.rules.json` rồi gộp vào `main` → GitHub Actions (`.github/workflows/deploy-rules.yml`) tự chạy `firebase deploy --only database`. KHÔNG cần bảo D bấm `DUA-LUAT-LEN.bat` nữa (file đó chỉ là dự phòng).
+- Cần secret `FIREBASE_TOKEN` (D lấy 1 lần bằng `LAY-KHOA-TU-DONG.bat`) hoặc `FIREBASE_SERVICE_ACCOUNT` trong GitHub → Settings → Secrets → Actions. Nếu tác vụ Actions đỏ vì thiếu khoá → nhắc D làm bước đó.
+- Các app phụ cùng repo: `thietbi.html` (nhánh RTDB `thietbi`), `hopdong.html` (nhánh `hopdong`, đọc `duyetchi/meta/sites` dùng chung danh sách công trình). Mỗi app có `version-<app>.txt` + `manifest-<app>.json`.
+
 ## Test tối thiểu trước khi push app3.html
 ```
 node -e "const fs=require('fs'),vm=require('vm');const h=fs.readFileSync('app3.html','utf8');const re=/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/gi;let m,i=0,bad=0;while((m=re.exec(h))){i++;try{new vm.Script(m[1])}catch(e){bad++;console.log('SCRIPT#'+i+' LOI:'+e.message)}}console.log(i+' script, loi: '+bad)"
