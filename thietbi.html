@@ -143,6 +143,7 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
     </section>
 
     <section id="tab-issues" hidden>
+      <div class="card" id="delreqs" hidden></div>
       <div class="card" id="expiring" hidden></div>
       <div class="card" id="issues"></div>
     </section>
@@ -158,6 +159,7 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
     </section>
 
     <section id="tab-more" hidden>
+      <div class="card" id="sites-card"></div>
       <div class="card"><div class="card-body">
         <h3 style="font-size:15px;margin-bottom:8px">📥 Nhập danh sách từ Excel</h3>
         <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">Tải file mẫu, điền thiết bị (mỗi dòng 1 máy), rồi chọn file để nhập. Mã trùng → cập nhật, mã mới → thêm.</p>
@@ -204,7 +206,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v3';
+const APP_VERSION = '20260929-v5';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database(), storage = firebase.storage();
@@ -251,7 +253,7 @@ function hideLayer(tag){ if(tag==='modal') $('modal-bg').hidden=true; else if(ta
 window.addEventListener('popstate',()=>{ const tag=_layers.pop(); if(tag) hideLayer(tag); });
 
 // ══ ĐĂNG NHẬP ══
-let currentUser=null, userName='';
+let currentUser=null, userName='', isDung=false; // isDung: chỉ Dũng được xoá thiết bị / duyệt đề nghị xoá
 async function doLogin(){
   const email=$('l-email').value.trim(), pass=$('l-pass').value, btn=$('l-btn'), err=$('l-err');
   if(!email||!pass){ err.textContent='Nhập email và mật khẩu'; return; }
@@ -270,7 +272,7 @@ firebase.auth().onAuthStateChanged(async user=>{
   if(!user) return;
   let prof={};
   try{ prof=(await db.ref('duyetchi/userRoles/'+user.uid).get()).val()||{}; }catch(e){}
-  userName=prof.name||user.email||'';
+  userName=prof.name||user.email||''; isDung=prof.role==='dung'||user.email==='vandung0802@gmail.com';
   if(prof.approved!==true && prof.role!=='dung'){ $('wait-screen').hidden=false; return; }
   $('app').hidden=false; $('hdr-user').textContent=userName;
   $('more-info').textContent='Đăng nhập: '+userName+' · Bản '+APP_VERSION;
@@ -293,7 +295,19 @@ function openIssuesOf(id){ return Object.entries(issues).filter(([k,v])=>v.itemI
 function showTab(t){
   ['list','issues','report','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
 }
-function renderAll(){ renderStats(); renderFilters(); renderList(); renderIssues(); renderReport(); if(curId&&_logRef) renderDetail(_logs); }
+function renderAll(){ renderStats(); renderFilters(); renderList(); renderIssues(); renderReport(); renderSitesCard(); if(curId&&_logRef) renderDetail(_logs); }
+// tab Khác: danh sách công trình dùng chung với app Duyệt Chi (chỉ xem; thêm/xoá bên Duyệt Chi → Cài đặt, ở đây tự cập nhật)
+function renderSitesCard(){
+  const cnt={}; Object.values(items).forEach(i=>{ if(i.site&&i.status!=='sold') cnt[i.site]=(cnt[i.site]||0)+1; });
+  const list=allSites();
+  $('sites-card').innerHTML=`<div class="sec-h">🏗 Danh sách công trình <span style="font-weight:400;color:var(--text-sub)">· ${list.length}</span></div>
+    ${list.length?list.map(sname=>`<div class="item" style="padding:9px 14px" onclick="showTab('list');$('f-site').value=${JSON.stringify(sname).replace(/"/g,'&quot;')};renderList()">
+      <div class="item-main"><div style="font-size:15px;font-weight:600">🏗 ${esc(sname)}</div>${dcSites.includes(sname)?'':'<div class="item-sub">chỉ có bên app Thiết bị (kho / bãi…)</div>'}</div>
+      <span class="badge ${cnt[sname]?'s-run':'s-sold'}">${cnt[sname]?cnt[sname]+' máy':'chưa có máy'}</span></div>`).join('')
+      :'<div class="empty">Chưa đọc được danh sách công trình từ app Duyệt Chi.</div>'}
+    <div class="card-body" style="font-size:13px;color:var(--text-sub);border-top:1px solid var(--gray-border)">Danh sách này lấy chung từ app <b>Duyệt Chi</b> (Cài đặt → Danh sách công trình). Thêm, đổi tên hay xoá công trình thì làm bên đó, bên này tự cập nhật. Bấm vào một công trình để xem máy đang ở đó.
+      <div style="margin-top:8px"><a class="lnk" style="text-align:left;margin:0" href="app3.html" target="_blank">↗ Mở app Duyệt Chi</a></div></div>`;
+}
 function renderStats(){
   const c={all:0}; Object.values(items).forEach(it=>{ if(it.status==='sold') return; c.all++; c[it.status]=(c[it.status]||0)+1; });
   $('stats').innerHTML=[['','Tất cả',c.all],['run','Đang chạy',c.run||0],['idle','Chờ việc',c.idle||0],['broken','Hỏng',c.broken||0],['repair','Đang sửa',c.repair||0],['sold','Thanh lý',Object.values(items).filter(i=>i.status==='sold').length]]
@@ -302,7 +316,7 @@ function renderStats(){
 function renderFilters(){
   const opt=(id,vals,lbl)=>{ const cur=$(id).value; $(id).innerHTML=`<option value="">${lbl}</option>`+[...vals].filter(Boolean).sort().map(v=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`).join(''); };
   const cnt={}; Object.values(items).forEach(i=>{ if(i.site&&i.status!=='sold') cnt[i.site]=(cnt[i.site]||0)+1; });
-  const optS=id=>{ const cur=$(id).value; $(id).innerHTML='<option value="">— Mọi công trình —</option>'+allSites().map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}${cnt[v]?' ('+cnt[v]+')':''}</option>`).join(''); };
+  const optS=id=>{ const cur=$(id).value; $(id).innerHTML='<option value="">🏗 Tất cả công trình</option>'+allSites().map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}${cnt[v]?' ('+cnt[v]+')':''}</option>`).join(''); };
   optS('f-site'); optS('rp-site');
   opt('f-type',new Set(Object.values(items).map(i=>i.type)),'— Mọi loại —');
 }
@@ -337,7 +351,14 @@ function expiringItems(){
 function renderIssues(){
   const rows=Object.entries(issues).filter(([k,v])=>v.status!=='done').sort((a,b)=>a[1].ts-b[1].ts);
   const exp=expiringItems(), now=Date.now();
-  $('iss-badge').hidden=!(rows.length+exp.length); $('iss-badge').textContent=rows.length+exp.length;
+  const dr=Object.entries(items).filter(([k,it])=>it.delReq).sort((a,b)=>a[1].delReq.ts-b[1].delReq.ts);
+  $('delreqs').hidden=!dr.length;
+  $('delreqs').innerHTML=dr.length?`<div class="sec-h">🗑 Đề nghị xoá thiết bị — ${isDung?'chờ anh duyệt':'chờ Dũng duyệt'} (${dr.length})</div>`+dr.map(([id,it])=>`<div class="item" onclick="openDetail('${id}')">
+    <div class="item-main"><div class="item-name">${esc(it.code)} · ${esc(it.name)}</div>
+    <div class="item-sub">👤 ${esc(it.delReq.by)} · ${fmtDate(it.delReq.ts)}${it.delReq.reason?' · '+esc(it.delReq.reason):''}</div></div>
+    <span class="badge s-idle">chờ duyệt</span></div>`).join(''):'';
+  const nb=rows.length+exp.length+(isDung?dr.length:0);
+  $('iss-badge').hidden=!nb; $('iss-badge').textContent=nb;
   $('expiring').hidden=!exp.length;
   $('expiring').innerHTML=exp.length?`<div class="sec-h">📅 Giấy tờ sắp hết hạn (trong 30 ngày)</div>`+exp.map(e=>`<div class="item" onclick="openDetail('${e.id}')">
     <div class="item-main"><div class="item-name">${esc(e.it.code)} · ${esc(e.it.name)}</div>
@@ -434,6 +455,9 @@ function renderDetail(logs){
   <header class="app-header"><button class="btn sm sec" onclick="closeDetail()">‹ Quay lại</button><h1 style="flex:1;text-align:center">${esc(it.code)}</h1><button class="btn sm sec" onclick="itemForm('${id}')">✏️ Sửa</button></header>
   <div class="main">
     ${warn.map(w=>`<div class="warn">⚠️ ${esc(w)}</div>`).join('')}
+    ${it.delReq?`<div class="card" style="background:var(--yellow-light);border:1px solid #f5d06f"><div class="card-body" style="font-size:14px">🗑 <b>${esc(it.delReq.by)}</b> đề nghị xoá thiết bị này (${fmtDate(it.delReq.ts)})${it.delReq.reason?': '+esc(it.delReq.reason):''}. ${isDung?'':'Chờ Dũng duyệt.'}
+      ${isDung?`<div class="row" style="margin-top:10px"><button class="btn red sm" onclick="delItem('${id}')">✅ Duyệt xoá</button><button class="btn sec sm" onclick="rejectDel('${id}')">✖ Từ chối</button></div>`
+        :it.delReq.uid===currentUser.uid?`<div style="margin-top:10px"><button class="btn sec sm" onclick="cancelDelReq('${id}')">Huỷ đề nghị</button></div>`:''}</div></div>`:''}
     <div class="card"><div class="card-body">
       <div class="row" style="align-items:flex-start">
         ${it.photo?`<img class="thumb" style="width:90px;height:90px;flex:0 0 90px" src="${esc(it.photo)}" onclick="viewImg('${esc(it.photo)}')">`:''}
@@ -460,7 +484,8 @@ function renderDetail(logs){
     </div>
     <h3 style="margin:16px 0 10px;font-size:16px">🕘 Lịch sử</h3>
     <div class="tl">${tl.map(e=>`<div class="tl-e ${e.cls}"><div class="tl-t">${fmtDT(e.ts)} · ${esc(e.by||'')}</div><div class="tl-b">${e.html}</div>${pics(e.pics)}</div>`).join('')||'<div class="empty">Chưa có gì.</div>'}</div>
-    <div style="margin-top:20px"><button class="btn sec" style="color:var(--red)" onclick="delItem('${id}')">🗑 Xoá thiết bị này</button></div>
+    <div style="margin-top:20px">${isDung?`<button class="btn sec" style="color:var(--red)" onclick="delItem('${id}')">🗑 Xoá thiết bị này</button>`
+      :it.delReq?'':`<button class="btn sec" style="color:var(--red)" onclick="requestDel('${id}')">🗑 Đề nghị xoá (chờ Dũng duyệt)</button>`}</div>
   </div>`;
 }
 function viewImg(u){ $('viewer-img').src=u; if($('viewer').hidden) pushLayer('viewer'); $('viewer').hidden=false; }
@@ -547,10 +572,24 @@ async function saveItem(id,btn){
     toast('✅ Đã lưu');
   });
 }
+// XOÁ THIẾT BỊ: chỉ Dũng xoá được (luật Firebase: xoá items/log/issues cần role dung). Người khác → đề nghị, Dũng duyệt / từ chối.
 async function delItem(id){
-  const it=items[id]; if(!confirm('Xoá "'+it.code+' · '+it.name+'" cùng toàn bộ lịch sử? Không hoàn tác được.')) return;
+  const it=items[id]; if(!isDung){ toast('Chỉ Dũng mới xoá được — dùng "Đề nghị xoá"'); return; }
+  if(!confirm('Xoá "'+it.code+' · '+it.name+'" cùng toàn bộ lịch sử? Không hoàn tác được.')) return;
   const up={}; up['items/'+id]=null; up['log/'+id]=null; Object.entries(issues).forEach(([k,v])=>{ if(v.itemId===id) up['issues/'+k]=null; });
-  await db.ref(ROOT).update(up); closeDetail(); toast('🗑 Đã xoá');
+  try{ await db.ref(ROOT).update(up); closeDetail(); toast('🗑 Đã xoá'); }catch(e){ toast('❌ Không xoá được: '+(e.message||e)); }
+}
+async function requestDel(id){
+  const it=items[id]; const reason=prompt('Đề nghị xoá "'+it.code+' · '+it.name+'" — lý do (bán, mất, trùng…):'); if(reason===null) return;
+  try{ await db.ref(ROOT+'/items/'+id+'/delReq').set(Object.assign({reason:reason.trim()},who())); await log(id,'delreq','🗑 Đề nghị xoá thiết bị'+(reason.trim()?': '+reason.trim():'')+' — chờ Dũng duyệt'); toast('✅ Đã gửi đề nghị, chờ Dũng duyệt'); }
+  catch(e){ toast('❌ '+(e.message||e)); }
+}
+async function cancelDelReq(id){
+  try{ await db.ref(ROOT+'/items/'+id+'/delReq').set(null); await log(id,'delreq','↩️ Huỷ đề nghị xoá'); toast('Đã huỷ đề nghị'); }catch(e){ toast('❌ '+(e.message||e)); }
+}
+async function rejectDel(id){
+  const reason=prompt('Từ chối xoá — lý do (không bắt buộc):'); if(reason===null) return;
+  try{ await db.ref(ROOT+'/items/'+id+'/delReq').set(null); await log(id,'delreq','✖ Dũng từ chối xoá'+(reason.trim()?': '+reason.trim():'')); toast('Đã từ chối'); }catch(e){ toast('❌ '+(e.message||e)); }
 }
 
 // ══ ĐIỀU CHUYỂN ══
@@ -686,7 +725,7 @@ async function importRows(btn){
       if(!byCode[r.code]){ if(!data.status) data.status='run'; data.createdAt=now; data.createdBy=userName; up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'create',text:'🆕 Nhập từ Excel'+(r.site?' — tại '+r.site:'')},who()); }
       else if(old.site!==r.site&&r.site) up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'move',text:'📦 Excel: '+(old.site||'—')+' → '+r.site,from:old.site||'',to:r.site},who());
       Object.keys(data).forEach(k=>{ if(byCode[r.code]&&data[k]===''&&k!=='updatedBy') delete data[k]; }); // cập nhật: ô trống không xoá dữ liệu cũ
-      Object.entries(data).forEach(([k,v])=>up['items/'+id+'/'+k]=v);
+      up['items/'+id]=Object.assign({},old,data); // ghi cả bản ghi (giữ delReq, ảnh… cũ) — hợp luật hasChildren(code,name) khi ghi nhiều đường dẫn
     }
     await db.ref(ROOT).update(up); toast('✅ Đã nhập '+window._xlList.length+' thiết bị'); showTab('list');
   });

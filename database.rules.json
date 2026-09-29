@@ -380,12 +380,16 @@
     // Mỗi bản ghi đều có tên người sửa (by/updatedBy) nên vẫn tra được ai làm gì.
     "thietbi": {
       ".read":  "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
-      ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
-      "items":  { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['code', 'name']) && newData.child('code').isString() && newData.child('code').val().length <= 100 && newData.child('name').isString() && newData.child('name').val().length <= 300)",
+      // v5 (D 29/09 "xoá thiết bị phải được sự đồng ý của tôi"): KHÔNG có .write ở gốc nữa — ghi theo từng nhánh bên dưới,
+      // ai đã được duyệt vẫn thêm/sửa/ghi nhật ký được, nhưng XOÁ (newData không tồn tại) thì chỉ role dung. Người khác chỉ ghi đề nghị items/$id/delReq.
+      "items":  { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+                           ".validate": "!newData.exists() || (newData.hasChildren(['code', 'name']) && newData.child('code').isString() && newData.child('code').val().length <= 100 && newData.child('name').isString() && newData.child('name').val().length <= 300)",
                            "note": { ".validate": "newData.isString() && newData.val().length <= 4000" },
                            "photo": { ".validate": "newData.isString() && newData.val().length <= 2000" } } },
-      "issues": { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['itemId', 'desc', 'status']) && newData.child('desc').val().length <= 4000)" } },
-      "log":    { "$item": { "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['type', 'text']) && newData.child('text').val().length <= 4000)" } } },
+      "issues": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+                           ".validate": "!newData.exists() || (newData.hasChildren(['itemId', 'desc', 'status']) && newData.child('desc').val().length <= 4000)" } },
+      "log":    { "$item": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+                             "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['type', 'text']) && newData.child('text').val().length <= 4000)" } } },
       "$other": { ".validate": false }
     },
 
