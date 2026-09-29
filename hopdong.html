@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#4338ca">
+<meta name="theme-color" content="#7e22ce">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Hợp đồng PVA-379-279">
@@ -16,7 +16,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --blue:#4338ca;--blue-light:#e0e7ff;--blue-dark:#3730a3; /* app Hợp đồng: tông chàm, khác 379 (xanh), Gia Bình (xanh lá), Thiết bị (cam) */
+  --blue:#7e22ce;--blue-light:#f3e8ff;--blue-dark:#6b21a8; /* app Hợp đồng: tông TÍM (D 29/09 'đổi màu khác 2 app kia'), khác 379 (xanh dương), Gia Bình (xanh lá), Thiết bị (cam) */
   --green:#057a55;--green-light:#def7ec;
   --yellow:#9f580a;--yellow-light:#fdf6b2;
   --red:#c81e1e;--red-light:#fde8e8;
@@ -64,7 +64,7 @@ label.f{display:block;font-size:13px;color:var(--text-sub);font-weight:600;margi
 .s-warranty{background:var(--green-light);color:var(--green)}
 .s-expired{background:var(--yellow-light);color:var(--yellow)}
 .s-closed{background:var(--gray-light);color:var(--gray)}
-.s-settling{background:#f3e8ff;color:#6b21a8}
+.s-settling{background:#fce7f3;color:#9d174d}
 .s-settled{background:#ccfbf1;color:#0f766e}
 .bar{height:6px;background:var(--gray-light);border-radius:3px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--blue)}
 .al{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-border);cursor:pointer;align-items:center}
@@ -208,7 +208,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v6';
+const APP_VERSION = '20260929-v7';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
