@@ -144,8 +144,8 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
       <div class="card"><div class="card-body" style="padding:8px 10px">
         <input id="q" placeholder="🔍 Tìm số HĐ, tên công trình, bên A/B, công ty…" oninput="renderList()">
       </div></div>
+      <button class="btn" style="margin-bottom:10px" onclick="contractForm()">＋ Thêm hợp đồng</button>
       <div class="card" id="list"></div>
-      <button class="btn" onclick="contractForm()">＋ Thêm hợp đồng</button>
     </section>
 
     <section id="tab-alerts" hidden>
@@ -201,7 +201,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v4';
+const APP_VERSION = '20260929-v5';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -292,19 +292,20 @@ function calc(c){
   const add=Object.values(c.addenda||{}).reduce((s,a)=>s+(Number(a.value)||0),0);
   const settle=Number(c.settleValue)||0, total=settle>0?settle:val+add; // đã quyết toán → tổng theo giá trị quyết toán được duyệt
   const adv=Object.values(c.advances||{}).reduce((s,a)=>s+(Number(a.value)||0),0);
-  let paid=0,recov=0,retain=0,refund=0,net=0,nPay=0;
+  let paid=0,recov=0,retain=0,refund=0,hold=0,refundQt=0,net=0,nPay=0;
   Object.values(c.payments||{}).forEach(p=>{ const v=Number(p.value)||0;
     if(p.type==='bh'){ refund+=v; net+=v; }
-    else { const r=Number(p.recover)||0, h=Number(p.retain)||0; nPay++; paid+=v; recov+=r; retain+=h; net+=v-r-h; } });
+    else if(p.type==='qt'){ refundQt+=v; net+=v; }
+    else { const r=Number(p.recover)||0, h=Number(p.retain)||0, q=Number(p.hold)||0; nPay++; paid+=v; recov+=r; retain+=h; hold+=q; net+=v-r-h-q; } });
   // KL đã thực hiện: đã bàn giao/quyết toán → coi như xong hết; có nhập tay (doneValue) → lấy số đó; không thì tạm lấy = đã thanh toán
   const handed=(c.handoverDate&&dl(c.handoverDate)<=0)||c.status==='settling'||c.status==='settled'||c.status==='closed';
   const done=handed?total:(Number(c.doneValue)||0)>0?Number(c.doneValue):paid, unbuilt=Math.max(0,total-done);
-  return {val,add,settle,total,done,unbuilt,doneSrc:handed?'handed':(Number(c.doneValue)||0)>0?'manual':'paid',adv,paid,recov,retain,refund,nPay,advLeft:adv-recov,retainLeft:retain-refund,remain:total-paid,received:adv+net,
+  return {val,add,settle,total,done,unbuilt,doneSrc:handed?'handed':(Number(c.doneValue)||0)>0?'manual':'paid',adv,paid,recov,retain,refund,hold,refundQt,holdLeft:hold-refundQt,nPay,advLeft:adv-recov,retainLeft:retain-refund,remain:total-paid,received:adv+net,
     pct:total>0?Math.max(0,Math.min(100,Math.round(paid/total*100))):0,nAdd:Object.keys(c.addenda||{}).length,nAdv:Object.keys(c.advances||{}).length};
 }
 // Cộng dồn tài chính nhiều hợp đồng (bảng Tổng hợp + sheet Excel)
-function sumOf(list){ const t={n:0,total:0,adv:0,recov:0,advLeft:0,paid:0,remain:0,retainLeft:0,received:0,unbuilt:0,nSettling:0,settlingRemain:0};
-  list.forEach(c=>{ const k=calc(c); t.n++; if(c.status==='settling'){ t.nSettling++; t.settlingRemain+=k.remain; } ['total','adv','recov','advLeft','paid','remain','retainLeft','received','unbuilt'].forEach(f=>t[f]+=k[f]); });
+function sumOf(list){ const t={n:0,total:0,adv:0,recov:0,advLeft:0,paid:0,remain:0,retainLeft:0,holdLeft:0,received:0,unbuilt:0,nSettling:0,settlingRemain:0};
+  list.forEach(c=>{ const k=calc(c); t.n++; if(c.status==='settling'){ t.nSettling++; t.settlingRemain+=k.remain; } ['total','adv','recov','advLeft','paid','remain','retainLeft','holdLeft','received','unbuilt'].forEach(f=>t[f]+=k[f]); });
   t.pct=t.total>0?Math.round(t.paid/t.total*100):0; return t; }
 let sumOpen=true;
 function renderSum(){
@@ -322,6 +323,7 @@ function renderSum(){
       <tr class="tot"><td>Tổng giá trị HĐ còn lại chưa thi công</td><td>${fmtMoney(t.unbuilt)}</td></tr>
       <tr><td>Chờ quyết toán (${t.nSettling} HĐ) · còn phải thu</td><td class="${t.nSettling?'neg':''}">${fmtMoney(t.settlingRemain)}</td></tr>
       <tr><td>Tiền bảo hành đang bị giữ</td><td>${fmtMoney(t.retainLeft)}</td></tr>
+      <tr><td>Tiền giữ chờ quyết toán đang bị giữ</td><td>${fmtMoney(t.holdLeft)}</td></tr>
       <tr><td>Tổng thực nhận</td><td>${fmtMoney(t.received)}</td></tr>
     </table><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,t.pct)}%"></i></div>`:''}</div>`;
 }
@@ -360,7 +362,7 @@ function renderList(){
   $('list').innerHTML=rows.length?rows.map(([id,c])=>{ const k=calc(c), al=alertsOf(id,c); return `<div class="item" onclick="openDetail('${id}')">
     <div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div>
     <div class="item-sub">${c.company?'<b style="color:var(--blue)">'+esc(c.company)+'</b> · ':''}🏢 ${esc(c.partyA||'—')}${c.signDate?' · ký '+fmtDate(c.signDate):''}</div>
-    <div class="item-sub">💰 ${fmtShort(k.total)} · đã TT <b>${k.pct}%</b>${k.advLeft>0?' · TƯ còn '+fmtShort(k.advLeft):''}${k.retainLeft>0?' · giữ BH '+fmtShort(k.retainLeft):''}${k.unbuilt>0?' · chưa TC '+fmtShort(k.unbuilt):''}${c.status==='settling'&&c.settlingAt?' · chờ QT '+Math.max(0,dl(Date.now())-dl(c.settlingAt))+' ngày':''}</div>
+    <div class="item-sub">💰 ${fmtShort(k.total)} · đã TT <b>${k.pct}%</b>${k.advLeft>0?' · TƯ còn '+fmtShort(k.advLeft):''}${k.retainLeft>0?' · giữ BH '+fmtShort(k.retainLeft):''}${k.holdLeft>0?' · giữ QT '+fmtShort(k.holdLeft):''}${k.unbuilt>0?' · chưa TC '+fmtShort(k.unbuilt):''}${c.status==='settling'&&c.settlingAt?' · chờ QT '+Math.max(0,dl(Date.now())-dl(c.settlingAt))+' ngày':''}</div>
     <div class="bar"><i style="width:${k.pct}%"></i></div>
     ${al.map(a=>`<div class="item-sub" style="color:var(--red);white-space:normal;margin-top:4px">${a.icon} ${esc(a.text)}</div>`).join('')}
     </div>${badge(phase(c))}</div>`; }).join('')
@@ -421,16 +423,18 @@ function renderDetail(logs){
         <tr><td>Đã thanh toán (${k.nPay} lần)</td><td>${fmtMoney(k.paid)}</td></tr>
         <tr><td>Còn lại chưa thanh toán</td><td class="${k.remain>0?'':'pos'}">${fmtMoney(k.remain)}</td></tr>
         <tr><td>Tiền giữ lại bảo hành</td><td>${fmtMoney(k.retain)}${k.refund?'<div class="hint">đã hoàn '+fmtMoney(k.refund)+' · còn giữ '+fmtMoney(k.retainLeft)+'</div>':''}</td></tr>
+        <tr><td>Tiền giữ chờ quyết toán</td><td>${fmtMoney(k.hold)}${k.refundQt?'<div class="hint">đã hoàn '+fmtMoney(k.refundQt)+' · còn giữ '+fmtMoney(k.holdLeft)+'</div>':''}</td></tr>
         <tr class="tot"><td>Thực nhận (tạm ứng + các lần)</td><td>${fmtMoney(k.received)}</td></tr>
       </table>
     </div></div>
 
     <div class="card"><div class="card-body">
       <div class="sec-h"><h3>🧾 Thanh toán</h3><button class="btn sm" onclick="subForm('${id}','payments')">＋ Thêm lần</button></div>
-      ${pays.length?`<div class="tw"><table class="p"><thead><tr><th>Lần</th><th>Ngày</th><th>Giá trị TT</th><th>Trừ TƯ</th><th>Giữ BH</th><th>Thực nhận</th><th></th></tr></thead><tbody>
-        ${pays.map(([key,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0; return x.type==='bh'
-          ?`<tr onclick="subForm('${id}','payments','${key}')"><td>↩️ Hoàn BH</td><td>${fmtDate(x.date)}</td><td>—</td><td>—</td><td class="pos">-${money(v)}</td><td><b>${money(v)}</b></td><td>${rowBtns('payments',key)}</td></tr>`
-          :`<tr onclick="subForm('${id}','payments','${key}')"><td>Lần ${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${money(v)}</td><td>${r?money(r):'—'}</td><td>${h?money(h):'—'}</td><td><b>${money(v-r-h)}</b></td><td>${rowBtns('payments',key)}</td></tr>`; }).join('')}
+      ${pays.length?`<div class="tw"><table class="p"><thead><tr><th>Lần</th><th>Ngày</th><th>Giá trị TT</th><th>Trừ TƯ</th><th>Giữ BH</th><th>Giữ QT</th><th>Thực nhận</th><th></th></tr></thead><tbody>
+        ${pays.map(([key,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0, q=Number(x.hold)||0; return x.type==='bh'
+          ?`<tr onclick="subForm('${id}','payments','${key}')"><td>↩️ Hoàn BH</td><td>${fmtDate(x.date)}</td><td>—</td><td>—</td><td class="pos">-${money(v)}</td><td>—</td><td><b>${money(v)}</b></td><td>${rowBtns('payments',key)}</td></tr>`
+          :x.type==='qt'?`<tr onclick="subForm('${id}','payments','${key}')"><td>↩️ Hoàn QT</td><td>${fmtDate(x.date)}</td><td>—</td><td>—</td><td>—</td><td class="pos">-${money(v)}</td><td><b>${money(v)}</b></td><td>${rowBtns('payments',key)}</td></tr>`
+          :`<tr onclick="subForm('${id}','payments','${key}')"><td>Lần ${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${money(v)}</td><td>${r?money(r):'—'}</td><td>${h?money(h):'—'}</td><td>${q?money(q):'—'}</td><td><b>${money(v-r-h-q)}</b></td><td>${rowBtns('payments',key)}</td></tr>`; }).join('')}
         </tbody></table></div><div class="hint">Đơn vị: đồng. Bấm vào dòng để sửa.</div>`:'<div class="hint">Chưa có lần thanh toán nào.</div>'}
     </div></div>
 
@@ -451,7 +455,7 @@ function renderDetail(logs){
     <div class="card"><div class="card-body">
       <div class="sec-h"><h3>📋 Quyết toán</h3>${c.status==='closed'?'':c.status==='settled'?`<button class="btn sm sec" onclick="settleForm('${id}')">✏️ Sửa</button>`:c.status==='settling'?`<button class="btn sm green" onclick="settleForm('${id}')">✅ Đã quyết toán</button>`:`<button class="btn sm" onclick="setSettling('${id}',true)">📋 Chờ quyết toán</button>`}</div>
       ${c.status==='settled'?`<div class="kv"><div>Ngày QT</div><div><b>${fmtDate(c.settleDate)||'—'}</b></div><div>Giá trị QT</div><div><b>${fmtMoney(c.settleValue)}</b>${(Number(c.settleValue)||0)!==k.val+k.add?' <span class="hint">(HĐ+PL: '+fmtMoney(k.val+k.add)+')</span>':''}</div>${c.settleNote?`<div>Ghi chú</div><div>${esc(c.settleNote)}</div>`:''}</div>`
-        :c.status==='settling'?`<div class="hint">Đang chờ quyết toán từ ${fmtDate(c.settlingAt)} (${Math.max(0,dl(Date.now())-dl(c.settlingAt))} ngày) · còn phải thu <b>${fmtMoney(k.remain)}</b></div><div style="margin-top:8px"><button class="btn sec sm" onclick="setSettling('${id}',false)">↩️ Bỏ chờ quyết toán</button></div>`
+        :c.status==='settling'?`<div class="hint">Đang chờ quyết toán từ ${fmtDate(c.settlingAt)} (${Math.max(0,dl(Date.now())-dl(c.settlingAt))} ngày) · còn phải thu <b>${fmtMoney(k.remain)}</b>${k.holdLeft>0?' · đang bị giữ chờ QT <b>'+fmtMoney(k.holdLeft)+'</b>':''}</div><div style="margin-top:8px"><button class="btn sec sm" onclick="setSettling('${id}',false)">↩️ Bỏ chờ quyết toán</button></div>`
         :'<div class="hint">Xong khối lượng, nộp hồ sơ quyết toán thì bấm "Chờ quyết toán".</div>'}
     </div></div>
 
@@ -529,7 +533,7 @@ async function delContract(id){
 }
 async function toggleClose(id){
   const c=contracts[id], closing=c.status!=='closed', k=calc(c);
-  const msg=closing?'Thanh lý / kết thúc hợp đồng "'+c.code+'"?'+(k.advLeft>0?'\n⚠️ Tạm ứng chưa thu hồi hết: '+fmtMoney(k.advLeft):'')+(k.retainLeft>0?'\n⚠️ Còn bị giữ tiền bảo hành: '+fmtMoney(k.retainLeft):'')+(k.remain>0?'\n⚠️ Còn '+fmtMoney(k.remain)+' chưa thanh toán':''):'Mở lại hợp đồng "'+c.code+'"?';
+  const msg=closing?'Thanh lý / kết thúc hợp đồng "'+c.code+'"?'+(k.advLeft>0?'\n⚠️ Tạm ứng chưa thu hồi hết: '+fmtMoney(k.advLeft):'')+(k.retainLeft>0?'\n⚠️ Còn bị giữ tiền bảo hành: '+fmtMoney(k.retainLeft):'')+(k.holdLeft>0?'\n⚠️ Còn bị giữ tiền chờ quyết toán: '+fmtMoney(k.holdLeft):'')+(k.remain>0?'\n⚠️ Còn '+fmtMoney(k.remain)+' chưa thanh toán':''):'Mở lại hợp đồng "'+c.code+'"?';
   if(!confirm(msg)) return;
   await db.ref(ROOT+'/contracts/'+id).update(closing?{status:'closed',closedAt:Date.now(),updatedAt:Date.now(),updatedBy:userName}:{status:c.settleValue?'settled':'active',closedAt:null,updatedAt:Date.now(),updatedBy:userName});
   await log(id,'status',closing?'⚫ Thanh lý / kết thúc hợp đồng':'↩️ Mở lại hợp đồng'); toast(closing?'✅ Đã thanh lý':'✅ Đã mở lại');
@@ -599,22 +603,24 @@ const KIND={addenda:{t:'📎 Phụ lục hợp đồng',no:'Số phụ lục',va
 function subForm(cid,kind,key){
   const c=contracts[cid], x=key?(c[kind]||{})[key]:null, K=KIND[kind], k=calc(c);
   const nextNo=Object.values(c[kind]||{}).reduce((m,y)=>Math.max(m,Number(y.no)||0),0)+1;
-  const isPay=kind==='payments', isBh=x&&x.type==='bh';
+  const isPay=kind==='payments', isBh=x&&x.type==='bh', isQt=x&&x.type==='qt', isRef=isBh||isQt;
   openModal(`<h3>${x?'✏️ Sửa':'＋ Thêm'} — ${K.t}</h3><p style="font-size:14px;color:var(--text-sub)">${esc(c.code)} · ${esc(c.name)}</p>
-    ${isPay?`<label class="f">Loại</label><select id="s-type" onchange="payKind()"><option value="kl" ${isBh?'':'selected'}>Thanh toán khối lượng (lần 1, 2, 3…)</option><option value="bh" ${isBh?'selected':''}>Hoàn trả tiền giữ lại bảo hành</option></select>`:''}
+    ${isPay?`<label class="f">Loại</label><select id="s-type" onchange="payKind()"><option value="kl" ${isRef?'':'selected'}>Thanh toán khối lượng (lần 1, 2, 3…)</option><option value="bh" ${isBh?'selected':''}>Hoàn trả tiền giữ lại bảo hành</option><option value="qt" ${isQt?'selected':''}>Hoàn trả tiền giữ chờ quyết toán</option></select>`:''}
     <div class="row"><div id="s-no-w"><label class="f">${K.no}</label><input id="s-no" value="${esc(x?x.no:(kind==='addenda'?'PL'+pad(nextNo):nextNo))}"></div><div><label class="f">Ngày</label><input id="s-date" type="date" value="${toISO(x&&x.date?x.date:Date.now())}"></div></div>
     <label class="f">${K.val}</label><input id="s-val" inputmode="numeric" value="${money(Math.abs(Number(x&&x.value)||0))}" oninput="fmtIn(this);payPreview()">
     ${kind==='addenda'?`<label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:8px"><input type="checkbox" id="s-dec" style="width:auto" ${x&&x.value<0?'checked':''}> Phụ lục GIẢM giá trị</label>`:''}
     ${isPay?`<div id="s-kl"><div class="row"><div><label class="f">Trừ thu hồi tạm ứng (đ)</label><input id="s-rec" inputmode="numeric" value="${money(x&&x.recover)}" oninput="fmtIn(this);payPreview()"></div><div><label class="f">Giữ lại bảo hành (đ)</label><input id="s-ret" inputmode="numeric" value="${money(x&&x.retain)}" oninput="fmtIn(this);payPreview()"></div></div>
-      <div class="hint">Tạm ứng còn phải thu hồi: <b>${fmtMoney(k.advLeft+(x&&!isBh?Number(x.recover)||0:0))}</b></div></div>
+      <label class="f">Giữ lại chờ quyết toán (đ)</label><input id="s-hold" inputmode="numeric" value="${money(x&&x.hold)}" oninput="fmtIn(this);payPreview()">
+      <div class="hint">Tạm ứng còn phải thu hồi: <b>${fmtMoney(k.advLeft+(x&&!isRef?Number(x.recover)||0:0))}</b></div></div>
       <div id="s-bh" class="hint">Đang bị giữ tiền bảo hành: <b>${fmtMoney(k.retainLeft+(isBh?Number(x.value)||0:0))}</b></div>
+      <div id="s-qt" class="hint">Đang bị giữ tiền chờ quyết toán: <b>${fmtMoney(k.holdLeft+(isQt?Number(x.value)||0:0))}</b></div>
       <div style="margin:10px 0;font-size:16px;font-weight:700" id="s-net"></div>`:''}
     <label class="f">Ghi chú</label><input id="s-note" value="${esc(x&&x.note||'')}" placeholder="${isPay?'Đợt nghiệm thu, số hồ sơ…':'Nội dung'}">
     <div style="margin-top:14px" class="row"><button class="btn" onclick="saveSub('${cid}','${kind}','${key||''}',this)">💾 Lưu</button>${x?`<button class="btn sec" style="color:var(--red);flex:0 0 auto;width:auto" onclick="delSub('${cid}','${kind}','${key}',this)">🗑 Xoá</button>`:''}</div>`);
   if(isPay){ payKind(); payPreview(); }
 }
-function payKind(){ const bh=$('s-type').value==='bh'; $('s-kl').hidden=bh; $('s-bh').hidden=!bh; $('s-no-w').style.visibility=bh?'hidden':''; }
-function payPreview(){ if(!$('s-net')) return; const v=parseMoney($('s-val').value); if($('s-type').value==='bh'){ $('s-net').textContent='Thực nhận: '+fmtMoney(v); return; } const r=parseMoney($('s-rec').value), h=parseMoney($('s-ret').value); $('s-net').textContent='Thực nhận đợt này: '+fmtMoney(v-r-h); }
+function payKind(){ const t=$('s-type').value, ref=t!=='kl'; $('s-kl').hidden=ref; $('s-bh').hidden=t!=='bh'; $('s-qt').hidden=t!=='qt'; $('s-no-w').style.visibility=ref?'hidden':''; }
+function payPreview(){ if(!$('s-net')) return; const v=parseMoney($('s-val').value); if($('s-type').value!=='kl'){ $('s-net').textContent='Thực nhận: '+fmtMoney(v); return; } const r=parseMoney($('s-rec').value), h=parseMoney($('s-ret').value), q=parseMoney($('s-hold').value); $('s-net').textContent='Thực nhận đợt này: '+fmtMoney(v-r-h-q); }
 async function saveSub(cid,kind,key,btn){
   await busy(btn,async()=>{
     const c=contracts[cid], K=KIND[kind]; let val=parseMoney($('s-val').value); if(!val) throw new Error('Nhập '+K.val.toLowerCase());
@@ -624,10 +630,11 @@ async function saveSub(cid,kind,key,btn){
     let txt;
     if(kind==='payments'){
       data.type=$('s-type').value;
-      if(data.type==='bh'){ data.no=''; data.recover=0; data.retain=0; txt='↩️ Hoàn trả tiền giữ lại bảo hành '+fmtMoney(val); }
-      else { data.recover=parseMoney($('s-rec').value); data.retain=parseMoney($('s-ret').value);
-        if(data.recover+data.retain>val) throw new Error('Trừ tạm ứng + giữ bảo hành không được lớn hơn giá trị thanh toán');
-        txt='🧾 Thanh toán lần '+data.no+': '+fmtMoney(val)+(data.recover?' · trừ TƯ '+fmtMoney(data.recover):'')+(data.retain?' · giữ BH '+fmtMoney(data.retain):'')+' · thực nhận '+fmtMoney(val-data.recover-data.retain); }
+      if(data.type==='bh'){ data.no=''; data.recover=0; data.retain=0; data.hold=0; txt='↩️ Hoàn trả tiền giữ lại bảo hành '+fmtMoney(val); }
+      else if(data.type==='qt'){ data.no=''; data.recover=0; data.retain=0; data.hold=0; txt='↩️ Hoàn trả tiền giữ chờ quyết toán '+fmtMoney(val); }
+      else { data.recover=parseMoney($('s-rec').value); data.retain=parseMoney($('s-ret').value); data.hold=parseMoney($('s-hold').value);
+        if(data.recover+data.retain+data.hold>val) throw new Error('Trừ tạm ứng + giữ bảo hành + giữ quyết toán không được lớn hơn giá trị thanh toán');
+        txt='🧾 Thanh toán lần '+data.no+': '+fmtMoney(val)+(data.recover?' · trừ TƯ '+fmtMoney(data.recover):'')+(data.retain?' · giữ BH '+fmtMoney(data.retain):'')+(data.hold?' · giữ QT '+fmtMoney(data.hold):'')+' · thực nhận '+fmtMoney(val-data.recover-data.retain-data.hold); }
     } else if(kind==='advances') txt='💵 Tạm ứng lần '+data.no+': '+fmtMoney(val);
     else txt='📎 Phụ lục '+data.no+': '+(val>=0?'+':'')+fmtMoney(val)+(data.note?' · '+data.note:'');
     if(key){ await db.ref(ROOT+'/contracts/'+cid+'/'+kind+'/'+key).update(data); await log(cid,kind,'✏️ Sửa · '+txt); }
@@ -732,22 +739,22 @@ async function importRows(btn){
 async function exportAll(){
   try{ const X=await loadXLSX();
     const all=Object.entries(contracts).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
-    const s1=[['Công ty','Số hợp đồng','Tên công trình','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','KL đã thực hiện','Còn lại chưa thi công','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Ngày quyết toán','Giá trị quyết toán','Tình trạng','Ghi chú']]
-      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.company||'',c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.done,k.unbuilt,k.retain,k.refund,k.retainLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),fmtDate(c.settleDate),c.settleValue||'',PH_TXT[phase(c)],c.note||'']; }));
-    const s2=[['Công ty','Số hợp đồng','Tên công trình','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Thực nhận','Ghi chú','Người ghi']];
+    const s1=[['Công ty','Số hợp đồng','Tên công trình','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','KL đã thực hiện','Còn lại chưa thi công','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Giữ chờ QT','Đã hoàn giữ QT','Còn giữ QT','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Ngày quyết toán','Giá trị quyết toán','Tình trạng','Ghi chú']]
+      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.company||'',c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.done,k.unbuilt,k.retain,k.refund,k.retainLeft,k.hold,k.refundQt,k.holdLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),fmtDate(c.settleDate),c.settleValue||'',PH_TXT[phase(c)],c.note||'']; }));
+    const s2=[['Công ty','Số hợp đồng','Tên công trình','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Giữ chờ QT','Thực nhận','Ghi chú','Người ghi']];
     const s3=[['Công ty','Số hợp đồng','Tên công trình','Loại','Số / lần','Ngày','Giá trị','Ghi chú','Người ghi']];
     all.forEach(([id,c])=>{
-      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0; s2.push([c.company||'',c.code,c.name,x.type==='bh'?'Hoàn tiền BH':'Thanh toán KL',x.no||'',fmtDate(x.date),x.type==='bh'?'':v,x.type==='bh'?'':r,x.type==='bh'?-v:h,x.type==='bh'?v:v-r-h,x.note||'',x.by||'']); });
+      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0, q=Number(x.hold)||0, t=x.type||'kl'; s2.push([c.company||'',c.code,c.name,t==='bh'?'Hoàn tiền BH':t==='qt'?'Hoàn tiền giữ QT':'Thanh toán KL',x.no||'',fmtDate(x.date),t==='kl'?v:'',t==='kl'?r:'',t==='bh'?-v:t==='kl'?h:'',t==='qt'?-v:t==='kl'?q:'',t==='kl'?v-r-h-q:v,x.note||'',x.by||'']); });
       sortNo(c.advances).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
       sortNo(c.addenda).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
     });
-    const s0=[['Công ty','Số HĐ (chưa thanh lý)','Tổng giá trị đã ký','Tổng tạm ứng','Đã trừ tạm ứng','Tạm ứng còn lại','Đã thanh toán','% TT','Còn lại chưa TT','Còn lại chưa thi công','Tiền BH đang giữ','Tổng thực nhận','Số HĐ chờ QT','Chờ QT còn phải thu']];
+    const s0=[['Công ty','Số HĐ (chưa thanh lý)','Tổng giá trị đã ký','Tổng tạm ứng','Đã trừ tạm ứng','Tạm ứng còn lại','Đã thanh toán','% TT','Còn lại chưa TT','Còn lại chưa thi công','Tiền BH đang giữ','Tiền giữ chờ QT đang giữ','Tổng thực nhận','Số HĐ chờ QT','Chờ QT còn phải thu']];
     const live=all.map(([id,c])=>c).filter(c=>phase(c)!=='closed'), coKeys=COMPANIES.concat([...new Set(live.map(c=>c.company||''))].filter(k=>!COMPANIES.includes(k)));
-    coKeys.map(k=>[k||'(chưa ghi)',sumOf(live.filter(c=>(c.company||'')===k))]).concat([['TỔNG',sumOf(live)]]).forEach(([k,t])=>s0.push([k,t.n,t.total,t.adv,t.recov,t.advLeft,t.paid,t.pct,t.remain,t.unbuilt,t.retainLeft,t.received,t.nSettling,t.settlingRemain]));
+    coKeys.map(k=>[k||'(chưa ghi)',sumOf(live.filter(c=>(c.company||'')===k))]).concat([['TỔNG',sumOf(live)]]).forEach(([k,t])=>s0.push([k,t.n,t.total,t.adv,t.recov,t.advLeft,t.paid,t.pct,t.remain,t.unbuilt,t.retainLeft,t.holdLeft,t.received,t.nSettling,t.settlingRemain]));
     const wb=X.utils.book_new(), mk=(aoa,w)=>{ const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=w.map(x=>({wch:x})); return ws; };
-    X.utils.book_append_sheet(wb,mk(s0,[12,10,18,16,16,16,16,6,18,18,16,18,10,18]),'Tong hop');
-    X.utils.book_append_sheet(wb,mk(s1,[8,16,30,20,20,11,16,14,16,14,14,14,16,16,6,16,16,14,12,12,16,12,8,12,12,16,14,25]),'Hop dong');
-    X.utils.book_append_sheet(wb,mk(s2,[8,16,30,14,6,11,16,14,14,16,25,14]),'Thanh toan');
+    X.utils.book_append_sheet(wb,mk(s0,[12,10,18,16,16,16,16,6,18,18,16,16,18,10,18]),'Tong hop');
+    X.utils.book_append_sheet(wb,mk(s1,[8,16,30,20,20,11,16,14,16,14,14,14,16,16,6,16,16,14,12,12,14,12,12,16,12,8,12,12,16,14,25]),'Hop dong');
+    X.utils.book_append_sheet(wb,mk(s2,[8,16,30,14,6,11,16,14,14,14,16,25,14]),'Thanh toan');
     X.utils.book_append_sheet(wb,mk(s3,[8,16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
     X.writeFile(wb,'Hop-dong-'+toISO(Date.now())+'.xlsx');
   }catch(e){ toast('❌ '+e.message); }
