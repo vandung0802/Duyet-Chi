@@ -83,6 +83,10 @@ label.f{display:block;font-size:13px;color:var(--text-sub);font-weight:600;margi
 .pics{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .pics img{width:70px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer}
 .warn{background:var(--red-light);color:var(--red);padding:8px 12px;border-radius:var(--radius);font-size:14px;margin-bottom:8px}
+.grp{padding:7px 14px;background:var(--gray-light);font-weight:700;font-size:13px;color:var(--text-sub);border-bottom:1px solid var(--gray-border)}
+.sec-h{padding:9px 14px;font-weight:700;font-size:14px;background:var(--gray-light);border-bottom:1px solid var(--gray-border)}
+.stat.ro{cursor:default}
+table.x td.r,table.x th.r{text-align:right;white-space:nowrap}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:999;max-width:90vw;text-align:center}
 .login{max-width:420px;margin:40px auto;padding:20px}
 .login h2{text-align:center;margin-bottom:16px;color:var(--blue-dark)}
@@ -127,13 +131,30 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
           <select id="f-site" onchange="renderList()"></select>
           <select id="f-type" onchange="renderList()"></select>
         </div>
+        <select id="f-group" style="margin-top:6px" onchange="renderList()">
+          <option value="">Xếp theo mã thiết bị</option>
+          <option value="site">Gom theo công trình</option>
+          <option value="type">Gom theo loại máy</option>
+          <option value="keeper">Gom theo người giữ</option>
+        </select>
       </div></div>
       <div class="card" id="list"></div>
       <button class="btn" onclick="itemForm()">＋ Thêm thiết bị</button>
     </section>
 
     <section id="tab-issues" hidden>
+      <div class="card" id="expiring" hidden></div>
       <div class="card" id="issues"></div>
+    </section>
+
+    <section id="tab-report" hidden>
+      <div class="card"><div class="card-body" style="padding:8px 10px">
+        <div class="row">
+          <select id="rp-period" onchange="renderReport()"></select>
+          <select id="rp-site" onchange="renderReport()"></select>
+        </div>
+      </div></div>
+      <div id="report"></div>
     </section>
 
     <section id="tab-more" hidden>
@@ -163,13 +184,14 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
   <nav class="bottom-nav">
     <button class="nav-item active" data-tab="list" onclick="showTab('list')"><span class="nav-icon">🚜</span>Thiết bị</button>
     <button class="nav-item" data-tab="issues" onclick="showTab('issues')"><span class="nav-icon">🔧</span>Sự cố<span class="nav-badge" id="iss-badge" hidden></span></button>
+    <button class="nav-item" data-tab="report" onclick="showTab('report')"><span class="nav-icon">📊</span>Báo cáo</button>
     <button class="nav-item" data-tab="more" onclick="showTab('more')"><span class="nav-icon">⚙️</span>Khác</button>
   </nav>
 </div>
 
 <div id="detail" class="overlay" hidden></div>
 <div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
-<div id="viewer" class="modal-bg" hidden onclick="this.hidden=true" style="align-items:center"><img id="viewer-img" style="max-width:96vw;max-height:92vh;border-radius:8px"></div>
+<div id="viewer" class="modal-bg" hidden onclick="closeViewer()" style="align-items:center"><img id="viewer-img" style="max-width:96vw;max-height:92vh;border-radius:8px"></div>
 
 <script>
 // ══ CẤU HÌNH — dùng CHUNG project Firebase với app Duyệt Chi 379 (cùng tài khoản, cùng danh sách người được duyệt) ══
@@ -182,7 +204,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260928-v1';
+const APP_VERSION = '20260929-v2';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database(), storage = firebase.storage();
@@ -217,6 +239,16 @@ const STATUS={run:'🟢 Đang chạy',idle:'🟡 Chờ việc',broken:'🔴 Hỏ
 const ISS={new:'🔴 Mới báo',repair:'🔧 Đang sửa',done:'✅ Đã sửa'};
 const TYPES=['Máy xúc','Máy ủi','Máy lu','Xe tải','Xe con','Máy phát điện','Máy bơm','Máy hàn','Máy khoan','Máy cắt','Máy trộn','Cẩu','Dụng cụ','Khác'];
 const badge=s=>`<span class="badge s-${s}">${STATUS[s]||s}</span>`;
+const DOCS=[['inspectionEnd','Đăng kiểm'],['insuranceEnd','Bảo hiểm'],['warrantyEnd','Bảo hành']];
+const SOON=30*86400000; // giấy tờ còn dưới 30 ngày = sắp hết hạn
+const moneyInput=id=>`<input id="${id}" inputmode="numeric" oninput="this.value=parseMoney(this.value)?parseMoney(this.value).toLocaleString('vi-VN'):''">`;
+
+// ══ NÚT BACK ĐIỆN THOẠI: đóng lớp trên cùng (hộp nhập / ảnh / chi tiết) thay vì thoát app ══
+const _layers=[];
+function pushLayer(tag){ _layers.push(tag); try{ history.pushState({tb:tag},''); }catch(e){} }
+function popLayer(tag){ if(_layers[_layers.length-1]!==tag) return; if(history.state&&history.state.tb===tag) history.back(); else _layers.pop(); }
+function hideLayer(tag){ if(tag==='modal') $('modal-bg').hidden=true; else if(tag==='viewer') $('viewer').hidden=true; else if(tag==='detail') hideDetail(); }
+window.addEventListener('popstate',()=>{ const tag=_layers.pop(); if(tag) hideLayer(tag); });
 
 // ══ ĐĂNG NHẬP ══
 let currentUser=null, userName='';
@@ -258,9 +290,9 @@ function openIssuesOf(id){ return Object.entries(issues).filter(([k,v])=>v.itemI
 
 // ══ MÀN CHÍNH ══
 function showTab(t){
-  ['list','issues','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
+  ['list','issues','report','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
 }
-function renderAll(){ renderStats(); renderFilters(); renderList(); renderIssues(); if(curId&&_logRef) renderDetail(_logs); }
+function renderAll(){ renderStats(); renderFilters(); renderList(); renderIssues(); renderReport(); if(curId&&_logRef) renderDetail(_logs); }
 function renderStats(){
   const c={all:0}; Object.values(items).forEach(it=>{ if(it.status==='sold') return; c.all++; c[it.status]=(c[it.status]||0)+1; });
   $('stats').innerHTML=[['','Tất cả',c.all],['run','Đang chạy',c.run||0],['idle','Chờ việc',c.idle||0],['broken','Hỏng',c.broken||0],['repair','Đang sửa',c.repair||0],['sold','Thanh lý',Object.values(items).filter(i=>i.status==='sold').length]]
@@ -270,44 +302,123 @@ function renderFilters(){
   const opt=(id,vals,lbl)=>{ const cur=$(id).value; $(id).innerHTML=`<option value="">${lbl}</option>`+[...vals].filter(Boolean).sort().map(v=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`).join(''); };
   opt('f-site',new Set(Object.values(items).map(i=>i.site)),'— Mọi công trình —');
   opt('f-type',new Set(Object.values(items).map(i=>i.type)),'— Mọi loại —');
+  opt('rp-site',new Set(Object.values(items).map(i=>i.site)),'— Mọi công trình —');
 }
 function renderList(){
-  const q=$('q').value.trim().toLowerCase(), site=$('f-site').value, type=$('f-type').value;
+  const q=$('q').value.trim().toLowerCase(), site=$('f-site').value, type=$('f-type').value, grp=$('f-group').value;
+  try{ localStorage.setItem('tb-group',grp); }catch(e){}
   const rows=Object.entries(items).filter(([id,it])=>{
     if(filterStatus? it.status!==filterStatus : it.status==='sold') return false;
     if(site&&it.site!==site) return false; if(type&&it.type!==type) return false;
     return !q||[it.code,it.name,it.plate,it.keeper,it.site,it.serial].join(' ').toLowerCase().includes(q);
   }).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
-  $('list').innerHTML=rows.length?rows.map(([id,it])=>`<div class="item" onclick="openDetail('${id}')">
+  const openOf={}; Object.values(issues).forEach(v=>{ if(v.status!=='done'&&(!openOf[v.itemId]||v.ts<openOf[v.itemId])) openOf[v.itemId]=v.ts; });
+  const card=([id,it])=>`<div class="item" onclick="openDetail('${id}')">
     ${it.photo?`<img class="thumb" src="${esc(it.photo)}">`:`<div class="thumb">🚜</div>`}
     <div class="item-main"><div class="item-name">${esc(it.code)} · ${esc(it.name)}</div>
-    <div class="item-sub">📍 ${esc(it.site||'—')}${it.keeper?' · 👤 '+esc(it.keeper):''}</div></div>${badge(it.status)}</div>`).join('')
-    :'<div class="empty">Chưa có thiết bị nào. Bấm "Thêm thiết bị" hoặc nhập từ Excel (tab Khác).</div>';
+    <div class="item-sub">📍 ${esc(it.site||'—')}${it.keeper?' · 👤 '+esc(it.keeper):''}${openOf[id]?' · nằm <b>'+days(openOf[id])+' ngày</b>':''}</div></div>${badge(it.status)}</div>`;
+  let html='';
+  if(!grp) html=rows.map(card).join('');
+  else{
+    const g={}; rows.forEach(r=>{ const k=r[1][grp]||'(chưa ghi)'; (g[k]=g[k]||[]).push(r); });
+    const ico={site:'📍',type:'🏷️',keeper:'👤'}[grp];
+    html=Object.keys(g).sort((a,b)=>a.localeCompare(b,'vi')).map(k=>`<div class="grp">${ico} ${esc(k)} <span style="font-weight:400">· ${g[k].length} máy</span></div>`+g[k].map(card).join('')).join('');
+  }
+  $('list').innerHTML=html||(Object.keys(items).length?'<div class="empty">Không có thiết bị nào khớp bộ lọc.</div>':'<div class="empty">Chưa có thiết bị nào. Bấm "Thêm thiết bị" hoặc nhập từ Excel (tab Khác).</div>');
+}
+// giấy tờ (đăng kiểm / bảo hiểm / bảo hành) đã hết hoặc còn dưới 30 ngày — máy đã thanh lý bỏ qua
+function expiringItems(){
+  const now=Date.now(), out=[];
+  Object.entries(items).forEach(([id,it])=>{ if(it.status==='sold') return; DOCS.forEach(([k,l])=>{ if(it[k]&&it[k]-now<SOON) out.push({id,it,k,l,ts:it[k]}); }); });
+  return out.sort((a,b)=>a.ts-b.ts);
 }
 function renderIssues(){
   const rows=Object.entries(issues).filter(([k,v])=>v.status!=='done').sort((a,b)=>a[1].ts-b[1].ts);
-  $('iss-badge').hidden=!rows.length; $('iss-badge').textContent=rows.length;
-  $('issues').innerHTML=rows.length?rows.map(([id,v])=>{ const it=items[v.itemId]||{}; return `<div class="item" onclick="openDetail('${v.itemId}')">
+  const exp=expiringItems(), now=Date.now();
+  $('iss-badge').hidden=!(rows.length+exp.length); $('iss-badge').textContent=rows.length+exp.length;
+  $('expiring').hidden=!exp.length;
+  $('expiring').innerHTML=exp.length?`<div class="sec-h">📅 Giấy tờ sắp hết hạn (trong 30 ngày)</div>`+exp.map(e=>`<div class="item" onclick="openDetail('${e.id}')">
+    <div class="item-main"><div class="item-name">${esc(e.it.code)} · ${esc(e.it.name)}</div>
+    <div class="item-sub">📍 ${esc(e.it.site||'—')}${e.it.plate?' · '+esc(e.it.plate):''}</div></div>
+    <span class="badge ${e.ts<now?'s-broken':'s-idle'}">${e.l} ${e.ts<now?'HẾT HẠN':'đến'} ${fmtDate(e.ts)}</span></div>`).join(''):'';
+  $('issues').innerHTML=rows.length?`<div class="sec-h">🔧 Máy đang hỏng / đang sửa (${rows.length})</div>`+rows.map(([id,v])=>{ const it=items[v.itemId]||{}; return `<div class="item" onclick="openDetail('${v.itemId}')">
     <div class="item-main"><div class="item-name">${esc(it.code||'?')} · ${esc(it.name||'(đã xoá)')}</div>
     <div class="item-sub">${esc(v.desc)}</div>
-    <div class="item-sub">📍 ${esc(it.site||'—')} · báo ${fmtDate(v.ts)} · nằm <b>${days(v.ts)} ngày</b></div></div>
+    <div class="item-sub">📍 ${esc(it.site||'—')} · báo ${fmtDate(v.ts)} · nằm <b>${days(v.ts)} ngày</b>${v.repairer?' · thợ: '+esc(v.repairer):''}</div></div>
     <span class="badge ${v.status==='new'?'s-broken':'s-repair'}">${ISS[v.status]}</span></div>`; }).join('')
     :'<div class="empty">🎉 Không có máy nào đang hỏng.</div>';
+}
+
+// ══ BÁO CÁO (tab Báo cáo): sự cố + chi phí sửa theo kỳ, theo máy, theo công trình ══
+const PERIODS={tm:'Tháng này',lm:'Tháng trước','3m':'3 tháng gần đây',ty:'Năm nay',all:'Tất cả thời gian'};
+function periodRange(p){
+  const n=new Date(), y=n.getFullYear(), m=n.getMonth(), t=(yy,mm)=>new Date(yy,mm,1).getTime();
+  if(p==='tm') return [t(y,m),t(y,m+1)]; if(p==='lm') return [t(y,m-1),t(y,m)]; if(p==='3m') return [t(y,m-2),t(y,m+1)]; if(p==='ty') return [t(y,0),t(y+1,0)];
+  return [0,Infinity];
+}
+function reportData(){
+  const p=$('rp-period').value||'ty', site=$('rp-site').value, [a,b]=periodRange(p);
+  const siteOf=v=>v.site||(items[v.itemId]||{}).site||'';
+  const list=Object.entries(issues).map(([k,v])=>Object.assign({id:k},v,{_site:siteOf(v)})).filter(v=>v.ts>=a&&v.ts<b&&(!site||v._site===site)).sort((x,y)=>y.ts-x.ts);
+  const sum=l=>({n:l.length,cost:l.reduce((s,v)=>s+(Number(v.cost)||0),0),down:l.reduce((s,v)=>s+days(v.ts,v.doneTs),0),open:l.filter(v=>v.status!=='done').length});
+  const by=key=>{ const g={}; list.forEach(v=>{ const k=key(v); (g[k]=g[k]||[]).push(v); }); return Object.entries(g).map(([k,l])=>Object.assign({k},sum(l))).sort((x,y)=>y.cost-x.cost||y.n-x.n); };
+  const fleet={}; Object.values(items).forEach(i=>{ if(!site||i.site===site) fleet[i.status]=(fleet[i.status]||0)+1; });
+  fleet.total=Object.entries(fleet).reduce((s,[k,n])=>s+(k==='sold'?0:n),0);
+  return {p,site,list,tot:sum(list),byItem:by(v=>v.itemId),bySite:by(v=>v._site||'(chưa ghi)'),fleet};
+}
+const itemName=id=>{ const it=items[id]||{}; return (it.code||'?')+' · '+(it.name||'(đã xoá)'); };
+function renderReport(){
+  if(!$('rp-period').options.length) $('rp-period').innerHTML=Object.entries(PERIODS).map(([k,v])=>`<option value="${k}" ${k==='ty'?'selected':''}>${v}</option>`).join('');
+  const R=reportData(), F=R.fleet;
+  const tbl=(title,rows,label,name)=>rows.length?`<div class="card"><div class="card-body"><h3 style="font-size:15px;margin-bottom:8px">${title}</h3><table class="x"><tr><th>${label}</th><th class="r">Lần</th><th class="r">Ngày nằm</th><th class="r">Chi phí</th></tr>${rows.map(r=>`<tr><td>${esc(name(r.k))}</td><td class="r">${r.n}</td><td class="r">${r.down}</td><td class="r">${fmtMoney(r.cost)||'—'}</td></tr>`).join('')}<tr style="font-weight:700"><td>Cộng</td><td class="r">${R.tot.n}</td><td class="r">${R.tot.down}</td><td class="r">${fmtMoney(R.tot.cost)||'—'}</td></tr></table></div></div>`:'';
+  $('report').innerHTML=`
+    <div class="stats"><div class="stat ro"><b>${R.tot.n}</b><span>lần hỏng</span></div><div class="stat ro"><b>${R.tot.open}</b><span>chưa sửa xong</span></div><div class="stat ro"><b>${R.tot.down}</b><span>ngày nằm</span></div><div class="stat ro" style="min-width:130px"><b style="font-size:16px;line-height:26px">${fmtMoney(R.tot.cost)||'0 đ'}</b><span>chi phí sửa</span></div></div>
+    <div class="card"><div class="card-body" style="font-size:14px">🚜 Đội máy${R.site?' tại <b>'+esc(R.site)+'</b>':''}: <b>${F.total}</b> máy · chạy ${F.run||0} · chờ việc ${F.idle||0} · hỏng ${F.broken||0} · đang sửa ${F.repair||0}${F.sold?' · đã thanh lý '+F.sold:''}
+      <div style="font-size:12px;color:var(--text-sub);margin-top:4px">Sự cố xếp vào kỳ theo ngày báo hỏng. Ngày nằm = từ báo hỏng đến sửa xong (chưa xong tính đến hôm nay). Chi phí = chi phí ghi lúc sửa xong.</div></div></div>
+    ${tbl('🔧 Theo máy',R.byItem,'Máy',itemName)}
+    ${R.site?'':tbl('📍 Theo công trình',R.bySite,'Công trình',k=>k)}
+    ${R.list.length?`<div class="card"><div class="card-body"><h3 style="font-size:15px;margin-bottom:8px">📋 Từng lần hỏng (${R.list.length})</h3><table class="x"><tr><th>Ngày</th><th>Máy · hỏng gì</th><th class="r">Chi phí</th></tr>${R.list.map(v=>`<tr onclick="openDetail('${v.itemId}')" style="cursor:pointer"><td style="white-space:nowrap">${fmtDate(v.ts)}</td><td><b>${esc((items[v.itemId]||{}).code||'?')}</b> ${esc(v.desc)}${v.status!=='done'?' <span class="badge '+(v.status==='new'?'s-broken':'s-repair')+'" style="font-size:11px;padding:1px 6px">'+ISS[v.status].replace(/^\S+ /,'')+'</span>':''}</td><td class="r">${fmtMoney(v.cost)||'—'}</td></tr>`).join('')}</table></div></div>`
+      :'<div class="card"><div class="empty">Không có sự cố nào trong kỳ này.</div></div>'}
+    <div class="row"><button class="btn" onclick="shareReport()">📤 Gửi Zalo / sao chép</button><button class="btn sec" onclick="exportIssues(true)">📊 Excel kỳ này</button></div>`;
+}
+function reportText(){
+  const R=reportData(), F=R.fleet, now=Date.now();
+  const nm=id=>{ const it=items[id]||{}; return (it.code||'?')+' '+(it.name||''); };
+  const L=['📊 BÁO CÁO THIẾT BỊ — '+PERIODS[R.p].toUpperCase()+(R.site?' — '+R.site:'')+' (lập '+fmtDate(now)+')'];
+  L.push('Đội máy: '+F.total+' · chạy '+(F.run||0)+' · chờ việc '+(F.idle||0)+' · hỏng '+(F.broken||0)+' · đang sửa '+(F.repair||0));
+  L.push('Sự cố: '+R.tot.n+' lần · chi phí sửa '+(fmtMoney(R.tot.cost)||'0 đ')+' · nằm tổng '+R.tot.down+' ngày');
+  const open=Object.values(issues).filter(v=>v.status!=='done'&&(!R.site||(v.site||(items[v.itemId]||{}).site||'')===R.site)).sort((a,b)=>a.ts-b.ts);
+  if(open.length){ L.push('','⚠️ ĐANG HỎNG / ĐANG SỬA ('+open.length+'):'); open.forEach(v=>L.push('- '+nm(v.itemId)+': '+v.desc+' — nằm '+days(v.ts)+' ngày'+(v.status==='repair'?' (đang sửa'+(v.repairer?', '+v.repairer:'')+')':''))); }
+  if(R.byItem.length){ L.push('','💰 CHI PHÍ SỬA THEO MÁY:'); R.byItem.slice(0,15).forEach(r=>L.push('- '+nm(r.k)+': '+r.n+' lần · '+(fmtMoney(r.cost)||'chưa ghi chi phí'))); if(R.byItem.length>15) L.push('- … và '+(R.byItem.length-15)+' máy khác'); }
+  const exp=expiringItems().filter(e=>!R.site||e.it.site===R.site);
+  if(exp.length){ L.push('','📅 GIẤY TỜ SẮP HẾT HẠN:'); exp.forEach(e=>L.push('- '+e.it.code+' '+e.it.name+(e.it.plate?' ('+e.it.plate+')':'')+': '+e.l.toLowerCase()+' '+(e.ts<now?'ĐÃ HẾT HẠN':'hết hạn')+' '+fmtDate(e.ts))); }
+  return L.join('\n');
+}
+async function shareReport(){
+  const txt=reportText();
+  if(navigator.share){ try{ await navigator.share({text:txt}); return; }catch(e){ if(e.name==='AbortError') return; } }
+  try{ await navigator.clipboard.writeText(txt); toast('✅ Đã sao chép — mở Zalo và dán'); }
+  catch(e){ openModal(`<h3>📋 Báo cáo</h3><textarea style="min-height:50vh;font-size:14px" readonly onclick="this.select()">${esc(txt)}</textarea><p style="font-size:13px;color:var(--text-sub);margin-top:6px">Bấm vào ô để chọn hết chữ, rồi sao chép.</p>`); }
 }
 
 // ══ CHI TIẾT 1 THIẾT BỊ ══
 let curId=null, _logRef=null, _logs={};
 function openDetail(id){
+  if(!items[id]) return;
+  if(!$('modal-bg').hidden) closeModal();
+  if($('detail').hidden) pushLayer('detail');
   curId=id; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; _logs={};
   if(_logRef) _logRef.off();
   _logRef=db.ref(ROOT+'/log/'+id); _logRef.on('value',s=>{ _logs=s.val()||{}; renderDetail(_logs); });
 }
-function closeDetail(){ $('detail').hidden=true; document.body.style.overflow=''; if(_logRef) _logRef.off(); _logRef=null; curId=null; }
+function hideDetail(){ $('detail').hidden=true; document.body.style.overflow=''; if(_logRef) _logRef.off(); _logRef=null; curId=null; }
+function closeDetail(){ if($('detail').hidden) return; hideDetail(); popLayer('detail'); }
 function renderDetail(logs){
   const id=curId, it=items[id]; if(!it){ closeDetail(); return; }
   const open=openIssuesOf(id);
-  const exp=[['warrantyEnd','Bảo hành'],['insuranceEnd','Bảo hiểm'],['inspectionEnd','Đăng kiểm']].filter(([k])=>it[k]);
-  const warn=exp.filter(([k])=>it[k]-Date.now()<30*86400000).map(([k,l])=>l+' '+(it[k]<Date.now()?'ĐÃ HẾT HẠN':'sắp hết hạn')+' ('+fmtDate(it[k])+')');
+  const exp=DOCS.filter(([k])=>it[k]);
+  const warn=exp.filter(([k])=>it[k]-Date.now()<SOON).map(([k,l])=>l+' '+(it[k]<Date.now()?'ĐÃ HẾT HẠN':'sắp hết hạn')+' ('+fmtDate(it[k])+')');
+  const hist=Object.values(issues).filter(v=>v.itemId===id), histCost=hist.reduce((s,v)=>s+(Number(v.cost)||0),0), histDown=hist.reduce((s,v)=>s+days(v.ts,v.doneTs),0);
   // dòng thời gian = nhật ký + sự cố, mới nhất trên
   const tl=Object.values(logs).map(l=>({ts:l.ts,cls:'',html:esc(l.text),by:l.by,pics:l.photos}));
   Object.entries(issues).filter(([k,v])=>v.itemId===id).forEach(([k,v])=>{
@@ -332,7 +443,8 @@ function renderDetail(logs){
         <div>Người giữ</div><div>${esc(it.keeper||'—')}</div>
         ${it.plate?`<div>Biển số</div><div>${esc(it.plate)}</div>`:''}
         ${it.serial?`<div>Số khung/máy</div><div>${esc(it.serial)}</div>`:''}
-        ${exp.map(([k,l])=>`<div>${l} đến</div><div>${fmtDate(it[k])}</div>`).join('')}
+        ${exp.map(([k,l])=>`<div>${l} đến</div><div>${it[k]-Date.now()<SOON?'<b style="color:var(--red)">'+fmtDate(it[k])+'</b>':fmtDate(it[k])}</div>`).join('')}
+        ${hist.length?`<div>Sửa chữa</div><div>${hist.length} lần · nằm ${histDown} ngày${histCost?' · <b>'+fmtMoney(histCost)+'</b>':''}</div>`:''}
         ${it.note?`<div>Ghi chú</div><div>${esc(it.note)}</div>`:''}
       </div>
     </div></div>
@@ -340,17 +452,21 @@ function renderDetail(logs){
       <button class="btn" onclick="moveForm('${id}')">📦 Điều chuyển</button>
       ${open.length?`<button class="btn yel" onclick="repairForm('${open[0][0]}')">🔧 Cập nhật sửa</button>`:`<button class="btn red" onclick="issueForm('${id}')">🔴 Báo hỏng</button>`}
     </div>
-    ${it.status!=='broken'&&it.status!=='repair'?`<div style="margin-top:8px"><button class="btn sec" onclick="statusForm('${id}')">Đổi tình trạng (chờ việc / thanh lý…)</button></div>`:''}
+    <div class="row" style="margin-top:8px">
+      <button class="btn sec" onclick="noteForm('${id}')">📝 Ghi nhật ký</button>
+      ${it.status!=='broken'&&it.status!=='repair'?`<button class="btn sec" onclick="statusForm('${id}')">Đổi tình trạng</button>`:''}
+    </div>
     <h3 style="margin:16px 0 10px;font-size:16px">🕘 Lịch sử</h3>
     <div class="tl">${tl.map(e=>`<div class="tl-e ${e.cls}"><div class="tl-t">${fmtDT(e.ts)} · ${esc(e.by||'')}</div><div class="tl-b">${e.html}</div>${pics(e.pics)}</div>`).join('')||'<div class="empty">Chưa có gì.</div>'}</div>
     <div style="margin-top:20px"><button class="btn sec" style="color:var(--red)" onclick="delItem('${id}')">🗑 Xoá thiết bị này</button></div>
   </div>`;
 }
-function viewImg(u){ $('viewer-img').src=u; $('viewer').hidden=false; }
+function viewImg(u){ $('viewer-img').src=u; if($('viewer').hidden) pushLayer('viewer'); $('viewer').hidden=false; }
+function closeViewer(){ if($('viewer').hidden) return; $('viewer').hidden=true; popLayer('viewer'); }
 
 // ══ MODAL & ẢNH ══
-function openModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
-function closeModal(){ $('modal-bg').hidden=true; }
+function openModal(html){ $('modal').innerHTML=html; if($('modal-bg').hidden) pushLayer('modal'); $('modal-bg').hidden=false; $('modal').scrollTop=0; }
+function closeModal(){ if($('modal-bg').hidden) return; $('modal-bg').hidden=true; popLayer('modal'); }
 const dl=(id,vals)=>`<datalist id="${id}">${[...new Set(vals.filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
 const sites=()=>Object.values(items).map(i=>i.site), keepers=()=>Object.values(items).map(i=>i.keeper);
 // ô chọn ảnh: nén rồi giữ dataUrl trong _pending[key]; upload lúc lưu
@@ -444,6 +560,22 @@ async function saveMove(id,btn){
     toast('✅ Đã điều chuyển');
   });
 }
+// nhật ký tự do: bảo dưỡng, thay dầu, đổ nhiên liệu, kiểm tra… (ghi vào log của máy, có ảnh + chi phí nếu có)
+function noteForm(id){
+  openModal(`<h3>📝 Ghi nhật ký ${esc(items[id].code)}</h3><p style="font-size:14px;color:var(--text-sub)">Bảo dưỡng, thay dầu, đổ nhiên liệu, kiểm tra định kỳ… ghi gì cũng được, có ảnh càng tốt.</p>
+    <label class="f">Nội dung *</label><textarea id="nt-desc" placeholder="VD: Thay dầu máy + lọc dầu lúc 2.500 giờ"></textarea>
+    <div class="row"><div><label class="f">Ngày</label><input id="nt-date" type="date" value="${toISO(Date.now())}"></div><div><label class="f">Chi phí (đ, nếu có)</label>${moneyInput('nt-cost')}</div></div>
+    ${picInput('note','Ảnh')}
+    <div style="margin-top:14px"><button class="btn" onclick="saveNote('${id}',this)">💾 Lưu</button></div>`);
+}
+async function saveNote(id,btn){
+  await busy(btn,async()=>{
+    const desc=$('nt-desc').value.trim(); if(!desc) throw new Error('Nhập nội dung');
+    const photos=await uploadPics('note','log'), cost=parseMoney($('nt-cost').value);
+    await log(id,'note','📝 '+desc+(cost?' · '+fmtMoney(cost):''),{ts:fromISO($('nt-date').value)||Date.now(),photos,cost});
+    toast('✅ Đã ghi');
+  });
+}
 function statusForm(id){
   openModal(`<h3>Đổi tình trạng</h3><label class="f">Tình trạng mới</label><select id="st">${Object.entries(STATUS).filter(([k])=>k!=='broken'&&k!=='repair').map(([k,v])=>`<option value="${k}" ${items[id].status===k?'selected':''}>${v}</option>`).join('')}</select>
     <label class="f">Ghi chú</label><input id="st-note"><div style="margin-top:14px"><button class="btn" onclick="saveStatus('${id}',this)">💾 Lưu</button></div>`);
@@ -478,7 +610,7 @@ function repairForm(isId){
       <div style="margin-top:10px"><button class="btn yel" onclick="startRepair('${isId}',this)">🔧 Bắt đầu sửa</button></div></div></div><p style="text-align:center;color:var(--text-sub);font-size:13px;margin:10px 0">— hoặc đã sửa xong luôn —</p>`:''}
     <label class="f">Đã sửa / thay những gì? *</label><textarea id="rp-desc"></textarea>
     <label class="f">Ai sửa</label><input id="rp-who2" value="${esc(v.repairer||'')}">
-    <div class="row"><div><label class="f">Chi phí (đ)</label><input id="rp-cost" inputmode="numeric" oninput="this.value=parseMoney(this.value)?parseMoney(this.value).toLocaleString('vi-VN'):''"></div><div><label class="f">Ngày sửa xong</label><input id="rp-date" type="date" value="${toISO(Date.now())}"></div></div>
+    <div class="row"><div><label class="f">Chi phí (đ)</label>${moneyInput('rp-cost')}</div><div><label class="f">Ngày sửa xong</label><input id="rp-date" type="date" value="${toISO(Date.now())}"></div></div>
     ${picInput('inv','Ảnh hóa đơn / máy sau sửa')}
     <label class="f">Tình trạng máy sau sửa</label><select id="rp-st"><option value="run">🟢 Đang chạy</option><option value="idle">🟡 Chờ việc</option><option value="sold">⚫ Thanh lý (không sửa được)</option></select>
     <div style="margin-top:14px"><button class="btn green" onclick="doneRepair('${isId}',this)">✅ Sửa xong</button></div>`);
@@ -520,7 +652,7 @@ async function onExcel(ev){
     const I={code:ci('mã'),name:ci('tên'),type:ci('loại'),plate:ci('biển'),serial:ci('số khung'),year:ci('năm'),site:ci('công trình'),keeper:ci('người'),status:ci('tình trạng'),note:ci('ghi chú')};
     if(I.code<0||I.name<0) throw new Error('File phải có cột "Mã thiết bị" và "Tên thiết bị"');
     const g=(r,k)=>I[k]>=0?String(r[I[k]]??'').trim():'';
-    const list=rows.slice(1).filter(r=>g(r,'code')&&g(r,'name')).map(r=>({code:g(r,'code'),name:g(r,'name'),type:g(r,'type'),plate:g(r,'plate'),serial:g(r,'serial'),year:g(r,'year'),site:g(r,'site'),keeper:g(r,'keeper'),status:txtToStatus(g(r,'status')),note:g(r,'note')}));
+    const list=rows.slice(1).filter(r=>g(r,'code')&&g(r,'name')).map(r=>({code:g(r,'code'),name:g(r,'name'),type:g(r,'type'),plate:g(r,'plate'),serial:g(r,'serial'),year:g(r,'year'),site:g(r,'site'),keeper:g(r,'keeper'),status:g(r,'status')?txtToStatus(g(r,'status')):'',note:g(r,'note')})); // ô Tình trạng trống → '' (cập nhật thì giữ tình trạng cũ, thêm mới thì Đang chạy)
     if(!list.length) throw new Error('Không thấy dòng nào có Mã + Tên');
     const byCode={}; Object.entries(items).forEach(([k,i])=>byCode[i.code]=k);
     const nNew=list.filter(r=>!byCode[r.code]).length;
@@ -539,7 +671,7 @@ async function importRows(btn){
       const old=items[id]||{};
       const data=Object.assign({},r,{updatedAt:now,updatedBy:userName});
       if(old.status==='broken'||old.status==='repair') data.status=old.status; // đang có sự cố mở thì Excel không được đè
-      if(!byCode[r.code]){ data.createdAt=now; data.createdBy=userName; up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'create',text:'🆕 Nhập từ Excel'+(r.site?' — tại '+r.site:'')},who()); }
+      if(!byCode[r.code]){ if(!data.status) data.status='run'; data.createdAt=now; data.createdBy=userName; up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'create',text:'🆕 Nhập từ Excel'+(r.site?' — tại '+r.site:'')},who()); }
       else if(old.site!==r.site&&r.site) up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'move',text:'📦 Excel: '+(old.site||'—')+' → '+r.site,from:old.site||'',to:r.site},who());
       Object.keys(data).forEach(k=>{ if(byCode[r.code]&&data[k]===''&&k!=='updatedBy') delete data[k]; }); // cập nhật: ô trống không xoá dữ liệu cũ
       Object.entries(data).forEach(([k,v])=>up['items/'+id+'/'+k]=v);
@@ -554,13 +686,17 @@ async function exportItems(){
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Thiet bi'); X.writeFile(wb,'Thiet-bi-'+toISO(Date.now())+'.xlsx');
   }catch(e){ toast('❌ '+e.message); }
 }
-async function exportIssues(){
+async function exportIssues(periodOnly){
   try{ const X=await loadXLSX();
-    const aoa=[['Mã','Thiết bị','Công trình','Ngày hỏng','Hỏng gì','Tình trạng','Ngày sửa xong','Số ngày nằm','Đã sửa gì','Thợ','Chi phí','Người báo']].concat(Object.values(issues).sort((a,b)=>b.ts-a.ts).map(v=>{ const it=items[v.itemId]||{}; return [it.code,it.name,v.site||it.site,fmtDate(v.ts),v.desc,ISS[v.status].replace(/^\S+ /,''),fmtDate(v.doneTs),days(v.ts,v.doneTs),v.repairDesc||'',v.repairer||'',v.cost||'',v.by]; }));
+    const src=periodOnly===true?reportData().list:Object.values(issues).sort((a,b)=>b.ts-a.ts);
+    const aoa=[['Mã','Thiết bị','Công trình','Ngày hỏng','Hỏng gì','Tình trạng','Ngày sửa xong','Số ngày nằm','Đã sửa gì','Thợ','Chi phí','Người báo']].concat(src.map(v=>{ const it=items[v.itemId]||{}; return [it.code,it.name,v.site||it.site,fmtDate(v.ts),v.desc,ISS[v.status].replace(/^\S+ /,''),fmtDate(v.doneTs),days(v.ts,v.doneTs),v.repairDesc||'',v.repairer||'',v.cost||'',v.by]; }));
     const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=[10,26,16,11,30,10,11,8,30,14,12,14].map(w=>({wch:w}));
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Sua chua'); X.writeFile(wb,'So-sua-chua-'+toISO(Date.now())+'.xlsx');
   }catch(e){ toast('❌ '+e.message); }
 }
+
+// nhớ cách gom danh sách lần trước trên máy này
+try{ const g=localStorage.getItem('tb-group'); if(g&&[...$('f-group').options].some(o=>o.value===g)) $('f-group').value=g; }catch(e){}
 </script>
 </body>
 </html>
