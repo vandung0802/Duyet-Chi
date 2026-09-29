@@ -142,7 +142,8 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
       <div class="stats" id="stats"></div>
       <div class="card" id="sum-card"></div>
       <div class="card"><div class="card-body" style="padding:8px 10px">
-        <input id="q" placeholder="🔍 Tìm số HĐ, tên công trình, bên A/B, công ty…" oninput="renderList()">
+        <input id="q" placeholder="🔍 Tìm số HĐ, tên gói thầu, bên A/B, công ty…" oninput="renderList()">
+        <select id="f-site" style="margin-top:6px" onchange="renderList()"><option value="">🏗 Tất cả công trình</option></select>
       </div></div>
       <button class="btn" style="margin-bottom:10px" onclick="contractForm()">＋ Thêm hợp đồng</button>
       <div class="card" id="list"></div>
@@ -154,6 +155,12 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
     </section>
 
     <section id="tab-more" hidden>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">🏗 Danh sách công trình</h3>
+        <p style="font-size:13px;color:var(--text-sub);margin-bottom:8px">Dùng chung với app Duyệt Chi (sửa ở đây thì bên đó cũng đổi). Chỉ D thêm/xoá được.</p>
+        <div id="site-list"></div>
+        <div class="row" id="site-add" hidden style="margin-top:8px"><input id="new-site" placeholder="Tên công trình mới…"><button class="btn sm" style="flex:0 0 auto" onclick="addSite()">＋ Thêm</button></div>
+      </div></div>
       <div class="card"><div class="card-body">
         <h3 style="font-size:15px;margin-bottom:8px">🔔 Thông báo trên máy này</h3>
         <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px" id="notify-info"></p>
@@ -201,7 +208,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v5';
+const APP_VERSION = '20260929-v6';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -245,7 +252,8 @@ const badge=p=>`<span class="badge s-${p}">${PHASE[p]||p}</span>`;
 function phase(c){ if(c.status==='closed') return 'closed'; if(c.status==='settling') return 'settling'; if(c.status==='settled') return 'settled'; if(c.warrantyEnd&&dl(c.warrantyEnd)<0) return 'expired'; if(c.handoverDate&&dl(c.handoverDate)<=0) return 'warranty'; return 'active'; }
 
 // ══ ĐĂNG NHẬP ══
-let currentUser=null, userName='';
+let currentUser=null, userName='', userRole='', sites=[];
+const isDung=()=>userRole==='dung';
 async function doLogin(){
   const email=$('l-email').value.trim(), pass=$('l-pass').value, btn=$('l-btn'), err=$('l-err');
   if(!email||!pass){ err.textContent='Nhập email và mật khẩu'; return; }
@@ -264,7 +272,7 @@ firebase.auth().onAuthStateChanged(async user=>{
   if(!user) return;
   let prof={};
   try{ prof=(await db.ref('duyetchi/userRoles/'+user.uid).get()).val()||{}; }catch(e){}
-  userName=prof.name||user.email||'';
+  userName=prof.name||user.email||''; userRole=prof.role||'';
   if(prof.approved!==true && prof.role!=='dung'){ $('wait-screen').hidden=false; return; }
   $('app').hidden=false; $('hdr-user').textContent=userName;
   $('more-info').textContent='Đăng nhập: '+userName+' · Bản '+APP_VERSION;
@@ -275,12 +283,25 @@ firebase.auth().onAuthStateChanged(async user=>{
 let contracts={}, filterPhase='', filterCo='', _firstLoad=true;
 const coOk=c=>!filterCo||(c.company||'')===filterCo; // lọc theo công ty đang chọn
 function attach(){
+  db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); sites=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); renderSites(); renderSiteFilter(); },()=>{});
   db.ref(ROOT+'/contracts').on('value',s=>{ contracts=s.val()||{}; renderAll(); if(_firstLoad){ _firstLoad=false; pushReminders(); } },
     e=>{ $('list').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh hopdong) có thể chưa được đưa lên máy chủ.</div>'; });
 }
 const who=()=>({by:userName,uid:currentUser.uid,ts:Date.now()});
 function log(cid,type,text){ return db.ref(ROOT+'/log/'+cid).push(Object.assign({type,text},who())); }
 const parties=k=>Object.values(contracts).map(c=>c[k]);
+// danh sách công trình: của Duyệt Chi + tên đã ghi trong hợp đồng (nếu có tên lạ)
+const allSites=()=>[...new Set(sites.concat(Object.values(contracts).map(c=>c.site).filter(Boolean)))];
+function renderSiteFilter(){ const el=$('f-site'), cur=el.value; el.innerHTML='<option value="">🏗 Tất cả công trình</option>'+allSites().map(s=>`<option value="${esc(s)}" ${s===cur?'selected':''}>${esc(s)}</option>`).join(''); }
+function renderSites(){
+  $('site-add').hidden=!isDung();
+  $('site-list').innerHTML=sites.length?sites.map((s,i)=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border)"><div style="font-size:15px">🏗 ${esc(s)}</div>${isDung()?`<button class="btn sm sec" style="flex:0 0 auto;color:var(--red)" onclick="delSite(${i})">✕</button>`:''}</div>`).join('')
+    :'<div class="hint">Chưa có công trình nào. '+(isDung()?'Thêm ở ô dưới.':'Nhờ D thêm trong app Duyệt Chi hoặc ở đây.')+'</div>';
+}
+async function addSite(){ const s=$('new-site').value.trim(); if(!s) return; if(sites.includes(s)) return toast('Đã có công trình này');
+  try{ await db.ref('duyetchi/meta/sites').set(sites.concat([s])); $('new-site').value=''; toast('✅ Đã thêm: '+s); }catch(e){ toast('❌ '+e.message); } }
+async function delSite(i){ const s=sites[i]; if(!confirm('Xoá "'+s+'" khỏi danh sách công trình (cả app Duyệt Chi)? Hợp đồng đã ghi tên này vẫn giữ nguyên.')) return;
+  try{ await db.ref('duyetchi/meta/sites').set(sites.filter((x,j)=>j!==i)); toast('🗑 Đã xoá'); }catch(e){ toast('❌ '+e.message); } }
 
 // Tính toán tài chính 1 hợp đồng.
 //  - Tổng giá trị = HĐ + Σ phụ lục (phụ lục giảm ghi số âm)
@@ -336,13 +357,13 @@ function alertsOf(id,c){
     else if(d<=REMIND_DAYS) out.push({id,kind:'warranty',days:d,level:'due',icon:'⚠️',text:'Hết bảo hành '+(d===0?'HÔM NAY':'sau '+d+' ngày')+' ('+fmtDate(c.warrantyEnd)+')'+(k.retainLeft>0?' · còn '+fmtShort(k.retainLeft)+' tiền giữ BH':'')}); }
   return out;
 }
-function allAlerts(){ const out=[]; Object.entries(contracts).forEach(([id,c])=>alertsOf(id,c).forEach(a=>out.push(a))); return out.sort((a,b)=>a.days-b.days); }
+function allAlerts(){ const out=[]; Object.entries(contracts).forEach(([id,c])=>{ alertsOf(id,c).forEach(a=>out.push(a)); if(c.deleteRequest) out.push({id,kind:'del',days:-9999,level:'over',icon:'🗑',text:(c.deleteRequest.by||'?')+' xin xoá hợp đồng ('+fmtDate(c.deleteRequest.ts)+')'+(c.deleteRequest.reason?': '+c.deleteRequest.reason:'')+(isDung()?' — mở để duyệt':' — chờ D duyệt')}); }); return out.sort((a,b)=>a.days-b.days); }
 
 // ══ MÀN CHÍNH ══
 function showTab(t){
   ['list','alerts','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
 }
-function renderAll(){ renderStats(); renderSum(); renderList(); renderAlerts(); if(curId&&_logRef) renderDetail(_logs); }
+function renderAll(){ renderStats(); renderSum(); renderSiteFilter(); renderList(); renderAlerts(); if(curId&&_logRef) renderDetail(_logs); }
 function renderStats(){
   const co={}; COMPANIES.forEach(k=>co[k]=0); let coAll=0;
   Object.values(contracts).forEach(x=>{ if(phase(x)==='closed') return; coAll++; const k=x.company||''; co[k]=(co[k]||0)+1; });
@@ -357,11 +378,14 @@ function renderList(){
   const q=$('q').value.trim().toLowerCase();
   const rows=Object.entries(contracts).filter(([id,c])=>{
     const p=phase(c); if(!coOk(c)) return false; if(filterPhase? p!==filterPhase : p==='closed') return false;
-    return !q||[c.company,c.code,c.name,c.partyA,c.partyB].join(' ').toLowerCase().includes(q);
+    const fs=$('f-site').value; if(fs&&(c.site||'')!==fs) return false;
+    return !q||[c.company,c.site,c.code,c.name,c.partyA,c.partyB].join(' ').toLowerCase().includes(q);
   }).sort((a,b)=>(b[1].signDate||b[1].createdAt||0)-(a[1].signDate||a[1].createdAt||0));
   $('list').innerHTML=rows.length?rows.map(([id,c])=>{ const k=calc(c), al=alertsOf(id,c); return `<div class="item" onclick="openDetail('${id}')">
     <div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div>
+    ${c.site?`<div class="item-sub">🏗 ${esc(c.site)}</div>`:''}
     <div class="item-sub">${c.company?'<b style="color:var(--blue)">'+esc(c.company)+'</b> · ':''}🏢 ${esc(c.partyA||'—')}${c.signDate?' · ký '+fmtDate(c.signDate):''}</div>
+    ${c.deleteRequest?`<div class="item-sub" style="color:var(--red);white-space:normal">🗑 ${esc(c.deleteRequest.by)} xin xoá — chờ D duyệt</div>`:''}
     <div class="item-sub">💰 ${fmtShort(k.total)} · đã TT <b>${k.pct}%</b>${k.advLeft>0?' · TƯ còn '+fmtShort(k.advLeft):''}${k.retainLeft>0?' · giữ BH '+fmtShort(k.retainLeft):''}${k.holdLeft>0?' · giữ QT '+fmtShort(k.holdLeft):''}${k.unbuilt>0?' · chưa TC '+fmtShort(k.unbuilt):''}${c.status==='settling'&&c.settlingAt?' · chờ QT '+Math.max(0,dl(Date.now())-dl(c.settlingAt))+' ngày':''}</div>
     <div class="bar"><i style="width:${k.pct}%"></i></div>
     ${al.map(a=>`<div class="item-sub" style="color:var(--red);white-space:normal;margin-top:4px">${a.icon} ${esc(a.text)}</div>`).join('')}
@@ -371,8 +395,8 @@ function renderList(){
 function renderAlerts(){
   const list=allAlerts(), n=list.length;
   $('al-badge').hidden=!n; $('al-badge').textContent=n;
-  $('top-alert').hidden=!n; $('top-alert').innerHTML=n?`<div class="warn" style="cursor:pointer" onclick="showTab('alerts')">🔔 ${n} việc cần lưu ý (bàn giao / bảo hành) — bấm xem</div>`:'';
-  const G=[['handover','⏰ Sắp bàn giao công trình'],['warranty','⚠️ Sắp hết bảo hành'],['expired','🔴 Đã hết bảo hành — thu hồi tiền giữ lại BH, thanh lý hợp đồng']];
+  $('top-alert').hidden=!n; $('top-alert').innerHTML=n?`<div class="warn" style="cursor:pointer" onclick="showTab('alerts')">🔔 ${n} việc cần lưu ý (bàn giao / bảo hành / xin xoá) — bấm xem</div>`:'';
+  const G=[['del','🗑 Yêu cầu xoá hợp đồng — chờ D đồng ý'],['handover','⏰ Sắp bàn giao công trình'],['warranty','⚠️ Sắp hết bảo hành'],['expired','🔴 Đã hết bảo hành — thu hồi tiền giữ lại BH, thanh lý hợp đồng']];
   $('alerts').innerHTML=n?G.map(([k,t])=>{ const rows=list.filter(a=>a.kind===k); if(!rows.length) return ''; return `<div class="al-h">${t}</div>`+rows.map(a=>{ const c=contracts[a.id]; return `<div class="al ${a.level}" onclick="openDetail('${a.id}')"><div class="ic">${a.icon}</div><div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div><div class="item-sub">${c.company?'<b style="color:var(--blue)">'+esc(c.company)+'</b> · ':''}🏢 ${esc(c.partyA||'—')}</div><div class="item-sub" style="white-space:normal;color:var(--text)">${esc(a.text)}</div></div></div>`; }).join(''); }).join('')
     :'<div class="empty">🎉 Không có gì cần nhắc trong '+REMIND_DAYS+' ngày tới.</div>';
 }
@@ -400,6 +424,7 @@ function renderDetail(logs){
       <div style="font-size:19px;font-weight:800">${esc(c.name)}</div><div style="margin:4px 0">${badge(p)}</div>
       <div class="kv" style="margin-top:10px">
         <div>Công ty</div><div><b>${esc(c.company||'—')}</b></div>
+        <div>Công trình</div><div><b>${esc(c.site||'—')}</b></div>
         <div>Bên A</div><div><b>${esc(c.partyA||'—')}</b></div>
         <div>Bên B</div><div><b>${esc(c.partyB||'—')}</b></div>
         <div>Ngày ký</div><div>${fmtDate(c.signDate)||'—'}</div>
@@ -473,7 +498,12 @@ function renderDetail(logs){
 
     <h3 style="margin:16px 0 10px;font-size:16px">🕘 Lịch sử</h3>
     <div class="tl">${tl.map(e=>`<div class="tl-e"><div class="tl-t">${fmtDT(e.ts)} · ${esc(e.by||'')}</div><div class="tl-b">${esc(e.text)}</div></div>`).join('')||'<div class="empty">Chưa có gì.</div>'}</div>
-    <div style="margin-top:20px"><button class="btn sec" style="color:var(--red)" onclick="delContract('${id}')">🗑 Xoá hợp đồng này</button></div>
+    <div style="margin-top:20px">${c.deleteRequest
+      ?`<div class="warn">🗑 ${esc(c.deleteRequest.by)} xin xoá hợp đồng này (${fmtDate(c.deleteRequest.ts)})${c.deleteRequest.reason?': '+esc(c.deleteRequest.reason):''}</div>
+        ${isDung()?`<div class="row"><button class="btn red" onclick="delContract('${id}')">✅ Đồng ý xoá</button><button class="btn sec" onclick="cancelDelete('${id}')">✖ Không xoá</button></div>`
+        :`<button class="btn sec" onclick="cancelDelete('${id}')">↩️ Rút lại yêu cầu xoá</button>`}`
+      :isDung()?`<button class="btn sec" style="color:var(--red)" onclick="delContract('${id}')">🗑 Xoá hợp đồng này</button>`
+      :`<button class="btn sec" style="color:var(--red)" onclick="requestDelete('${id}')">🗑 Xin xoá hợp đồng này (D duyệt)</button>`}</div>
   </div>`;
 }
 
@@ -491,7 +521,9 @@ function contractForm(id){
   openModal(`<h3>${id?'✏️ Sửa hợp đồng':'＋ Thêm hợp đồng'}</h3>
     <label class="f">Hợp đồng của công ty *</label><select id="m-co">${COMPANIES.concat(c.company&&!COMPANIES.includes(c.company)?[c.company]:[]).map(k=>`<option value="${esc(k)}" ${(c.company||COMPANIES[0])===k?'selected':''}>${esc(k)}</option>`).join('')}</select>
     <label class="f">Số hợp đồng *</label><input id="m-code" value="${esc(c.code||'')}" placeholder="VD: 12/2026/HĐXD">
-    <label class="f">Tên công trình / gói thầu *</label><input id="m-name" value="${esc(c.name||'')}" placeholder="VD: Cầu ABC – gói thầu số 3">
+    <label class="f">Công trình (theo danh sách Duyệt Chi)</label><select id="m-site" onchange="$('m-site-x').hidden=this.value!=='__x'"><option value="">— Chọn công trình —</option>${allSites().map(s=>`<option value="${esc(s)}" ${c.site===s?'selected':''}>${esc(s)}</option>`).join('')}<option value="__x">✏️ Khác (nhập tay)…</option></select>
+    <input id="m-site-x" hidden style="margin-top:6px" placeholder="Tên công trình khác">
+    <label class="f">Tên gói thầu / nội dung hợp đồng *</label><input id="m-name" value="${esc(c.name||'')}" placeholder="VD: Gói thầu số 3 – cầu Km12">
     <label class="f">Bên A (chủ đầu tư / bên giao thầu)</label><input id="m-pa" list="dl-pa" value="${esc(c.partyA||'')}">${dlist('dl-pa',parties('partyA'))}
     <label class="f">Bên B (nhà thầu / bên nhận thầu)</label><input id="m-pb" list="dl-pb" value="${esc(c.partyB||'')}" placeholder="VD: Công ty Phúc Vinh An">${dlist('dl-pb',parties('partyB'))}
     <div class="row"><div><label class="f">Ngày ký</label><input id="m-sign" type="date" value="${d('signDate')}"></div><div><label class="f">Giá trị hợp đồng (đ)</label><input id="m-val" inputmode="numeric" value="${money(c.value)}" oninput="fmtIn(this)"></div></div>
@@ -506,12 +538,14 @@ async function saveContract(id,btn){
     const v=k=>$(k).value.trim();
     if(!v('m-code')||!v('m-name')) throw new Error('Cần nhập Số hợp đồng và Tên công trình');
     if(!v('m-co')) throw new Error('Chọn hợp đồng của công ty nào');
+    const site=$('m-site').value==='__x'?v('m-site-x'):$('m-site').value;
     const dup=Object.entries(contracts).find(([k,c])=>c.code===v('m-code')&&k!==id); if(dup) throw new Error('Số HĐ '+v('m-code')+' đã có ('+dup[1].name+')');
-    const data={company:v('m-co'),code:v('m-code'),name:v('m-name'),partyA:v('m-pa'),partyB:v('m-pb'),signDate:fromISO(v('m-sign')),value:parseMoney(v('m-val')),
+    const data={company:v('m-co'),site,code:v('m-code'),name:v('m-name'),partyA:v('m-pa'),partyB:v('m-pb'),signDate:fromISO(v('m-sign')),value:parseMoney(v('m-val')),
       handoverDate:fromISO(v('m-ho')),warrantyMonths:parseInt(v('m-wm'),10)||0,warrantyEnd:fromISO(v('m-we')),note:v('m-note'),updatedAt:Date.now(),updatedBy:userName};
     if(id){
       const o=contracts[id], ch=[];
       if((o.company||'')!==data.company) ch.push('công ty '+(o.company||'—')+' → '+data.company);
+      if((o.site||'')!==data.site) ch.push('công trình '+(o.site||'—')+' → '+(data.site||'—'));
       if((o.value||0)!==data.value) ch.push('giá trị '+fmtMoney(o.value)+' → '+fmtMoney(data.value));
       if((o.handoverDate||0)!==data.handoverDate) ch.push('bàn giao '+(fmtDate(o.handoverDate)||'—')+' → '+(fmtDate(data.handoverDate)||'—'));
       if((o.warrantyEnd||0)!==data.warrantyEnd) ch.push('hết BH '+(fmtDate(o.warrantyEnd)||'—')+' → '+(fmtDate(data.warrantyEnd)||'—'));
@@ -527,9 +561,21 @@ async function saveContract(id,btn){
   });
 }
 async function delContract(id){
-  const c=contracts[id]; if(!confirm('Xoá hợp đồng "'+c.code+' · '+c.name+'" cùng toàn bộ thanh toán, tạm ứng, phụ lục và lịch sử? Không hoàn tác được.')) return;
+  const c=contracts[id]; if(!isDung()) return toast('Chỉ D mới xoá được — bấm "Xin xoá"');
+  if(!confirm('Xoá hợp đồng "'+c.code+' · '+c.name+'" cùng toàn bộ thanh toán, tạm ứng, phụ lục và lịch sử? Không hoàn tác được.')) return;
   const up={}; up['contracts/'+id]=null; up['log/'+id]=null;
-  await db.ref(ROOT).update(up); closeDetail(); toast('🗑 Đã xoá');
+  try{ await db.ref(ROOT).update(up); closeDetail(); toast('🗑 Đã xoá'); }catch(e){ toast('❌ '+e.message); }
+}
+// người khác không xoá được: gửi yêu cầu, D vào duyệt (luật Firebase cũng chỉ cho tài khoản D xoá)
+async function requestDelete(id){
+  const c=contracts[id]; const reason=prompt('Lý do xin xoá hợp đồng "'+c.code+'"? (D sẽ thấy và duyệt)'); if(reason===null) return;
+  await db.ref(ROOT+'/contracts/'+id).update({deleteRequest:Object.assign({reason:reason.trim()},who()),updatedAt:Date.now(),updatedBy:userName});
+  await log(id,'delreq','🗑 Xin xoá hợp đồng'+(reason.trim()?': '+reason.trim():'')); toast('✅ Đã gửi yêu cầu, chờ D duyệt');
+}
+async function cancelDelete(id){
+  const c=contracts[id]; if(!isDung()&&c.deleteRequest&&c.deleteRequest.uid!==currentUser.uid) return toast('Chỉ người xin hoặc D mới rút được');
+  await db.ref(ROOT+'/contracts/'+id).update({deleteRequest:null,updatedAt:Date.now(),updatedBy:userName});
+  await log(id,'delreq',isDung()?'✖ D không đồng ý xoá':'↩️ Rút lại yêu cầu xoá'); toast('✅ Đã bỏ yêu cầu xoá');
 }
 async function toggleClose(id){
   const c=contracts[id], closing=c.status!=='closed', k=calc(c);
@@ -685,7 +731,7 @@ function loadXLSX(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(
   const s=document.createElement('script'); s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
   s.integrity='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'; s.crossOrigin='anonymous';
   s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
-const COLS=['Công ty','Số hợp đồng','Tên công trình / gói thầu','Bên A','Bên B','Ngày ký','Giá trị hợp đồng','Tạm ứng lần 1','Ngày bàn giao','Bảo hành (tháng)','Ngày hết bảo hành','Ghi chú'];
+const COLS=['Công ty','Công trình','Số hợp đồng','Tên gói thầu / nội dung','Bên A','Bên B','Ngày ký','Giá trị hợp đồng','Tạm ứng lần 1','Ngày bàn giao','Bảo hành (tháng)','Ngày hết bảo hành','Ghi chú'];
 const PH_TXT={active:'Đang thi công',warranty:'Đang bảo hành',expired:'Hết bảo hành',settling:'Chờ quyết toán',settled:'Đã quyết toán',closed:'Đã thanh lý'};
 function xDate(v){ // ô ngày trong Excel: Date, số serial, hoặc chữ dd/mm/yyyy
   if(!v) return 0; if(v instanceof Date) return isNaN(v)?0:new Date(v.getFullYear(),v.getMonth(),v.getDate(),12).getTime();
@@ -695,8 +741,8 @@ function xDate(v){ // ô ngày trong Excel: Date, số serial, hoặc chữ dd/m
 const xNum=v=>typeof v==='number'?Math.round(v):parseMoney(v);
 async function downloadTemplate(){
   try{ const X=await loadXLSX();
-    const ws=X.utils.aoa_to_sheet([COLS,['PVA','12/2026/HĐXD','Cầu ABC – gói thầu số 3','Ban QLDA huyện X','Công ty Phúc Vinh An','15/01/2026',12500000000,2500000000,'','12','','Ví dụ — xoá dòng này'],['379','05/2025/HĐ','Đường nội bộ KCN Y','Công ty Z','Công ty Phúc Vinh An','20/03/2025',3200000000,'','30/06/2026','12','30/06/2027','']]);
-    ws['!cols']=[9,16,32,22,22,11,18,16,13,10,14,25].map(w=>({wch:w}));
+    const ws=X.utils.aoa_to_sheet([COLS,['PVA','CT QL14e cầu','12/2026/HĐXD','Gói thầu số 3 – cầu Km12','Ban QLDA huyện X','Công ty Phúc Vinh An','15/01/2026',12500000000,2500000000,'','12','','Ví dụ — xoá dòng này'],['379','CT QL28b','05/2025/HĐ','Đường nội bộ KCN Y','Công ty Z','Công ty Phúc Vinh An','20/03/2025',3200000000,'','30/06/2026','12','30/06/2027','']]);
+    ws['!cols']=[9,22,16,32,22,22,11,18,16,13,10,14,25].map(w=>({wch:w}));
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Hop dong'); X.writeFile(wb,'Mau-danh-sach-hop-dong.xlsx');
   }catch(e){ toast('❌ '+e.message); }
 }
@@ -704,10 +750,10 @@ async function onExcel(ev){
   const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
   try{ const X=await loadXLSX(); const wb=X.read(await f.arrayBuffer(),{cellDates:true}); const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
     const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase()); const ci=n=>hdr.findIndex(h=>h.includes(n));
-    const I={company:ci('công ty'),code:ci('số hợp'),name:ci('tên'),partyA:ci('bên a'),partyB:ci('bên b'),signDate:ci('ngày ký'),value:ci('giá trị'),adv:ci('tạm ứng'),handoverDate:ci('bàn giao'),warrantyMonths:ci('tháng'),warrantyEnd:ci('hết bảo'),note:ci('ghi chú')};
+    const I={company:ci('công ty'),site:hdr.findIndex(h=>h.includes('công trình')&&!h.includes('tên')),code:ci('số hợp'),name:ci('tên'),partyA:ci('bên a'),partyB:ci('bên b'),signDate:ci('ngày ký'),value:ci('giá trị'),adv:ci('tạm ứng'),handoverDate:ci('bàn giao'),warrantyMonths:ci('tháng'),warrantyEnd:ci('hết bảo'),note:ci('ghi chú')};
     if(I.code<0||I.name<0) throw new Error('File phải có cột "Số hợp đồng" và "Tên công trình"');
     const g=(r,k)=>I[k]>=0?r[I[k]]:''; const gs=(r,k)=>String(g(r,k)??'').trim();
-    const list=rows.slice(1).filter(r=>gs(r,'code')&&gs(r,'name')).map(r=>{ const o={company:gs(r,'company').toUpperCase(),code:gs(r,'code'),name:gs(r,'name'),partyA:gs(r,'partyA'),partyB:gs(r,'partyB'),signDate:xDate(g(r,'signDate')),value:xNum(g(r,'value')),adv:xNum(g(r,'adv')),
+    const list=rows.slice(1).filter(r=>gs(r,'code')&&gs(r,'name')).map(r=>{ const o={company:gs(r,'company').toUpperCase(),site:gs(r,'site'),code:gs(r,'code'),name:gs(r,'name'),partyA:gs(r,'partyA'),partyB:gs(r,'partyB'),signDate:xDate(g(r,'signDate')),value:xNum(g(r,'value')),adv:xNum(g(r,'adv')),
       handoverDate:xDate(g(r,'handoverDate')),warrantyMonths:parseInt(gs(r,'warrantyMonths'),10)||0,warrantyEnd:xDate(g(r,'warrantyEnd')),note:gs(r,'note')};
       if(!o.warrantyEnd&&o.handoverDate&&o.warrantyMonths) o.warrantyEnd=addMonths(o.handoverDate,o.warrantyMonths); return o; });
     if(!list.length) throw new Error('Không thấy dòng nào có Số HĐ + Tên');
@@ -739,23 +785,23 @@ async function importRows(btn){
 async function exportAll(){
   try{ const X=await loadXLSX();
     const all=Object.entries(contracts).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
-    const s1=[['Công ty','Số hợp đồng','Tên công trình','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','KL đã thực hiện','Còn lại chưa thi công','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Giữ chờ QT','Đã hoàn giữ QT','Còn giữ QT','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Ngày quyết toán','Giá trị quyết toán','Tình trạng','Ghi chú']]
-      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.company||'',c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.done,k.unbuilt,k.retain,k.refund,k.retainLeft,k.hold,k.refundQt,k.holdLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),fmtDate(c.settleDate),c.settleValue||'',PH_TXT[phase(c)],c.note||'']; }));
-    const s2=[['Công ty','Số hợp đồng','Tên công trình','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Giữ chờ QT','Thực nhận','Ghi chú','Người ghi']];
-    const s3=[['Công ty','Số hợp đồng','Tên công trình','Loại','Số / lần','Ngày','Giá trị','Ghi chú','Người ghi']];
+    const s1=[['Công ty','Công trình','Số hợp đồng','Tên gói thầu','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','KL đã thực hiện','Còn lại chưa thi công','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Giữ chờ QT','Đã hoàn giữ QT','Còn giữ QT','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Ngày quyết toán','Giá trị quyết toán','Tình trạng','Ghi chú']]
+      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.company||'',c.site||'',c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.done,k.unbuilt,k.retain,k.refund,k.retainLeft,k.hold,k.refundQt,k.holdLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),fmtDate(c.settleDate),c.settleValue||'',PH_TXT[phase(c)],c.note||'']; }));
+    const s2=[['Công ty','Công trình','Số hợp đồng','Tên gói thầu','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Giữ chờ QT','Thực nhận','Ghi chú','Người ghi']];
+    const s3=[['Công ty','Công trình','Số hợp đồng','Tên gói thầu','Loại','Số / lần','Ngày','Giá trị','Ghi chú','Người ghi']];
     all.forEach(([id,c])=>{
-      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0, q=Number(x.hold)||0, t=x.type||'kl'; s2.push([c.company||'',c.code,c.name,t==='bh'?'Hoàn tiền BH':t==='qt'?'Hoàn tiền giữ QT':'Thanh toán KL',x.no||'',fmtDate(x.date),t==='kl'?v:'',t==='kl'?r:'',t==='bh'?-v:t==='kl'?h:'',t==='qt'?-v:t==='kl'?q:'',t==='kl'?v-r-h-q:v,x.note||'',x.by||'']); });
-      sortNo(c.advances).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
-      sortNo(c.addenda).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
+      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0, q=Number(x.hold)||0, t=x.type||'kl'; s2.push([c.company||'',c.site||'',c.code,c.name,t==='bh'?'Hoàn tiền BH':t==='qt'?'Hoàn tiền giữ QT':'Thanh toán KL',x.no||'',fmtDate(x.date),t==='kl'?v:'',t==='kl'?r:'',t==='bh'?-v:t==='kl'?h:'',t==='qt'?-v:t==='kl'?q:'',t==='kl'?v-r-h-q:v,x.note||'',x.by||'']); });
+      sortNo(c.advances).forEach(([k,x])=>s3.push([c.company||'',c.site||'',c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
+      sortNo(c.addenda).forEach(([k,x])=>s3.push([c.company||'',c.site||'',c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
     });
     const s0=[['Công ty','Số HĐ (chưa thanh lý)','Tổng giá trị đã ký','Tổng tạm ứng','Đã trừ tạm ứng','Tạm ứng còn lại','Đã thanh toán','% TT','Còn lại chưa TT','Còn lại chưa thi công','Tiền BH đang giữ','Tiền giữ chờ QT đang giữ','Tổng thực nhận','Số HĐ chờ QT','Chờ QT còn phải thu']];
     const live=all.map(([id,c])=>c).filter(c=>phase(c)!=='closed'), coKeys=COMPANIES.concat([...new Set(live.map(c=>c.company||''))].filter(k=>!COMPANIES.includes(k)));
     coKeys.map(k=>[k||'(chưa ghi)',sumOf(live.filter(c=>(c.company||'')===k))]).concat([['TỔNG',sumOf(live)]]).forEach(([k,t])=>s0.push([k,t.n,t.total,t.adv,t.recov,t.advLeft,t.paid,t.pct,t.remain,t.unbuilt,t.retainLeft,t.holdLeft,t.received,t.nSettling,t.settlingRemain]));
     const wb=X.utils.book_new(), mk=(aoa,w)=>{ const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=w.map(x=>({wch:x})); return ws; };
     X.utils.book_append_sheet(wb,mk(s0,[12,10,18,16,16,16,16,6,18,18,16,16,18,10,18]),'Tong hop');
-    X.utils.book_append_sheet(wb,mk(s1,[8,16,30,20,20,11,16,14,16,14,14,14,16,16,6,16,16,14,12,12,14,12,12,16,12,8,12,12,16,14,25]),'Hop dong');
-    X.utils.book_append_sheet(wb,mk(s2,[8,16,30,14,6,11,16,14,14,14,16,25,14]),'Thanh toan');
-    X.utils.book_append_sheet(wb,mk(s3,[8,16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
+    X.utils.book_append_sheet(wb,mk(s1,[8,22,16,30,20,20,11,16,14,16,14,14,14,16,16,6,16,16,14,12,12,14,12,12,16,12,8,12,12,16,14,25]),'Hop dong');
+    X.utils.book_append_sheet(wb,mk(s2,[8,22,16,30,14,6,11,16,14,14,14,16,25,14]),'Thanh toan');
+    X.utils.book_append_sheet(wb,mk(s3,[8,22,16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
     X.writeFile(wb,'Hop-dong-'+toISO(Date.now())+'.xlsx');
   }catch(e){ toast('❌ '+e.message); }
 }
