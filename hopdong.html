@@ -5,9 +5,9 @@
 <meta name="theme-color" content="#4338ca">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Hợp đồng">
+<meta name="apple-mobile-web-app-title" content="Hợp đồng PVA-379-279">
 <link rel="manifest" href="manifest-hopdong.json">
-<title>Hợp đồng PVA</title>
+<title>Hợp đồng PVA-379-279</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
@@ -111,7 +111,7 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
 
 <!-- ĐĂNG NHẬP (dùng chung tài khoản app Duyệt Chi 379) -->
 <div id="login-screen" class="login">
-  <h2>📑 Hợp đồng PVA</h2>
+  <h2>📑 Hợp đồng PVA-379-279</h2>
   <div class="card"><div class="card-body">
     <label class="f">Email</label><input id="l-email" type="email" autocomplete="username">
     <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password">
@@ -131,14 +131,15 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
 
 <div id="app" hidden>
   <div id="update-banner" onclick="doUpdateNow()">⬆️ Có bản mới — bấm để cập nhật</div>
-  <header class="app-header"><h1>📑 Hợp đồng PVA <small id="ver-label"></small></h1><span class="hdr-user" id="hdr-user"></span></header>
+  <header class="app-header"><h1>📑 Hợp đồng PVA-379-279 <small id="ver-label"></small></h1><span class="hdr-user" id="hdr-user"></span></header>
   <main class="main">
 
     <section id="tab-list">
       <div id="top-alert" hidden></div>
+      <div class="stats" id="co-chips"></div>
       <div class="stats" id="stats"></div>
       <div class="card"><div class="card-body" style="padding:8px 10px">
-        <input id="q" placeholder="🔍 Tìm số HĐ, tên công trình, bên A/B…" oninput="renderList()">
+        <input id="q" placeholder="🔍 Tìm số HĐ, tên công trình, bên A/B, công ty…" oninput="renderList()">
       </div></div>
       <div class="card" id="list"></div>
       <button class="btn" onclick="contractForm()">＋ Thêm hợp đồng</button>
@@ -197,12 +198,13 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v1';
+const APP_VERSION = '20260929-v2';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const ROOT = 'hopdong';      // nhánh riêng trong RTDB, luật ở database.rules.json
 const REMIND_DAYS = 10;      // nhắc trước 10 ngày (bàn giao + hết bảo hành)
+const COMPANIES = ['PVA','379','279']; // 3 công ty của D — mỗi hợp đồng thuộc 1 công ty
 
 // ── kiểm tra bản mới (giống 379: so version-hopdong.txt, chỉ báo khi server MỚI HƠN) ──
 function _verNum(v){ var m=/^(\d{8})-v(\d+)$/.exec(String(v||'').trim()); return m?parseInt(m[1],10)*1000+parseInt(m[2],10):0; }
@@ -267,7 +269,8 @@ firebase.auth().onAuthStateChanged(async user=>{
 });
 
 // ══ DỮ LIỆU ══
-let contracts={}, filterPhase='', _firstLoad=true;
+let contracts={}, filterPhase='', filterCo='', _firstLoad=true;
+const coOk=c=>!filterCo||(c.company||'')===filterCo; // lọc theo công ty đang chọn
 function attach(){
   db.ref(ROOT+'/contracts').on('value',s=>{ contracts=s.val()||{}; renderAll(); if(_firstLoad){ _firstLoad=false; pushReminders(); } },
     e=>{ $('list').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh hopdong) có thể chưa được đưa lên máy chủ.</div>'; });
@@ -310,19 +313,24 @@ function showTab(t){
 }
 function renderAll(){ renderStats(); renderList(); renderAlerts(); if(curId&&_logRef) renderDetail(_logs); }
 function renderStats(){
-  const c={all:0,active:0,warranty:0,expired:0,closed:0}; Object.values(contracts).forEach(x=>{ const p=phase(x); c[p]++; if(p!=='closed') c.all++; });
+  const co={}; COMPANIES.forEach(k=>co[k]=0); let coAll=0;
+  Object.values(contracts).forEach(x=>{ if(phase(x)==='closed') return; coAll++; const k=x.company||''; co[k]=(co[k]||0)+1; });
+  const coKeys=COMPANIES.concat(Object.keys(co).filter(k=>k&&!COMPANIES.includes(k)));
+  $('co-chips').innerHTML=[['','Tất cả công ty',coAll]].concat(coKeys.map(k=>[k,'Công ty '+k,co[k]||0]))
+    .map(([k,l,m])=>`<div class="stat ${filterCo===k?'on':''}" style="border-color:${filterCo===k?'var(--blue)':'transparent'};background:${filterCo===k?'var(--blue-light)':'#fff'}" onclick="filterCo='${k}';renderAll()"><b>${m}</b><span>${l}</span></div>`).join('');
+  const c={all:0,active:0,warranty:0,expired:0,closed:0}; Object.values(contracts).filter(coOk).forEach(x=>{ const p=phase(x); c[p]++; if(p!=='closed') c.all++; });
   $('stats').innerHTML=[['','Tất cả',c.all],['active','Đang thi công',c.active],['warranty','Đang bảo hành',c.warranty],['expired','Hết bảo hành',c.expired],['closed','Đã thanh lý',c.closed]]
     .map(([k,l,n])=>`<div class="stat ${filterPhase===k?'on':''}" onclick="filterPhase='${k}';renderAll()"><b>${n}</b><span>${l}</span></div>`).join('');
 }
 function renderList(){
   const q=$('q').value.trim().toLowerCase();
   const rows=Object.entries(contracts).filter(([id,c])=>{
-    const p=phase(c); if(filterPhase? p!==filterPhase : p==='closed') return false;
-    return !q||[c.code,c.name,c.partyA,c.partyB].join(' ').toLowerCase().includes(q);
+    const p=phase(c); if(!coOk(c)) return false; if(filterPhase? p!==filterPhase : p==='closed') return false;
+    return !q||[c.company,c.code,c.name,c.partyA,c.partyB].join(' ').toLowerCase().includes(q);
   }).sort((a,b)=>(b[1].signDate||b[1].createdAt||0)-(a[1].signDate||a[1].createdAt||0));
   $('list').innerHTML=rows.length?rows.map(([id,c])=>{ const k=calc(c), al=alertsOf(id,c); return `<div class="item" onclick="openDetail('${id}')">
     <div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div>
-    <div class="item-sub">🏢 ${esc(c.partyA||'—')}${c.signDate?' · ký '+fmtDate(c.signDate):''}</div>
+    <div class="item-sub">${c.company?'<b style="color:var(--blue)">'+esc(c.company)+'</b> · ':''}🏢 ${esc(c.partyA||'—')}${c.signDate?' · ký '+fmtDate(c.signDate):''}</div>
     <div class="item-sub">💰 ${fmtShort(k.total)} · đã TT <b>${k.pct}%</b>${k.advLeft>0?' · TƯ còn '+fmtShort(k.advLeft):''}${k.retainLeft>0?' · giữ BH '+fmtShort(k.retainLeft):''}</div>
     <div class="bar"><i style="width:${k.pct}%"></i></div>
     ${al.map(a=>`<div class="item-sub" style="color:var(--red);white-space:normal;margin-top:4px">${a.icon} ${esc(a.text)}</div>`).join('')}
@@ -334,7 +342,7 @@ function renderAlerts(){
   $('al-badge').hidden=!n; $('al-badge').textContent=n;
   $('top-alert').hidden=!n; $('top-alert').innerHTML=n?`<div class="warn" style="cursor:pointer" onclick="showTab('alerts')">🔔 ${n} việc cần lưu ý (bàn giao / bảo hành) — bấm xem</div>`:'';
   const G=[['handover','⏰ Sắp bàn giao công trình'],['warranty','⚠️ Sắp hết bảo hành'],['expired','🔴 Đã hết bảo hành — thu hồi tiền giữ lại BH, thanh lý hợp đồng']];
-  $('alerts').innerHTML=n?G.map(([k,t])=>{ const rows=list.filter(a=>a.kind===k); if(!rows.length) return ''; return `<div class="al-h">${t}</div>`+rows.map(a=>{ const c=contracts[a.id]; return `<div class="al ${a.level}" onclick="openDetail('${a.id}')"><div class="ic">${a.icon}</div><div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div><div class="item-sub">🏢 ${esc(c.partyA||'—')}</div><div class="item-sub" style="white-space:normal;color:var(--text)">${esc(a.text)}</div></div></div>`; }).join(''); }).join('')
+  $('alerts').innerHTML=n?G.map(([k,t])=>{ const rows=list.filter(a=>a.kind===k); if(!rows.length) return ''; return `<div class="al-h">${t}</div>`+rows.map(a=>{ const c=contracts[a.id]; return `<div class="al ${a.level}" onclick="openDetail('${a.id}')"><div class="ic">${a.icon}</div><div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div><div class="item-sub">${c.company?'<b style="color:var(--blue)">'+esc(c.company)+'</b> · ':''}🏢 ${esc(c.partyA||'—')}</div><div class="item-sub" style="white-space:normal;color:var(--text)">${esc(a.text)}</div></div></div>`; }).join(''); }).join('')
     :'<div class="empty">🎉 Không có gì cần nhắc trong '+REMIND_DAYS+' ngày tới.</div>';
 }
 
@@ -360,6 +368,7 @@ function renderDetail(logs){
     <div class="card"><div class="card-body">
       <div style="font-size:19px;font-weight:800">${esc(c.name)}</div><div style="margin:4px 0">${badge(p)}</div>
       <div class="kv" style="margin-top:10px">
+        <div>Công ty</div><div><b>${esc(c.company||'—')}</b></div>
         <div>Bên A</div><div><b>${esc(c.partyA||'—')}</b></div>
         <div>Bên B</div><div><b>${esc(c.partyB||'—')}</b></div>
         <div>Ngày ký</div><div>${fmtDate(c.signDate)||'—'}</div>
@@ -437,6 +446,7 @@ function contractForm(id){
   const c=id?contracts[id]:{};
   const d=k=>c[k]?toISO(c[k]):'';
   openModal(`<h3>${id?'✏️ Sửa hợp đồng':'＋ Thêm hợp đồng'}</h3>
+    <label class="f">Hợp đồng của công ty *</label><select id="m-co">${COMPANIES.concat(c.company&&!COMPANIES.includes(c.company)?[c.company]:[]).map(k=>`<option value="${esc(k)}" ${(c.company||COMPANIES[0])===k?'selected':''}>${esc(k)}</option>`).join('')}</select>
     <label class="f">Số hợp đồng *</label><input id="m-code" value="${esc(c.code||'')}" placeholder="VD: 12/2026/HĐXD">
     <label class="f">Tên công trình / gói thầu *</label><input id="m-name" value="${esc(c.name||'')}" placeholder="VD: Cầu ABC – gói thầu số 3">
     <label class="f">Bên A (chủ đầu tư / bên giao thầu)</label><input id="m-pa" list="dl-pa" value="${esc(c.partyA||'')}">${dlist('dl-pa',parties('partyA'))}
@@ -452,11 +462,13 @@ async function saveContract(id,btn){
   await busy(btn,async()=>{
     const v=k=>$(k).value.trim();
     if(!v('m-code')||!v('m-name')) throw new Error('Cần nhập Số hợp đồng và Tên công trình');
+    if(!v('m-co')) throw new Error('Chọn hợp đồng của công ty nào');
     const dup=Object.entries(contracts).find(([k,c])=>c.code===v('m-code')&&k!==id); if(dup) throw new Error('Số HĐ '+v('m-code')+' đã có ('+dup[1].name+')');
-    const data={code:v('m-code'),name:v('m-name'),partyA:v('m-pa'),partyB:v('m-pb'),signDate:fromISO(v('m-sign')),value:parseMoney(v('m-val')),
+    const data={company:v('m-co'),code:v('m-code'),name:v('m-name'),partyA:v('m-pa'),partyB:v('m-pb'),signDate:fromISO(v('m-sign')),value:parseMoney(v('m-val')),
       handoverDate:fromISO(v('m-ho')),warrantyMonths:parseInt(v('m-wm'),10)||0,warrantyEnd:fromISO(v('m-we')),note:v('m-note'),updatedAt:Date.now(),updatedBy:userName};
     if(id){
       const o=contracts[id], ch=[];
+      if((o.company||'')!==data.company) ch.push('công ty '+(o.company||'—')+' → '+data.company);
       if((o.value||0)!==data.value) ch.push('giá trị '+fmtMoney(o.value)+' → '+fmtMoney(data.value));
       if((o.handoverDate||0)!==data.handoverDate) ch.push('bàn giao '+(fmtDate(o.handoverDate)||'—')+' → '+(fmtDate(data.handoverDate)||'—'));
       if((o.warrantyEnd||0)!==data.warrantyEnd) ch.push('hết BH '+(fmtDate(o.warrantyEnd)||'—')+' → '+(fmtDate(data.warrantyEnd)||'—'));
@@ -569,7 +581,7 @@ function renderNotify(){
 }
 async function enableNotify(){
   try{ const p=await Notification.requestPermission(); renderNotify();
-    if(p==='granted'){ toast('✅ Đã bật thông báo'); showNote('📑 Hợp đồng PVA','Đã bật nhắc nhở trên máy này.','test'); pushReminders(); } else toast('Chưa cho phép thông báo'); }
+    if(p==='granted'){ toast('✅ Đã bật thông báo'); showNote('📑 Hợp đồng PVA-379-279','Đã bật nhắc nhở trên máy này.','test'); pushReminders(); } else toast('Chưa cho phép thông báo'); }
   catch(e){ toast('❌ '+e.message); }
 }
 async function showNote(title,body,tag){
@@ -580,7 +592,7 @@ async function showNote(title,body,tag){
 function pushReminders(){
   if(!canNotify()||Notification.permission!=='granted'||!currentUser) return;
   const key='hd_noted_'+toISO(Date.now()); let done={}; try{ done=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
-  allAlerts().forEach(a=>{ const k=a.id+':'+a.kind; if(done[k]) return; done[k]=1; const c=contracts[a.id]; showNote(a.icon+' '+c.code+' · '+c.name,a.text,k); });
+  allAlerts().forEach(a=>{ const k=a.id+':'+a.kind; if(done[k]) return; done[k]=1; const c=contracts[a.id]; showNote(a.icon+' '+(c.company?c.company+' · ':'')+c.code+' · '+c.name,a.text,k); });
   try{ localStorage.setItem(key,JSON.stringify(done)); Object.keys(localStorage).forEach(x=>{ if(x.startsWith('hd_noted_')&&x!==key) localStorage.removeItem(x); }); }catch(e){}
 }
 
@@ -589,7 +601,7 @@ function loadXLSX(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(
   const s=document.createElement('script'); s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
   s.integrity='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'; s.crossOrigin='anonymous';
   s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
-const COLS=['Số hợp đồng','Tên công trình / gói thầu','Bên A','Bên B','Ngày ký','Giá trị hợp đồng','Tạm ứng lần 1','Ngày bàn giao','Bảo hành (tháng)','Ngày hết bảo hành','Ghi chú'];
+const COLS=['Công ty','Số hợp đồng','Tên công trình / gói thầu','Bên A','Bên B','Ngày ký','Giá trị hợp đồng','Tạm ứng lần 1','Ngày bàn giao','Bảo hành (tháng)','Ngày hết bảo hành','Ghi chú'];
 const PH_TXT={active:'Đang thi công',warranty:'Đang bảo hành',expired:'Hết bảo hành',closed:'Đã thanh lý'};
 function xDate(v){ // ô ngày trong Excel: Date, số serial, hoặc chữ dd/mm/yyyy
   if(!v) return 0; if(v instanceof Date) return isNaN(v)?0:new Date(v.getFullYear(),v.getMonth(),v.getDate(),12).getTime();
@@ -599,8 +611,8 @@ function xDate(v){ // ô ngày trong Excel: Date, số serial, hoặc chữ dd/m
 const xNum=v=>typeof v==='number'?Math.round(v):parseMoney(v);
 async function downloadTemplate(){
   try{ const X=await loadXLSX();
-    const ws=X.utils.aoa_to_sheet([COLS,['12/2026/HĐXD','Cầu ABC – gói thầu số 3','Ban QLDA huyện X','Công ty Phúc Vinh An','15/01/2026',12500000000,2500000000,'','12','','Ví dụ — xoá dòng này'],['05/2025/HĐ','Đường nội bộ KCN Y','Công ty Z','Công ty Phúc Vinh An','20/03/2025',3200000000,'','30/06/2026','12','30/06/2027','']]);
-    ws['!cols']=[16,32,22,22,11,18,16,13,10,14,25].map(w=>({wch:w}));
+    const ws=X.utils.aoa_to_sheet([COLS,['PVA','12/2026/HĐXD','Cầu ABC – gói thầu số 3','Ban QLDA huyện X','Công ty Phúc Vinh An','15/01/2026',12500000000,2500000000,'','12','','Ví dụ — xoá dòng này'],['379','05/2025/HĐ','Đường nội bộ KCN Y','Công ty Z','Công ty Phúc Vinh An','20/03/2025',3200000000,'','30/06/2026','12','30/06/2027','']]);
+    ws['!cols']=[9,16,32,22,22,11,18,16,13,10,14,25].map(w=>({wch:w}));
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Hop dong'); X.writeFile(wb,'Mau-danh-sach-hop-dong.xlsx');
   }catch(e){ toast('❌ '+e.message); }
 }
@@ -608,17 +620,17 @@ async function onExcel(ev){
   const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
   try{ const X=await loadXLSX(); const wb=X.read(await f.arrayBuffer(),{cellDates:true}); const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
     const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase()); const ci=n=>hdr.findIndex(h=>h.includes(n));
-    const I={code:ci('số hợp'),name:ci('tên'),partyA:ci('bên a'),partyB:ci('bên b'),signDate:ci('ngày ký'),value:ci('giá trị'),adv:ci('tạm ứng'),handoverDate:ci('bàn giao'),warrantyMonths:ci('tháng'),warrantyEnd:ci('hết bảo'),note:ci('ghi chú')};
+    const I={company:ci('công ty'),code:ci('số hợp'),name:ci('tên'),partyA:ci('bên a'),partyB:ci('bên b'),signDate:ci('ngày ký'),value:ci('giá trị'),adv:ci('tạm ứng'),handoverDate:ci('bàn giao'),warrantyMonths:ci('tháng'),warrantyEnd:ci('hết bảo'),note:ci('ghi chú')};
     if(I.code<0||I.name<0) throw new Error('File phải có cột "Số hợp đồng" và "Tên công trình"');
     const g=(r,k)=>I[k]>=0?r[I[k]]:''; const gs=(r,k)=>String(g(r,k)??'').trim();
-    const list=rows.slice(1).filter(r=>gs(r,'code')&&gs(r,'name')).map(r=>{ const o={code:gs(r,'code'),name:gs(r,'name'),partyA:gs(r,'partyA'),partyB:gs(r,'partyB'),signDate:xDate(g(r,'signDate')),value:xNum(g(r,'value')),adv:xNum(g(r,'adv')),
+    const list=rows.slice(1).filter(r=>gs(r,'code')&&gs(r,'name')).map(r=>{ const o={company:gs(r,'company').toUpperCase(),code:gs(r,'code'),name:gs(r,'name'),partyA:gs(r,'partyA'),partyB:gs(r,'partyB'),signDate:xDate(g(r,'signDate')),value:xNum(g(r,'value')),adv:xNum(g(r,'adv')),
       handoverDate:xDate(g(r,'handoverDate')),warrantyMonths:parseInt(gs(r,'warrantyMonths'),10)||0,warrantyEnd:xDate(g(r,'warrantyEnd')),note:gs(r,'note')};
       if(!o.warrantyEnd&&o.handoverDate&&o.warrantyMonths) o.warrantyEnd=addMonths(o.handoverDate,o.warrantyMonths); return o; });
     if(!list.length) throw new Error('Không thấy dòng nào có Số HĐ + Tên');
     const byCode={}; Object.entries(contracts).forEach(([k,c])=>byCode[c.code]=k);
     const nNew=list.filter(r=>!byCode[r.code]).length;
     openModal(`<h3>📥 Xem trước: ${list.length} dòng</h3><p style="font-size:14px">Thêm mới <b>${nNew}</b> · cập nhật <b>${list.length-nNew}</b> (số HĐ đã có)</p>
-      <div style="max-height:45vh;overflow:auto"><table class="x"><tr><th>Số HĐ</th><th>Tên</th><th>Giá trị</th><th></th></tr>${list.map(r=>`<tr><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${fmtShort(r.value)}</td><td>${byCode[r.code]?'cập nhật':'mới'}</td></tr>`).join('')}</table></div>
+      <div style="max-height:45vh;overflow:auto"><table class="x"><tr><th>Cty</th><th>Số HĐ</th><th>Tên</th><th>Giá trị</th><th></th></tr>${list.map(r=>`<tr><td>${esc(r.company)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${fmtShort(r.value)}</td><td>${byCode[r.code]?'cập nhật':'mới'}</td></tr>`).join('')}</table></div>
       <div style="margin-top:14px"><button class="btn" onclick="importRows(this)">✅ Nhập ${list.length} hợp đồng</button></div>`);
     window._xlList=list;
   }catch(e){ toast('❌ '+e.message); }
@@ -637,25 +649,25 @@ async function importRows(btn){
         Object.entries(data).forEach(([k,v])=>{ if(v!==''&&v!==0||k==='updatedAt'||k==='updatedBy') up['contracts/'+id+'/'+k]=v; });
         up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'edit',text:'✏️ Cập nhật từ Excel'},who()); }
     }
-    await db.ref(ROOT).update(up); filterPhase=''; $('q').value=''; renderAll(); toast('✅ Đã nhập '+window._xlList.length+' hợp đồng'); showTab('list');
+    await db.ref(ROOT).update(up); filterPhase=''; filterCo=''; $('q').value=''; renderAll(); toast('✅ Đã nhập '+window._xlList.length+' hợp đồng'); showTab('list');
   });
 }
 async function exportAll(){
   try{ const X=await loadXLSX();
     const all=Object.entries(contracts).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
-    const s1=[['Số hợp đồng','Tên công trình','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Tình trạng','Ghi chú']]
-      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.retain,k.refund,k.retainLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),PH_TXT[phase(c)],c.note||'']; }));
-    const s2=[['Số hợp đồng','Tên công trình','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Thực nhận','Ghi chú','Người ghi']];
-    const s3=[['Số hợp đồng','Tên công trình','Loại','Số / lần','Ngày','Giá trị','Ghi chú','Người ghi']];
+    const s1=[['Công ty','Số hợp đồng','Tên công trình','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Tình trạng','Ghi chú']]
+      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.company||'',c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.retain,k.refund,k.retainLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),PH_TXT[phase(c)],c.note||'']; }));
+    const s2=[['Công ty','Số hợp đồng','Tên công trình','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Thực nhận','Ghi chú','Người ghi']];
+    const s3=[['Công ty','Số hợp đồng','Tên công trình','Loại','Số / lần','Ngày','Giá trị','Ghi chú','Người ghi']];
     all.forEach(([id,c])=>{
-      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0; s2.push([c.code,c.name,x.type==='bh'?'Hoàn tiền BH':'Thanh toán KL',x.no||'',fmtDate(x.date),x.type==='bh'?'':v,x.type==='bh'?'':r,x.type==='bh'?-v:h,x.type==='bh'?v:v-r-h,x.note||'',x.by||'']); });
-      sortNo(c.advances).forEach(([k,x])=>s3.push([c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
-      sortNo(c.addenda).forEach(([k,x])=>s3.push([c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
+      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0; s2.push([c.company||'',c.code,c.name,x.type==='bh'?'Hoàn tiền BH':'Thanh toán KL',x.no||'',fmtDate(x.date),x.type==='bh'?'':v,x.type==='bh'?'':r,x.type==='bh'?-v:h,x.type==='bh'?v:v-r-h,x.note||'',x.by||'']); });
+      sortNo(c.advances).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
+      sortNo(c.addenda).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
     });
     const wb=X.utils.book_new(), mk=(aoa,w)=>{ const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=w.map(x=>({wch:x})); return ws; };
-    X.utils.book_append_sheet(wb,mk(s1,[16,30,20,20,11,16,14,16,14,14,14,16,16,6,14,12,12,16,12,8,12,14,25]),'Hop dong');
-    X.utils.book_append_sheet(wb,mk(s2,[16,30,14,6,11,16,14,14,16,25,14]),'Thanh toan');
-    X.utils.book_append_sheet(wb,mk(s3,[16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
+    X.utils.book_append_sheet(wb,mk(s1,[8,16,30,20,20,11,16,14,16,14,14,14,16,16,6,14,12,12,16,12,8,12,14,25]),'Hop dong');
+    X.utils.book_append_sheet(wb,mk(s2,[8,16,30,14,6,11,16,14,14,16,25,14]),'Thanh toan');
+    X.utils.book_append_sheet(wb,mk(s3,[8,16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
     X.writeFile(wb,'Hop-dong-'+toISO(Date.now())+'.xlsx');
   }catch(e){ toast('❌ '+e.message); }
 }
