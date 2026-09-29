@@ -206,7 +206,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v5';
+const APP_VERSION = '20260929-v6';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database(), storage = firebase.storage();
@@ -300,13 +300,36 @@ function renderAll(){ renderStats(); renderFilters(); renderList(); renderIssues
 function renderSitesCard(){
   const cnt={}; Object.values(items).forEach(i=>{ if(i.site&&i.status!=='sold') cnt[i.site]=(cnt[i.site]||0)+1; });
   const list=allSites();
+  const jsName=sname=>JSON.stringify(sname).replace(/"/g,'&quot;');
   $('sites-card').innerHTML=`<div class="sec-h">🏗 Danh sách công trình <span style="font-weight:400;color:var(--text-sub)">· ${list.length}</span></div>
-    ${list.length?list.map(sname=>`<div class="item" style="padding:9px 14px" onclick="showTab('list');$('f-site').value=${JSON.stringify(sname).replace(/"/g,'&quot;')};renderList()">
+    ${list.length?list.map(sname=>`<div class="item" style="padding:9px 14px" onclick="showTab('list');$('f-site').value=${jsName(sname)};renderList()">
       <div class="item-main"><div style="font-size:15px;font-weight:600">🏗 ${esc(sname)}</div>${dcSites.includes(sname)?'':'<div class="item-sub">chỉ có bên app Thiết bị (kho / bãi…)</div>'}</div>
-      <span class="badge ${cnt[sname]?'s-run':'s-sold'}">${cnt[sname]?cnt[sname]+' máy':'chưa có máy'}</span></div>`).join('')
+      <span class="badge ${cnt[sname]?'s-run':'s-sold'}">${cnt[sname]?cnt[sname]+' máy':'chưa có máy'}</span>
+      ${isDung?(dcSites.includes(sname)?`<button class="btn sm sec" style="color:var(--red);padding:6px 10px" onclick="event.stopPropagation();removeSite(${jsName(sname)})" title="Bớt khỏi danh sách">✕</button>`
+        :`<button class="btn sm sec" style="padding:6px 10px" onclick="event.stopPropagation();addSite(${jsName(sname)})" title="Đưa vào danh sách chung">＋</button>`):''}</div>`).join('')
       :'<div class="empty">Chưa đọc được danh sách công trình từ app Duyệt Chi.</div>'}
-    <div class="card-body" style="font-size:13px;color:var(--text-sub);border-top:1px solid var(--gray-border)">Danh sách này lấy chung từ app <b>Duyệt Chi</b> (Cài đặt → Danh sách công trình). Thêm, đổi tên hay xoá công trình thì làm bên đó, bên này tự cập nhật. Bấm vào một công trình để xem máy đang ở đó.
-      <div style="margin-top:8px"><a class="lnk" style="text-align:left;margin:0" href="app3.html" target="_blank">↗ Mở app Duyệt Chi</a></div></div>`;
+    ${isDung?`<div class="card-body" style="border-top:1px solid var(--gray-border)"><div class="row"><input id="new-site" placeholder="Tên công trình mới, VD: CT Cầu Sông Bé" onkeydown="if(event.key==='Enter')addSite()"><button class="btn sm" style="flex:0 0 auto" onclick="addSite()">＋ Thêm</button></div></div>`:''}
+    <div class="card-body" style="font-size:13px;color:var(--text-sub);border-top:1px solid var(--gray-border)">Danh sách này <b>dùng chung</b> với app Duyệt Chi (Cài đặt → Danh sách công trình): thêm / bớt ở đây hay bên đó đều như nhau, cả hai app cùng thấy. ${isDung?'Bớt công trình không xoá máy hay phiếu chi đã ghi tên đó.':'Chỉ Dũng thêm / bớt được.'} Bấm vào một công trình để xem máy đang ở đó.</div>`;
+}
+// THÊM / BỚT công trình: ghi thẳng vào duyetchi/meta/sites (mảng của app Duyệt Chi) bằng transaction đọc-rồi-sửa để không đè lẫn nhau. Luật Firebase: chỉ role dung ghi được meta.
+function _sitesArr(v){ return Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); }
+async function addSite(name){
+  name=(name!=null?name:$('new-site').value).trim(); if(!name) return;
+  if(!isDung){ toast('Chỉ Dũng thêm được'); return; }
+  try{
+    const r=await db.ref('duyetchi/meta/sites').transaction(cur=>{ const a=_sitesArr(cur); if(a.some(x=>x.toLowerCase()===name.toLowerCase())) return; a.push(name); return a; });
+    if(!r.committed){ toast('Đã có công trình "'+name+'"'); return; }
+    if($('new-site')) $('new-site').value=''; toast('✅ Đã thêm "'+name+'" (cả app Duyệt Chi)');
+  }catch(e){ toast('❌ Không ghi được: '+(e.message||e)); }
+}
+async function removeSite(name){
+  if(!isDung){ toast('Chỉ Dũng bớt được'); return; }
+  const n=Object.values(items).filter(i=>i.site===name&&i.status!=='sold').length;
+  if(!confirm('Bớt "'+name+'" khỏi danh sách công trình (cả app Duyệt Chi)?'+(n?'\nĐang có '+n+' máy ghi ở công trình này — máy vẫn giữ tên đó, không bị xoá.':''))) return;
+  try{
+    await db.ref('duyetchi/meta/sites').transaction(cur=>_sitesArr(cur).filter(x=>x!==name));
+    toast('Đã bớt "'+name+'"');
+  }catch(e){ toast('❌ Không ghi được: '+(e.message||e)); }
 }
 function renderStats(){
   const c={all:0}; Object.values(items).forEach(it=>{ if(it.status==='sold') return; c.all++; c[it.status]=(c[it.status]||0)+1; });
