@@ -138,6 +138,7 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
       <div id="top-alert" hidden></div>
       <div class="stats" id="co-chips"></div>
       <div class="stats" id="stats"></div>
+      <div class="card" id="sum-card"></div>
       <div class="card"><div class="card-body" style="padding:8px 10px">
         <input id="q" placeholder="🔍 Tìm số HĐ, tên công trình, bên A/B, công ty…" oninput="renderList()">
       </div></div>
@@ -198,7 +199,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v2';
+const APP_VERSION = '20260929-v3';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -296,6 +297,27 @@ function calc(c){
   return {val,add,total,adv,paid,recov,retain,refund,nPay,advLeft:adv-recov,retainLeft:retain-refund,remain:total-paid,received:adv+net,
     pct:total>0?Math.max(0,Math.min(100,Math.round(paid/total*100))):0,nAdd:Object.keys(c.addenda||{}).length,nAdv:Object.keys(c.advances||{}).length};
 }
+// Cộng dồn tài chính nhiều hợp đồng (bảng Tổng hợp + sheet Excel)
+function sumOf(list){ const t={n:0,total:0,adv:0,recov:0,advLeft:0,paid:0,remain:0,retainLeft:0,received:0};
+  list.forEach(c=>{ const k=calc(c); t.n++; ['total','adv','recov','advLeft','paid','remain','retainLeft','received'].forEach(f=>t[f]+=k[f]); });
+  t.pct=t.total>0?Math.round(t.paid/t.total*100):0; return t; }
+let sumOpen=true;
+function renderSum(){
+  const list=Object.values(contracts).filter(c=>{ const p=phase(c); return coOk(c)&&(filterPhase? p===filterPhase : p!=='closed'); });
+  const t=sumOf(list), lbl=(filterCo?'Công ty '+filterCo:'Cả 3 công ty')+' · '+(filterPhase?PHASE[filterPhase].replace(/^\S+ /,''):'chưa thanh lý')+' · '+t.n+' HĐ';
+  $('sum-card').innerHTML=`<div class="card-body" style="padding:10px 14px">
+    <div class="sec-h" style="margin-bottom:${sumOpen?'8px':'0'};cursor:pointer" onclick="sumOpen=!sumOpen;renderSum()"><h3>📊 Tổng hợp <span style="font-weight:400;font-size:13px;color:var(--text-sub)">${esc(lbl)}</span></h3><b>${sumOpen?'▾':'▸'}</b></div>
+    ${sumOpen?`<table class="fin">
+      <tr class="tot"><td>Tổng giá trị HĐ đã ký (kể cả phụ lục)</td><td>${fmtMoney(t.total)}</td></tr>
+      <tr><td>Tổng tạm ứng</td><td>${fmtMoney(t.adv)}</td></tr>
+      <tr><td class="sub">Tổng đã trừ (thu hồi) tạm ứng</td><td class="sub">${fmtMoney(t.recov)}</td></tr>
+      <tr><td>Tổng tạm ứng còn lại</td><td class="${t.advLeft>0?'neg':''}">${fmtMoney(t.advLeft)}</td></tr>
+      <tr><td>Tổng đã thanh toán (${t.pct}%)</td><td>${fmtMoney(t.paid)}</td></tr>
+      <tr class="tot"><td>Tổng giá trị HĐ còn lại chưa thanh toán</td><td>${fmtMoney(t.remain)}</td></tr>
+      <tr><td>Tiền bảo hành đang bị giữ</td><td>${fmtMoney(t.retainLeft)}</td></tr>
+      <tr><td>Tổng thực nhận</td><td>${fmtMoney(t.received)}</td></tr>
+    </table><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,t.pct)}%"></i></div>`:''}</div>`;
+}
 // Nhắc nhở của 1 hợp đồng (bỏ qua HĐ đã thanh lý)
 function alertsOf(id,c){
   const out=[]; if(c.status==='closed') return out;
@@ -311,7 +333,7 @@ function allAlerts(){ const out=[]; Object.entries(contracts).forEach(([id,c])=>
 function showTab(t){
   ['list','alerts','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
 }
-function renderAll(){ renderStats(); renderList(); renderAlerts(); if(curId&&_logRef) renderDetail(_logs); }
+function renderAll(){ renderStats(); renderSum(); renderList(); renderAlerts(); if(curId&&_logRef) renderDetail(_logs); }
 function renderStats(){
   const co={}; COMPANIES.forEach(k=>co[k]=0); let coAll=0;
   Object.values(contracts).forEach(x=>{ if(phase(x)==='closed') return; coAll++; const k=x.company||''; co[k]=(co[k]||0)+1; });
@@ -664,7 +686,11 @@ async function exportAll(){
       sortNo(c.advances).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
       sortNo(c.addenda).forEach(([k,x])=>s3.push([c.company||'',c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
     });
+    const s0=[['Công ty','Số HĐ (chưa thanh lý)','Tổng giá trị đã ký','Tổng tạm ứng','Đã trừ tạm ứng','Tạm ứng còn lại','Đã thanh toán','% TT','Còn lại chưa TT','Tiền BH đang giữ','Tổng thực nhận']];
+    const live=all.map(([id,c])=>c).filter(c=>phase(c)!=='closed'), coKeys=COMPANIES.concat([...new Set(live.map(c=>c.company||''))].filter(k=>!COMPANIES.includes(k)));
+    coKeys.map(k=>[k||'(chưa ghi)',sumOf(live.filter(c=>(c.company||'')===k))]).concat([['TỔNG',sumOf(live)]]).forEach(([k,t])=>s0.push([k,t.n,t.total,t.adv,t.recov,t.advLeft,t.paid,t.pct,t.remain,t.retainLeft,t.received]));
     const wb=X.utils.book_new(), mk=(aoa,w)=>{ const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=w.map(x=>({wch:x})); return ws; };
+    X.utils.book_append_sheet(wb,mk(s0,[12,10,18,16,16,16,16,6,18,16,18]),'Tong hop');
     X.utils.book_append_sheet(wb,mk(s1,[8,16,30,20,20,11,16,14,16,14,14,14,16,16,6,14,12,12,16,12,8,12,14,25]),'Hop dong');
     X.utils.book_append_sheet(wb,mk(s2,[8,16,30,14,6,11,16,14,14,16,25,14]),'Thanh toan');
     X.utils.book_append_sheet(wb,mk(s3,[8,16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
