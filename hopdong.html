@@ -258,7 +258,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20260930-v9',
+  PHIEN_BAN: '20260930-v10',
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
   URL_APPS_SCRIPT: '',            // khối 15 (Google Sheets / Drive) — chưa làm
@@ -323,7 +323,7 @@ function veO(o, gt){
   const id='f-'+o.k.replace(/\./g,'_'), v=layO(gt,o.k), nhan=`<label class="f">${esc(o.nhan)}${o.batBuoc?' *':''}</label>`;
   const att=`id="${id}" ${o.onInput?`oninput="${o.onInput}"`:''}`;
   let inp='';
-  if(o.kieu==='tien') inp=`<input ${att} inputmode="numeric" value="${v?tien(Math.abs(Number(v))):''}" oninput="dinhDangO(this);${o.onInput||''}" placeholder="${esc(o.placeholder||'0')}">`+(o.choAm?`<label class="ck" style="margin-top:4px"><input type="checkbox" id="${id}-am" ${Number(v)<0?'checked':''}> Giá trị GIẢM (số âm)</label>`:'');
+  if(o.kieu==='tien') inp=`<input ${att} inputmode="numeric" value="${v?tien(Math.abs(Number(v))):''}" oninput="dinhDangO(this);${o.onInput||''}" onchange="dinhDangO(this);${o.onInput||''}" placeholder="${esc(o.placeholder||'0')}">`+(o.choAm?`<label class="ck" style="margin-top:4px"><input type="checkbox" id="${id}-am" ${Number(v)<0?'checked':''}> Giá trị GIẢM (số âm)</label>`:'');
   else if(o.kieu==='so') inp=`<input ${att} inputmode="numeric" value="${v!=null?esc(v):''}" placeholder="${esc(o.placeholder||'')}">`;
   else if(o.kieu==='ngay') inp=`<input ${att} type="date" value="${esc(v||'')}">`;
   else if(o.kieu==='chon') inp=`<select ${att}>${chonOptions(o.ds, v!=null?v:(o.macDinh!=null?o.macDinh:''), o.rong)}</select>`;
@@ -333,7 +333,7 @@ function veO(o, gt){
   else inp=`<input ${att} value="${esc(v||'')}" placeholder="${esc(o.placeholder||'')}">`;
   return `<div id="w-${id}" ${o.hienKhi?'data-hienkhi="f-'+o.hienKhi.replace(/\./g,'_')+'"':''}>${nhan}${inp}${o.hint?`<div class="hint">${o.hint}</div>`:''}</div>`;
 }
-function capNhatHienKhi(){ document.querySelectorAll('[data-hienkhi]').forEach(w=>{ const c=$(w.dataset.hienkhi); w.hidden=!(c&&c.checked); }); }
+function capNhatHienKhi(){ document.querySelectorAll('[data-hienkhi]').forEach(w=>{ const [id,gt]=w.dataset.hienkhi.split('='); const c=$(id); w.hidden=!(c&&(gt!=null?String(c.value)===gt:c.checked)); }); }
 function moForm(tieuDe, cacO, gt, luuHtml){
   gt=gt||{}; let html=`<h3>${tieuDe}</h3>`, i=0;
   while(i<cacO.length){ const o=cacO[i];
@@ -342,7 +342,7 @@ function moForm(tieuDe, cacO, gt, luuHtml){
     else { html+=veO(o,gt); i++; } }
   html+=`<div style="margin-top:14px">${luuHtml}</div>`;
   moModal(html); capNhatHienKhi();
-  cacO.forEach(o=>{ if(o.kieu==='check'){ const c=$('f-'+o.k.replace(/\./g,'_')); if(c) c.addEventListener('change',capNhatHienKhi); } });
+  cacO.forEach(o=>{ if(o.kieu==='check'||o.kieu==='chon'){ const c=$('f-'+o.k.replace(/\./g,'_')); if(c) c.addEventListener('change',capNhatHienKhi); } });
 }
 function docForm(cacO, vao){
   const kq=vao||{};
@@ -704,7 +704,7 @@ function veChiTiet(){
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">${esc(h.tenGoiThau)}</div>
       <div class="item-sub" style="margin-top:2px">${esc(h.tenDuAn||'')}${h.tenDuAn?' · ':''}<b>${esc(h.congTyId)}</b>${h.noiBo&&h.noiBo.co?' (nội bộ)':''} · 🏢 ${esc(h.chuDauTu||'—')}</div>
-      <div style="margin:6px 0">${badgeTrangThai(h.trangThai)}${h.lienDanh&&h.lienDanh.co?' <span class="badge tt-choNghiemThuHoanThanh">Liên danh '+esc(h.lienDanh.tyLe||'')+'</span>':''}</div>
+      <div style="margin:6px 0">${badgeTrangThai(h.trangThai)} ${h.lienDanh&&h.lienDanh.co?'<span class="badge tt-choNghiemThuHoanThanh">Liên danh '+esc(h.lienDanh.tyLe||'')+'</span>':'<span class="badge tt-daXong">Độc lập</span>'}</div>
       <div class="tiles" style="margin:8px 0 0;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
         <div class="tile" style="padding:8px"><span>Hiện hành</span><b style="font-size:14px">${tienNgan(k.giaTriHienHanh)}</b></div>
         <div class="tile acc" style="padding:8px"><span>Nghiệm thu</span><b style="font-size:14px">${tienNgan(k.nghiemThuLuyKe)}</b></div>
@@ -728,7 +728,7 @@ function veTabThongTin(id,h,k){
       <div>Chủ đầu tư</div><div>${esc(h.chuDauTu||'—')}</div>
       <div>Gói thầu</div><div>${esc(h.tenGoiThau)}</div>
       <div>Dự án</div><div>${esc(h.tenDuAn||'—')}</div>
-      <div>Loại hợp đồng</div><div>${esc(LOAI_HOP_DONG[h.loaiHopDong]||'—')}</div>
+      <div>Loại hợp đồng</div><div>${esc(LOAI_HOP_DONG[h.loaiHopDong]||'—')} · ${h.lienDanh&&h.lienDanh.co?'Liên danh':'Độc lập'}</div>
       <div>Giá trước thuế</div><div>${h.giaTriTruocThue?tienD(h.giaTriTruocThue):'—'}${h.thue?' · thuế '+tienD(h.thue):''}</div>
       <div>Giá trị gốc (sau thuế)</div><div><b>${tienD(h.giaTriGoc)}</b>${h.lienDanh&&h.lienDanh.co?' — phần của mình'+(h.lienDanh.tongGiaTriLienDanh?' / tổng liên danh '+tienD(h.lienDanh.tongGiaTriLienDanh):'')+(h.lienDanh.thanhVienKhac?' · cùng '+esc(h.lienDanh.thanhVienKhac):''):''}</div>
       <div>Thời gian thực hiện</div><div>${esc(h.thoiGianThucHien||'—')}</div>
@@ -859,7 +859,7 @@ function veTabLichSu(id,h,k){
     <div class="tl">${ds.length?ds.map(l=>`<div class="tl-e"><div class="tl-t">${lucVN(l.luc)} · ${esc(l.nguoi)}</div><div class="tl-b">${hd[l.hanhDong]||l.hanhDong} <b>${esc(TEN_BANG[l.bang]||l.bang)}</b>${l.truong?' · '+esc(tenTruong(l.truong)):''}${l.hanhDong==='sua'?': <span class="neg">'+esc(hienGiaTri(l.truong,l.giaTriCu))+'</span> → <span class="pos">'+esc(hienGiaTri(l.truong,l.giaTriMoi))+'</span>':(l.giaTriMoi||l.giaTriCu?': '+esc(l.giaTriMoi||l.giaTriCu):'')}</div></div>`).join(''):'<div class="empty">Chưa có gì.</div>'}</div></div></div>`;
 }
 const TEN_TRUONG={ congTyId:'Công ty', soHopDong:'Số hợp đồng', ngayKy:'Ngày ký', chuDauTu:'Chủ đầu tư', tenGoiThau:'Tên gói thầu', tenDuAn:'Tên dự án', loaiHopDong:'Loại hợp đồng', giaTriTruocThue:'Giá trước thuế', thue:'Thuế', giaTriGoc:'Giá trị gốc', thoiGianThucHien:'Thời gian thực hiện', ngayKhoiCong:'Ngày khởi công', ngayHoanThanhHopDong:'Ngày hoàn thành theo HĐ', trangThai:'Trạng thái', ghiChu:'Ghi chú',
-  'lienDanh.co':'Liên danh','lienDanh.tyLe':'Tỷ lệ liên danh','lienDanh.tongGiaTriLienDanh':'Tổng giá trị liên danh','lienDanh.thanhVienKhac':'Thành viên liên danh','noiBo.co':'Nội bộ','noiBo.hopDongGocId':'Hợp đồng gốc',
+  'lienDanh.co':'Liên danh (có/không → độc lập)','lienDanh.tyLe':'Tỷ lệ liên danh','lienDanh.tongGiaTriLienDanh':'Tổng giá trị liên danh','lienDanh.thanhVienKhac':'Thành viên liên danh','noiBo.co':'Nội bộ','noiBo.hopDongGocId':'Hợp đồng gốc',
   'baoHanh.hinhThuc':'Hình thức bảo hành','baoHanh.ngayNghiemThuBanGiao':'Ngày nghiệm thu bàn giao','baoHanh.soThang':'Số tháng bảo hành','baoHanh.ngayHetBaoHanh':'Ngày hết bảo hành',
   'quyetToan.ngayNop':'Ngày nộp hồ sơ QT','quyetToan.ngayDuyet':'Ngày duyệt QT','quyetToan.giaTriDuyet':'Giá trị quyết toán','quyetToan.daNhanDu':'Đã nhận đủ','quyetToan.conNo':'Còn nợ',
   'khoiLuongDaThucHien.soTien':'KL đã thực hiện','khoiLuongDaThucHien.ngay':'Ngày cập nhật KL',
@@ -876,7 +876,8 @@ function goiYNganHang(){ return Object.values(DL.baoLanh).flatMap(o=>Object.valu
 
 // --- Hợp đồng (tạo / sửa thông tin chung) ---
 function formHopDong(id){
-  const h=id?DL.hopDong[id]:{ congTyId:'PVA', trangThai:'dangThiCong', loaiHopDong:'donGiaDieuChinh' };
+  const h=id?JSON.parse(JSON.stringify(DL.hopDong[id])):{ congTyId:'PVA', trangThai:'dangThiCong', loaiHopDong:'donGiaDieuChinh' };
+  h.lienDanh=Object.assign({},h.lienDanh||{}); h.lienDanh.hinhThuc=h.lienDanh.co?'lienDanh':'docLap';
   const khac=Object.entries(DL.hopDong).filter(([k])=>k!==id).map(([k,x])=>[k,x.soHopDong+' · '+x.tenGoiThau]);
   _cacO=[
     {k:'congTyId',nhan:'Công ty ký hợp đồng',kieu:'chon',ds:Object.fromEntries(MA_CONG_TY.map(m=>[m,m+' — '+tenCongTy(m)])),batBuoc:true},
@@ -892,9 +893,9 @@ function formHopDong(id){
     {k:'thoiGianThucHien',nhan:'Thời gian thực hiện',placeholder:'VD: 540 ngày'},
     {k:'ngayKhoiCong',nhan:'Ngày khởi công',kieu:'ngay'},{k:'ngayHoanThanhHopDong',nhan:'Hoàn thành theo HĐ',kieu:'ngay',nua:true},
     {tieuDe:'Liên danh / nội bộ'},
-    {k:'lienDanh.co',nhan:'Hợp đồng liên danh (chỉ theo dõi phần của mình)',kieu:'check'},
-    {k:'lienDanh.tyLe',nhan:'Tỷ lệ của mình',placeholder:'VD: 60%',hienKhi:'lienDanh.co'},{k:'lienDanh.tongGiaTriLienDanh',nhan:'Tổng giá trị cả liên danh',kieu:'tien',nua:true,hienKhi:'lienDanh.co'},
-    {k:'lienDanh.thanhVienKhac',nhan:'Thành viên liên danh khác',hienKhi:'lienDanh.co'},
+    {k:'lienDanh.hinhThuc',nhan:'Hình thức ký',kieu:'chon',ds:{docLap:'Độc lập (một mình công ty ký)',lienDanh:'Liên danh (chỉ theo dõi phần của mình)'},macDinh:'docLap'},
+    {k:'lienDanh.tyLe',nhan:'Tỷ lệ của mình',placeholder:'VD: 60%',hienKhi:'lienDanh.hinhThuc=lienDanh'},{k:'lienDanh.tongGiaTriLienDanh',nhan:'Tổng giá trị cả liên danh',kieu:'tien',nua:true,hienKhi:'lienDanh.hinhThuc=lienDanh'},
+    {k:'lienDanh.thanhVienKhac',nhan:'Thành viên liên danh khác',hienKhi:'lienDanh.hinhThuc=lienDanh'},
     {k:'noiBo.co',nhan:'Giao khoán NỘI BỘ giữa 3 công ty (không cộng vào "cả 3")',kieu:'check'},
     {k:'noiBo.hopDongGocId',nhan:'Hợp đồng gốc',kieu:'chon',ds:Object.fromEntries(khac),rong:'— chọn hợp đồng gốc —',hienKhi:'noiBo.co'},
     {k:'ghiChu',nhan:'Ghi chú',kieu:'vanBan'},
@@ -906,6 +907,7 @@ async function luuHopDong(id,btn){
   await bam(btn,async()=>{
     const v=docForm(_cacO); batBuoc(_cacO,v);
     const trung=Object.entries(DL.hopDong).find(([k,x])=>k!==id&&x.congTyId===v.congTyId&&String(x.soHopDong).trim().toLowerCase()===v.soHopDong.toLowerCase()); if(trung) throw new Error('Công ty '+v.congTyId+' đã có hợp đồng số '+v.soHopDong);
+    v.lienDanh.co=v.lienDanh.hinhThuc==='lienDanh'; delete v.lienDanh.hinhThuc; if(!v.lienDanh.co){ v.lienDanh={co:false}; }
     if(v.noiBo.co&&!v.noiBo.hopDongGocId) throw new Error('Chọn hợp đồng gốc của giao khoán nội bộ');
     if(id){ const cu=DL.hopDong[id]; ['baoHanh','quyetToan','keHoachTienVe','fileDinhKem','khoiLuongDaThucHien'].forEach(k=>{ if(cu[k]!=null) v[k]=cu[k]; }); }
     else v.baoHanh={hinhThuc:'giuTien'};
