@@ -14,9 +14,10 @@
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
 <style>
+/* ===== CSS toàn bộ app (spec mục 4.2). Chữ tối thiểu 16px, nút tối thiểu 44px trên điện thoại (quy tắc 10) ===== */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --blue:#7e22ce;--blue-light:#f3e8ff;--blue-dark:#6b21a8; /* app Hợp đồng: tông TÍM (D 29/09 'đổi màu khác 2 app kia'), khác 379 (xanh dương), Gia Bình (xanh lá), Thiết bị (cam) */
+  --blue:#7e22ce;--blue-light:#f3e8ff;--blue-dark:#6b21a8; /* app Hợp đồng: tông TÍM, khác 379 (xanh dương), Gia Bình (xanh lá), Thiết bị (cam) */
   --green:#057a55;--green-light:#def7ec;
   --yellow:#9f580a;--yellow-light:#fdf6b2;
   --red:#c81e1e;--red-light:#fde8e8;
@@ -24,16 +25,16 @@
   --text:#111827;--text-sub:#6b7280;--white:#fff;
   --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,.08);
 }
-body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:17px}
+body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:16px}
 [hidden]{display:none!important}
-.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:8px}
 .app-header h1{font-size:16px;font-weight:700}
 .app-header small{font-size:11px;opacity:.85;margin-left:6px;font-weight:400}
-.hdr-user{font-size:12px;opacity:.9}
+.hdr-user{font-size:12px;opacity:.9;white-space:nowrap}
 #update-banner{display:none;background:#f59e0b;color:#111;font-weight:700;text-align:center;padding:10px;cursor:pointer;font-size:15px}
-.main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
+.main{padding:10px 10px calc(80px + env(safe-area-inset-bottom));max-width:1100px;margin:0 auto}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0)}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:11px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:11px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative;min-height:44px}
 .nav-item.active{color:var(--blue);font-weight:700}
 .nav-icon{font-size:20px;line-height:1;width:44px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#eef2f7}
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px var(--blue)}
@@ -42,57 +43,61 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .card-body{padding:12px 14px}
 .row{display:flex;gap:8px;align-items:center}
 .row>*{flex:1;min-width:0}
-input,select,textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--gray-border);border-radius:var(--radius);background:#fff;color:var(--text)}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--gray-border);border-radius:var(--radius);background:#fff;color:var(--text);min-height:44px}
+input[type=checkbox]{width:22px;height:22px;min-height:0}
 textarea{min-height:70px;resize:vertical}
 label.f{display:block;font-size:13px;color:var(--text-sub);font-weight:600;margin:10px 0 4px}
-.btn{font:inherit;font-size:15px;font-weight:700;padding:11px 14px;border-radius:var(--radius);border:none;background:var(--blue);color:#fff;cursor:pointer;width:100%}
+label.ck{display:flex;gap:8px;align-items:center;font-size:16px;margin-top:10px;min-height:44px}
+.btn{font:inherit;font-size:15px;font-weight:700;padding:11px 14px;border-radius:var(--radius);border:none;background:var(--blue);color:#fff;cursor:pointer;width:100%;min-height:44px}
 .btn.sec{background:var(--gray-light);color:var(--text)}
 .btn.red{background:var(--red)}.btn.green{background:var(--green)}.btn.yel{background:#d97706}
 .btn:disabled{opacity:.6}
-.btn.sm{width:auto;padding:7px 12px;font-size:13px}
-.stats{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px}
-.stat{flex:0 0 auto;background:#fff;border-radius:var(--radius);padding:8px 12px;box-shadow:var(--shadow);cursor:pointer;text-align:center;min-width:78px;border:2px solid transparent}
-.stat.on{border-color:var(--blue)}
-.stat b{display:block;font-size:20px}.stat span{font-size:11px;color:var(--text-sub)}
-.item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid var(--gray-border);cursor:pointer;align-items:center}
-.item:last-child{border-bottom:none}
-.item-main{flex:1;min-width:0}
-.item-name{font-weight:700;font-size:16px}
-.item-sub{font-size:13px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.btn.sm{width:auto;padding:7px 12px;font-size:13px;min-height:36px}
+.chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px}
+.chip{flex:0 0 auto;background:#fff;border-radius:var(--radius);padding:8px 12px;box-shadow:var(--shadow);cursor:pointer;text-align:center;min-width:78px;border:2px solid transparent;font-size:14px;font-weight:600;min-height:44px;display:flex;align-items:center;justify-content:center}
+.chip.on{border-color:var(--blue);background:var(--blue-light);color:var(--blue-dark)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.tile{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:12px 14px}
+.tile span{display:block;font-size:12px;color:var(--text-sub);font-weight:600;text-transform:uppercase;letter-spacing:.02em}
+.tile b{display:block;font-size:20px;margin-top:4px;word-break:break-all}
+.tile small{display:block;font-size:12px;color:var(--text-sub);margin-top:2px}
+.tile.acc b{color:var(--blue-dark)}.tile.ok b{color:var(--green)}.tile.warn b{color:var(--red)}
+@media(min-width:700px){.tiles{grid-template-columns:repeat(3,1fr)}.tile b{font-size:22px}}
 .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
-.s-active{background:#dbeafe;color:#1d4ed8}
-.s-warranty{background:var(--green-light);color:var(--green)}
-.s-expired{background:var(--yellow-light);color:var(--yellow)}
-.s-closed{background:var(--gray-light);color:var(--gray)}
-.s-settling{background:#fce7f3;color:#9d174d}
-.s-settled{background:#ccfbf1;color:#0f766e}
-.bar{height:6px;background:var(--gray-light);border-radius:3px;overflow:hidden;margin-top:6px}.bar i{display:block;height:100%;background:var(--blue)}
-.al{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-border);cursor:pointer;align-items:center}
-.al:last-child{border-bottom:none}
-.al .ic{font-size:24px;flex:0 0 auto}
-.al.warn{background:#fffbeb}.al.due{background:#fff7ed}.al.over{background:var(--red-light)}
-.al-h{padding:8px 14px;font-size:13px;font-weight:700;color:var(--text-sub);background:var(--gray-light);text-transform:uppercase}
+.tt-dangThiCong{background:#dbeafe;color:#1d4ed8}
+.tt-choNghiemThuHoanThanh{background:#e0e7ff;color:#3730a3}
+.tt-dangBaoHanh{background:var(--green-light);color:var(--green)}
+.tt-choQuyetToan{background:#fce7f3;color:#9d174d}
+.tt-daXong{background:#ccfbf1;color:#0f766e}
+.tt-tamDung{background:var(--yellow-light);color:var(--yellow)}
+.tt-biChamDut{background:var(--gray-light);color:var(--gray)}
 .fin{width:100%;border-collapse:collapse;font-size:15px}
 .fin td{padding:6px 0;border-bottom:1px dashed var(--gray-border)}
 .fin td:last-child{text-align:right;font-weight:600;white-space:nowrap}
 .fin tr.tot td{font-weight:800;border-bottom:2px solid var(--gray-border)}
-.fin td.sub{color:var(--text-sub);font-size:14px}
-table.p{width:100%;border-collapse:collapse;font-size:13px}
-table.p th,table.p td{border-bottom:1px solid var(--gray-border);padding:6px 4px;text-align:right;white-space:nowrap}
-table.p th:first-child,table.p td:first-child{text-align:left}
-table.p th{color:var(--text-sub);font-weight:600;font-size:12px}
+.fin td.sub{color:var(--text-sub);font-size:14px;padding-left:14px}
+table.p{width:100%;border-collapse:collapse;font-size:14px}
+table.p th,table.p td{border-bottom:1px solid var(--gray-border);padding:8px 6px;text-align:right;white-space:nowrap}
+table.p th:first-child,table.p td:first-child,table.p th.tr,table.p td.tr{text-align:left}
+table.p th{color:var(--text-sub);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
+table.p th.sx{color:var(--blue-dark)}
 table.p tbody tr{cursor:pointer}
+table.p tbody tr:hover{background:#faf5ff}
+table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.sec-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.sec-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;gap:8px}
 .sec-h h3{font-size:15px}
 .neg{color:var(--red)}.pos{color:var(--green)}
 .empty{text-align:center;color:var(--text-sub);padding:30px 10px;font-size:15px}
 .overlay{position:fixed;inset:0;background:#f0f2f5;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
-.modal{background:#fff;width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.modal{background:#fff;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .modal h3{font-size:17px;margin-bottom:6px}
-.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 10px;font-size:15px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px}
 .kv div:nth-child(odd){color:var(--text-sub)}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding:6px 0 8px;position:sticky;top:50px;background:#f0f2f5;z-index:5}
+.tab{flex:0 0 auto;padding:9px 12px;border-radius:999px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border:2px solid transparent;min-height:40px;white-space:nowrap}
+.tab.on{border-color:var(--blue);color:var(--blue-dark);background:var(--blue-light)}
 .tl{border-left:3px solid var(--gray-border);margin-left:8px;padding-left:14px}
 .tl-e{position:relative;padding-bottom:14px}
 .tl-e::before{content:'';position:absolute;left:-21px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--blue);border:2px solid #fff}
@@ -101,23 +106,32 @@ table.p tbody tr{cursor:pointer}
 .warn{background:var(--red-light);color:var(--red);padding:8px 12px;border-radius:var(--radius);font-size:14px;margin-bottom:8px;font-weight:600}
 .warn.soft{background:#fffbeb;color:#92400e}
 .hint{font-size:13px;color:var(--text-sub);margin-top:4px}
+.al{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--gray-border);align-items:center}
+.al:last-child{border-bottom:none}
+.al .ic{font-size:24px;flex:0 0 auto}
+.al.over{background:var(--red-light)}.al.due{background:#fff7ed}
+.al-h{padding:8px 14px;font-size:13px;font-weight:700;color:var(--text-sub);background:var(--gray-light);text-transform:uppercase}
+.item-main{flex:1;min-width:0}
+.item-name{font-weight:700;font-size:16px}
+.item-sub{font-size:13px;color:var(--text-sub)}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:999;max-width:90vw;text-align:center}
 .login{max-width:420px;margin:40px auto;padding:20px}
 .login h2{text-align:center;margin-bottom:16px;color:var(--blue-dark)}
 .err{color:var(--red);font-size:14px;margin-top:8px;min-height:20px}
 table.x{width:100%;border-collapse:collapse;font-size:13px}
 table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-align:left}
+canvas{max-width:100%}
 </style>
 </head>
 <body>
 
-<!-- ĐĂNG NHẬP (dùng chung tài khoản app Duyệt Chi 379) -->
+<!-- ===== 3. DANG_NHAP: màn đăng nhập (email + mật khẩu Firebase, dùng chung tài khoản app Duyệt Chi) ===== -->
 <div id="login-screen" class="login">
   <h2>📑 Hợp đồng PVA-379-279</h2>
   <div class="card"><div class="card-body">
     <label class="f">Email</label><input id="l-email" type="email" autocomplete="username">
     <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password">
-    <div style="margin-top:14px"><button class="btn" id="l-btn" onclick="doLogin()">Đăng nhập</button></div>
+    <div style="margin-top:14px"><button class="btn" id="l-btn" onclick="dangNhap()">Đăng nhập</button></div>
     <div class="err" id="l-err"></div>
     <p style="font-size:13px;color:var(--text-sub);margin-top:10px">Dùng đúng email + mật khẩu của app <b>Duyệt Chi</b>. Chưa có tài khoản → đăng ký trong app Duyệt Chi trước.</p>
   </div></div>
@@ -127,182 +141,339 @@ table.x td,table.x th{border:1px solid var(--gray-border);padding:4px 6px;text-a
   <h2>⏳ Chờ cấp quyền</h2>
   <div class="card"><div class="card-body" style="font-size:15px">
     Tài khoản của bạn chưa được duyệt xem dữ liệu. Nhờ quản trị bấm "Cho xem" trong app Duyệt Chi, rồi mở lại app này.
-    <div style="margin-top:14px"><button class="btn sec" onclick="doLogout()">Đăng xuất</button></div>
+    <div style="margin-top:14px"><button class="btn sec" onclick="dangXuat()">Đăng xuất</button></div>
   </div></div>
 </div>
 
 <div id="app" hidden>
-  <div id="update-banner" onclick="doUpdateNow()">⬆️ Có bản mới — bấm để cập nhật</div>
+  <div id="update-banner" onclick="capNhatNgay()">⬆️ Có bản mới — bấm để cập nhật</div>
   <header class="app-header"><h1>📑 Hợp đồng PVA-379-279 <small id="ver-label"></small></h1><span class="hdr-user" id="hdr-user"></span></header>
   <main class="main">
 
-    <section id="tab-list">
-      <div id="top-alert" hidden></div>
-      <div class="stats" id="co-chips"></div>
-      <div class="stats" id="stats"></div>
-      <div class="card" id="sum-card"></div>
-      <div class="card"><div class="card-body" style="padding:8px 10px">
-        <input id="q" placeholder="🔍 Tìm số HĐ, tên gói thầu, bên A/B, công ty…" oninput="renderList()">
-        <select id="f-site" style="margin-top:6px" onchange="renderList()"><option value="">🏗 Tất cả công trình</option></select>
-      </div></div>
-      <button class="btn" style="margin-bottom:10px" onclick="contractForm()">＋ Thêm hợp đồng</button>
-      <div class="card" id="list"></div>
-    </section>
-
-    <section id="tab-alerts" hidden>
-      <div class="card"><div class="card-body" style="font-size:14px;color:var(--text-sub)">Nhắc trước <b>10 ngày</b> ngày bàn giao và ngày hết bảo hành. Hợp đồng đã hết bảo hành nằm ở đây cho tới khi bấm <b>Thanh lý</b>.</div></div>
-      <div class="card" id="alerts"></div>
-    </section>
-
-    <section id="tab-more" hidden>
+    <!-- ===== 7. MÀN HÌNH: Dashboard ===== -->
+    <section id="tab-tongquan">
+      <div class="chips" id="db-congty"></div>
+      <div id="db-tiles" class="tiles"></div>
       <div class="card"><div class="card-body">
-        <h3 style="font-size:15px;margin-bottom:8px">🏗 Danh sách công trình</h3>
-        <p style="font-size:13px;color:var(--text-sub);margin-bottom:8px">Dùng chung với app Duyệt Chi (sửa ở đây thì bên đó cũng đổi). Chỉ D thêm/xoá được.</p>
+        <div class="sec-h"><h3>💧 Dòng tiền về</h3><div class="row" style="flex:0 0 auto;gap:4px">
+          <button class="btn sm sec" id="ky-thang" onclick="doiKyDongTien('thang')">Tháng</button>
+          <button class="btn sm sec" id="ky-quy" onclick="doiKyDongTien('quy')">Quý</button></div></div>
+        <div class="hint" style="margin-bottom:6px">Kế hoạch nhập trong từng hợp đồng (tab Kế hoạch tiền về). Thực tế = tạm ứng + tiền thực nhận về theo ngày tiền về.</div>
+        <canvas id="db-chart" height="160" hidden></canvas>
+        <div class="tw" id="db-dongtien"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div class="sec-h"><h3>📋 Chờ quyết toán</h3></div>
+        <div id="db-choqt"></div>
+      </div></div>
+      <button class="btn sec" onclick="xuatExcelDashboard()">📤 Xuất Excel tổng hợp</button>
+    </section>
+
+    <!-- ===== 8. MÀN HÌNH: Danh sách hợp đồng ===== -->
+    <section id="tab-hopdong" hidden>
+      <button class="btn" style="margin-bottom:10px" onclick="formHopDong()">＋ Thêm hợp đồng</button>
+      <div class="card"><div class="card-body" style="padding:8px 10px">
+        <input id="q" placeholder="🔍 Tìm số HĐ, gói thầu, dự án, chủ đầu tư…" oninput="veDanhSach()">
+        <div class="row" style="margin-top:6px">
+          <select id="f-congty" onchange="veDanhSach()"></select>
+          <select id="f-trangthai" onchange="veDanhSach()"></select>
+        </div>
+      </div></div>
+      <div class="card"><div class="tw" id="ds-hopdong"></div></div>
+      <button class="btn sec" onclick="xuatExcelDanhSach()">📤 Xuất Excel danh sách</button>
+    </section>
+
+    <!-- ===== 10. MÀN HÌNH: Nhắc hạn ===== -->
+    <section id="tab-nhac" hidden>
+      <div class="card"><div class="card-body" style="font-size:14px;color:var(--text-sub)">Nhắc trước <b id="nhac-truoc"></b> ngày, sau đó cứ <b id="nhac-lap"></b> ngày nhắc lại, tới khi có người bấm <b>Đã xong</b>. Mốc: hết bảo hành, hết bảo lãnh, đến hạn hoàn thành hợp đồng, mốc tự thêm.</div></div>
+      <div class="card" id="ds-nhac"></div>
+      <button class="btn sec" onclick="formMocTuThem()">＋ Thêm mốc tự nhắc</button>
+      <div class="card" style="margin-top:10px"><div class="card-body"><div class="sec-h"><h3>✅ Đã xong gần đây</h3></div><div id="ds-nhac-xong"></div></div></div>
+    </section>
+
+    <!-- ===== 11/12/13/14: Khác (Nhập Excel, Quản trị, Thông báo) ===== -->
+    <section id="tab-khac" hidden>
+      <div class="card" id="qt-yeucauxoa-card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">🗑 Yêu cầu xoá <span class="badge tt-choQuyetToan" id="qt-yeucauxoa-n" hidden></span></h3>
+        <div id="qt-yeucauxoa"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">🏢 Ba công ty</h3>
+        <div id="qt-congty"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">👥 Người dùng (chung app Duyệt Chi)</h3>
+        <div class="hint" style="margin-bottom:6px">Ai đã được duyệt trong Duyệt Chi đều vào được và sửa được mọi thứ. Chỉ giám đốc (GD) xoá được. Thêm/bớt người làm trong app Duyệt Chi.</div>
+        <div id="qt-nguoidung"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">🏗 Danh sách dự án / công trình</h3>
+        <p style="font-size:13px;color:var(--text-sub);margin-bottom:8px">Dùng chung với app Duyệt Chi (sửa ở đây thì bên đó cũng đổi). Chỉ giám đốc thêm/xoá được.</p>
         <div id="site-list"></div>
-        <div class="row" id="site-add" hidden style="margin-top:8px"><input id="new-site" placeholder="Tên công trình mới…"><button class="btn sm" style="flex:0 0 auto" onclick="addSite()">＋ Thêm</button></div>
+        <div class="row" id="site-add" hidden style="margin-top:8px"><input id="new-site" placeholder="Tên dự án / công trình mới…"><button class="btn sm" style="flex:0 0 auto" onclick="themCongTrinh()">＋ Thêm</button></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">📥 Nhập hợp đồng từ Excel</h3>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">Tải file mẫu, điền mỗi dòng 1 hợp đồng, chọn file → xem trước → xác nhận mới ghi. Số HĐ trùng (cùng công ty) → cập nhật thông tin chung, số mới → thêm.</p>
+        <div class="row">
+          <button class="btn sec" onclick="taiFileMau()">⬇️ File mẫu</button>
+          <button class="btn" onclick="document.getElementById('xl-file').click()">📂 Chọn file</button>
+        </div>
+        <input id="xl-file" type="file" accept=".xlsx,.xls" hidden onchange="chonFileExcel(event)">
       </div></div>
       <div class="card"><div class="card-body">
         <h3 style="font-size:15px;margin-bottom:8px">🔔 Thông báo trên máy này</h3>
         <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px" id="notify-info"></p>
-        <button class="btn" id="notify-btn" onclick="enableNotify()">Bật thông báo</button>
-      </div></div>
-      <div class="card"><div class="card-body">
-        <h3 style="font-size:15px;margin-bottom:8px">📥 Nhập danh sách hợp đồng từ Excel</h3>
-        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">Tải file mẫu, điền mỗi dòng 1 hợp đồng, rồi chọn file để nhập. Số HĐ trùng → cập nhật thông tin chung (không đụng phụ lục/tạm ứng/thanh toán đã ghi), số mới → thêm.</p>
-        <div class="row">
-          <button class="btn sec" onclick="downloadTemplate()">⬇️ File mẫu</button>
-          <button class="btn" onclick="document.getElementById('xl-file').click()">📂 Chọn file</button>
-        </div>
-        <input id="xl-file" type="file" accept=".xlsx,.xls" hidden onchange="onExcel(event)">
-      </div></div>
-      <div class="card"><div class="card-body">
-        <h3 style="font-size:15px;margin-bottom:8px">📤 Xuất Excel</h3>
-        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">1 file, 3 sheet: Hợp đồng (tổng hợp tài chính) · Thanh toán · Tạm ứng &amp; Phụ lục.</p>
-        <button class="btn sec" onclick="exportAll()">Xuất toàn bộ</button>
+        <button class="btn" id="notify-btn" onclick="batThongBao()">Bật thông báo</button>
       </div></div>
       <div class="card"><div class="card-body">
         <div style="font-size:14px;color:var(--text-sub)" id="more-info"></div>
-        <div style="margin-top:10px"><button class="btn sec" onclick="doLogout()">Đăng xuất</button></div>
+        <div style="margin-top:10px"><button class="btn sec" onclick="dangXuat()">Đăng xuất</button></div>
       </div></div>
     </section>
   </main>
 
   <nav class="bottom-nav">
-    <button class="nav-item active" data-tab="list" onclick="showTab('list')"><span class="nav-icon">📑</span>Hợp đồng</button>
-    <button class="nav-item" data-tab="alerts" onclick="showTab('alerts')"><span class="nav-icon">🔔</span>Nhắc nhở<span class="nav-badge" id="al-badge" hidden></span></button>
-    <button class="nav-item" data-tab="more" onclick="showTab('more')"><span class="nav-icon">⚙️</span>Khác</button>
+    <button class="nav-item active" data-tab="tongquan" onclick="chuyenTab('tongquan')"><span class="nav-icon">📊</span>Tổng quan</button>
+    <button class="nav-item" data-tab="hopdong" onclick="chuyenTab('hopdong')"><span class="nav-icon">📑</span>Hợp đồng</button>
+    <button class="nav-item" data-tab="nhac" onclick="chuyenTab('nhac')"><span class="nav-icon">🔔</span>Nhắc hạn<span class="nav-badge" id="nhac-badge" hidden></span></button>
+    <button class="nav-item" data-tab="khac" onclick="chuyenTab('khac')"><span class="nav-icon">⚙️</span>Khác<span class="nav-badge" id="khac-badge" hidden></span></button>
   </nav>
 </div>
 
+<!-- ===== 9. MÀN HÌNH: Chi tiết hợp đồng (lớp phủ) ===== -->
 <div id="detail" class="overlay" hidden></div>
-<div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this)dongModal()"><div class="modal" id="modal"></div></div>
 
 <script>
-// ===== 1. CAU_HINH — cấu hình Firebase (dùng CHUNG project với app Duyệt Chi 379: cùng tài khoản, cùng danh sách người được duyệt) =====
-const firebaseConfig = {
-  apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
-  authDomain: "duyetchi-pva379.firebaseapp.com",
-  databaseURL: "https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "duyetchi-pva379",
-  storageBucket: "duyetchi-pva379.firebasestorage.app",
-  messagingSenderId: "366275914302",
-  appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
+// ===== 1. CAU_HINH — cấu hình Firebase (dùng CHUNG project với app Duyệt Chi: cùng tài khoản, cùng danh sách người được duyệt), hằng số =====
+const CAU_HINH = {
+  firebase: {
+    apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
+    authDomain: "duyetchi-pva379.firebaseapp.com",
+    databaseURL: "https://duyetchi-pva379-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "duyetchi-pva379",
+    storageBucket: "duyetchi-pva379.firebasestorage.app",
+    messagingSenderId: "366275914302",
+    appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
+  },
+  GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
+  PHIEN_BAN: '20260930-v8',
+  NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
+  NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
+  URL_APPS_SCRIPT: '',            // khối 15 (Google Sheets / Drive) — chưa làm
+  URL_SHEETJS: 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
+  SRI_SHEETJS: 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT',
+  URL_CHARTJS: 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'
 };
-const APP_VERSION = '20260929-v7';
-document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const ROOT = 'hopdong';      // nhánh riêng trong RTDB, luật ở database.rules.json
-const REMIND_DAYS = 10;      // nhắc trước 10 ngày (bàn giao + hết bảo hành)
-const COMPANIES = ['PVA','379','279']; // 3 công ty của D — mỗi hợp đồng thuộc 1 công ty
+document.getElementById('ver-label').textContent = CAU_HINH.PHIEN_BAN.split('-').pop();
 
-// ── kiểm tra bản mới (giống 379: so version-hopdong.txt, chỉ báo khi server MỚI HƠN) ──
-function _verNum(v){ var m=/^(\d{8})-v(\d+)$/.exec(String(v||'').trim()); return m?parseInt(m[1],10)*1000+parseInt(m[2],10):0; }
-function checkForUpdate(){
+// kiểm tra bản mới (giống Duyệt Chi: so version-hopdong.txt, chỉ báo khi máy chủ MỚI HƠN)
+function _soPhienBan(v){ var m=/^(\d{8})-v(\d+)$/.exec(String(v||'').trim()); return m?parseInt(m[1],10)*1000+parseInt(m[2],10):0; }
+function kiemTraBanMoi(){
   fetch('version-hopdong.txt?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(txt=>{
-    if(!txt) return; var sv=_verNum(txt), lv=_verNum(APP_VERSION);
-    if(sv>0&&lv>0?sv>lv:txt.trim()!==APP_VERSION) document.getElementById('update-banner').style.display='block';
+    if(!txt) return; var sv=_soPhienBan(txt), lv=_soPhienBan(CAU_HINH.PHIEN_BAN);
+    if(sv>0&&lv>0?sv>lv:txt.trim()!==CAU_HINH.PHIEN_BAN) document.getElementById('update-banner').style.display='block';
   }).catch(()=>{});
 }
-function doUpdateNow(){ location.replace(location.origin+location.pathname+'?u='+Date.now()); }
-setTimeout(checkForUpdate,4000); setInterval(checkForUpdate,3*60*1000);
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ checkForUpdate(); pushReminders(); } });
+function capNhatNgay(){ location.replace(location.origin+location.pathname+'?u='+Date.now()); }
 
-// ===== TIỆN ÍCH (định dạng tiền/ngày) + 2. DU_LIEU_TINH (công ty, giai đoạn) — sẽ sắp lại theo mục 4.2 ở bước đổi cấu trúc =====
-const $=id=>document.getElementById(id);
-const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const pad=n=>String(n).padStart(2,'0');
-function fmtDate(ts){ if(!ts) return ''; const d=new Date(ts); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
-function fmtDT(ts){ if(!ts) return ''; const d=new Date(ts); return fmtDate(ts)+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
-function toISO(ts){ const d=new Date(ts); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
-function fromISO(s){ if(!s) return 0; const [y,m,d]=s.split('-').map(Number); if(!y||!m||!d) return 0; return new Date(y,m-1,d,12).getTime(); } // luôn 12h trưa → so ngày không lệch múi giờ
-function today0(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
-function dl(ts){ return Math.floor((ts-today0())/86400000); } // số ngày còn lại (âm = đã qua)
-function addMonths(ts,m){ const d=new Date(ts); return new Date(d.getFullYear(),d.getMonth()+m,d.getDate(),12).getTime(); }
-function fmtMoney(n){ n=Number(n)||0; return n.toLocaleString('vi-VN')+' đ'; }
-function fmtShort(n){ n=Number(n)||0; const a=Math.abs(n), s=n<0?'-':''; if(a>=1e9) return s+(a/1e9).toLocaleString('vi-VN',{maximumFractionDigits:2})+' tỷ'; if(a>=1e6) return s+(a/1e6).toLocaleString('vi-VN',{maximumFractionDigits:1})+' tr'; return s+a.toLocaleString('vi-VN')+' đ'; }
-function parseMoney(s){ return Number(String(s||'').replace(/[^\d]/g,''))||0; }
-function fmtIn(el){ const n=parseMoney(el.value); el.value=n?n.toLocaleString('vi-VN'):''; }
-const money=n=>n?Number(n).toLocaleString('vi-VN'):'';
-let _toastT; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=m; t.hidden=false; clearTimeout(_toastT); _toastT=setTimeout(()=>t.hidden=true,3000); }
+// ===== 2. DU_LIEU_TINH — danh sách công ty, trạng thái, loại hợp đồng, loại bảo lãnh… (mục 1.4) =====
+const CONG_TY = { PVA:{ ten:'Công ty CP Xây lắp công trình Phúc Vinh An', tenVietTat:'PVA', ghiChu:'tên cũ: Công ty CP Xây dựng 439' },
+                  '379':{ ten:'Công ty CP 379 Việt Nam', tenVietTat:'379' },
+                  '279':{ ten:'Công ty TNHH Đầu tư và Xây lắp 279', tenVietTat:'279' } };
+const MA_CONG_TY = ['PVA','379','279'];
+const TRANG_THAI = { dangThiCong:'Đang thi công', choNghiemThuHoanThanh:'Chờ nghiệm thu hoàn thành', dangBaoHanh:'Đang bảo hành', choQuyetToan:'Chờ quyết toán', daXong:'Đã xong', tamDung:'Tạm dừng', biChamDut:'Bị chấm dứt' };
+const LOAI_HOP_DONG = { tronGoi:'Trọn gói', donGiaCoDinh:'Đơn giá cố định', donGiaDieuChinh:'Đơn giá điều chỉnh' };
+const LOAI_PHU_LUC = { dieuChinhGia:'Điều chỉnh giá trị', giaHan:'Gia hạn thời gian', caHai:'Cả hai' };
+const LOAI_BAO_LANH = { thucHienHopDong:'Bảo lãnh thực hiện hợp đồng', tamUng:'Bảo lãnh tạm ứng', baoHanh:'Bảo lãnh bảo hành' };
+const HINH_THUC_BAO_HANH = { giuTien:'Chủ đầu tư giữ tiền', baoLanh:'Nộp thư bảo lãnh bảo hành', caHai:'Cả hai' };
+const LOAI_HOAN_TRA = { baoHanh:'Tiền giữ bảo hành', quyetToan:'Tiền giữ chờ quyết toán' };
+const LY_DO_HOAN_TRA = { phatHanhBaoLanh:'Phát hành thư bảo lãnh bảo hành', hetBaoHanh:'Hết thời gian bảo hành', duyetQuyetToan:'Quyết toán được duyệt', khac:'Khác' };
+const LOAI_MOC = { hetBaoHanh:'Hết bảo hành', hetBaoLanh:'Hết hạn bảo lãnh', hoanThanhHopDong:'Đến hạn hoàn thành hợp đồng', khac:'Mốc tự thêm' };
+const TEN_BANG = { hopDong:'Hợp đồng', phuLuc:'Phụ lục', tamUng:'Tạm ứng', thanhToan:'Đợt thanh toán', hoanTra:'Hoàn trả', baoLanh:'Bảo lãnh', keHoachTienVe:'Kế hoạch tiền về', fileDinhKem:'File đính kèm', nhacNho:'Nhắc hạn', congTy:'Công ty' };
+const BANG_CON = ['phuLuc','tamUng','thanhToan','hoanTra','baoLanh'];   // các bảng treo dưới hợp đồng theo hopDongId
 
-const PHASE={active:'🔵 Đang thi công',warranty:'🟢 Đang bảo hành',expired:'🟠 Hết bảo hành',settling:'🟣 Chờ quyết toán',settled:'✅ Đã quyết toán',closed:'⚫ Đã thanh lý'};
-const badge=p=>`<span class="badge s-${p}">${PHASE[p]||p}</span>`;
-// Giai đoạn tự suy ra từ ngày tháng — người dùng chỉ cần bấm "Thanh lý" khi kết thúc hợp đồng
-function phase(c){ if(c.status==='closed') return 'closed'; if(c.status==='settling') return 'settling'; if(c.status==='settled') return 'settled'; if(c.warrantyEnd&&dl(c.warrantyEnd)<0) return 'expired'; if(c.handoverDate&&dl(c.handoverDate)<=0) return 'warranty'; return 'active'; }
+// ===== TIỆN ÍCH: định dạng tiền / ngày, đọc ô nhập =====
+const $ = id => document.getElementById(id);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+function tien(n){ n=Math.round(Number(n)||0); return n.toLocaleString('vi-VN'); }                       // 15.900.000.000
+function tienD(n){ return tien(n)+' đ'; }
+function tienNgan(n){ n=Number(n)||0; const a=Math.abs(n), s=n<0?'-':''; if(a>=1e9) return s+(a/1e9).toLocaleString('vi-VN',{maximumFractionDigits:2})+' tỷ'; if(a>=1e6) return s+(a/1e6).toLocaleString('vi-VN',{maximumFractionDigits:1})+' tr'; return s+tien(a); }
+function docTien(s){ return Number(String(s||'').replace(/[^\d]/g,''))||0; }                            // '12.500.000' → 12500000
+function dinhDangO(el){ const n=docTien(el.value); el.value=n?tien(n):''; }
+function ngayVN(iso){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return ''; return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4); }
+function homNay(){ const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function luc(){ return new Date().toISOString(); }                                                       // thời điểm ghi lịch sử: ISO 8601 (quy tắc 12)
+function lucVN(iso){ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
+function thangVN(t){ return /^\d{4}-\d{2}$/.test(t)?t.slice(5,7)+'/'+t.slice(0,4):/^\d{4}-Q\d$/.test(t)?'Quý '+t.slice(6)+'/'+t.slice(0,4):t; }
+const layO=(o,p)=>String(p).split('.').reduce((x,k)=>x==null?undefined:x[k],o);
+const datO=(o,p,v)=>{ const ks=String(p).split('.'); let x=o; ks.slice(0,-1).forEach(k=>{ if(x[k]==null||typeof x[k]!=='object') x[k]={}; x=x[k]; }); x[ks[ks.length-1]]=v; return o; };
+let _toastT; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=m; t.hidden=false; clearTimeout(_toastT); _toastT=setTimeout(()=>t.hidden=true,3500); }
+const tenCongTy = id => (DL.congTy[id]&&DL.congTy[id].ten)||(CONG_TY[id]&&CONG_TY[id].ten)||id||'';
+const badgeTrangThai = tt => `<span class="badge tt-${esc(tt||'dangThiCong')}">${esc(TRANG_THAI[tt]||tt||'—')}</span>`;
+function chonOptions(ds, gt, rong){ const o=rong!=null?`<option value="">${esc(rong)}</option>`:''; return o+Object.entries(ds).map(([k,v])=>`<option value="${esc(k)}" ${String(gt)===String(k)?'selected':''}>${esc(v)}</option>`).join(''); }
 
-// ===== 3. DANG_NHAP — email + mật khẩu Firebase Auth, chung với app Duyệt Chi =====
-let currentUser=null, userName='', userRole='', sites=[];
-const isDung=()=>userRole==='dung';
-async function doLogin(){
+// ----- FORM dùng chung: mô tả các ô → vẽ modal → đọc lại giá trị -----
+// Ô: {k:'baoHanh.soThang', nhan:'…', kieu:'text'|'tien'|'so'|'ngay'|'chon'|'check'|'vanBan'|'goiY', ds:{}, goiY:[], batBuoc, hint, nua (đứng chung 1 hàng với ô trước), choAm (tiền được âm), hienKhi:'lienDanh.co', onInput}
+function moModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
+function dongModal(){ $('modal-bg').hidden=true; }
+function veO(o, gt){
+  const id='f-'+o.k.replace(/\./g,'_'), v=layO(gt,o.k), nhan=`<label class="f">${esc(o.nhan)}${o.batBuoc?' *':''}</label>`;
+  const att=`id="${id}" ${o.onInput?`oninput="${o.onInput}"`:''}`;
+  let inp='';
+  if(o.kieu==='tien') inp=`<input ${att} inputmode="numeric" value="${v?tien(Math.abs(Number(v))):''}" oninput="dinhDangO(this);${o.onInput||''}" placeholder="${esc(o.placeholder||'0')}">`+(o.choAm?`<label class="ck" style="margin-top:4px"><input type="checkbox" id="${id}-am" ${Number(v)<0?'checked':''}> Giá trị GIẢM (số âm)</label>`:'');
+  else if(o.kieu==='so') inp=`<input ${att} inputmode="numeric" value="${v!=null?esc(v):''}" placeholder="${esc(o.placeholder||'')}">`;
+  else if(o.kieu==='ngay') inp=`<input ${att} type="date" value="${esc(v||'')}">`;
+  else if(o.kieu==='chon') inp=`<select ${att}>${chonOptions(o.ds, v!=null?v:(o.macDinh!=null?o.macDinh:''), o.rong)}</select>`;
+  else if(o.kieu==='check') return `<div id="w-${id}" ${o.hienKhi?'data-hienkhi="f-'+o.hienKhi.replace(/\./g,'_')+'"':''}><label class="ck"><input type="checkbox" ${att} ${v?'checked':''} onchange="capNhatHienKhi()"> ${esc(o.nhan)}</label>${o.hint?`<div class="hint">${o.hint}</div>`:''}</div>`;
+  else if(o.kieu==='vanBan') inp=`<textarea ${att}>${esc(v||'')}</textarea>`;
+  else if(o.kieu==='goiY') inp=`<input ${att} list="${id}-dl" value="${esc(v||'')}" placeholder="${esc(o.placeholder||'')}"><datalist id="${id}-dl">${[...new Set((o.goiY||[]).filter(Boolean))].sort().map(x=>`<option value="${esc(x)}">`).join('')}</datalist>`;
+  else inp=`<input ${att} value="${esc(v||'')}" placeholder="${esc(o.placeholder||'')}">`;
+  return `<div id="w-${id}" ${o.hienKhi?'data-hienkhi="f-'+o.hienKhi.replace(/\./g,'_')+'"':''}>${nhan}${inp}${o.hint?`<div class="hint">${o.hint}</div>`:''}</div>`;
+}
+function capNhatHienKhi(){ document.querySelectorAll('[data-hienkhi]').forEach(w=>{ const c=$(w.dataset.hienkhi); w.hidden=!(c&&c.checked); }); }
+function moForm(tieuDe, cacO, gt, luuHtml){
+  gt=gt||{}; let html=`<h3>${tieuDe}</h3>`, i=0;
+  while(i<cacO.length){ const o=cacO[i];
+    if(o.tieuDe){ html+=`<h4 style="margin:14px 0 2px;font-size:14px;color:var(--blue-dark)">${esc(o.tieuDe)}</h4>`; i++; continue; }
+    if(cacO[i+1]&&cacO[i+1].nua){ html+=`<div class="row" style="align-items:flex-start">${veO(o,gt)}${veO(cacO[i+1],gt)}</div>`; i+=2; }
+    else { html+=veO(o,gt); i++; } }
+  html+=`<div style="margin-top:14px">${luuHtml}</div>`;
+  moModal(html); capNhatHienKhi();
+  cacO.forEach(o=>{ if(o.kieu==='check'){ const c=$('f-'+o.k.replace(/\./g,'_')); if(c) c.addEventListener('change',capNhatHienKhi); } });
+}
+function docForm(cacO, vao){
+  const kq=vao||{};
+  cacO.forEach(o=>{ if(o.tieuDe) return; const id='f-'+o.k.replace(/\./g,'_'), el=$(id); if(!el) return; let v;
+    if(o.kieu==='tien'){ v=docTien(el.value); if(o.choAm&&$(id+'-am')&&$(id+'-am').checked) v=-v; }
+    else if(o.kieu==='so') v=Number(String(el.value).replace(',','.'))||0;
+    else if(o.kieu==='check') v=!!el.checked;
+    else v=String(el.value||'').trim();
+    datO(kq,o.k,v); });
+  return kq;
+}
+function batBuoc(cacO, kq){ const thieu=cacO.filter(o=>o.batBuoc&&!o.tieuDe).filter(o=>{ const v=layO(kq,o.k); return v==null||v===''||(o.kieu==='tien'&&!v); }); if(thieu.length) throw new Error('Cần nhập: '+thieu.map(o=>o.nhan).join(', ')); }
+// ===== 3. DANG_NHAP — email + mật khẩu Firebase Auth, chung tài khoản app Duyệt Chi (chốt 30/09: KHÔNG dùng tên + PIN) =====
+firebase.initializeApp(CAU_HINH.firebase);
+const db = firebase.database();
+let nguoiHienTai=null, tenNguoiDung='', vaiTroDuyetChi='';
+const laGiamDoc = () => vaiTroDuyetChi==='dung';   // "GD" trong spec = tài khoản role 'dung' của Duyệt Chi
+async function dangNhap(){
   const email=$('l-email').value.trim(), pass=$('l-pass').value, btn=$('l-btn'), err=$('l-err');
   if(!email||!pass){ err.textContent='Nhập email và mật khẩu'; return; }
   btn.disabled=true; btn.textContent='⏳ Đang đăng nhập...'; err.textContent='';
   try{ await firebase.auth().signInWithEmailAndPassword(email,pass); }
-  catch(e){
-    err.textContent = /user-not-found|wrong-password|invalid-credential/.test(e.code)?'Email hoặc mật khẩu không đúng'
-      : e.code==='auth/network-request-failed'?'Lỗi mạng — kiểm tra WiFi/4G':'Đăng nhập thất bại';
-  }
+  catch(e){ err.textContent=/user-not-found|wrong-password|invalid-credential/.test(e.code)?'Email hoặc mật khẩu không đúng':e.code==='auth/network-request-failed'?'Lỗi mạng — kiểm tra WiFi/4G':'Đăng nhập thất bại'; }
   btn.disabled=false; btn.textContent='Đăng nhập';
 }
-function doLogout(){ firebase.auth().signOut(); }
+function dangXuat(){ firebase.auth().signOut(); }
 firebase.auth().onAuthStateChanged(async user=>{
-  currentUser=user;
+  nguoiHienTai=user;
   $('login-screen').hidden=!!user; $('app').hidden=true; $('wait-screen').hidden=true;
   if(!user) return;
-  let prof={};
-  try{ prof=(await db.ref('duyetchi/userRoles/'+user.uid).get()).val()||{}; }catch(e){}
-  userName=prof.name||user.email||''; userRole=prof.role||'';
-  if(prof.approved!==true && prof.role!=='dung'){ $('wait-screen').hidden=false; return; }
-  $('app').hidden=false; $('hdr-user').textContent=userName;
-  $('more-info').textContent='Đăng nhập: '+userName+' · Bản '+APP_VERSION;
-  renderNotify(); attach();
+  let ho={}; try{ ho=(await db.ref('duyetchi/userRoles/'+user.uid).get()).val()||{}; }catch(e){}
+  tenNguoiDung=ho.name||user.email||''; vaiTroDuyetChi=ho.role||'';
+  if(ho.approved!==true && !laGiamDoc()){ $('wait-screen').hidden=false; return; }
+  $('app').hidden=false; $('hdr-user').textContent=tenNguoiDung+(laGiamDoc()?' (GD)':'');
+  $('more-info').textContent='Đăng nhập: '+tenNguoiDung+' · '+(laGiamDoc()?'Giám đốc':'Nhân viên')+' · Bản '+CAU_HINH.PHIEN_BAN;
+  dangKyNguoiDung(); veThongBao(); ketNoiDuLieu();
 });
 
-// ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (+ 5. LICH_SU: hàm log) =====
-let contracts={}, filterPhase='', filterCo='', _firstLoad=true;
-const coOk=c=>!filterCo||(c.company||'')===filterCo; // lọc theo công ty đang chọn
-function attach(){
-  db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); sites=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); renderSites(); renderSiteFilter(); },()=>{});
-  db.ref(ROOT+'/contracts').on('value',s=>{ contracts=s.val()||{}; renderAll(); if(_firstLoad){ _firstLoad=false; pushReminders(); } },
-    e=>{ $('list').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh hopdong) có thể chưa được đưa lên máy chủ.</div>'; });
+// ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3, tất cả dưới hopdong/) =====
+const DL = { hopDong:{}, phuLuc:{}, tamUng:{}, thanhToan:{}, hoanTra:{}, baoLanh:{}, nhacNho:{}, yeuCauXoa:{}, lichSu:{}, congTy:{}, nguoiDung:{} };
+let danhSachCongTrinh=[], _daKetNoi=false, _lanDauCoDuLieu=false;
+const duongDan = p => CAU_HINH.GOC+'/'+p;
+const ref = p => db.ref(duongDan(p));
+function ketNoiDuLieu(){
+  if(_daKetNoi) return; _daKetNoi=true;
+  const loi=e=>{ $('ds-hopdong').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh hopdong) có thể chưa được đưa lên máy chủ.</div>'; };
+  Object.keys(DL).forEach(bang=>{ ref(bang).on('value',s=>{ DL[bang]=s.val()||{}; veTatCa(); if(bang==='hopDong'&&!_lanDauCoDuLieu){ _lanDauCoDuLieu=true; setTimeout(()=>{ dongBoNhacNho(); nhacTrenMay(); },800); } }, bang==='hopDong'?loi:()=>{}); });
+  db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); danhSachCongTrinh=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); veCongTrinh(); },()=>{});
 }
-const who=()=>({by:userName,uid:currentUser.uid,ts:Date.now()});
-function log(cid,type,text){ return db.ref(ROOT+'/log/'+cid).push(Object.assign({type,text},who())); }
-const parties=k=>Object.values(contracts).map(c=>c[k]);
-// danh sách công trình: của Duyệt Chi + tên đã ghi trong hợp đồng (nếu có tên lạ)
-const allSites=()=>[...new Set(sites.concat(Object.values(contracts).map(c=>c.site).filter(Boolean)))];
-function renderSiteFilter(){ const el=$('f-site'), cur=el.value; el.innerHTML='<option value="">🏗 Tất cả công trình</option>'+allSites().map(s=>`<option value="${esc(s)}" ${s===cur?'selected':''}>${esc(s)}</option>`).join(''); }
-function renderSites(){
-  $('site-add').hidden=!isDung();
-  $('site-list').innerHTML=sites.length?sites.map((s,i)=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border)"><div style="font-size:15px">🏗 ${esc(s)}</div>${isDung()?`<button class="btn sm sec" style="flex:0 0 auto;color:var(--red)" onclick="delSite(${i})">✕</button>`:''}</div>`).join('')
-    :'<div class="hint">Chưa có công trình nào. '+(isDung()?'Thêm ở ô dưới.':'Nhờ D thêm trong app Duyệt Chi hoặc ở đây.')+'</div>';
+function dangKyNguoiDung(){ // mỗi lần đăng nhập ghi lại hồ sơ của mình vào hopdong/nguoiDung (danh sách người dùng của app)
+  try{ ref('nguoiDung/'+nguoiHienTai.uid).update({ ten:tenNguoiDung, email:nguoiHienTai.email||'', vaiTro:laGiamDoc()?'GD':'NV', dangHoatDong:true, lanCuoi:luc() }); }catch(e){}
 }
-async function addSite(){ const s=$('new-site').value.trim(); if(!s) return; if(sites.includes(s)) return toast('Đã có công trình này');
-  try{ await db.ref('duyetchi/meta/sites').set(sites.concat([s])); $('new-site').value=''; toast('✅ Đã thêm: '+s); }catch(e){ toast('❌ '+e.message); } }
-async function delSite(i){ const s=sites[i]; if(!confirm('Xoá "'+s+'" khỏi danh sách công trình (cả app Duyệt Chi)? Hợp đồng đã ghi tên này vẫn giữ nguyên.')) return;
-  try{ await db.ref('duyetchi/meta/sites').set(sites.filter((x,j)=>j!==i)); toast('🗑 Đã xoá'); }catch(e){ toast('❌ '+e.message); } }
+// Gom dữ liệu của 1 hợp đồng để đưa vào TINH_TOAN
+function duLieuHopDong(id){ const c={ hopDong:Object.assign({id},DL.hopDong[id]||{}) }; BANG_CON.forEach(b=>c[b]=DL[b][id]||{}); return c; }
+function ketQua(id){ return TINH_TOAN.tinhHopDong(duLieuHopDong(id)); }
+function danhSachBanGhi(bang, hopDongId){ return Object.entries((DL[bang]||{})[hopDongId]||{}).map(([id,x])=>Object.assign({id},x)); }
+async function ghiNhieu(capNhat){ await db.ref(CAU_HINH.GOC).update(capNhat); }
+async function bam(btn, viec){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await viec(); dongModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
 
+// ===== 5. LICH_SU — mọi thao tác ghi đều để lại vết: ai, lúc nào, bảng nào, bản ghi nào, trường nào, cũ → mới (quy tắc 13) =====
+const TRUONG_BO_QUA = ['taoBoi','taoLuc','suaBoi','suaLuc','id','fileDinhKem','keHoachTienVe'];
+function phang(o, tienTo){ // {baoHanh:{soThang:12}} → {'baoHanh.soThang':12}; bỏ object con phức tạp
+  const kq={}; Object.entries(o||{}).forEach(([k,v])=>{ const kk=tienTo?tienTo+'.'+k:k; if(TRUONG_BO_QUA.includes(k)) return;
+    if(v&&typeof v==='object'&&!Array.isArray(v)) Object.assign(kq,phang(v,kk)); else kq[kk]=v; }); return kq;
+}
+function soSanh(cu, moi){ const a=phang(cu), b=phang(moi), ks=[...new Set([...Object.keys(a),...Object.keys(b)])], kq=[];
+  ks.forEach(k=>{ const x=a[k]==null?'':a[k], y=b[k]==null?'':b[k]; if(String(x)!==String(y)) kq.push({truong:k,giaTriCu:x,giaTriMoi:y}); }); return kq; }
+function dongLichSu(bang, banGhiId, hopDongId, hanhDong, truong, giaTriCu, giaTriMoi){
+  return { nguoi:tenNguoiDung, uid:nguoiHienTai?nguoiHienTai.uid:'', luc:luc(), bang, banGhiId:banGhiId||'', hopDongId:hopDongId||'', hanhDong, truong:truong||'', giaTriCu:giaTriCu==null?'':giaTriCu, giaTriMoi:giaTriMoi==null?'':giaTriMoi };
+}
+function khoaMoi(){ return db.ref().push().key; }
+// Lưu 1 bản ghi (tạo hoặc sửa) + ghi lịch sử từng trường thay đổi trong CÙNG một lần ghi (không bao giờ thiếu vết)
+async function luuBanGhi(bang, hopDongId, id, moi, tomTat){
+  const duongBang = bang==='hopDong' ? 'hopDong/'+(id||'') : bang+'/'+hopDongId+'/'+(id||'');
+  const cu = bang==='hopDong' ? DL.hopDong[id] : ((DL[bang]||{})[hopDongId]||{})[id];
+  const up={}; const now=luc();
+  if(!id){ id=khoaMoi(); const dl=Object.assign({},moi,{taoBoi:tenNguoiDung,taoLuc:now,suaBoi:tenNguoiDung,suaLuc:now});
+    up[(bang==='hopDong'?'hopDong/':bang+'/'+hopDongId+'/')+id]=dl;
+    up['lichSu/'+khoaMoi()]=dongLichSu(bang,id,bang==='hopDong'?id:hopDongId,'tao','',''
+      ,tomTat||'');
+  } else {
+    const khac=soSanh(cu||{},moi); if(!khac.length){ toast('Không có gì thay đổi'); return id; }
+    khac.forEach(t=>{ up[duongBang+'/'+t.truong.replace(/\./g,'/')]=t.giaTriMoi===''?null:t.giaTriMoi; });
+    up[duongBang+'/suaBoi']=tenNguoiDung; up[duongBang+'/suaLuc']=now;
+    khac.forEach(t=>{ up['lichSu/'+khoaMoi()]=dongLichSu(bang,id,bang==='hopDong'?id:hopDongId,'sua',t.truong,t.giaTriCu,t.giaTriMoi); });
+  }
+  await ghiNhieu(up); return id;
+}
+// Xoá thật — CHỈ giám đốc (quy tắc 14). Xoá hợp đồng thì xoá luôn mọi bảng con + nhắc hạn của nó. Ghi lịch sử 'xoa'.
+async function xoaBanGhi(bang, hopDongId, id, tomTat){
+  if(!laGiamDoc()) throw new Error('Chỉ giám đốc được xoá. Hãy bấm "Yêu cầu xoá".');
+  const up={};
+  if(bang==='hopDong'){ up['hopDong/'+id]=null; BANG_CON.forEach(b=>up[b+'/'+id]=null);
+    Object.entries(DL.nhacNho).forEach(([k,n])=>{ if(n.hopDongId===id) up['nhacNho/'+k]=null; }); }
+  else up[bang+'/'+hopDongId+'/'+id]=null;
+  up['lichSu/'+khoaMoi()]=dongLichSu(bang,id,bang==='hopDong'?id:hopDongId,'xoa','',tomTat||'','');
+  await ghiNhieu(up);
+}
+// Nhân viên: gửi yêu cầu xoá, giám đốc duyệt ở tab Khác
+async function yeuCauXoa(bang, hopDongId, id, tomTat){
+  const lyDo=prompt('Lý do xin xoá '+TEN_BANG[bang]+' "'+tomTat+'"? (giám đốc sẽ thấy và duyệt)'); if(lyDo===null) return;
+  await ref('yeuCauXoa').push({ bang, banGhiId:id, hopDongId:bang==='hopDong'?id:hopDongId, tomTat, nguoiYeuCau:tenNguoiDung, uid:nguoiHienTai.uid, luc:luc(), lyDo:lyDo.trim(), trangThai:'cho' });
+  toast('✅ Đã gửi yêu cầu xoá, chờ giám đốc duyệt');
+}
+function yeuCauXoaDangCho(bang, id){ return Object.entries(DL.yeuCauXoa).find(([k,y])=>y.bang===bang&&y.banGhiId===id&&y.trangThai==='cho'); }
+// Nút xoá dùng chung cho mọi bảng: GD → xoá thật (hỏi lại), NV → yêu cầu xoá / rút yêu cầu
+function nutXoa(bang, hopDongId, id, tomTat){
+  const yc=yeuCauXoaDangCho(bang,id);
+  if(yc) return `<div class="warn">🗑 ${esc(yc[1].nguoiYeuCau)} xin xoá (${lucVN(yc[1].luc)})${yc[1].lyDo?': '+esc(yc[1].lyDo):''}</div>`+
+    (laGiamDoc()?`<div class="row"><button class="btn red" onclick="duyetXoa('${yc[0]}',true,this)">✅ Đồng ý xoá</button><button class="btn sec" onclick="duyetXoa('${yc[0]}',false,this)">✖ Không xoá</button></div>`
+      :`<button class="btn sec" onclick="rutYeuCauXoa('${yc[0]}')">↩️ Rút lại yêu cầu xoá</button>`);
+  return laGiamDoc()?`<button class="btn sec" style="color:var(--red)" onclick="xoaNgay('${bang}','${hopDongId}','${id}',this)">🗑 Xoá ${esc(TEN_BANG[bang].toLowerCase())}</button>`
+    :`<button class="btn sec" style="color:var(--red)" onclick="yeuCauXoa('${bang}','${hopDongId}','${id}',${JSON.stringify(tomTat).replace(/"/g,'&quot;')})">🗑 Yêu cầu xoá (giám đốc duyệt)</button>`;
+}
+async function xoaNgay(bang, hopDongId, id, btn){
+  const tomTat=tomTatBanGhi(bang,hopDongId,id); if(!confirm('Xoá '+TEN_BANG[bang]+' "'+tomTat+'"?'+(bang==='hopDong'?' Toàn bộ phụ lục, tạm ứng, thanh toán, bảo lãnh, hoàn trả của nó cũng bị xoá.':'')+' Không hoàn tác được.')) return;
+  try{ await xoaBanGhi(bang,hopDongId,id,tomTat); toast('🗑 Đã xoá'); if(bang==='hopDong') dongChiTiet(); else dongModal(); }catch(e){ toast('❌ '+e.message); }
+}
+async function duyetXoa(k, dongY, btn){
+  const y=DL.yeuCauXoa[k]; if(!y) return;
+  if(dongY){ if(!confirm('Đồng ý xoá '+TEN_BANG[y.bang]+' "'+(y.tomTat||'')+'"?')) return;
+    try{ await xoaBanGhi(y.bang,y.hopDongId,y.banGhiId,y.tomTat); }catch(e){ return toast('❌ '+e.message); } }
+  await ref('yeuCauXoa/'+k).update({ trangThai:dongY?'dongY':'tuChoi', nguoiDuyet:tenNguoiDung, lucDuyet:luc() });
+  toast(dongY?'🗑 Đã xoá':'✖ Đã từ chối'); if(dongY&&y.bang==='hopDong') dongChiTiet(); else dongModal();
+}
+async function rutYeuCauXoa(k){ await ref('yeuCauXoa/'+k).update({ trangThai:'rut', lucDuyet:luc() }); toast('Đã rút yêu cầu'); dongModal(); }
+function tomTatBanGhi(bang, hopDongId, id){
+  if(bang==='hopDong'){ const h=DL.hopDong[id]||{}; return (h.soHopDong||'')+' · '+(h.tenGoiThau||''); }
+  const x=((DL[bang]||{})[hopDongId]||{})[id]||{}, h=DL.hopDong[hopDongId]||{};
+  return (h.soHopDong||'')+' · '+TEN_BANG[bang]+' '+(x.dot||x.soPhuLuc||LOAI_BAO_LANH[x.loai]||LOAI_HOAN_TRA[x.loai]||'')+' '+tienD(x.soTien||x.giaTriDieuChinh||x.giaTriNghiemThu||0);
+}
 // ===== 6. TINH_TOAN — toàn bộ công thức mục 1.5 của docs/hopdong/CLAUDE.md, thuần túy, KHÔNG đụng giao diện =====
 // Cách dùng:
 //   TINH_TOAN.tinhHopDong({hopDong, phuLuc, tamUng, thanhToan, hoanTra})  → bảng số của MỘT hợp đồng
@@ -387,6 +558,11 @@ const TINH_TOAN = (function () {
       conPhaiThu: conPhaiThu,
       conPhaiThuTrongDo: { giuBaoHanh: giuBaoHanhDangGiu, giuQuyetToan: giuQuyetToanDangGiu, khac: conPhaiThu - giuBaoHanhDangGiu - giuQuyetToanDangGiu },
       conLaiChuaNghiemThu: giaTriHH - nghiemThuLuyKe, // tham khảo (không thuộc 6 ô dashboard): phần hợp đồng chưa nghiệm thu
+      // "Còn lại chưa thi công" (anh Dũng yêu cầu 29/09, chốt giữ 30/09): đã bàn giao/quyết toán/xong → 0;
+      // có nhập tay khoiLuongDaThucHien.soTien → giaTriHienHanh − số đó; không nhập → tạm = giaTriHienHanh − nghiệm thu
+      conLaiChuaThiCong: (function(){ const kl=soNguyen(hd.khoiLuongDaThucHien&&hd.khoiLuongDaThucHien.soTien);
+        const xong=laNgay(bh.ngayNghiemThuBanGiao)||['choQuyetToan','daXong','biChamDut'].includes(hd.trangThai);
+        return xong?0:Math.max(0,giaTriHH-(kl>0?kl:nghiemThuLuyKe)); })(),
       daDuyetQuyetToan: daDuyetQuyetToan(hd), doanhThuCuoiCung: doanhThuCuoiCung(hd, du.phuLuc),
       ngayHoanThanhHienHanh: ngayHoanThanhHienHanh(hd, du.phuLuc), ngayHetBaoHanh: ngayHetBH,
       soPhuLuc: danhSach(du.phuLuc).length, soDotTamUng: danhSach(du.tamUng).length, soDotThanhToan: danhSach(du.thanhToan).length
@@ -401,7 +577,7 @@ const TINH_TOAN = (function () {
     const ds = danhSach(danhSachKq).filter(k => caBa ? !k.noiBo : k.congTyId === congTyId);
     const t = { soHopDong: ds.length, soDangThucHien: 0, giaTriDangThucHien: 0, soChoQuyetToan: 0, conDongChoQuyetToan: 0 };
     ['giaTriHienHanh', 'nghiemThuLuyKe', 'tienDaVe', 'tamUngLuyKe', 'thuHoiTamUngLuyKe', 'tamUngChuaThuHoi', 'thucNhanLuyKe',
-      'conPhaiThu', 'giuBaoHanhDangGiu', 'giuQuyetToanDangGiu', 'conLaiChuaNghiemThu', 'doanhThuCuoiCung'].forEach(f => t[f] = 0);
+      'conPhaiThu', 'giuBaoHanhDangGiu', 'giuQuyetToanDangGiu', 'conLaiChuaNghiemThu', 'conLaiChuaThiCong', 'doanhThuCuoiCung'].forEach(f => t[f] = 0);
     ds.forEach(k => {
       Object.keys(t).forEach(f => { if (typeof k[f] === 'number' && f !== 'soHopDong') t[f] += soNguyen(k[f]); });
       if (k.dangThucHien) { t.soDangThucHien++; t.giaTriDangThucHien += soNguyen(k.giaTriHienHanh); }
@@ -442,511 +618,463 @@ const TINH_TOAN = (function () {
     tinhHopDong, tinhTongHop, dongTien, cacMoc };
 })();
 // ===== HẾT 6. TINH_TOAN =====
+// ===== ĐIỀU PHỐI MÀN HÌNH =====
+function chuyenTab(t){ ['tongquan','hopdong','nhac','khac'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); }); window.scrollTo(0,0); }
+let _veT,_nhacT; function veTatCa(){ clearTimeout(_veT); _veT=setTimeout(()=>{ veDashboard(); veDanhSach(); veNhacHan(); veQuanTri(); veCongTrinh(); if(chiTietId) veChiTiet(); if(_lanDauCoDuLieu){ clearTimeout(_nhacT); _nhacT=setTimeout(dongBoNhacNho,500); } },30); }
+function tatCaKetQua(){ return Object.keys(DL.hopDong).map(id=>Object.assign({id},ketQua(id))); }
 
-// (TẠM) calc() cũ của giao diện hiện tại, tính trên cấu trúc dữ liệu cũ (contracts/addenda/advances/payments).
-// Bước tiếp theo (đổi cấu trúc dữ liệu theo mục 4.3) sẽ thay toàn bộ calc()/sumOf() bằng TINH_TOAN ở trên.
-// Tính toán tài chính 1 hợp đồng.
-//  - Tổng giá trị = HĐ + Σ phụ lục (phụ lục giảm ghi số âm)
-//  - Đã thanh toán = Σ giá trị các lần thanh toán khối lượng (chưa trừ gì) → so với tổng giá trị
-//  - Mỗi lần thanh toán KL: trừ thu hồi tạm ứng + giữ lại bảo hành → thực nhận
-//  - Lần "hoàn trả tiền bảo hành" (type=bh): chỉ cộng vào thực nhận, trừ khỏi số đang bị giữ
-function calc(c){
-  const val=Number(c.value)||0;
-  const add=Object.values(c.addenda||{}).reduce((s,a)=>s+(Number(a.value)||0),0);
-  const settle=Number(c.settleValue)||0, total=settle>0?settle:val+add; // đã quyết toán → tổng theo giá trị quyết toán được duyệt
-  const adv=Object.values(c.advances||{}).reduce((s,a)=>s+(Number(a.value)||0),0);
-  let paid=0,recov=0,retain=0,refund=0,hold=0,refundQt=0,net=0,nPay=0;
-  Object.values(c.payments||{}).forEach(p=>{ const v=Number(p.value)||0;
-    if(p.type==='bh'){ refund+=v; net+=v; }
-    else if(p.type==='qt'){ refundQt+=v; net+=v; }
-    else { const r=Number(p.recover)||0, h=Number(p.retain)||0, q=Number(p.hold)||0; nPay++; paid+=v; recov+=r; retain+=h; hold+=q; net+=v-r-h-q; } });
-  // KL đã thực hiện: đã bàn giao/quyết toán → coi như xong hết; có nhập tay (doneValue) → lấy số đó; không thì tạm lấy = đã thanh toán
-  const handed=(c.handoverDate&&dl(c.handoverDate)<=0)||c.status==='settling'||c.status==='settled'||c.status==='closed';
-  const done=handed?total:(Number(c.doneValue)||0)>0?Number(c.doneValue):paid, unbuilt=Math.max(0,total-done);
-  return {val,add,settle,total,done,unbuilt,doneSrc:handed?'handed':(Number(c.doneValue)||0)>0?'manual':'paid',adv,paid,recov,retain,refund,hold,refundQt,holdLeft:hold-refundQt,nPay,advLeft:adv-recov,retainLeft:retain-refund,remain:total-paid,received:adv+net,
-    pct:total>0?Math.max(0,Math.min(100,Math.round(paid/total*100))):0,nAdd:Object.keys(c.addenda||{}).length,nAdv:Object.keys(c.advances||{}).length};
+// ===== 7. MÀN HÌNH: Dashboard — 6 ô số, dòng tiền tháng/quý (bảng + biểu đồ), chờ quyết toán, đếm việc đang nhắc (mục 1.4) =====
+let locCongTy='', kyDongTien='thang', _chart=null;
+function chonCongTyDashboard(id){ locCongTy=id; veDashboard(); }
+function doiKyDongTien(k){ kyDongTien=k; veDashboard(); }
+function veDashboard(){
+  const kq=tatCaKetQua(), t=TINH_TOAN.tinhTongHop(kq,locCongTy);
+  $('db-congty').innerHTML=[['','Cả 3 công ty']].concat(MA_CONG_TY.map(m=>[m,'Công ty '+m])).map(([k,l])=>`<div class="chip ${locCongTy===k?'on':''}" onclick="chonCongTyDashboard('${k}')">${l}</div>`).join('');
+  const dangNhac=danhSachDangNhac().length, ycx=Object.values(DL.yeuCauXoa).filter(y=>y.trangThai==='cho').length;
+  $('db-tiles').innerHTML=`
+    <div class="tile"><span>Tổng giá trị HĐ đang thực hiện</span><b>${tienD(t.giaTriDangThucHien)}</b><small>${t.soDangThucHien} hợp đồng · ${locCongTy?'công ty '+locCongTy:'cả 3, đã trừ nội bộ'}</small></div>
+    <div class="tile acc"><span>Đã nghiệm thu lũy kế</span><b>${tienD(t.nghiemThuLuyKe)}</b><small>còn ${tienNgan(t.conLaiChuaNghiemThu)} chưa nghiệm thu</small></div>
+    <div class="tile ok"><span>Tiền đã về lũy kế</span><b>${tienD(t.tienDaVe)}</b><small>tạm ứng ${tienNgan(t.tamUngLuyKe)} + thực nhận ${tienNgan(t.thucNhanLuyKe)}</small></div>
+    <div class="tile warn"><span>Còn phải thu</span><b>${tienD(t.conPhaiThu)}</b><small>tạm ứng chưa thu hồi ${tienNgan(t.tamUngChuaThuHoi)}</small></div>
+    <div class="tile"><span>Đang bị giữ bảo hành</span><b>${tienD(t.giuBaoHanhDangGiu)}</b></div>
+    <div class="tile"><span>Đang bị giữ chờ quyết toán</span><b>${tienD(t.giuQuyetToanDangGiu)}</b></div>
+    <div class="tile" style="cursor:pointer" onclick="chuyenTab('nhac')"><span>Việc đang nhắc</span><b class="${dangNhac?'neg':''}">${dangNhac}</b><small>bấm để xem</small></div>
+    <div class="tile"><span>Còn lại chưa thi công</span><b>${tienD(t.conLaiChuaThiCong)}</b><small>theo khối lượng đã thực hiện</small></div>
+    ${laGiamDoc()&&ycx?`<div class="tile" style="cursor:pointer" onclick="chuyenTab('khac')"><span>Yêu cầu xoá chờ duyệt</span><b class="neg">${ycx}</b></div>`:''}`;
+  // dòng tiền
+  $('ky-thang').className='btn sm '+(kyDongTien==='thang'?'':'sec'); $('ky-quy').className='btn sm '+(kyDongTien==='quy'?'':'sec');
+  const du=Object.keys(DL.hopDong).map(id=>duLieuHopDong(id));
+  const dt=TINH_TOAN.dongTien(du,kyDongTien,locCongTy);
+  const tongKH=dt.reduce((s,x)=>s+x.keHoach,0), tongTT=dt.reduce((s,x)=>s+x.thucTe,0);
+  $('db-dongtien').innerHTML=dt.length?`<table class="p"><thead><tr><th class="tr">Kỳ</th><th>Kế hoạch về</th><th>Thực tế về</th><th>Chênh lệch</th></tr></thead><tbody>
+    ${dt.map(x=>`<tr><td class="tr">${esc(thangVN(x.ky))}</td><td>${tien(x.keHoach)}</td><td>${tien(x.thucTe)}</td><td class="${x.thucTe-x.keHoach<0?'neg':'pos'}">${tien(x.thucTe-x.keHoach)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td class="tr">Cộng</td><td>${tien(tongKH)}</td><td>${tien(tongTT)}</td><td class="${tongTT-tongKH<0?'neg':'pos'}">${tien(tongTT-tongKH)}</td></tr></tfoot></table>`
+    :'<div class="empty">Chưa có kế hoạch tiền về hay tiền về nào. Nhập kế hoạch trong từng hợp đồng (tab Kế hoạch tiền về).</div>';
+  veBieuDo(dt);
+  // chờ quyết toán
+  const cho=kq.filter(k=>k.trangThai==='choQuyetToan'&&(locCongTy?k.congTyId===locCongTy:!k.noiBo)).sort((a,b)=>b.conPhaiThu-a.conPhaiThu);
+  $('db-choqt').innerHTML=cho.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Hợp đồng</th><th class="tr">Chủ đầu tư</th><th>Tiền còn đọng</th><th>Nộp hồ sơ</th></tr></thead><tbody>
+    ${cho.map(k=>{ const h=DL.hopDong[k.id]; return `<tr onclick="moChiTiet('${k.id}')"><td class="tr"><b>${esc(h.soHopDong)}</b><br><span class="hint">${esc(h.tenGoiThau)}</span></td><td class="tr">${esc(h.chuDauTu||'')}</td><td class="neg"><b>${tien(k.conPhaiThu)}</b></td><td>${ngayVN(h.quyetToan&&h.quyetToan.ngayNop)||'—'}</td></tr>`; }).join('')}</tbody>
+    <tfoot><tr><td class="tr" colspan="2">${cho.length} hợp đồng</td><td>${tien(cho.reduce((s,k)=>s+k.conPhaiThu,0))}</td><td></td></tr></tfoot></table></div>`
+    :'<div class="hint">Không có hợp đồng nào đang chờ quyết toán.</div>';
 }
-// Cộng dồn tài chính nhiều hợp đồng (bảng Tổng hợp + sheet Excel)
-function sumOf(list){ const t={n:0,total:0,adv:0,recov:0,advLeft:0,paid:0,remain:0,retainLeft:0,holdLeft:0,received:0,unbuilt:0,nSettling:0,settlingRemain:0};
-  list.forEach(c=>{ const k=calc(c); t.n++; if(c.status==='settling'){ t.nSettling++; t.settlingRemain+=k.remain; } ['total','adv','recov','advLeft','paid','remain','retainLeft','holdLeft','received','unbuilt'].forEach(f=>t[f]+=k[f]); });
-  t.pct=t.total>0?Math.round(t.paid/t.total*100):0; return t; }
-let sumOpen=true;
-function renderSum(){
-  const list=Object.values(contracts).filter(c=>{ const p=phase(c); return coOk(c)&&(filterPhase? p===filterPhase : p!=='closed'); });
-  const t=sumOf(list), lbl=(filterCo?'Công ty '+filterCo:'Cả 3 công ty')+' · '+(filterPhase?PHASE[filterPhase].replace(/^\S+ /,''):'chưa thanh lý')+' · '+t.n+' HĐ';
-  $('sum-card').innerHTML=`<div class="card-body" style="padding:10px 14px">
-    <div class="sec-h" style="margin-bottom:${sumOpen?'8px':'0'};cursor:pointer" onclick="sumOpen=!sumOpen;renderSum()"><h3>📊 Tổng hợp <span style="font-weight:400;font-size:13px;color:var(--text-sub)">${esc(lbl)}</span></h3><b>${sumOpen?'▾':'▸'}</b></div>
-    ${sumOpen?`<table class="fin">
-      <tr class="tot"><td>Tổng giá trị HĐ đã ký (kể cả phụ lục)</td><td>${fmtMoney(t.total)}</td></tr>
-      <tr><td>Tổng tạm ứng</td><td>${fmtMoney(t.adv)}</td></tr>
-      <tr><td class="sub">Tổng đã trừ (thu hồi) tạm ứng</td><td class="sub">${fmtMoney(t.recov)}</td></tr>
-      <tr><td>Tổng tạm ứng còn lại</td><td class="${t.advLeft>0?'neg':''}">${fmtMoney(t.advLeft)}</td></tr>
-      <tr><td>Tổng đã thanh toán (${t.pct}%)</td><td>${fmtMoney(t.paid)}</td></tr>
-      <tr class="tot"><td>Tổng giá trị HĐ còn lại chưa thanh toán</td><td>${fmtMoney(t.remain)}</td></tr>
-      <tr class="tot"><td>Tổng giá trị HĐ còn lại chưa thi công</td><td>${fmtMoney(t.unbuilt)}</td></tr>
-      <tr><td>Chờ quyết toán (${t.nSettling} HĐ) · còn phải thu</td><td class="${t.nSettling?'neg':''}">${fmtMoney(t.settlingRemain)}</td></tr>
-      <tr><td>Tiền bảo hành đang bị giữ</td><td>${fmtMoney(t.retainLeft)}</td></tr>
-      <tr><td>Tiền giữ chờ quyết toán đang bị giữ</td><td>${fmtMoney(t.holdLeft)}</td></tr>
-      <tr><td>Tổng thực nhận</td><td>${fmtMoney(t.received)}</td></tr>
-    </table><div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,t.pct)}%"></i></div>`:''}</div>`;
+function napChartJs(){ return new Promise((res,rej)=>{ if(window.Chart) return res(window.Chart); const s=document.createElement('script'); s.src=CAU_HINH.URL_CHARTJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.Chart); s.onerror=()=>rej(new Error('Không tải được Chart.js')); document.head.appendChild(s); }); }
+async function veBieuDo(dt){
+  const cv=$('db-chart'); if(!dt.length){ cv.hidden=true; if(_chart){ _chart.destroy(); _chart=null; } return; }
+  try{ const Chart=await napChartJs(); cv.hidden=false;
+    const data={ labels:dt.map(x=>thangVN(x.ky)), datasets:[ {label:'Kế hoạch về',data:dt.map(x=>x.keHoach/1e6),backgroundColor:'#c4b5fd'}, {label:'Thực tế về',data:dt.map(x=>x.thucTe/1e6),backgroundColor:'#7e22ce'} ] };
+    if(_chart){ _chart.data=data; _chart.update(); return; }
+    _chart=new Chart(cv,{ type:'bar', data, options:{ responsive:true, plugins:{ legend:{position:'bottom'}, tooltip:{ callbacks:{ label:c=>c.dataset.label+': '+tien(c.parsed.y*1e6)+' đ' } } }, scales:{ y:{ ticks:{ callback:v=>tienNgan(v*1e6) } } } } });
+  }catch(e){ cv.hidden=true; }
 }
-// Nhắc nhở của 1 hợp đồng (bỏ qua HĐ đã thanh lý)
-function alertsOf(id,c){
-  const out=[]; if(c.status==='closed') return out;
-  if(c.handoverDate){ const d=dl(c.handoverDate); if(d>=0&&d<=REMIND_DAYS) out.push({id,kind:'handover',days:d,level:'warn',icon:'🏁',text:'Bàn giao công trình '+(d===0?'HÔM NAY':'sau '+d+' ngày')+' ('+fmtDate(c.handoverDate)+')'}); }
-  if(c.warrantyEnd){ const d=dl(c.warrantyEnd), k=calc(c);
-    if(d<0) out.push({id,kind:'expired',days:d,level:'over',icon:'🔴',text:'Đã hết bảo hành '+(-d)+' ngày ('+fmtDate(c.warrantyEnd)+')'+(k.retainLeft>0?' · đang bị giữ '+fmtShort(k.retainLeft)+' tiền BH':'')});
-    else if(d<=REMIND_DAYS) out.push({id,kind:'warranty',days:d,level:'due',icon:'⚠️',text:'Hết bảo hành '+(d===0?'HÔM NAY':'sau '+d+' ngày')+' ('+fmtDate(c.warrantyEnd)+')'+(k.retainLeft>0?' · còn '+fmtShort(k.retainLeft)+' tiền giữ BH':'')}); }
-  return out;
-}
-function allAlerts(){ const out=[]; Object.entries(contracts).forEach(([id,c])=>{ alertsOf(id,c).forEach(a=>out.push(a)); if(c.deleteRequest) out.push({id,kind:'del',days:-9999,level:'over',icon:'🗑',text:(c.deleteRequest.by||'?')+' xin xoá hợp đồng ('+fmtDate(c.deleteRequest.ts)+')'+(c.deleteRequest.reason?': '+c.deleteRequest.reason:'')+(isDung()?' — mở để duyệt':' — chờ D duyệt')}); }); return out.sort((a,b)=>a.days-b.days); }
 
-// ══ MÀN CHÍNH ══
-function showTab(t){
-  ['list','alerts','more'].forEach(x=>{ $('tab-'+x).hidden=x!==t; document.querySelector(`.nav-item[data-tab=${x}]`).classList.toggle('active',x===t); });
-}
-function renderAll(){ renderStats(); renderSum(); renderSiteFilter(); renderList(); renderAlerts(); if(curId&&_logRef) renderDetail(_logs); }
-function renderStats(){
-  const co={}; COMPANIES.forEach(k=>co[k]=0); let coAll=0;
-  Object.values(contracts).forEach(x=>{ if(phase(x)==='closed') return; coAll++; const k=x.company||''; co[k]=(co[k]||0)+1; });
-  const coKeys=COMPANIES.concat(Object.keys(co).filter(k=>k&&!COMPANIES.includes(k)));
-  $('co-chips').innerHTML=[['','Tất cả công ty',coAll]].concat(coKeys.map(k=>[k,'Công ty '+k,co[k]||0]))
-    .map(([k,l,m])=>`<div class="stat ${filterCo===k?'on':''}" style="border-color:${filterCo===k?'var(--blue)':'transparent'};background:${filterCo===k?'var(--blue-light)':'#fff'}" onclick="filterCo='${k}';renderAll()"><b>${m}</b><span>${l}</span></div>`).join('');
-  const c={all:0,active:0,warranty:0,expired:0,settling:0,settled:0,closed:0}; Object.values(contracts).filter(coOk).forEach(x=>{ const p=phase(x); c[p]++; if(p!=='closed') c.all++; });
-  $('stats').innerHTML=[['','Tất cả',c.all],['active','Đang thi công',c.active],['warranty','Đang bảo hành',c.warranty],['expired','Hết bảo hành',c.expired],['settling','Chờ quyết toán',c.settling],['settled','Đã quyết toán',c.settled],['closed','Đã thanh lý',c.closed]]
-    .map(([k,l,n])=>`<div class="stat ${filterPhase===k?'on':''}" onclick="filterPhase='${k}';renderAll()"><b>${n}</b><span>${l}</span></div>`).join('');
-}
-function renderList(){
+// ===== 8. MÀN HÌNH: Danh sách hợp đồng — bảng, lọc và sắp xếp theo cột (mục 1.4) =====
+let sapXep={cot:'soHopDong',chieu:1};
+const COT_DS=[ ['congTyId','Công ty','tr'],['soHopDong','Số hợp đồng','tr'],['tenGoiThau','Tên gói thầu','tr'],['chuDauTu','Chủ đầu tư','tr'],['giaTriHienHanh','Giá trị hiện hành'],['nghiemThuLuyKe','Đã nghiệm thu'],['tienDaVe','Đã về tiền'],['conPhaiThu','Còn phải thu'],['trangThai','Trạng thái','tr'],['ngayHetBaoHanh','Hết bảo hành'] ];
+function docSapXep(cot){ if(sapXep.cot===cot) sapXep.chieu=-sapXep.chieu; else sapXep={cot,chieu:1}; veDanhSach(); }
+function veDanhSach(){
+  const fc=$('f-congty'), ft=$('f-trangthai'); const cc=fc.value, tt=ft.value;
+  fc.innerHTML=chonOptions(Object.fromEntries(MA_CONG_TY.map(m=>[m,'Công ty '+m])),cc,'— Mọi công ty —');
+  ft.innerHTML=chonOptions(TRANG_THAI,tt,'— Mọi trạng thái —');
   const q=$('q').value.trim().toLowerCase();
-  const rows=Object.entries(contracts).filter(([id,c])=>{
-    const p=phase(c); if(!coOk(c)) return false; if(filterPhase? p!==filterPhase : p==='closed') return false;
-    const fs=$('f-site').value; if(fs&&(c.site||'')!==fs) return false;
-    return !q||[c.company,c.site,c.code,c.name,c.partyA,c.partyB].join(' ').toLowerCase().includes(q);
-  }).sort((a,b)=>(b[1].signDate||b[1].createdAt||0)-(a[1].signDate||a[1].createdAt||0));
-  $('list').innerHTML=rows.length?rows.map(([id,c])=>{ const k=calc(c), al=alertsOf(id,c); return `<div class="item" onclick="openDetail('${id}')">
-    <div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div>
-    ${c.site?`<div class="item-sub">🏗 ${esc(c.site)}</div>`:''}
-    <div class="item-sub">${c.company?'<b style="color:var(--blue)">'+esc(c.company)+'</b> · ':''}🏢 ${esc(c.partyA||'—')}${c.signDate?' · ký '+fmtDate(c.signDate):''}</div>
-    ${c.deleteRequest?`<div class="item-sub" style="color:var(--red);white-space:normal">🗑 ${esc(c.deleteRequest.by)} xin xoá — chờ D duyệt</div>`:''}
-    <div class="item-sub">💰 ${fmtShort(k.total)} · đã TT <b>${k.pct}%</b>${k.advLeft>0?' · TƯ còn '+fmtShort(k.advLeft):''}${k.retainLeft>0?' · giữ BH '+fmtShort(k.retainLeft):''}${k.holdLeft>0?' · giữ QT '+fmtShort(k.holdLeft):''}${k.unbuilt>0?' · chưa TC '+fmtShort(k.unbuilt):''}${c.status==='settling'&&c.settlingAt?' · chờ QT '+Math.max(0,dl(Date.now())-dl(c.settlingAt))+' ngày':''}</div>
-    <div class="bar"><i style="width:${k.pct}%"></i></div>
-    ${al.map(a=>`<div class="item-sub" style="color:var(--red);white-space:normal;margin-top:4px">${a.icon} ${esc(a.text)}</div>`).join('')}
-    </div>${badge(phase(c))}</div>`; }).join('')
+  let rows=tatCaKetQua().map(k=>Object.assign({},DL.hopDong[k.id],k)).filter(r=>{
+    if(cc&&r.congTyId!==cc) return false; if(tt&&r.trangThai!==tt) return false;
+    return !q||[r.soHopDong,r.tenGoiThau,r.tenDuAn,r.chuDauTu,r.congTyId].join(' ').toLowerCase().includes(q); });
+  rows.sort((a,b)=>{ const x=a[sapXep.cot], y=b[sapXep.cot]; const r=typeof x==='number'||typeof y==='number'?(Number(x)||0)-(Number(y)||0):String(x||'').localeCompare(String(y||''),'vi',{numeric:true}); return r*sapXep.chieu; });
+  const tong=TINH_TOAN.tinhTongHop(rows.map(r=>r),cc||'all');
+  $('ds-hopdong').innerHTML=rows.length?`<table class="p"><thead><tr>${COT_DS.map(([k,l,tr])=>`<th class="${tr||''} ${sapXep.cot===k?'sx':''}" onclick="docSapXep('${k}')">${l}${sapXep.cot===k?(sapXep.chieu>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
+    ${rows.map(r=>`<tr onclick="moChiTiet('${r.id}')"><td class="tr"><b>${esc(r.congTyId)}</b>${r.noiBo?' <span class="hint">(nội bộ)</span>':''}</td><td class="tr"><b>${esc(r.soHopDong)}</b></td><td class="tr" style="white-space:normal;min-width:180px">${esc(r.tenGoiThau)}</td><td class="tr">${esc(r.chuDauTu||'')}</td><td>${tien(r.giaTriHienHanh)}</td><td>${tien(r.nghiemThuLuyKe)}</td><td>${tien(r.tienDaVe)}</td><td class="${r.conPhaiThu>0?'neg':''}">${tien(r.conPhaiThu)}</td><td class="tr">${badgeTrangThai(r.trangThai)}</td><td>${ngayVN(r.ngayHetBaoHanh)||'—'}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td class="tr" colspan="4">Cộng ${rows.length} hợp đồng${cc?'':' (cả 3, đã trừ nội bộ)'}</td><td>${tien(tong.giaTriHienHanh)}</td><td>${tien(tong.nghiemThuLuyKe)}</td><td>${tien(tong.tienDaVe)}</td><td>${tien(tong.conPhaiThu)}</td><td colspan="2"></td></tr></tfoot></table>`
     :'<div class="empty">Chưa có hợp đồng nào. Bấm "Thêm hợp đồng" hoặc nhập từ Excel (tab Khác).</div>';
 }
-function renderAlerts(){
-  const list=allAlerts(), n=list.length;
-  $('al-badge').hidden=!n; $('al-badge').textContent=n;
-  $('top-alert').hidden=!n; $('top-alert').innerHTML=n?`<div class="warn" style="cursor:pointer" onclick="showTab('alerts')">🔔 ${n} việc cần lưu ý (bàn giao / bảo hành / xin xoá) — bấm xem</div>`:'';
-  const G=[['del','🗑 Yêu cầu xoá hợp đồng — chờ D đồng ý'],['handover','⏰ Sắp bàn giao công trình'],['warranty','⚠️ Sắp hết bảo hành'],['expired','🔴 Đã hết bảo hành — thu hồi tiền giữ lại BH, thanh lý hợp đồng']];
-  $('alerts').innerHTML=n?G.map(([k,t])=>{ const rows=list.filter(a=>a.kind===k); if(!rows.length) return ''; return `<div class="al-h">${t}</div>`+rows.map(a=>{ const c=contracts[a.id]; return `<div class="al ${a.level}" onclick="openDetail('${a.id}')"><div class="ic">${a.icon}</div><div class="item-main"><div class="item-name">${esc(c.code)} · ${esc(c.name)}</div><div class="item-sub">${c.company?'<b style="color:var(--blue)">'+esc(c.company)+'</b> · ':''}🏢 ${esc(c.partyA||'—')}</div><div class="item-sub" style="white-space:normal;color:var(--text)">${esc(a.text)}</div></div></div>`; }).join(''); }).join('')
-    :'<div class="empty">🎉 Không có gì cần nhắc trong '+REMIND_DAYS+' ngày tới.</div>';
-}
-
-// ══ CHI TIẾT 1 HỢP ĐỒNG ══
-let curId=null, _logRef=null, _logs={};
-function openDetail(id){
-  curId=id; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; _logs={};
-  if(_logRef) _logRef.off();
-  _logRef=db.ref(ROOT+'/log/'+id); _logRef.on('value',s=>{ _logs=s.val()||{}; renderDetail(_logs); });
-}
-function closeDetail(){ $('detail').hidden=true; document.body.style.overflow=''; if(_logRef) _logRef.off(); _logRef=null; curId=null; }
-const sortNo=o=>Object.entries(o||{}).sort((a,b)=>(Number(a[1].no)||0)-(Number(b[1].no)||0)||(a[1].date||0)-(b[1].date||0));
-function renderDetail(logs){
-  const id=curId, c=contracts[id]; if(!c){ closeDetail(); return; }
-  const k=calc(c), p=phase(c), al=alertsOf(id,c);
-  const pays=sortNo(c.payments), adds=sortNo(c.addenda), advs=sortNo(c.advances);
-  const tl=Object.values(logs).sort((a,b)=>b.ts-a.ts);
-  const rowBtns=(kind,key)=>`<button class="btn sm sec" onclick="event.stopPropagation();subForm('${id}','${kind}','${key}')">✏️</button>`;
+// ===== 9. MÀN HÌNH: Chi tiết hợp đồng — tab: Thông tin / Phụ lục / Tạm ứng / Thanh toán / Bảo lãnh / Bảo hành & Quyết toán / Kế hoạch tiền về / File / Lịch sử =====
+let chiTietId=null, tabChiTiet='thongTin';
+const TAB_CT={ thongTin:'Thông tin', phuLuc:'Phụ lục', tamUng:'Tạm ứng', thanhToan:'Thanh toán', baoLanh:'Bảo lãnh', baoHanh:'BH & Quyết toán', keHoach:'Kế hoạch tiền về', file:'File', lichSu:'Lịch sử' };
+function moChiTiet(id, tab){ chiTietId=id; if(tab) tabChiTiet=tab; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; veChiTiet(); }
+function dongChiTiet(){ $('detail').hidden=true; document.body.style.overflow=''; chiTietId=null; }
+function chonTabChiTiet(t){ tabChiTiet=t; veChiTiet(); }
+function veChiTiet(){
+  const id=chiTietId, h=DL.hopDong[id]; if(!h){ dongChiTiet(); return; }
+  const k=ketQua(id);
+  const noiDung={ thongTin:veTabThongTin, phuLuc:veTabPhuLuc, tamUng:veTabTamUng, thanhToan:veTabThanhToan, baoLanh:veTabBaoLanh, baoHanh:veTabBaoHanh, keHoach:veTabKeHoach, file:veTabFile, lichSu:veTabLichSu }[tabChiTiet](id,h,k);
   $('detail').innerHTML=`
-  <header class="app-header"><button class="btn sm sec" onclick="closeDetail()">‹ Quay lại</button><h1 style="flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px">${esc(c.code)}</h1><button class="btn sm sec" onclick="contractForm('${id}')">✏️ Sửa</button></header>
+  <header class="app-header"><button class="btn sm sec" onclick="dongChiTiet()">‹ Quay lại</button><h1 style="flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(h.soHopDong)}</h1><button class="btn sm sec" onclick="formHopDong('${id}')">✏️ Sửa</button></header>
   <div class="main">
-    ${al.map(a=>`<div class="warn ${a.level==='warn'?'soft':''}">${a.icon} ${esc(a.text)}</div>`).join('')}
     <div class="card"><div class="card-body">
-      <div style="font-size:19px;font-weight:800">${esc(c.name)}</div><div style="margin:4px 0">${badge(p)}</div>
-      <div class="kv" style="margin-top:10px">
-        <div>Công ty</div><div><b>${esc(c.company||'—')}</b></div>
-        <div>Công trình</div><div><b>${esc(c.site||'—')}</b></div>
-        <div>Bên A</div><div><b>${esc(c.partyA||'—')}</b></div>
-        <div>Bên B</div><div><b>${esc(c.partyB||'—')}</b></div>
-        <div>Ngày ký</div><div>${fmtDate(c.signDate)||'—'}</div>
-        ${c.note?`<div>Ghi chú</div><div>${esc(c.note)}</div>`:''}
+      <div style="font-size:18px;font-weight:800">${esc(h.tenGoiThau)}</div>
+      <div class="item-sub" style="margin-top:2px">${esc(h.tenDuAn||'')}${h.tenDuAn?' · ':''}<b>${esc(h.congTyId)}</b>${h.noiBo&&h.noiBo.co?' (nội bộ)':''} · 🏢 ${esc(h.chuDauTu||'—')}</div>
+      <div style="margin:6px 0">${badgeTrangThai(h.trangThai)}${h.lienDanh&&h.lienDanh.co?' <span class="badge tt-choNghiemThuHoanThanh">Liên danh '+esc(h.lienDanh.tyLe||'')+'</span>':''}</div>
+      <div class="tiles" style="margin:8px 0 0;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
+        <div class="tile" style="padding:8px"><span>Hiện hành</span><b style="font-size:14px">${tienNgan(k.giaTriHienHanh)}</b></div>
+        <div class="tile acc" style="padding:8px"><span>Nghiệm thu</span><b style="font-size:14px">${tienNgan(k.nghiemThuLuyKe)}</b></div>
+        <div class="tile ok" style="padding:8px"><span>Tiền về</span><b style="font-size:14px">${tienNgan(k.tienDaVe)}</b></div>
+        <div class="tile warn" style="padding:8px"><span>Còn phải thu</span><b style="font-size:14px">${tienNgan(k.conPhaiThu)}</b></div>
       </div>
     </div></div>
-
-    <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>💰 Tài chính</h3><div class="row" style="flex:0 0 auto;gap:6px"><b>${k.pct}%</b>${k.doneSrc!=='handed'&&c.status!=='closed'?`<button class="btn sm sec" onclick="doneForm('${id}')">📐 KL thực hiện</button>`:''}</div></div>
-      <div class="bar" style="margin:0 0 10px"><i style="width:${k.pct}%"></i></div>
-      <table class="fin">
-        <tr><td>Giá trị hợp đồng</td><td>${fmtMoney(k.val)}</td></tr>
-        <tr><td>Phụ lục (${k.nAdd})</td><td class="${k.add<0?'neg':''}">${k.add>=0?'+':''}${fmtMoney(k.add)}</td></tr>
-        ${k.settle>0?`<tr><td>Giá trị quyết toán (${fmtDate(c.settleDate)})</td><td class="pos">${fmtMoney(k.settle)}</td></tr>`:''}
-        <tr class="tot"><td>${k.settle>0?'Tổng giá trị (theo quyết toán)':'Tổng giá trị'}</td><td>${fmtMoney(k.total)}</td></tr>
-        <tr><td>Khối lượng đã thực hiện <span class="hint">${k.doneSrc==='handed'?'(đã bàn giao)':k.doneSrc==='manual'?'(nhập '+fmtDate(c.doneDate)+')':'(tạm = đã thanh toán)'}</span></td><td>${fmtMoney(k.done)}</td></tr>
-        <tr><td>Còn lại chưa thi công</td><td class="${k.unbuilt>0?'neg':'pos'}">${fmtMoney(k.unbuilt)}</td></tr>
-        <tr><td>Tạm ứng (${k.nAdv} lần)</td><td>${fmtMoney(k.adv)}</td></tr>
-        <tr><td class="sub">Đã thu hồi tạm ứng</td><td class="sub">${fmtMoney(k.recov)}</td></tr>
-        <tr><td>Tạm ứng còn phải thu hồi</td><td class="${k.advLeft>0?'neg':'pos'}">${fmtMoney(k.advLeft)}</td></tr>
-        <tr><td>Đã thanh toán (${k.nPay} lần)</td><td>${fmtMoney(k.paid)}</td></tr>
-        <tr><td>Còn lại chưa thanh toán</td><td class="${k.remain>0?'':'pos'}">${fmtMoney(k.remain)}</td></tr>
-        <tr><td>Tiền giữ lại bảo hành</td><td>${fmtMoney(k.retain)}${k.refund?'<div class="hint">đã hoàn '+fmtMoney(k.refund)+' · còn giữ '+fmtMoney(k.retainLeft)+'</div>':''}</td></tr>
-        <tr><td>Tiền giữ chờ quyết toán</td><td>${fmtMoney(k.hold)}${k.refundQt?'<div class="hint">đã hoàn '+fmtMoney(k.refundQt)+' · còn giữ '+fmtMoney(k.holdLeft)+'</div>':''}</td></tr>
-        <tr class="tot"><td>Thực nhận (tạm ứng + các lần)</td><td>${fmtMoney(k.received)}</td></tr>
-      </table>
-    </div></div>
-
-    <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>🧾 Thanh toán</h3><button class="btn sm" onclick="subForm('${id}','payments')">＋ Thêm lần</button></div>
-      ${pays.length?`<div class="tw"><table class="p"><thead><tr><th>Lần</th><th>Ngày</th><th>Giá trị TT</th><th>Trừ TƯ</th><th>Giữ BH</th><th>Giữ QT</th><th>Thực nhận</th><th></th></tr></thead><tbody>
-        ${pays.map(([key,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0, q=Number(x.hold)||0; return x.type==='bh'
-          ?`<tr onclick="subForm('${id}','payments','${key}')"><td>↩️ Hoàn BH</td><td>${fmtDate(x.date)}</td><td>—</td><td>—</td><td class="pos">-${money(v)}</td><td>—</td><td><b>${money(v)}</b></td><td>${rowBtns('payments',key)}</td></tr>`
-          :x.type==='qt'?`<tr onclick="subForm('${id}','payments','${key}')"><td>↩️ Hoàn QT</td><td>${fmtDate(x.date)}</td><td>—</td><td>—</td><td>—</td><td class="pos">-${money(v)}</td><td><b>${money(v)}</b></td><td>${rowBtns('payments',key)}</td></tr>`
-          :`<tr onclick="subForm('${id}','payments','${key}')"><td>Lần ${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td>${money(v)}</td><td>${r?money(r):'—'}</td><td>${h?money(h):'—'}</td><td>${q?money(q):'—'}</td><td><b>${money(v-r-h-q)}</b></td><td>${rowBtns('payments',key)}</td></tr>`; }).join('')}
-        </tbody></table></div><div class="hint">Đơn vị: đồng. Bấm vào dòng để sửa.</div>`:'<div class="hint">Chưa có lần thanh toán nào.</div>'}
-    </div></div>
-
-    <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>💵 Tạm ứng</h3><button class="btn sm" onclick="subForm('${id}','advances')">＋ Thêm</button></div>
-      ${advs.length?`<table class="p"><thead><tr><th>Lần</th><th>Ngày</th><th>Số tiền</th><th>Ghi chú</th><th></th></tr></thead><tbody>
-        ${advs.map(([key,x])=>`<tr onclick="subForm('${id}','advances','${key}')"><td>Lần ${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td><b>${money(x.value)}</b></td><td style="white-space:normal;text-align:left">${esc(x.note||'')}</td><td>${rowBtns('advances',key)}</td></tr>`).join('')}
-        </tbody></table>`:'<div class="hint">Chưa tạm ứng.</div>'}
-    </div></div>
-
-    <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>📎 Phụ lục hợp đồng</h3><button class="btn sm" onclick="subForm('${id}','addenda')">＋ Thêm</button></div>
-      ${adds.length?`<table class="p"><thead><tr><th>Số PL</th><th>Ngày</th><th>Giá trị</th><th>Nội dung</th><th></th></tr></thead><tbody>
-        ${adds.map(([key,x])=>`<tr onclick="subForm('${id}','addenda','${key}')"><td>${esc(x.no)}</td><td>${fmtDate(x.date)}</td><td class="${x.value<0?'neg':'pos'}"><b>${x.value>=0?'+':''}${money(x.value)}</b></td><td style="white-space:normal;text-align:left">${esc(x.note||'')}</td><td>${rowBtns('addenda',key)}</td></tr>`).join('')}
-        </tbody></table>`:'<div class="hint">Chưa có phụ lục.</div>'}
-    </div></div>
-
-    <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>📋 Quyết toán</h3>${c.status==='closed'?'':c.status==='settled'?`<button class="btn sm sec" onclick="settleForm('${id}')">✏️ Sửa</button>`:c.status==='settling'?`<button class="btn sm green" onclick="settleForm('${id}')">✅ Đã quyết toán</button>`:`<button class="btn sm" onclick="setSettling('${id}',true)">📋 Chờ quyết toán</button>`}</div>
-      ${c.status==='settled'?`<div class="kv"><div>Ngày QT</div><div><b>${fmtDate(c.settleDate)||'—'}</b></div><div>Giá trị QT</div><div><b>${fmtMoney(c.settleValue)}</b>${(Number(c.settleValue)||0)!==k.val+k.add?' <span class="hint">(HĐ+PL: '+fmtMoney(k.val+k.add)+')</span>':''}</div>${c.settleNote?`<div>Ghi chú</div><div>${esc(c.settleNote)}</div>`:''}</div>`
-        :c.status==='settling'?`<div class="hint">Đang chờ quyết toán từ ${fmtDate(c.settlingAt)} (${Math.max(0,dl(Date.now())-dl(c.settlingAt))} ngày) · còn phải thu <b>${fmtMoney(k.remain)}</b>${k.holdLeft>0?' · đang bị giữ chờ QT <b>'+fmtMoney(k.holdLeft)+'</b>':''}</div><div style="margin-top:8px"><button class="btn sec sm" onclick="setSettling('${id}',false)">↩️ Bỏ chờ quyết toán</button></div>`
-        :'<div class="hint">Xong khối lượng, nộp hồ sơ quyết toán thì bấm "Chờ quyết toán".</div>'}
-    </div></div>
-
-    <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>🏁 Bàn giao &amp; bảo hành</h3>${c.status==='closed'?'':`<button class="btn sm" onclick="handoverForm('${id}')">${c.handoverDate?'✏️ Sửa':'🏁 Bàn giao'}</button>`}</div>
-      <div class="kv">
-        <div>Ngày bàn giao</div><div>${c.handoverDate?'<b>'+fmtDate(c.handoverDate)+'</b>'+(dl(c.handoverDate)>0?' · còn '+dl(c.handoverDate)+' ngày':''):'<span class="hint">chưa bàn giao</span>'}</div>
-        <div>Thời gian BH</div><div>${c.warrantyMonths?c.warrantyMonths+' tháng':'—'}</div>
-        <div>Hết bảo hành</div><div>${c.warrantyEnd?'<b>'+fmtDate(c.warrantyEnd)+'</b>'+(dl(c.warrantyEnd)>=0?' · còn <b>'+dl(c.warrantyEnd)+' ngày</b>':' · <span class="neg">đã hết '+(-dl(c.warrantyEnd))+' ngày</span>'):'—'}</div>
-      </div>
-      <div style="margin-top:12px">${c.status==='closed'
-        ?`<button class="btn sec" onclick="toggleClose('${id}')">↩️ Mở lại hợp đồng (đã thanh lý ${fmtDate(c.closedAt)})</button>`
-        :`<button class="btn sec" onclick="toggleClose('${id}')">⚫ Thanh lý / kết thúc hợp đồng</button>`}</div>
-    </div></div>
-
-    <h3 style="margin:16px 0 10px;font-size:16px">🕘 Lịch sử</h3>
-    <div class="tl">${tl.map(e=>`<div class="tl-e"><div class="tl-t">${fmtDT(e.ts)} · ${esc(e.by||'')}</div><div class="tl-b">${esc(e.text)}</div></div>`).join('')||'<div class="empty">Chưa có gì.</div>'}</div>
-    <div style="margin-top:20px">${c.deleteRequest
-      ?`<div class="warn">🗑 ${esc(c.deleteRequest.by)} xin xoá hợp đồng này (${fmtDate(c.deleteRequest.ts)})${c.deleteRequest.reason?': '+esc(c.deleteRequest.reason):''}</div>
-        ${isDung()?`<div class="row"><button class="btn red" onclick="delContract('${id}')">✅ Đồng ý xoá</button><button class="btn sec" onclick="cancelDelete('${id}')">✖ Không xoá</button></div>`
-        :`<button class="btn sec" onclick="cancelDelete('${id}')">↩️ Rút lại yêu cầu xoá</button>`}`
-      :isDung()?`<button class="btn sec" style="color:var(--red)" onclick="delContract('${id}')">🗑 Xoá hợp đồng này</button>`
-      :`<button class="btn sec" style="color:var(--red)" onclick="requestDelete('${id}')">🗑 Xin xoá hợp đồng này (D duyệt)</button>`}</div>
+    <div class="tabs">${Object.entries(TAB_CT).map(([t,l])=>`<div class="tab ${tabChiTiet===t?'on':''}" onclick="chonTabChiTiet('${t}')">${l}${demTab(id,t)}</div>`).join('')}</div>
+    ${noiDung}
   </div>`;
 }
+function demTab(id,t){ if(BANG_CON.includes(t)){ const n=Object.keys(DL[t][id]||{}).length; return n?` <b>${n}</b>`:''; } if(t==='lichSu'){ const n=Object.values(DL.lichSu).filter(l=>l.hopDongId===id).length; return n?` <b>${n}</b>`:''; } return ''; }
 
-// ══ MODAL ══
-function openModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
-function closeModal(){ $('modal-bg').hidden=true; }
-const dlist=(id,vals)=>`<datalist id="${id}">${[...new Set(vals.filter(Boolean))].sort().map(v=>`<option value="${esc(v)}">`).join('')}</datalist>`;
-async function busy(btn,fn){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await fn(); closeModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
-function autoWE(ho,wm,we){ const h=fromISO($(ho).value), m=parseInt($(wm).value,10); if(h&&m>0) $(we).value=toISO(addMonths(h,m)); }
-
-// ══ FORM HỢP ĐỒNG (thêm / sửa) ══
-function contractForm(id){
-  const c=id?contracts[id]:{};
-  const d=k=>c[k]?toISO(c[k]):'';
-  openModal(`<h3>${id?'✏️ Sửa hợp đồng':'＋ Thêm hợp đồng'}</h3>
-    <label class="f">Hợp đồng của công ty *</label><select id="m-co">${COMPANIES.concat(c.company&&!COMPANIES.includes(c.company)?[c.company]:[]).map(k=>`<option value="${esc(k)}" ${(c.company||COMPANIES[0])===k?'selected':''}>${esc(k)}</option>`).join('')}</select>
-    <label class="f">Số hợp đồng *</label><input id="m-code" value="${esc(c.code||'')}" placeholder="VD: 12/2026/HĐXD">
-    <label class="f">Công trình (theo danh sách Duyệt Chi)</label><select id="m-site" onchange="$('m-site-x').hidden=this.value!=='__x'"><option value="">— Chọn công trình —</option>${allSites().map(s=>`<option value="${esc(s)}" ${c.site===s?'selected':''}>${esc(s)}</option>`).join('')}<option value="__x">✏️ Khác (nhập tay)…</option></select>
-    <input id="m-site-x" hidden style="margin-top:6px" placeholder="Tên công trình khác">
-    <label class="f">Tên gói thầu / nội dung hợp đồng *</label><input id="m-name" value="${esc(c.name||'')}" placeholder="VD: Gói thầu số 3 – cầu Km12">
-    <label class="f">Bên A (chủ đầu tư / bên giao thầu)</label><input id="m-pa" list="dl-pa" value="${esc(c.partyA||'')}">${dlist('dl-pa',parties('partyA'))}
-    <label class="f">Bên B (nhà thầu / bên nhận thầu)</label><input id="m-pb" list="dl-pb" value="${esc(c.partyB||'')}" placeholder="VD: Công ty Phúc Vinh An">${dlist('dl-pb',parties('partyB'))}
-    <div class="row"><div><label class="f">Ngày ký</label><input id="m-sign" type="date" value="${d('signDate')}"></div><div><label class="f">Giá trị hợp đồng (đ)</label><input id="m-val" inputmode="numeric" value="${money(c.value)}" oninput="fmtIn(this)"></div></div>
-    ${id?'':`<div class="row"><div><label class="f">Tạm ứng lần 1 (đ)</label><input id="m-adv" inputmode="numeric" oninput="fmtIn(this)" placeholder="để trống nếu chưa"></div><div><label class="f">Ngày tạm ứng</label><input id="m-advd" type="date"></div></div>`}
-    <div class="row"><div><label class="f">Ngày bàn giao</label><input id="m-ho" type="date" value="${d('handoverDate')}" onchange="autoWE('m-ho','m-wm','m-we')"></div><div><label class="f">Bảo hành (tháng)</label><input id="m-wm" inputmode="numeric" value="${esc(c.warrantyMonths||'')}" oninput="autoWE('m-ho','m-wm','m-we')"></div></div>
-    <label class="f">Ngày hết bảo hành</label><input id="m-we" type="date" value="${d('warrantyEnd')}"><div class="hint">Tự tính = ngày bàn giao + số tháng bảo hành; có thể sửa tay.</div>
-    <label class="f">Ghi chú</label><textarea id="m-note">${esc(c.note||'')}</textarea>
-    <div style="margin-top:14px"><button class="btn" onclick="saveContract('${id||''}',this)">💾 Lưu</button></div>`);
+// --- Tab Thông tin ---
+function veTabThongTin(id,h,k){
+  const qt=h.quyetToan||{}, bh=h.baoHanh||{}, kl=h.khoiLuongDaThucHien||{};
+  return `<div class="card"><div class="card-body">
+    <div class="kv">
+      <div>Công ty ký</div><div><b>${esc(h.congTyId)}</b> — ${esc(tenCongTy(h.congTyId))}</div>
+      <div>Số hợp đồng</div><div><b>${esc(h.soHopDong)}</b> · ký ${ngayVN(h.ngayKy)||'—'}</div>
+      <div>Chủ đầu tư</div><div>${esc(h.chuDauTu||'—')}</div>
+      <div>Gói thầu</div><div>${esc(h.tenGoiThau)}</div>
+      <div>Dự án</div><div>${esc(h.tenDuAn||'—')}</div>
+      <div>Loại hợp đồng</div><div>${esc(LOAI_HOP_DONG[h.loaiHopDong]||'—')}</div>
+      <div>Giá trước thuế</div><div>${h.giaTriTruocThue?tienD(h.giaTriTruocThue):'—'}${h.thue?' · thuế '+tienD(h.thue):''}</div>
+      <div>Giá trị gốc (sau thuế)</div><div><b>${tienD(h.giaTriGoc)}</b>${h.lienDanh&&h.lienDanh.co?' — phần của mình'+(h.lienDanh.tongGiaTriLienDanh?' / tổng liên danh '+tienD(h.lienDanh.tongGiaTriLienDanh):'')+(h.lienDanh.thanhVienKhac?' · cùng '+esc(h.lienDanh.thanhVienKhac):''):''}</div>
+      <div>Thời gian thực hiện</div><div>${esc(h.thoiGianThucHien||'—')}</div>
+      <div>Khởi công</div><div>${ngayVN(h.ngayKhoiCong)||'—'}</div>
+      <div>Hoàn thành theo HĐ</div><div>${ngayVN(h.ngayHoanThanhHopDong)||'—'}${k.ngayHoanThanhHienHanh&&k.ngayHoanThanhHienHanh!==h.ngayHoanThanhHopDong?' → gia hạn <b>'+ngayVN(k.ngayHoanThanhHienHanh)+'</b>':''}</div>
+      ${h.noiBo&&h.noiBo.co?`<div>Nội bộ</div><div>Giao khoán nội bộ từ HĐ ${esc((DL.hopDong[h.noiBo.hopDongGocId]||{}).soHopDong||h.noiBo.hopDongGocId||'—')} — không cộng vào "cả 3 công ty"</div>`:''}
+      ${h.ghiChu?`<div>Ghi chú</div><div>${esc(h.ghiChu)}</div>`:''}
+    </div>
+  </div></div>
+  <div class="card"><div class="card-body">
+    <div class="sec-h"><h3>💰 Tài chính (tính theo công thức mục 1.5)</h3></div>
+    <table class="fin">
+      <tr><td>Giá trị gốc</td><td>${tienD(k.giaTriGoc)}</td></tr>
+      <tr><td class="sub">Điều chỉnh phụ lục (${k.soPhuLuc})</td><td class="${k.dieuChinhPhuLuc<0?'neg':''}">${k.dieuChinhPhuLuc>=0?'+':''}${tienD(k.dieuChinhPhuLuc)}</td></tr>
+      <tr class="tot"><td>Giá trị hiện hành</td><td>${tienD(k.giaTriHienHanh)}</td></tr>
+      ${k.daDuyetQuyetToan?`<tr class="tot"><td>Doanh thu cuối cùng (theo quyết toán ${ngayVN(qt.ngayDuyet)})</td><td class="pos">${tienD(k.doanhThuCuoiCung)}</td></tr>`:''}
+      <tr><td>Đã nghiệm thu lũy kế (${k.soDotThanhToan} đợt)</td><td>${tienD(k.nghiemThuLuyKe)}</td></tr>
+      <tr><td class="sub">Còn lại chưa nghiệm thu</td><td class="sub">${tienD(k.conLaiChuaNghiemThu)}</td></tr>
+      <tr><td>Tạm ứng lũy kế (${k.soDotTamUng} đợt)</td><td>${tienD(k.tamUngLuyKe)}</td></tr>
+      <tr><td class="sub">Đã thu hồi tạm ứng</td><td class="sub">${tienD(k.thuHoiTamUngLuyKe)}</td></tr>
+      <tr><td>Tạm ứng chưa thu hồi</td><td class="${k.tamUngChuaThuHoi>0?'neg':''}">${tienD(k.tamUngChuaThuHoi)}</td></tr>
+      <tr><td>Thực nhận lũy kế</td><td>${tienD(k.thucNhanLuyKe)}</td></tr>
+      <tr class="tot"><td>Tiền đã về (tạm ứng + thực nhận)</td><td class="pos">${tienD(k.tienDaVe)}</td></tr>
+      <tr class="tot"><td>Còn phải thu</td><td class="${k.conPhaiThu>0?'neg':''}">${tienD(k.conPhaiThu)}</td></tr>
+      <tr><td class="sub">trong đó đang bị giữ bảo hành</td><td class="sub">${tienD(k.giuBaoHanhDangGiu)}</td></tr>
+      <tr><td class="sub">trong đó đang bị giữ chờ quyết toán</td><td class="sub">${tienD(k.giuQuyetToanDangGiu)}</td></tr>
+      <tr><td class="sub">phần khác</td><td class="sub">${tienD(k.conPhaiThuTrongDo.khac)}</td></tr>
+      <tr><td>Còn lại chưa thi công <span class="hint">${kl.soTien?'(KL thực hiện nhập '+ngayVN(kl.ngay)+')':'(tạm = chưa nghiệm thu)'}</span></td><td>${tienD(k.conLaiChuaThiCong)}</td></tr>
+    </table>
+    <div style="margin-top:10px"><button class="btn sec sm" onclick="formKhoiLuong('${id}')">📐 Cập nhật khối lượng đã thực hiện</button></div>
+  </div></div>
+  <div class="card"><div class="card-body">${nutXoa('hopDong','',id,h.soHopDong+' · '+h.tenGoiThau)}</div></div>`;
 }
-async function saveContract(id,btn){
-  await busy(btn,async()=>{
-    const v=k=>$(k).value.trim();
-    if(!v('m-code')||!v('m-name')) throw new Error('Cần nhập Số hợp đồng và Tên công trình');
-    if(!v('m-co')) throw new Error('Chọn hợp đồng của công ty nào');
-    const site=$('m-site').value==='__x'?v('m-site-x'):$('m-site').value;
-    const dup=Object.entries(contracts).find(([k,c])=>c.code===v('m-code')&&k!==id); if(dup) throw new Error('Số HĐ '+v('m-code')+' đã có ('+dup[1].name+')');
-    const data={company:v('m-co'),site,code:v('m-code'),name:v('m-name'),partyA:v('m-pa'),partyB:v('m-pb'),signDate:fromISO(v('m-sign')),value:parseMoney(v('m-val')),
-      handoverDate:fromISO(v('m-ho')),warrantyMonths:parseInt(v('m-wm'),10)||0,warrantyEnd:fromISO(v('m-we')),note:v('m-note'),updatedAt:Date.now(),updatedBy:userName};
-    if(id){
-      const o=contracts[id], ch=[];
-      if((o.company||'')!==data.company) ch.push('công ty '+(o.company||'—')+' → '+data.company);
-      if((o.site||'')!==data.site) ch.push('công trình '+(o.site||'—')+' → '+(data.site||'—'));
-      if((o.value||0)!==data.value) ch.push('giá trị '+fmtMoney(o.value)+' → '+fmtMoney(data.value));
-      if((o.handoverDate||0)!==data.handoverDate) ch.push('bàn giao '+(fmtDate(o.handoverDate)||'—')+' → '+(fmtDate(data.handoverDate)||'—'));
-      if((o.warrantyEnd||0)!==data.warrantyEnd) ch.push('hết BH '+(fmtDate(o.warrantyEnd)||'—')+' → '+(fmtDate(data.warrantyEnd)||'—'));
-      await db.ref(ROOT+'/contracts/'+id).update(data); await log(id,'edit','✏️ Sửa hợp đồng'+(ch.length?': '+ch.join('; '):''));
-    } else {
-      Object.assign(data,{status:'active',createdAt:Date.now(),createdBy:userName});
-      const adv=parseMoney(v('m-adv'));
-      if(adv>0) data.advances={[db.ref().push().key]:Object.assign({no:1,date:fromISO(v('m-advd'))||Date.now(),value:adv,note:''},who())};
-      const ref=db.ref(ROOT+'/contracts').push(); await ref.set(data);
-      await log(ref.key,'create','🆕 Tạo hợp đồng · giá trị '+fmtMoney(data.value)+(adv?' · tạm ứng lần 1 '+fmtMoney(adv):''));
-    }
-    toast('✅ Đã lưu');
+// --- Tab Phụ lục ---
+function veTabPhuLuc(id,h,k){
+  const ds=danhSachBanGhi('phuLuc',id).sort((a,b)=>String(a.ngayKy||'').localeCompare(String(b.ngayKy||'')));
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📎 Phụ lục hợp đồng</h3><button class="btn sm" onclick="formPhuLuc('${id}')">＋ Thêm</button></div>
+    ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Số PL</th><th>Ngày ký</th><th class="tr">Loại</th><th>Điều chỉnh giá trị</th><th>Hoàn thành mới</th><th class="tr">Nội dung</th></tr></thead><tbody>
+      ${ds.map(x=>`<tr onclick="formPhuLuc('${id}','${x.id}')"><td class="tr"><b>${esc(x.soPhuLuc)}</b></td><td>${ngayVN(x.ngayKy)}</td><td class="tr">${esc(LOAI_PHU_LUC[x.loai]||'')}</td><td class="${x.giaTriDieuChinh<0?'neg':'pos'}">${x.giaTriDieuChinh>=0?'+':''}${tien(x.giaTriDieuChinh)}</td><td>${ngayVN(x.ngayHoanThanhMoi)||'—'}</td><td class="tr" style="white-space:normal">${esc(x.noiDung||'')}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td class="tr" colspan="3">Giá trị hiện hành</td><td>${tien(k.giaTriHienHanh)}</td><td>${ngayVN(k.ngayHoanThanhHienHanh)||'—'}</td><td></td></tr></tfoot></table></div><div class="hint">Bấm vào dòng để sửa. Phụ lục có thể cộng hoặc trừ giá trị, gia hạn thời gian, hoặc cả hai.</div>`:'<div class="hint">Chưa có phụ lục.</div>'}</div></div>`;
+}
+// --- Tab Tạm ứng ---
+function veTabTamUng(id,h,k){
+  const ds=danhSachBanGhi('tamUng',id).sort((a,b)=>(a.dot||0)-(b.dot||0)); const bl=DL.baoLanh[id]||{};
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>💵 Tạm ứng</h3><button class="btn sm" onclick="formTamUng('${id}')">＋ Thêm đợt</button></div>
+    ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đợt</th><th>Ngày</th><th>Số tiền</th><th class="tr">Bảo lãnh tạm ứng</th><th class="tr">Ghi chú</th></tr></thead><tbody>
+      ${ds.map(x=>{ const b=x.baoLanhId&&bl[x.baoLanhId]; return `<tr onclick="formTamUng('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b></td><td>${ngayVN(x.ngay)}</td><td><b>${tien(x.soTien)}</b></td><td class="tr">${b?esc(b.nganHang||'')+' · '+tienNgan(b.soTien)+' · hết hạn '+ngayVN(b.ngayHetHan):'—'}</td><td class="tr" style="white-space:normal">${esc(x.ghiChu||'')}</td></tr>`; }).join('')}</tbody>
+      <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(k.tamUngLuyKe)}</td><td class="tr" colspan="2">đã thu hồi ${tien(k.thuHoiTamUngLuyKe)} · chưa thu hồi <b>${tien(k.tamUngChuaThuHoi)}</b></td></tr></tfoot></table></div>`:'<div class="hint">Chưa có đợt tạm ứng nào.</div>'}</div></div>`;
+}
+// --- Tab Thanh toán ---
+function veTabThanhToan(id,h,k){
+  const ds=danhSachBanGhi('thanhToan',id).sort((a,b)=>(a.dot||0)-(b.dot||0));
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🧾 Thanh toán từng đợt</h3><button class="btn sm" onclick="formThanhToan('${id}')">＋ Thêm đợt</button></div>
+    ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đợt</th><th>Ngày NT</th><th>Giá trị nghiệm thu</th><th>Đề nghị TT</th><th>Thu hồi TƯ</th><th>Giữ BH</th><th>Giữ QT</th><th>Thực nhận</th><th>Tiền về</th></tr></thead><tbody>
+      ${ds.map(x=>`<tr onclick="formThanhToan('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b></td><td>${ngayVN(x.ngayNghiemThu)}</td><td>${tien(x.giaTriNghiemThu)}</td><td>${tien(x.soTienDeNghi)}</td><td>${x.thuHoiTamUng?tien(x.thuHoiTamUng):'—'}</td><td>${x.giuBaoHanh?tien(x.giuBaoHanh):'—'}</td><td>${x.giuQuyetToan?tien(x.giuQuyetToan):'—'}</td><td><b>${tien(x.soTienThucNhan)}</b></td><td>${ngayVN(x.ngayTienVe)||'<span class="neg">chưa</span>'}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(k.nghiemThuLuyKe)}</td><td>${tien(k.deNghiLuyKe)}</td><td>${tien(k.thuHoiTamUngLuyKe)}</td><td>${tien(k.giuBaoHanhLuyKe)}</td><td>${tien(k.giuQuyetToanLuyKe)}</td><td>${tien(k.thucNhanLuyKe)}</td><td></td></tr></tfoot></table></div><div class="hint">Số tiền thực nhận và thu hồi tạm ứng do kế toán nhập tay theo chứng từ. Bấm vào dòng để sửa.</div>`:'<div class="hint">Chưa có đợt thanh toán nào.</div>'}</div></div>`;
+}
+// --- Tab Bảo lãnh ---
+function veTabBaoLanh(id,h,k){
+  const ds=danhSachBanGhi('baoLanh',id).sort((a,b)=>String(a.ngayHetHan||'').localeCompare(String(b.ngayHetHan||'')));
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🏦 Bảo lãnh ngân hàng</h3><button class="btn sm" onclick="formBaoLanh('${id}')">＋ Thêm</button></div>
+    ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Loại</th><th class="tr">Ngân hàng</th><th>Số tiền</th><th>Phát hành</th><th>Hết hạn</th><th>Còn</th></tr></thead><tbody>
+      ${ds.map(x=>{ const d=TINH_TOAN.soNgayGiua(homNay(),x.ngayHetHan); return `<tr onclick="formBaoLanh('${id}','${x.id}')"><td class="tr"><b>${esc(LOAI_BAO_LANH[x.loai]||x.loai)}</b>${x.daGiaHan?' <span class="hint">(đã gia hạn)</span>':''}</td><td class="tr">${esc(x.nganHang||'')}</td><td>${tien(x.soTien)}</td><td>${ngayVN(x.ngayPhatHanh)}</td><td>${ngayVN(x.ngayHetHan)}</td><td class="${d!=null&&d<=CAU_HINH.NHAC_TRUOC_NGAY?'neg':''}">${d==null?'—':d<0?'quá '+(-d)+' ngày':d+' ngày'}</td></tr>`; }).join('')}</tbody></table></div><div class="hint">App nhắc gia hạn trước ${CAU_HINH.NHAC_TRUOC_NGAY} ngày.</div>`:'<div class="hint">Chưa có bảo lãnh nào. Ba loại: thực hiện hợp đồng, tạm ứng, bảo hành.</div>'}</div></div>`;
+}
+// --- Tab Bảo hành & Quyết toán (+ hoàn trả tiền giữ) ---
+function veTabBaoHanh(id,h,k){
+  const bh=h.baoHanh||{}, qt=h.quyetToan||{}; const ht=danhSachBanGhi('hoanTra',id).sort((a,b)=>String(a.ngay||'').localeCompare(String(b.ngay||'')));
+  const d=k.ngayHetBaoHanh?TINH_TOAN.soNgayGiua(homNay(),k.ngayHetBaoHanh):null;
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🛡 Bảo hành</h3><button class="btn sm" onclick="formBaoHanh('${id}')">✏️ Sửa</button></div>
+    <div class="kv"><div>Hình thức</div><div>${esc(HINH_THUC_BAO_HANH[bh.hinhThuc]||'—')}</div>
+      <div>Nghiệm thu bàn giao</div><div>${ngayVN(bh.ngayNghiemThuBanGiao)||'<span class="hint">chưa bàn giao</span>'}</div>
+      <div>Thời gian BH</div><div>${bh.soThang?bh.soThang+' tháng':'—'}</div>
+      <div>Hết bảo hành</div><div>${k.ngayHetBaoHanh?'<b>'+ngayVN(k.ngayHetBaoHanh)+'</b>'+(d!=null?(d<0?' · <span class="neg">đã hết '+(-d)+' ngày</span>':' · còn '+d+' ngày'):''):'—'}</div>
+      <div>Đang bị giữ BH</div><div class="${k.giuBaoHanhDangGiu>0?'neg':''}"><b>${tienD(k.giuBaoHanhDangGiu)}</b> <span class="hint">(giữ ${tienNgan(k.giuBaoHanhLuyKe)} − đã hoàn ${tienNgan(k.hoanTraBaoHanh)})</span></div></div>
+  </div></div>
+  <div class="card"><div class="card-body"><div class="sec-h"><h3>📋 Quyết toán</h3><button class="btn sm" onclick="formQuyetToan('${id}')">✏️ Sửa</button></div>
+    <div class="kv"><div>Nộp hồ sơ</div><div>${ngayVN(qt.ngayNop)||'—'}</div><div>Được duyệt</div><div>${ngayVN(qt.ngayDuyet)||'—'}</div>
+      <div>Giá trị duyệt</div><div>${qt.giaTriDuyet?'<b>'+tienD(qt.giaTriDuyet)+'</b>'+(Number(qt.giaTriDuyet)!==k.giaTriHienHanh?' <span class="hint">(hiện hành '+tienNgan(k.giaTriHienHanh)+')</span>':''):'—'}</div>
+      <div>Đã nhận đủ tiền</div><div>${qt.daNhanDu?'✅ Rồi':'Chưa'}${qt.conNo?' · còn nợ <b>'+tienD(qt.conNo)+'</b>':''}</div>
+      <div>Đang bị giữ QT</div><div class="${k.giuQuyetToanDangGiu>0?'neg':''}"><b>${tienD(k.giuQuyetToanDangGiu)}</b> <span class="hint">(giữ ${tienNgan(k.giuQuyetToanLuyKe)} − đã hoàn ${tienNgan(k.hoanTraQuyetToan)})</span></div></div>
+    ${h.trangThai!=='choQuyetToan'&&h.trangThai!=='daXong'?`<div class="hint" style="margin-top:6px">Xong việc, nộp hồ sơ quyết toán thì đổi trạng thái hợp đồng sang "Chờ quyết toán" (nút Sửa ở trên cùng).</div>`:''}
+  </div></div>
+  <div class="card"><div class="card-body"><div class="sec-h"><h3>↩️ Hoàn trả tiền giữ</h3><button class="btn sm" onclick="formHoanTra('${id}')">＋ Thêm</button></div>
+    ${ht.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Loại</th><th>Ngày</th><th>Số tiền</th><th class="tr">Lý do</th><th class="tr">Ghi chú</th></tr></thead><tbody>
+      ${ht.map(x=>`<tr onclick="formHoanTra('${id}','${x.id}')"><td class="tr"><b>${esc(LOAI_HOAN_TRA[x.loai]||x.loai)}</b></td><td>${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(LY_DO_HOAN_TRA[x.lyDo]||'')}</td><td class="tr" style="white-space:normal">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Chưa nhận lại khoản giữ nào. Khi bên A trả lại tiền giữ bảo hành / giữ chờ quyết toán thì ghi ở đây.</div>'}</div></div>`;
+}
+// --- Tab Kế hoạch tiền về: bảng 12 tháng của 1 năm, nhập số dự kiến ---
+let namKeHoach=new Date().getFullYear();
+function doiNamKeHoach(d){ namKeHoach+=d; veChiTiet(); }
+function veTabKeHoach(id,h,k){
+  const kh=h.keHoachTienVe||{}; const du=duLieuHopDong(id); const tt=Object.fromEntries(TINH_TOAN.dongTien([du],'thang','').map(x=>[x.ky,x.thucTe]));
+  const thangs=Array.from({length:12},(_,i)=>namKeHoach+'-'+pad(i+1));
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📅 Kế hoạch tiền về</h3><div class="row" style="flex:0 0 auto;gap:4px"><button class="btn sm sec" onclick="doiNamKeHoach(-1)">‹</button><b>${namKeHoach}</b><button class="btn sm sec" onclick="doiNamKeHoach(1)">›</button></div></div>
+    <div class="hint" style="margin-bottom:8px">Nhập số tiền dự kiến về từng tháng (đồng). Dashboard tự cộng các hợp đồng lại, gộp thành quý khi chọn xem quý.</div>
+    <table class="p"><thead><tr><th class="tr">Tháng</th><th>Kế hoạch về</th><th>Thực tế về</th></tr></thead><tbody>
+      ${thangs.map(t=>`<tr><td class="tr">${thangVN(t)}</td><td><input class="kh-o" data-thang="${t}" inputmode="numeric" style="text-align:right;min-height:40px;padding:6px 8px" value="${kh[t]?tien(kh[t]):''}" oninput="dinhDangO(this)"></td><td>${tt[t]?tien(tt[t]):'—'}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td class="tr">Cộng năm ${namKeHoach}</td><td>${tien(thangs.reduce((s,t)=>s+(Number(kh[t])||0),0))}</td><td>${tien(thangs.reduce((s,t)=>s+(tt[t]||0),0))}</td></tr></tfoot></table>
+    <div style="margin-top:10px"><button class="btn" onclick="luuKeHoach('${id}',this)">💾 Lưu kế hoạch năm ${namKeHoach}</button></div></div></div>`;
+}
+async function luuKeHoach(id,btn){
+  btn.disabled=true;
+  try{ const h=DL.hopDong[id], cu=h.keHoachTienVe||{}, up={};
+    document.querySelectorAll('.kh-o').forEach(o=>{ const t=o.dataset.thang, v=docTien(o.value), c=Number(cu[t])||0; if(v!==c){ up['hopDong/'+id+'/keHoachTienVe/'+t]=v||null; up['lichSu/'+khoaMoi()]=dongLichSu('keHoachTienVe',id,id,'sua',t,c,v); } });
+    if(!Object.keys(up).length){ toast('Không có gì thay đổi'); } else { up['hopDong/'+id+'/suaBoi']=tenNguoiDung; up['hopDong/'+id+'/suaLuc']=luc(); await ghiNhieu(up); toast('✅ Đã lưu kế hoạch'); }
+  }catch(e){ toast('❌ '+e.message); } btn.disabled=false;
+}
+// --- Tab File: giai đoạn đầu chỉ dán link (Google Drive / OneDrive). Tải lên Drive qua Apps Script làm ở khối 15. ---
+function veTabFile(id,h,k){
+  const fs=Object.entries(h.fileDinhKem||{});
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📁 File đính kèm</h3><button class="btn sm" onclick="formFile('${id}')">＋ Thêm link</button></div>
+    <div class="hint" style="margin-bottom:8px">Scan hợp đồng, phụ lục, bảo lãnh… Dán link OneDrive hoặc Google Drive (đặt quyền "ai có link đều xem được").</div>
+    ${fs.length?fs.map(([fid,f])=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><a href="${esc(f.link)}" target="_blank" rel="noopener" style="font-weight:700;color:var(--blue-dark)">📎 ${esc(f.ten||f.link)}</a><div class="hint">${esc(f.nguon||'')} · ${esc(f.nguoiTai||'')} · ${lucVN(f.luc)}</div></div>${laGiamDoc()?`<button class="btn sm sec" style="flex:0 0 auto;color:var(--red)" onclick="xoaFile('${id}','${fid}')">✕</button>`:''}</div>`).join(''):'<div class="hint">Chưa có file nào.</div>'}</div></div>`;
+}
+function formFile(id){
+  const cacO=[{k:'ten',nhan:'Tên file / tài liệu',batBuoc:true,placeholder:'VD: Scan hợp đồng ký'},{k:'link',nhan:'Link (OneDrive / Google Drive)',batBuoc:true,placeholder:'https://…'},{k:'nguon',nhan:'Nguồn',kieu:'chon',ds:{onedrive:'OneDrive',drive:'Google Drive',khac:'Khác'}}];
+  moForm('📎 Thêm file đính kèm',cacO,{nguon:'onedrive'},`<button class="btn" onclick="luuFile('${id}',this)">💾 Lưu</button>`);
+  window._cacOFile=cacO;
+}
+async function luuFile(id,btn){ await bam(btn,async()=>{ const v=docForm(window._cacOFile); batBuoc(window._cacOFile,v); if(!/^https?:\/\//i.test(v.link)) throw new Error('Link phải bắt đầu bằng http');
+  const fid=khoaMoi(), up={}; up['hopDong/'+id+'/fileDinhKem/'+fid]=Object.assign(v,{nguoiTai:tenNguoiDung,luc:luc()}); up['lichSu/'+khoaMoi()]=dongLichSu('fileDinhKem',fid,id,'tao','','',v.ten); await ghiNhieu(up); toast('✅ Đã thêm file'); }); }
+async function xoaFile(id,fid){ const f=(DL.hopDong[id].fileDinhKem||{})[fid]; if(!confirm('Xoá link "'+(f&&f.ten)+'"?')) return; const up={}; up['hopDong/'+id+'/fileDinhKem/'+fid]=null; up['lichSu/'+khoaMoi()]=dongLichSu('fileDinhKem',fid,id,'xoa','',f&&f.ten,''); await ghiNhieu(up); }
+// --- Tab Lịch sử ---
+function veTabLichSu(id,h,k){
+  const ds=Object.values(DL.lichSu).filter(l=>l.hopDongId===id).sort((a,b)=>String(b.luc).localeCompare(String(a.luc)));
+  const hd={tao:'🆕 Tạo',sua:'✏️ Sửa',xoa:'🗑 Xoá'};
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🕘 Lịch sử thay đổi</h3></div>
+    <div class="tl">${ds.length?ds.map(l=>`<div class="tl-e"><div class="tl-t">${lucVN(l.luc)} · ${esc(l.nguoi)}</div><div class="tl-b">${hd[l.hanhDong]||l.hanhDong} <b>${esc(TEN_BANG[l.bang]||l.bang)}</b>${l.truong?' · '+esc(tenTruong(l.truong)):''}${l.hanhDong==='sua'?': <span class="neg">'+esc(hienGiaTri(l.truong,l.giaTriCu))+'</span> → <span class="pos">'+esc(hienGiaTri(l.truong,l.giaTriMoi))+'</span>':(l.giaTriMoi||l.giaTriCu?': '+esc(l.giaTriMoi||l.giaTriCu):'')}</div></div>`).join(''):'<div class="empty">Chưa có gì.</div>'}</div></div></div>`;
+}
+const TEN_TRUONG={ congTyId:'Công ty', soHopDong:'Số hợp đồng', ngayKy:'Ngày ký', chuDauTu:'Chủ đầu tư', tenGoiThau:'Tên gói thầu', tenDuAn:'Tên dự án', loaiHopDong:'Loại hợp đồng', giaTriTruocThue:'Giá trước thuế', thue:'Thuế', giaTriGoc:'Giá trị gốc', thoiGianThucHien:'Thời gian thực hiện', ngayKhoiCong:'Ngày khởi công', ngayHoanThanhHopDong:'Ngày hoàn thành theo HĐ', trangThai:'Trạng thái', ghiChu:'Ghi chú',
+  'lienDanh.co':'Liên danh','lienDanh.tyLe':'Tỷ lệ liên danh','lienDanh.tongGiaTriLienDanh':'Tổng giá trị liên danh','lienDanh.thanhVienKhac':'Thành viên liên danh','noiBo.co':'Nội bộ','noiBo.hopDongGocId':'Hợp đồng gốc',
+  'baoHanh.hinhThuc':'Hình thức bảo hành','baoHanh.ngayNghiemThuBanGiao':'Ngày nghiệm thu bàn giao','baoHanh.soThang':'Số tháng bảo hành','baoHanh.ngayHetBaoHanh':'Ngày hết bảo hành',
+  'quyetToan.ngayNop':'Ngày nộp hồ sơ QT','quyetToan.ngayDuyet':'Ngày duyệt QT','quyetToan.giaTriDuyet':'Giá trị quyết toán','quyetToan.daNhanDu':'Đã nhận đủ','quyetToan.conNo':'Còn nợ',
+  'khoiLuongDaThucHien.soTien':'KL đã thực hiện','khoiLuongDaThucHien.ngay':'Ngày cập nhật KL',
+  soPhuLuc:'Số phụ lục', loai:'Loại', giaTriDieuChinh:'Giá trị điều chỉnh', ngayHoanThanhMoi:'Ngày hoàn thành mới', noiDung:'Nội dung', dot:'Đợt', ngay:'Ngày', soTien:'Số tiền', baoLanhId:'Bảo lãnh',
+  ngayNghiemThu:'Ngày nghiệm thu', giaTriNghiemThu:'Giá trị nghiệm thu', soTienDeNghi:'Số tiền đề nghị', thuHoiTamUng:'Thu hồi tạm ứng', giuBaoHanh:'Giữ bảo hành', giuQuyetToan:'Giữ chờ quyết toán', soTienThucNhan:'Thực nhận', ngayTienVe:'Ngày tiền về',
+  nganHang:'Ngân hàng', ngayPhatHanh:'Ngày phát hành', ngayHetHan:'Ngày hết hạn', daGiaHan:'Đã gia hạn', lyDo:'Lý do', tamUngId:'Đợt tạm ứng' };
+function tenTruong(t){ return TEN_TRUONG[t]||(/^\d{4}-\d{2}$/.test(t)?'tháng '+thangVN(t):t); }
+function hienGiaTri(truong,v){ if(v===''||v==null) return '(trống)'; if(typeof v==='boolean') return v?'có':'không'; if(typeof v==='number'&&Math.abs(v)>=1000) return tien(v); if(/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return ngayVN(v);
+  const tu={ ...TRANG_THAI, ...LOAI_HOP_DONG, ...LOAI_PHU_LUC, ...LOAI_BAO_LANH, ...HINH_THUC_BAO_HANH, ...LOAI_HOAN_TRA, ...LY_DO_HOAN_TRA }; return tu[v]||String(v); }
+// ----- 9b. Các form nhập liệu của chi tiết hợp đồng (dùng moForm/docForm ở khối tiện ích) -----
+let _cacO=null, _formId=null, _formBang='', _formHopDongId='';
+function goiYChuDauTu(){ return Object.values(DL.hopDong).map(h=>h.chuDauTu); }
+function goiYNganHang(){ return Object.values(DL.baoLanh).flatMap(o=>Object.values(o)).map(b=>b.nganHang); }
+
+// --- Hợp đồng (tạo / sửa thông tin chung) ---
+function formHopDong(id){
+  const h=id?DL.hopDong[id]:{ congTyId:'PVA', trangThai:'dangThiCong', loaiHopDong:'donGiaDieuChinh' };
+  const khac=Object.entries(DL.hopDong).filter(([k])=>k!==id).map(([k,x])=>[k,x.soHopDong+' · '+x.tenGoiThau]);
+  _cacO=[
+    {k:'congTyId',nhan:'Công ty ký hợp đồng',kieu:'chon',ds:Object.fromEntries(MA_CONG_TY.map(m=>[m,m+' — '+tenCongTy(m)])),batBuoc:true},
+    {k:'soHopDong',nhan:'Số hợp đồng',batBuoc:true,placeholder:'VD: 12/2026/HĐXD'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',batBuoc:true,nua:true},
+    {k:'chuDauTu',nhan:'Chủ đầu tư / Ban QLDA',kieu:'goiY',goiY:goiYChuDauTu(),batBuoc:true},
+    {k:'tenGoiThau',nhan:'Tên gói thầu',batBuoc:true,placeholder:'VD: Gói thầu số 3 – cầu Km12'},
+    {k:'tenDuAn',nhan:'Tên dự án / công trình',kieu:'goiY',goiY:danhSachCongTrinh,batBuoc:true,hint:'Chọn từ danh sách công trình dùng chung với Duyệt Chi, hoặc gõ tên mới'},
+    {k:'loaiHopDong',nhan:'Loại hợp đồng',kieu:'chon',ds:LOAI_HOP_DONG,batBuoc:true},{k:'trangThai',nhan:'Trạng thái',kieu:'chon',ds:TRANG_THAI,nua:true},
+    {tieuDe:'Giá trị (đồng, phần của công ty mình)'},
+    {k:'giaTriTruocThue',nhan:'Giá trị trước thuế',kieu:'tien',onInput:'tinhSauThue()'},{k:'thue',nhan:'Thuế GTGT',kieu:'tien',nua:true,onInput:'tinhSauThue()'},
+    {k:'giaTriGoc',nhan:'Giá trị sau thuế (giá trị gốc hợp đồng)',kieu:'tien',batBuoc:true,hint:'Tự cộng = trước thuế + thuế khi nhập 2 ô trên; sửa tay được'},
+    {tieuDe:'Thời gian'},
+    {k:'thoiGianThucHien',nhan:'Thời gian thực hiện',placeholder:'VD: 540 ngày'},
+    {k:'ngayKhoiCong',nhan:'Ngày khởi công',kieu:'ngay'},{k:'ngayHoanThanhHopDong',nhan:'Hoàn thành theo HĐ',kieu:'ngay',nua:true},
+    {tieuDe:'Liên danh / nội bộ'},
+    {k:'lienDanh.co',nhan:'Hợp đồng liên danh (chỉ theo dõi phần của mình)',kieu:'check'},
+    {k:'lienDanh.tyLe',nhan:'Tỷ lệ của mình',placeholder:'VD: 60%',hienKhi:'lienDanh.co'},{k:'lienDanh.tongGiaTriLienDanh',nhan:'Tổng giá trị cả liên danh',kieu:'tien',nua:true,hienKhi:'lienDanh.co'},
+    {k:'lienDanh.thanhVienKhac',nhan:'Thành viên liên danh khác',hienKhi:'lienDanh.co'},
+    {k:'noiBo.co',nhan:'Giao khoán NỘI BỘ giữa 3 công ty (không cộng vào "cả 3")',kieu:'check'},
+    {k:'noiBo.hopDongGocId',nhan:'Hợp đồng gốc',kieu:'chon',ds:Object.fromEntries(khac),rong:'— chọn hợp đồng gốc —',hienKhi:'noiBo.co'},
+    {k:'ghiChu',nhan:'Ghi chú',kieu:'vanBan'},
+  ];
+  moForm(id?'✏️ Sửa hợp đồng':'＋ Thêm hợp đồng',_cacO,h,`<button class="btn" onclick="luuHopDong('${id||''}',this)">💾 Lưu</button>`);
+}
+function tinhSauThue(){ const a=docTien($('f-giaTriTruocThue').value), t=docTien($('f-thue').value); if(a) $('f-giaTriGoc').value=tien(a+t); }
+async function luuHopDong(id,btn){
+  await bam(btn,async()=>{
+    const v=docForm(_cacO); batBuoc(_cacO,v);
+    const trung=Object.entries(DL.hopDong).find(([k,x])=>k!==id&&x.congTyId===v.congTyId&&String(x.soHopDong).trim().toLowerCase()===v.soHopDong.toLowerCase()); if(trung) throw new Error('Công ty '+v.congTyId+' đã có hợp đồng số '+v.soHopDong);
+    if(v.noiBo.co&&!v.noiBo.hopDongGocId) throw new Error('Chọn hợp đồng gốc của giao khoán nội bộ');
+    if(id){ const cu=DL.hopDong[id]; ['baoHanh','quyetToan','keHoachTienVe','fileDinhKem','khoiLuongDaThucHien'].forEach(k=>{ if(cu[k]!=null) v[k]=cu[k]; }); }
+    else v.baoHanh={hinhThuc:'giuTien'};
+    const moiId=await luuBanGhi('hopDong','',id,v,v.soHopDong+' · '+v.tenGoiThau); toast('✅ Đã lưu hợp đồng'); if(!id) moChiTiet(moiId,'thongTin');
   });
 }
-async function delContract(id){
-  const c=contracts[id]; if(!isDung()) return toast('Chỉ D mới xoá được — bấm "Xin xoá"');
-  if(!confirm('Xoá hợp đồng "'+c.code+' · '+c.name+'" cùng toàn bộ thanh toán, tạm ứng, phụ lục và lịch sử? Không hoàn tác được.')) return;
-  const up={}; up['contracts/'+id]=null; up['log/'+id]=null;
-  try{ await db.ref(ROOT).update(up); closeDetail(); toast('🗑 Đã xoá'); }catch(e){ toast('❌ '+e.message); }
-}
-// người khác không xoá được: gửi yêu cầu, D vào duyệt (luật Firebase cũng chỉ cho tài khoản D xoá)
-async function requestDelete(id){
-  const c=contracts[id]; const reason=prompt('Lý do xin xoá hợp đồng "'+c.code+'"? (D sẽ thấy và duyệt)'); if(reason===null) return;
-  await db.ref(ROOT+'/contracts/'+id).update({deleteRequest:Object.assign({reason:reason.trim()},who()),updatedAt:Date.now(),updatedBy:userName});
-  await log(id,'delreq','🗑 Xin xoá hợp đồng'+(reason.trim()?': '+reason.trim():'')); toast('✅ Đã gửi yêu cầu, chờ D duyệt');
-}
-async function cancelDelete(id){
-  const c=contracts[id]; if(!isDung()&&c.deleteRequest&&c.deleteRequest.uid!==currentUser.uid) return toast('Chỉ người xin hoặc D mới rút được');
-  await db.ref(ROOT+'/contracts/'+id).update({deleteRequest:null,updatedAt:Date.now(),updatedBy:userName});
-  await log(id,'delreq',isDung()?'✖ D không đồng ý xoá':'↩️ Rút lại yêu cầu xoá'); toast('✅ Đã bỏ yêu cầu xoá');
-}
-async function toggleClose(id){
-  const c=contracts[id], closing=c.status!=='closed', k=calc(c);
-  const msg=closing?'Thanh lý / kết thúc hợp đồng "'+c.code+'"?'+(k.advLeft>0?'\n⚠️ Tạm ứng chưa thu hồi hết: '+fmtMoney(k.advLeft):'')+(k.retainLeft>0?'\n⚠️ Còn bị giữ tiền bảo hành: '+fmtMoney(k.retainLeft):'')+(k.holdLeft>0?'\n⚠️ Còn bị giữ tiền chờ quyết toán: '+fmtMoney(k.holdLeft):'')+(k.remain>0?'\n⚠️ Còn '+fmtMoney(k.remain)+' chưa thanh toán':''):'Mở lại hợp đồng "'+c.code+'"?';
-  if(!confirm(msg)) return;
-  await db.ref(ROOT+'/contracts/'+id).update(closing?{status:'closed',closedAt:Date.now(),updatedAt:Date.now(),updatedBy:userName}:{status:c.settleValue?'settled':'active',closedAt:null,updatedAt:Date.now(),updatedBy:userName});
-  await log(id,'status',closing?'⚫ Thanh lý / kết thúc hợp đồng':'↩️ Mở lại hợp đồng'); toast(closing?'✅ Đã thanh lý':'✅ Đã mở lại');
-}
+// --- Khối lượng đã thực hiện (để tính "còn lại chưa thi công") ---
+function formKhoiLuong(id){ const h=DL.hopDong[id], k=ketQua(id);
+  _cacO=[{k:'khoiLuongDaThucHien.soTien',nhan:'Giá trị khối lượng đã thực hiện đến nay (đ)',kieu:'tien',hint:'Ước theo nghiệm thu nội bộ / khối lượng hiện trường. Để trống → tạm lấy = đã nghiệm thu ('+tienNgan(k.nghiemThuLuyKe)+')'},{k:'khoiLuongDaThucHien.ngay',nhan:'Ngày cập nhật',kieu:'ngay'}];
+  moForm('📐 Khối lượng đã thực hiện',_cacO,{khoiLuongDaThucHien:Object.assign({ngay:homNay()},h.khoiLuongDaThucHien||{})},`<button class="btn" onclick="luuPhan('${id}',this)">💾 Lưu</button>`); }
+// Lưu một phần của hợp đồng (baoHanh / quyetToan / khoiLuong): gộp vào bản ghi rồi luuBanGhi để có lịch sử từng trường
+async function luuPhan(id,btn,sauKhi){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); const moi=JSON.parse(JSON.stringify(DL.hopDong[id])); Object.entries(v).forEach(([k,x])=>{ moi[k]=Object.assign({},moi[k]||{},x); }); if(sauKhi) sauKhi(moi); await luuBanGhi('hopDong','',id,moi); toast('✅ Đã lưu'); }); }
+// --- Bảo hành ---
+function formBaoHanh(id){ const h=DL.hopDong[id];
+  _cacO=[{k:'baoHanh.hinhThuc',nhan:'Hình thức bảo hành',kieu:'chon',ds:HINH_THUC_BAO_HANH,batBuoc:true},{k:'baoHanh.ngayNghiemThuBanGiao',nhan:'Ngày nghiệm thu hoàn thành bàn giao đưa vào sử dụng',kieu:'ngay',hint:'Thời gian bảo hành tính từ ngày này'},{k:'baoHanh.soThang',nhan:'Thời gian bảo hành (tháng)',kieu:'so',placeholder:'12 hoặc 24',hint:'Ngày hết bảo hành = ngày bàn giao + số tháng (app tự tính)'}];
+  moForm('🛡 Bảo hành',_cacO,h,`<button class="btn" onclick="luuPhan('${id}',this,m=>{ m.baoHanh.ngayHetBaoHanh=TINH_TOAN.ngayHetBaoHanh(m.baoHanh.ngayNghiemThuBanGiao,m.baoHanh.soThang); })">💾 Lưu</button>`); }
+// --- Quyết toán ---
+function formQuyetToan(id){ const h=DL.hopDong[id], k=ketQua(id);
+  _cacO=[{k:'quyetToan.ngayNop',nhan:'Ngày nộp hồ sơ quyết toán',kieu:'ngay'},{k:'quyetToan.ngayDuyet',nhan:'Ngày được duyệt',kieu:'ngay',nua:true},{k:'quyetToan.giaTriDuyet',nhan:'Giá trị quyết toán được duyệt (đ)',kieu:'tien',hint:'Giá trị hiện hành: '+tienD(k.giaTriHienHanh)+'. Có ngày duyệt + giá trị → doanh thu cuối cùng lấy theo số này'},{k:'quyetToan.daNhanDu',nhan:'Đã nhận đủ tiền quyết toán',kieu:'check'},{k:'quyetToan.conNo',nhan:'Còn nợ (đ) — kế toán nhập',kieu:'tien'}];
+  moForm('📋 Quyết toán',_cacO,h,`<button class="btn" onclick="luuPhan('${id}',this)">💾 Lưu</button>`); }
 
-// ══ QUYẾT TOÁN ══
-async function setSettling(id,on){
-  const c=contracts[id]; if(!confirm(on?'Chuyển "'+c.code+'" sang CHỜ QUYẾT TOÁN?':'Bỏ trạng thái chờ quyết toán của "'+c.code+'"?')) return;
-  await db.ref(ROOT+'/contracts/'+id).update(on?{status:'settling',settlingAt:Date.now(),updatedAt:Date.now(),updatedBy:userName}:{status:'active',settlingAt:null,updatedAt:Date.now(),updatedBy:userName});
-  await log(id,'status',on?'📋 Chuyển sang chờ quyết toán':'↩️ Bỏ chờ quyết toán'); toast('✅ Đã lưu');
-}
-function settleForm(id){
-  const c=contracts[id], k=calc(c);
-  openModal(`<h3>✅ Quyết toán hợp đồng</h3><p style="font-size:14px;color:var(--text-sub)">${esc(c.code)} · ${esc(c.name)}<br>Giá trị HĐ + phụ lục: <b>${fmtMoney(k.val+k.add)}</b> · đã thanh toán ${fmtMoney(k.paid)}</p>
-    <label class="f">Ngày quyết toán</label><input id="q-date" type="date" value="${toISO(c.settleDate||Date.now())}">
-    <label class="f">Giá trị quyết toán được duyệt (đ)</label><input id="q-val" inputmode="numeric" value="${money(c.settleValue||k.val+k.add)}" oninput="fmtIn(this)"><div class="hint">Từ đây tổng giá trị HĐ tính theo số này; còn lại chưa thanh toán = quyết toán − đã thanh toán.</div>
-    <label class="f">Ghi chú</label><input id="q-note" value="${esc(c.settleNote||'')}" placeholder="Số quyết định, hồ sơ…">
-    <div style="margin-top:14px"><button class="btn green" onclick="saveSettle('${id}',this)">💾 Lưu</button></div>`);
-}
-async function saveSettle(id,btn){
-  await busy(btn,async()=>{
-    const d=fromISO($('q-date').value)||Date.now(), v=parseMoney($('q-val').value); if(!v) throw new Error('Nhập giá trị quyết toán');
-    await db.ref(ROOT+'/contracts/'+id).update({status:'settled',settleDate:d,settleValue:v,settleNote:$('q-note').value.trim(),updatedAt:Date.now(),updatedBy:userName});
-    await log(id,'settle','✅ Đã quyết toán '+fmtDate(d)+' · giá trị '+fmtMoney(v)+($('q-note').value.trim()?' · '+$('q-note').value.trim():'')); toast('✅ Đã ghi quyết toán');
-  });
-}
-// ══ KHỐI LƯỢNG ĐÃ THỰC HIỆN (để tính "còn lại chưa thi công") ══
-function doneForm(id){
-  const c=contracts[id], k=calc(c);
-  openModal(`<h3>📐 Khối lượng đã thực hiện</h3><p style="font-size:14px;color:var(--text-sub)">${esc(c.code)} · ${esc(c.name)}<br>Tổng giá trị: <b>${fmtMoney(k.total)}</b> · đã thanh toán ${fmtMoney(k.paid)}</p>
-    <label class="f">Giá trị khối lượng đã thực hiện đến nay (đ)</label><input id="d-val" inputmode="numeric" value="${money(c.doneValue)}" oninput="fmtIn(this)"><div class="hint">Ước theo nghiệm thu / khối lượng tại hiện trường. Để trống → app tạm lấy = đã thanh toán.</div>
-    <label class="f">Ngày cập nhật</label><input id="d-date" type="date" value="${toISO(c.doneDate||Date.now())}">
-    <label class="f">Ghi chú</label><input id="d-note" placeholder="Đợt nghiệm thu, hạng mục…">
-    <div style="margin-top:14px"><button class="btn" onclick="saveDone('${id}',this)">💾 Lưu</button></div>`);
-}
-async function saveDone(id,btn){
-  await busy(btn,async()=>{
-    const v=parseMoney($('d-val').value), d=fromISO($('d-date').value)||Date.now(), note=$('d-note').value.trim();
-    await db.ref(ROOT+'/contracts/'+id).update({doneValue:v,doneDate:v?d:null,updatedAt:Date.now(),updatedBy:userName});
-    await log(id,'done',v?'📐 KL đã thực hiện '+fmtMoney(v)+' ('+fmtDate(d)+')'+(note?' · '+note:''):'📐 Xoá KL thực hiện nhập tay (tạm lấy = đã thanh toán)'); toast('✅ Đã lưu');
-  });
-}
+// --- Bảng con dùng chung: phụ lục / tạm ứng / thanh toán / bảo lãnh / hoàn trả ---
+function moFormCon(bang,hopDongId,id,tieuDe,cacO,macDinh){ _formBang=bang; _formHopDongId=hopDongId; _formId=id||''; _cacO=cacO; const x=id?((DL[bang]||{})[hopDongId]||{})[id]:macDinh;
+  moForm((id?'✏️ Sửa ':'＋ Thêm ')+tieuDe,cacO,x,`<div class="row"><button class="btn" onclick="luuCon(this)">💾 Lưu</button></div>${id?'<div style="margin-top:10px">'+nutXoa(bang,hopDongId,id,tomTatBanGhi(bang,hopDongId,id))+'</div>':''}`); }
+async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); if(window._kiemTraCon) window._kiemTraCon(v); const id=await luuBanGhi(_formBang,_formHopDongId,_formId,v,tomTatMoi(_formBang,v)); if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v); toast('✅ Đã lưu'); }); }
+function tomTatMoi(bang,v){ return (DL.hopDong[_formHopDongId]||{}).soHopDong+' · '+TEN_BANG[bang]+' '+(v.dot||v.soPhuLuc||LOAI_BAO_LANH[v.loai]||LOAI_HOAN_TRA[v.loai]||'')+' '+tienD(v.soTien||v.giaTriDieuChinh||v.giaTriNghiemThu||0); }
+function dotTiep(bang,hopDongId){ return danhSachBanGhi(bang,hopDongId).reduce((m,x)=>Math.max(m,Number(x.dot)||0),0)+1; }
 
-// ══ BÀN GIAO ══
-function handoverForm(id){
-  const c=contracts[id];
-  openModal(`<h3>🏁 Bàn giao công trình</h3><p style="font-size:14px;color:var(--text-sub)">${esc(c.code)} · ${esc(c.name)}</p>
-    <label class="f">Ngày bàn giao</label><input id="h-ho" type="date" value="${toISO(c.handoverDate||Date.now())}" onchange="autoWE('h-ho','h-wm','h-we')">
-    <label class="f">Thời gian bảo hành (tháng)</label><input id="h-wm" inputmode="numeric" value="${c.warrantyMonths||12}" oninput="autoWE('h-ho','h-wm','h-we')">
-    <label class="f">Ngày hết bảo hành</label><input id="h-we" type="date" value="${c.warrantyEnd?toISO(c.warrantyEnd):''}">
-    <label class="f">Ghi chú</label><input id="h-note" placeholder="Số biên bản bàn giao…">
-    <div style="margin-top:14px"><button class="btn" onclick="saveHandover('${id}',this)">💾 Lưu</button></div>`);
-  if(!c.warrantyEnd) autoWE('h-ho','h-wm','h-we');
-}
-async function saveHandover(id,btn){
-  await busy(btn,async()=>{
-    const ho=fromISO($('h-ho').value); if(!ho) throw new Error('Chọn ngày bàn giao');
-    const wm=parseInt($('h-wm').value,10)||0, we=fromISO($('h-we').value), note=$('h-note').value.trim();
-    await db.ref(ROOT+'/contracts/'+id).update({handoverDate:ho,warrantyMonths:wm,warrantyEnd:we,updatedAt:Date.now(),updatedBy:userName});
-    await log(id,'handover','🏁 Bàn giao công trình '+fmtDate(ho)+(wm?' · bảo hành '+wm+' tháng':'')+(we?' · hết BH '+fmtDate(we):'')+(note?' · '+note:''));
-    toast('✅ Đã ghi bàn giao');
-  });
-}
+function formPhuLuc(hopDongId,id){ window._kiemTraCon=v=>{ if(v.loai!=='giaHan'&&!v.giaTriDieuChinh) throw new Error('Nhập giá trị điều chỉnh'); if(v.loai!=='dieuChinhGia'&&!v.ngayHoanThanhMoi) throw new Error('Nhập ngày hoàn thành mới'); if(v.loai==='giaHan') v.giaTriDieuChinh=0; if(v.loai==='dieuChinhGia') v.ngayHoanThanhMoi=''; }; window._sauKhiLuuCon=null;
+  moFormCon('phuLuc',hopDongId,id,'phụ lục',[{k:'soPhuLuc',nhan:'Số phụ lục',batBuoc:true,placeholder:'VD: PL01'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',batBuoc:true,nua:true},{k:'loai',nhan:'Loại phụ lục',kieu:'chon',ds:LOAI_PHU_LUC,batBuoc:true},{k:'giaTriDieuChinh',nhan:'Giá trị điều chỉnh (đ)',kieu:'tien',choAm:true,hint:'Tăng: nhập số. Giảm: nhập số và tích "Giá trị GIẢM"'},{k:'ngayHoanThanhMoi',nhan:'Ngày hoàn thành mới (nếu gia hạn)',kieu:'ngay'},{k:'noiDung',nhan:'Nội dung',kieu:'vanBan'}],{soPhuLuc:'PL'+pad(danhSachBanGhi('phuLuc',hopDongId).length+1),ngayKy:homNay(),loai:'dieuChinhGia'}); }
 
-// ══ PHỤ LỤC / TẠM ỨNG / THANH TOÁN (chung 1 form) ══
-const KIND={addenda:{t:'📎 Phụ lục hợp đồng',no:'Số phụ lục',val:'Giá trị phụ lục (đ)'},advances:{t:'💵 Tạm ứng',no:'Lần tạm ứng',val:'Số tiền tạm ứng (đ)'},payments:{t:'🧾 Thanh toán',no:'Lần thanh toán',val:'Giá trị thanh toán đợt này (đ)'}};
-function subForm(cid,kind,key){
-  const c=contracts[cid], x=key?(c[kind]||{})[key]:null, K=KIND[kind], k=calc(c);
-  const nextNo=Object.values(c[kind]||{}).reduce((m,y)=>Math.max(m,Number(y.no)||0),0)+1;
-  const isPay=kind==='payments', isBh=x&&x.type==='bh', isQt=x&&x.type==='qt', isRef=isBh||isQt;
-  openModal(`<h3>${x?'✏️ Sửa':'＋ Thêm'} — ${K.t}</h3><p style="font-size:14px;color:var(--text-sub)">${esc(c.code)} · ${esc(c.name)}</p>
-    ${isPay?`<label class="f">Loại</label><select id="s-type" onchange="payKind()"><option value="kl" ${isRef?'':'selected'}>Thanh toán khối lượng (lần 1, 2, 3…)</option><option value="bh" ${isBh?'selected':''}>Hoàn trả tiền giữ lại bảo hành</option><option value="qt" ${isQt?'selected':''}>Hoàn trả tiền giữ chờ quyết toán</option></select>`:''}
-    <div class="row"><div id="s-no-w"><label class="f">${K.no}</label><input id="s-no" value="${esc(x?x.no:(kind==='addenda'?'PL'+pad(nextNo):nextNo))}"></div><div><label class="f">Ngày</label><input id="s-date" type="date" value="${toISO(x&&x.date?x.date:Date.now())}"></div></div>
-    <label class="f">${K.val}</label><input id="s-val" inputmode="numeric" value="${money(Math.abs(Number(x&&x.value)||0))}" oninput="fmtIn(this);payPreview()">
-    ${kind==='addenda'?`<label style="display:flex;gap:8px;align-items:center;font-size:15px;margin-top:8px"><input type="checkbox" id="s-dec" style="width:auto" ${x&&x.value<0?'checked':''}> Phụ lục GIẢM giá trị</label>`:''}
-    ${isPay?`<div id="s-kl"><div class="row"><div><label class="f">Trừ thu hồi tạm ứng (đ)</label><input id="s-rec" inputmode="numeric" value="${money(x&&x.recover)}" oninput="fmtIn(this);payPreview()"></div><div><label class="f">Giữ lại bảo hành (đ)</label><input id="s-ret" inputmode="numeric" value="${money(x&&x.retain)}" oninput="fmtIn(this);payPreview()"></div></div>
-      <label class="f">Giữ lại chờ quyết toán (đ)</label><input id="s-hold" inputmode="numeric" value="${money(x&&x.hold)}" oninput="fmtIn(this);payPreview()">
-      <div class="hint">Tạm ứng còn phải thu hồi: <b>${fmtMoney(k.advLeft+(x&&!isRef?Number(x.recover)||0:0))}</b></div></div>
-      <div id="s-bh" class="hint">Đang bị giữ tiền bảo hành: <b>${fmtMoney(k.retainLeft+(isBh?Number(x.value)||0:0))}</b></div>
-      <div id="s-qt" class="hint">Đang bị giữ tiền chờ quyết toán: <b>${fmtMoney(k.holdLeft+(isQt?Number(x.value)||0:0))}</b></div>
-      <div style="margin:10px 0;font-size:16px;font-weight:700" id="s-net"></div>`:''}
-    <label class="f">Ghi chú</label><input id="s-note" value="${esc(x&&x.note||'')}" placeholder="${isPay?'Đợt nghiệm thu, số hồ sơ…':'Nội dung'}">
-    <div style="margin-top:14px" class="row"><button class="btn" onclick="saveSub('${cid}','${kind}','${key||''}',this)">💾 Lưu</button>${x?`<button class="btn sec" style="color:var(--red);flex:0 0 auto;width:auto" onclick="delSub('${cid}','${kind}','${key}',this)">🗑 Xoá</button>`:''}</div>`);
-  if(isPay){ payKind(); payPreview(); }
-}
-function payKind(){ const t=$('s-type').value, ref=t!=='kl'; $('s-kl').hidden=ref; $('s-bh').hidden=t!=='bh'; $('s-qt').hidden=t!=='qt'; $('s-no-w').style.visibility=ref?'hidden':''; }
-function payPreview(){ if(!$('s-net')) return; const v=parseMoney($('s-val').value); if($('s-type').value!=='kl'){ $('s-net').textContent='Thực nhận: '+fmtMoney(v); return; } const r=parseMoney($('s-rec').value), h=parseMoney($('s-ret').value), q=parseMoney($('s-hold').value); $('s-net').textContent='Thực nhận đợt này: '+fmtMoney(v-r-h-q); }
-async function saveSub(cid,kind,key,btn){
-  await busy(btn,async()=>{
-    const c=contracts[cid], K=KIND[kind]; let val=parseMoney($('s-val').value); if(!val) throw new Error('Nhập '+K.val.toLowerCase());
-    const data={no:$('s-no').value.trim(),date:fromISO($('s-date').value)||Date.now(),note:$('s-note').value.trim(),updatedAt:Date.now(),updatedBy:userName};
-    if(kind==='addenda'&&$('s-dec').checked) val=-val;
-    data.value=val;
-    let txt;
-    if(kind==='payments'){
-      data.type=$('s-type').value;
-      if(data.type==='bh'){ data.no=''; data.recover=0; data.retain=0; data.hold=0; txt='↩️ Hoàn trả tiền giữ lại bảo hành '+fmtMoney(val); }
-      else if(data.type==='qt'){ data.no=''; data.recover=0; data.retain=0; data.hold=0; txt='↩️ Hoàn trả tiền giữ chờ quyết toán '+fmtMoney(val); }
-      else { data.recover=parseMoney($('s-rec').value); data.retain=parseMoney($('s-ret').value); data.hold=parseMoney($('s-hold').value);
-        if(data.recover+data.retain+data.hold>val) throw new Error('Trừ tạm ứng + giữ bảo hành + giữ quyết toán không được lớn hơn giá trị thanh toán');
-        txt='🧾 Thanh toán lần '+data.no+': '+fmtMoney(val)+(data.recover?' · trừ TƯ '+fmtMoney(data.recover):'')+(data.retain?' · giữ BH '+fmtMoney(data.retain):'')+(data.hold?' · giữ QT '+fmtMoney(data.hold):'')+' · thực nhận '+fmtMoney(val-data.recover-data.retain-data.hold); }
-    } else if(kind==='advances') txt='💵 Tạm ứng lần '+data.no+': '+fmtMoney(val);
-    else txt='📎 Phụ lục '+data.no+': '+(val>=0?'+':'')+fmtMoney(val)+(data.note?' · '+data.note:'');
-    if(key){ await db.ref(ROOT+'/contracts/'+cid+'/'+kind+'/'+key).update(data); await log(cid,kind,'✏️ Sửa · '+txt); }
-    else { await db.ref(ROOT+'/contracts/'+cid+'/'+kind).push(Object.assign(data,who())); await log(cid,kind,txt); }
-    await db.ref(ROOT+'/contracts/'+cid).update({updatedAt:Date.now(),updatedBy:userName});
-    toast('✅ Đã lưu');
-  });
-}
-async function delSub(cid,kind,key,btn){
-  const x=contracts[cid][kind][key]; if(!confirm('Xoá dòng này ('+fmtMoney(x.value)+')?')) return;
-  await busy(btn,async()=>{
-    await db.ref(ROOT+'/contracts/'+cid+'/'+kind+'/'+key).set(null);
-    await log(cid,kind,'🗑 Xoá '+KIND[kind].t.replace(/^\S+ /,'')+(x.no?' '+x.no:'')+' · '+fmtMoney(x.value));
-    toast('🗑 Đã xoá');
-  });
-}
+function formTamUng(hopDongId,id){ const x=id?DL.tamUng[hopDongId][id]:null; const bl=x&&x.baoLanhId&&(DL.baoLanh[hopDongId]||{})[x.baoLanhId]||{};
+  window._kiemTraCon=null;
+  // bảo lãnh tạm ứng nhập ngay trong form: ghi thành 1 bản ghi baoLanh loại tamUng và nối bằng baoLanhId
+  window._sauKhiLuuCon=async(tuId,v)=>{ const b=v._baoLanh; delete v._baoLanh; if(!b||!b.soTien) return; const blId=await luuBanGhi('baoLanh',hopDongId,x&&x.baoLanhId||'',{loai:'tamUng',nganHang:b.nganHang,soTien:b.soTien,ngayPhatHanh:b.ngayPhatHanh,ngayHetHan:b.ngayHetHan,tamUngId:tuId},'Bảo lãnh tạm ứng đợt '+v.dot); if(!(x&&x.baoLanhId)) await ref('tamUng/'+hopDongId+'/'+tuId).update({baoLanhId:blId}); };
+  moFormCon('tamUng',hopDongId,id,'đợt tạm ứng',[{k:'dot',nhan:'Đợt',kieu:'so',batBuoc:true},{k:'ngay',nhan:'Ngày nhận tạm ứng',kieu:'ngay',batBuoc:true,nua:true},{k:'soTien',nhan:'Số tiền tạm ứng (đ)',kieu:'tien',batBuoc:true},{k:'ghiChu',nhan:'Ghi chú'},
+    {tieuDe:'Bảo lãnh tạm ứng (nếu có)'},{k:'_baoLanh.nganHang',nhan:'Ngân hàng',kieu:'goiY',goiY:goiYNganHang()},{k:'_baoLanh.soTien',nhan:'Số tiền bảo lãnh (đ)',kieu:'tien',nua:true},{k:'_baoLanh.ngayPhatHanh',nhan:'Ngày phát hành',kieu:'ngay'},{k:'_baoLanh.ngayHetHan',nhan:'Ngày hết hạn',kieu:'ngay',nua:true,hint:'App nhắc gia hạn trước 30 ngày'}],
+    Object.assign({dot:dotTiep('tamUng',hopDongId),ngay:homNay()},x||{},{_baoLanh:{nganHang:bl.nganHang,soTien:bl.soTien,ngayPhatHanh:bl.ngayPhatHanh,ngayHetHan:bl.ngayHetHan}})); }
 
-// ══ THÔNG BÁO TRÊN MÁY (Notification API) — nhắc khi mở app / quay lại app, mỗi việc 1 lần/ngày ══
-const canNotify=()=>'Notification' in window;
-function renderNotify(){
-  const info=$('notify-info'), btn=$('notify-btn');
-  if(!canNotify()){ info.textContent='Trình duyệt này không hỗ trợ thông báo. Vẫn xem được ở tab 🔔 Nhắc nhở.'; btn.hidden=true; return; }
-  const p=Notification.permission;
-  info.textContent=p==='granted'?'✅ Đã bật. Mỗi lần mở app, việc sắp đến hạn (bàn giao / hết bảo hành trong '+REMIND_DAYS+' ngày) sẽ hiện thông báo trên máy này.'
-    :p==='denied'?'⛔ Đã bị chặn trong cài đặt trình duyệt. Mở lại quyền Thông báo cho trang này rồi tải lại.'
-    :'Bấm để cho phép app hiện thông báo nhắc bàn giao / hết bảo hành trên máy này.';
-  btn.hidden=p!=='default';
-}
-async function enableNotify(){
-  try{ const p=await Notification.requestPermission(); renderNotify();
-    if(p==='granted'){ toast('✅ Đã bật thông báo'); showNote('📑 Hợp đồng PVA-379-279','Đã bật nhắc nhở trên máy này.','test'); pushReminders(); } else toast('Chưa cho phép thông báo'); }
-  catch(e){ toast('❌ '+e.message); }
-}
-async function showNote(title,body,tag){
-  try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();
-    if(reg&&reg.showNotification) return reg.showNotification(title,{body,tag,renotify:false});
-    new Notification(title,{body,tag}); }catch(e){}
-}
-function pushReminders(){
-  if(!canNotify()||Notification.permission!=='granted'||!currentUser) return;
-  const key='hd_noted_'+toISO(Date.now()); let done={}; try{ done=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
-  allAlerts().forEach(a=>{ const k=a.id+':'+a.kind; if(done[k]) return; done[k]=1; const c=contracts[a.id]; showNote(a.icon+' '+(c.company?c.company+' · ':'')+c.code+' · '+c.name,a.text,k); });
-  try{ localStorage.setItem(key,JSON.stringify(done)); Object.keys(localStorage).forEach(x=>{ if(x.startsWith('hd_noted_')&&x!==key) localStorage.removeItem(x); }); }catch(e){}
-}
+function formThanhToan(hopDongId,id){ const k=ketQua(hopDongId);
+  window._kiemTraCon=v=>{ if(v.thuHoiTamUng+v.giuBaoHanh+v.giuQuyetToan>v.soTienDeNghi) throw new Error('Thu hồi tạm ứng + giữ bảo hành + giữ quyết toán không được lớn hơn số tiền đề nghị'); if(!v.soTienThucNhan) v.soTienThucNhan=v.soTienDeNghi-v.thuHoiTamUng-v.giuBaoHanh-v.giuQuyetToan; }; window._sauKhiLuuCon=null;
+  moFormCon('thanhToan',hopDongId,id,'đợt thanh toán',[{k:'dot',nhan:'Đợt',kieu:'so',batBuoc:true},{k:'ngayNghiemThu',nhan:'Ngày nghiệm thu khối lượng',kieu:'ngay',batBuoc:true,nua:true},
+    {k:'giaTriNghiemThu',nhan:'Giá trị nghiệm thu đợt này (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()'},{k:'soTienDeNghi',nhan:'Số tiền đề nghị thanh toán (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()',hint:'Thường = giá trị nghiệm thu'},
+    {k:'thuHoiTamUng',nhan:'Thu hồi tạm ứng đợt này (đ)',kieu:'tien',onInput:'goiYThucNhan()',hint:'Kế toán nhập tay theo chứng từ. Tạm ứng chưa thu hồi: '+tienD(k.tamUngChuaThuHoi)},
+    {k:'giuBaoHanh',nhan:'Giữ lại bảo hành (đ)',kieu:'tien',onInput:'goiYThucNhan()'},{k:'giuQuyetToan',nhan:'Giữ lại chờ quyết toán (đ)',kieu:'tien',nua:true,onInput:'goiYThucNhan()'},
+    {k:'soTienThucNhan',nhan:'Số tiền thực nhận (đ)',kieu:'tien',hint:'Để trống → app lấy = đề nghị − thu hồi TƯ − giữ BH − giữ QT (xem gợi ý bên dưới khi gõ)'},{k:'ngayTienVe',nhan:'Ngày tiền về tài khoản',kieu:'ngay',nua:true,hint:'Chưa về thì để trống'},
+    {k:'ghiChu',nhan:'Ghi chú',placeholder:'Đợt nghiệm thu, số hồ sơ…'}],{dot:dotTiep('thanhToan',hopDongId),ngayNghiemThu:homNay()});
+  goiYThucNhan(); }
+function goiYThucNhan(){ const g=k=>docTien(($('f-'+k)||{}).value); const n=g('soTienDeNghi')-g('thuHoiTamUng')-g('giuBaoHanh')-g('giuQuyetToan'); const o=$('f-soTienThucNhan'); if(o&&!o.value) o.placeholder='gợi ý '+tien(n); }
 
-// ══ EXCEL (SheetJS tải khi cần, giống 379) ══
-function loadXLSX(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX);
-  const s=document.createElement('script'); s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
-  s.integrity='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT'; s.crossOrigin='anonymous';
-  s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
-const COLS=['Công ty','Công trình','Số hợp đồng','Tên gói thầu / nội dung','Bên A','Bên B','Ngày ký','Giá trị hợp đồng','Tạm ứng lần 1','Ngày bàn giao','Bảo hành (tháng)','Ngày hết bảo hành','Ghi chú'];
-const PH_TXT={active:'Đang thi công',warranty:'Đang bảo hành',expired:'Hết bảo hành',settling:'Chờ quyết toán',settled:'Đã quyết toán',closed:'Đã thanh lý'};
-function xDate(v){ // ô ngày trong Excel: Date, số serial, hoặc chữ dd/mm/yyyy
-  if(!v) return 0; if(v instanceof Date) return isNaN(v)?0:new Date(v.getFullYear(),v.getMonth(),v.getDate(),12).getTime();
-  if(typeof v==='number'){ const d=new Date(Math.round((v-25569)*86400000)); return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),12).getTime(); }
-  const s=String(v).trim(); let m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); if(m) return new Date(+m[3],+m[2]-1,+m[1],12).getTime();
-  m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return new Date(+m[1],+m[2]-1,+m[3],12).getTime(); return 0; }
-const xNum=v=>typeof v==='number'?Math.round(v):parseMoney(v);
-async function downloadTemplate(){
-  try{ const X=await loadXLSX();
-    const ws=X.utils.aoa_to_sheet([COLS,['PVA','CT QL14e cầu','12/2026/HĐXD','Gói thầu số 3 – cầu Km12','Ban QLDA huyện X','Công ty Phúc Vinh An','15/01/2026',12500000000,2500000000,'','12','','Ví dụ — xoá dòng này'],['379','CT QL28b','05/2025/HĐ','Đường nội bộ KCN Y','Công ty Z','Công ty Phúc Vinh An','20/03/2025',3200000000,'','30/06/2026','12','30/06/2027','']]);
-    ws['!cols']=[9,22,16,32,22,22,11,18,16,13,10,14,25].map(w=>({wch:w}));
-    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Hop dong'); X.writeFile(wb,'Mau-danh-sach-hop-dong.xlsx');
-  }catch(e){ toast('❌ '+e.message); }
+function formBaoLanh(hopDongId,id){ const k=ketQua(hopDongId);
+  window._kiemTraCon=null;
+  // Phát hành thư bảo lãnh bảo hành → hỏi "đã nhận lại tiền giữ bảo hành chưa?" → tự tạo bản ghi hoanTra (mục 1.4)
+  window._sauKhiLuuCon=async(blId,v)=>{ if(v.loai!=='baoHanh'||id) return; const dangGiu=ketQua(hopDongId).giuBaoHanhDangGiu; if(dangGiu<=0) return;
+    if(confirm('Đã nhận lại tiền giữ bảo hành ('+tienD(dangGiu)+') sau khi nộp thư bảo lãnh chưa?\nBấm OK nếu đã nhận → app ghi 1 dòng "Hoàn trả tiền giữ bảo hành" ngày '+ngayVN(v.ngayPhatHanh||homNay())+'.'))
+      await luuBanGhi('hoanTra',hopDongId,'',{loai:'baoHanh',ngay:v.ngayPhatHanh||homNay(),soTien:dangGiu,lyDo:'phatHanhBaoLanh',baoLanhId:blId,ghiChu:'Tự ghi khi phát hành thư bảo lãnh bảo hành'},'Hoàn trả tiền giữ BH '+tienD(dangGiu)); };
+  moFormCon('baoLanh',hopDongId,id,'bảo lãnh',[{k:'loai',nhan:'Loại bảo lãnh',kieu:'chon',ds:LOAI_BAO_LANH,batBuoc:true},{k:'nganHang',nhan:'Ngân hàng',kieu:'goiY',goiY:goiYNganHang(),batBuoc:true},{k:'soTien',nhan:'Số tiền bảo lãnh (đ)',kieu:'tien',batBuoc:true},{k:'ngayPhatHanh',nhan:'Ngày phát hành',kieu:'ngay',batBuoc:true},{k:'ngayHetHan',nhan:'Ngày hết hạn',kieu:'ngay',batBuoc:true,nua:true,hint:'App nhắc gia hạn trước 30 ngày'},{k:'daGiaHan',nhan:'Đã gia hạn (thư mới thay thư cũ)',kieu:'check'},{k:'ghiChu',nhan:'Ghi chú / số thư'}],{loai:'thucHienHopDong',ngayPhatHanh:homNay()}); }
+
+function formHoanTra(hopDongId,id){ const k=ketQua(hopDongId);
+  window._kiemTraCon=null; window._sauKhiLuuCon=null;
+  moFormCon('hoanTra',hopDongId,id,'hoàn trả tiền giữ',[{k:'loai',nhan:'Khoản được trả lại',kieu:'chon',ds:LOAI_HOAN_TRA,batBuoc:true,hint:'Đang bị giữ: bảo hành '+tienD(k.giuBaoHanhDangGiu)+' · chờ quyết toán '+tienD(k.giuQuyetToanDangGiu)},{k:'ngay',nhan:'Ngày tiền về',kieu:'ngay',batBuoc:true},{k:'soTien',nhan:'Số tiền (đ)',kieu:'tien',batBuoc:true,nua:true},{k:'lyDo',nhan:'Lý do',kieu:'chon',ds:LY_DO_HOAN_TRA},{k:'ghiChu',nhan:'Ghi chú'}],{loai:'baoHanh',ngay:homNay(),lyDo:'hetBaoHanh'}); }
+// ===== 10. MÀN HÌNH: Nhắc hạn — mốc từ TINH_TOAN.cacMoc + mốc tự thêm; nhắc trước 30 ngày, lặp 5 ngày, tới khi "Đã xong" (quy tắc 18) =====
+function khoaNhac(hopDongId,loai,thamChieuId){ return (hopDongId+'__'+loai+'__'+(thamChieuId||'x')).replace(/[.#$\[\]\/]/g,'_'); }
+// Đồng bộ bảng nhacNho với dữ liệu: mốc mới → tạo; ngày mốc đổi → cập nhật và mở lại; mốc không còn → xoá (mốc tự thêm giữ nguyên)
+async function dongBoNhacNho(){
+  const up={}, con=new Set();
+  Object.keys(DL.hopDong).forEach(id=>{ if((DL.hopDong[id].trangThai)==='biChamDut') return;
+    TINH_TOAN.cacMoc(duLieuHopDong(id)).forEach(m=>{ const k=khoaNhac(id,m.loai,m.thamChieuId); con.add(k); const cu=DL.nhacNho[k];
+      if(!cu) up['nhacNho/'+k]={ hopDongId:id, loai:m.loai, thamChieuId:m.thamChieuId||'', loaiBaoLanh:m.loaiBaoLanh||'', ngayMoc:m.ngayMoc, ngayNhacTiep:TINH_TOAN.congThang(m.ngayMoc,0), soLanDaNhac:0, daXong:false, taoLuc:luc() };
+      else if(cu.ngayMoc!==m.ngayMoc){ up['nhacNho/'+k+'/ngayMoc']=m.ngayMoc; up['nhacNho/'+k+'/daXong']=false; up['nhacNho/'+k+'/soLanDaNhac']=0; } }); });
+  Object.entries(DL.nhacNho).forEach(([k,n])=>{ if(n.loai!=='khac'&&!con.has(k)) up['nhacNho/'+k]=null; });
+  if(Object.keys(up).length){ try{ await ghiNhieu(up); }catch(e){} }
 }
-async function onExcel(ev){
-  const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
-  try{ const X=await loadXLSX(); const wb=X.read(await f.arrayBuffer(),{cellDates:true}); const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
-    const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase()); const ci=n=>hdr.findIndex(h=>h.includes(n));
-    const I={company:ci('công ty'),site:hdr.findIndex(h=>h.includes('công trình')&&!h.includes('tên')),code:ci('số hợp'),name:ci('tên'),partyA:ci('bên a'),partyB:ci('bên b'),signDate:ci('ngày ký'),value:ci('giá trị'),adv:ci('tạm ứng'),handoverDate:ci('bàn giao'),warrantyMonths:ci('tháng'),warrantyEnd:ci('hết bảo'),note:ci('ghi chú')};
-    if(I.code<0||I.name<0) throw new Error('File phải có cột "Số hợp đồng" và "Tên công trình"');
+function moTaNhac(n){ const h=DL.hopDong[n.hopDongId]||{}; const ten=h.tenGoiThau||h.soHopDong||'(hợp đồng đã xoá)';
+  const loai=n.loai==='hetBaoLanh'?'hết '+(LOAI_BAO_LANH[n.loaiBaoLanh]||'bảo lãnh').toLowerCase():n.loai==='khac'?(n.ghiChu||'mốc tự thêm'):LOAI_MOC[n.loai].toLowerCase();
+  return {ten, loai}; }
+function danhSachDangNhac(){ const hn=homNay(); return Object.entries(DL.nhacNho).map(([k,n])=>Object.assign({id:k,conNgay:TINH_TOAN.soNgayGiua(hn,n.ngayMoc)},n)).filter(n=>!n.daXong&&n.conNgay!=null&&n.conNgay<=CAU_HINH.NHAC_TRUOC_NGAY).sort((a,b)=>a.conNgay-b.conNgay); }
+function veNhacHan(){
+  $('nhac-truoc').textContent=CAU_HINH.NHAC_TRUOC_NGAY; $('nhac-lap').textContent=CAU_HINH.NHAC_LAP_NGAY;
+  const ds=danhSachDangNhac(); $('nhac-badge').hidden=!ds.length; $('nhac-badge').textContent=ds.length;
+  $('ds-nhac').innerHTML=ds.length?ds.map(n=>{ const m=moTaNhac(n); return `<div class="al ${n.conNgay<0?'over':n.conNgay<=7?'due':''}"><div class="ic">${n.conNgay<0?'🔴':'⏰'}</div><div class="item-main" style="cursor:pointer" onclick="moChiTiet('${n.hopDongId}','${n.loai==='hetBaoLanh'?'baoLanh':n.loai==='hetBaoHanh'?'baoHanh':'thongTin'}')"><div class="item-name">${esc(m.ten)} — ${esc(m.loai)}</div><div class="item-sub">${n.conNgay<0?'<b class="neg">QUÁ HẠN '+(-n.conNgay)+' ngày</b>':n.conNgay===0?'<b class="neg">HÔM NAY</b>':'còn <b>'+n.conNgay+' ngày</b>'} · ${ngayVN(n.ngayMoc)}${n.soLanDaNhac?' · đã nhắc '+n.soLanDaNhac+' lần':''}</div></div><button class="btn sm green" style="flex:0 0 auto" onclick="daXongNhac('${n.id}')">✅ Đã xong</button></div>`; }).join('')
+    :'<div class="empty">🎉 Không có việc nào đến hạn trong '+CAU_HINH.NHAC_TRUOC_NGAY+' ngày tới.</div>';
+  const xong=Object.entries(DL.nhacNho).filter(([k,n])=>n.daXong).sort((a,b)=>String(b[1].lucXong||'').localeCompare(String(a[1].lucXong||''))).slice(0,10);
+  $('ds-nhac-xong').innerHTML=xong.length?xong.map(([k,n])=>{ const m=moTaNhac(n); return `<div class="item-sub" style="padding:4px 0">✅ ${esc(m.ten)} — ${esc(m.loai)} (${ngayVN(n.ngayMoc)}) · ${esc(n.nguoiXong||'')} ${lucVN(n.lucXong)} <a href="#" onclick="moLaiNhac('${k}');return false" style="color:var(--blue)">mở lại</a></div>`; }).join(''):'<div class="hint">Chưa có.</div>';
+}
+async function daXongNhac(k){ await ref('nhacNho/'+k).update({daXong:true,nguoiXong:tenNguoiDung,lucXong:luc()}); toast('✅ Đã đánh dấu xong'); }
+async function moLaiNhac(k){ await ref('nhacNho/'+k).update({daXong:false,nguoiXong:null,lucXong:null}); }
+function formMocTuThem(){ _cacO=[{k:'hopDongId',nhan:'Hợp đồng',kieu:'chon',ds:Object.fromEntries(Object.entries(DL.hopDong).map(([k,h])=>[k,h.soHopDong+' · '+h.tenGoiThau])),rong:'— chọn —',batBuoc:true},{k:'ngayMoc',nhan:'Ngày mốc',kieu:'ngay',batBuoc:true},{k:'ghiChu',nhan:'Nhắc việc gì?',batBuoc:true,placeholder:'VD: nộp hồ sơ xin hoàn trả tiền bảo hành'}];
+  moForm('＋ Mốc tự nhắc',_cacO,{ngayMoc:homNay()},`<button class="btn" onclick="luuMocTuThem(this)">💾 Lưu</button>`); }
+async function luuMocTuThem(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); await ref('nhacNho').push({hopDongId:v.hopDongId,loai:'khac',thamChieuId:'',ngayMoc:v.ngayMoc,ghiChu:v.ghiChu,ngayNhacTiep:v.ngayMoc,soLanDaNhac:0,daXong:false,nguoiTao:tenNguoiDung,taoLuc:luc()}); toast('✅ Đã thêm mốc'); }); }
+
+// ===== 11. MÀN HÌNH: Nhập từ Excel (xem trước → xác nhận) — file mẫu do app xuất ra (quy tắc 16) =====
+function napSheetJs(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX); const s=document.createElement('script'); s.src=CAU_HINH.URL_SHEETJS; s.integrity=CAU_HINH.SRI_SHEETJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
+const COT_NHAP=[['congTyId','Công ty (PVA/379/279)'],['soHopDong','Số hợp đồng'],['ngayKy','Ngày ký'],['chuDauTu','Chủ đầu tư'],['tenGoiThau','Tên gói thầu'],['tenDuAn','Tên dự án'],['loaiHopDong','Loại HĐ (Trọn gói/Đơn giá cố định/Đơn giá điều chỉnh)'],['giaTriTruocThue','Giá trị trước thuế'],['thue','Thuế'],['giaTriGoc','Giá trị sau thuế'],['thoiGianThucHien','Thời gian thực hiện'],['ngayKhoiCong','Ngày khởi công'],['ngayHoanThanhHopDong','Ngày hoàn thành theo HĐ'],['trangThai','Trạng thái'],['ghiChu','Ghi chú']];
+function docNgayExcel(v){ if(!v) return ''; if(v instanceof Date) return isNaN(v)?'':v.getFullYear()+'-'+pad(v.getMonth()+1)+'-'+pad(v.getDate()); if(typeof v==='number'){ const d=new Date(Math.round((v-25569)*86400000)); return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate()); }
+  const s=String(v).trim(); let m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); if(m) return m[3]+'-'+pad(+m[2])+'-'+pad(+m[1]); m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]); return ''; }
+const docSoExcel=v=>typeof v==='number'?Math.round(v):docTien(v);
+const timKhoa=(ds,t)=>{ t=String(t||'').toLowerCase().trim(); return Object.entries(ds).find(([k,v])=>t===k.toLowerCase()||t===v.toLowerCase())?.[0]||''; };
+async function taiFileMau(){ try{ const X=await napSheetJs();
+  const ws=X.utils.aoa_to_sheet([COT_NHAP.map(c=>c[1]),['PVA','MẪU-01/2026 (xoá dòng này)','15/01/2026','Ban QLDA huyện X','Gói thầu số 3 – cầu Km12','CT QL14e cầu','Đơn giá điều chỉnh',11363636364,1136363636,12500000000,'540 ngày','01/02/2026','31/07/2027','Đang thi công','']]);
+  ws['!cols']=COT_NHAP.map(()=>({wch:18})); const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'HopDong'); X.writeFile(wb,'mau-nhap-hop-dong.xlsx'); }catch(e){ toast('❌ '+e.message); } }
+async function chonFileExcel(ev){ const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  try{ const X=await napSheetJs(); const wb=X.read(await f.arrayBuffer(),{cellDates:true}); const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:'',raw:true});
+    const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase()); const idx=k=>hdr.findIndex(h=>h.startsWith(COT_NHAP.find(c=>c[0]===k)[1].toLowerCase().split(' (')[0]));
+    const I=Object.fromEntries(COT_NHAP.map(c=>[c[0],idx(c[0])])); if(I.soHopDong<0||I.tenGoiThau<0||I.congTyId<0) throw new Error('File phải theo đúng file mẫu (có cột Công ty, Số hợp đồng, Tên gói thầu)');
     const g=(r,k)=>I[k]>=0?r[I[k]]:''; const gs=(r,k)=>String(g(r,k)??'').trim();
-    const list=rows.slice(1).filter(r=>gs(r,'code')&&gs(r,'name')).map(r=>{ const o={company:gs(r,'company').toUpperCase(),site:gs(r,'site'),code:gs(r,'code'),name:gs(r,'name'),partyA:gs(r,'partyA'),partyB:gs(r,'partyB'),signDate:xDate(g(r,'signDate')),value:xNum(g(r,'value')),adv:xNum(g(r,'adv')),
-      handoverDate:xDate(g(r,'handoverDate')),warrantyMonths:parseInt(gs(r,'warrantyMonths'),10)||0,warrantyEnd:xDate(g(r,'warrantyEnd')),note:gs(r,'note')};
-      if(!o.warrantyEnd&&o.handoverDate&&o.warrantyMonths) o.warrantyEnd=addMonths(o.handoverDate,o.warrantyMonths); return o; });
-    if(!list.length) throw new Error('Không thấy dòng nào có Số HĐ + Tên');
-    const byCode={}; Object.entries(contracts).forEach(([k,c])=>byCode[c.code]=k);
-    const nNew=list.filter(r=>!byCode[r.code]).length;
-    openModal(`<h3>📥 Xem trước: ${list.length} dòng</h3><p style="font-size:14px">Thêm mới <b>${nNew}</b> · cập nhật <b>${list.length-nNew}</b> (số HĐ đã có)</p>
-      <div style="max-height:45vh;overflow:auto"><table class="x"><tr><th>Cty</th><th>Số HĐ</th><th>Tên</th><th>Giá trị</th><th></th></tr>${list.map(r=>`<tr><td>${esc(r.company)}</td><td>${esc(r.code)}</td><td>${esc(r.name)}</td><td>${fmtShort(r.value)}</td><td>${byCode[r.code]?'cập nhật':'mới'}</td></tr>`).join('')}</table></div>
-      <div style="margin-top:14px"><button class="btn" onclick="importRows(this)">✅ Nhập ${list.length} hợp đồng</button></div>`);
-    window._xlList=list;
-  }catch(e){ toast('❌ '+e.message); }
+    const ds=rows.slice(1).map((r,i)=>{ const o={dong:i+2,congTyId:gs(r,'congTyId').toUpperCase(),soHopDong:gs(r,'soHopDong'),ngayKy:docNgayExcel(g(r,'ngayKy')),chuDauTu:gs(r,'chuDauTu'),tenGoiThau:gs(r,'tenGoiThau'),tenDuAn:gs(r,'tenDuAn'),loaiHopDong:timKhoa(LOAI_HOP_DONG,gs(r,'loaiHopDong'))||'donGiaDieuChinh',giaTriTruocThue:docSoExcel(g(r,'giaTriTruocThue')),thue:docSoExcel(g(r,'thue')),giaTriGoc:docSoExcel(g(r,'giaTriGoc')),thoiGianThucHien:gs(r,'thoiGianThucHien'),ngayKhoiCong:docNgayExcel(g(r,'ngayKhoiCong')),ngayHoanThanhHopDong:docNgayExcel(g(r,'ngayHoanThanhHopDong')),trangThai:timKhoa(TRANG_THAI,gs(r,'trangThai'))||'dangThiCong',ghiChu:gs(r,'ghiChu')};
+      if(!o.giaTriGoc&&o.giaTriTruocThue) o.giaTriGoc=o.giaTriTruocThue+o.thue; const loi=[]; if(!o.soHopDong&&!o.tenGoiThau) return null;
+      if(!MA_CONG_TY.includes(o.congTyId)) loi.push('công ty phải là PVA/379/279'); if(!o.soHopDong) loi.push('thiếu số HĐ'); if(!o.tenGoiThau) loi.push('thiếu tên gói thầu'); if(!o.ngayKy) loi.push('ngày ký sai'); if(!o.giaTriGoc) loi.push('thiếu giá trị'); if(/MẪU/i.test(o.soHopDong)) loi.push('dòng mẫu, hãy xoá');
+      o.loi=loi; o.cuId=Object.keys(DL.hopDong).find(k=>DL.hopDong[k].congTyId===o.congTyId&&String(DL.hopDong[k].soHopDong).trim().toLowerCase()===o.soHopDong.toLowerCase())||''; return o; }).filter(Boolean);
+    if(!ds.length) throw new Error('Không thấy dòng nào có dữ liệu'); const ok=ds.filter(o=>!o.loi.length);
+    moModal(`<h3>📥 Xem trước ${ds.length} dòng</h3><p style="font-size:14px">Hợp lệ <b>${ok.length}</b> (thêm mới ${ok.filter(o=>!o.cuId).length}, cập nhật ${ok.filter(o=>o.cuId).length}) · lỗi <b class="neg">${ds.length-ok.length}</b> (bị bỏ qua)</p>
+      <div style="max-height:45vh;overflow:auto"><table class="x"><tr><th>Dòng</th><th>Cty</th><th>Số HĐ</th><th>Gói thầu</th><th>Giá trị</th><th>Kết quả</th></tr>${ds.map(o=>`<tr style="${o.loi.length?'color:var(--red)':''}"><td>${o.dong}</td><td>${esc(o.congTyId)}</td><td>${esc(o.soHopDong)}</td><td>${esc(o.tenGoiThau)}</td><td>${tienNgan(o.giaTriGoc)}</td><td>${o.loi.length?esc(o.loi.join('; ')):o.cuId?'cập nhật':'mới'}</td></tr>`).join('')}</table></div>
+      <div style="margin-top:14px"><button class="btn" ${ok.length?'':'disabled'} onclick="nhapExcel(this)">✅ Ghi ${ok.length} hợp đồng vào Firebase</button></div>`);
+    window._dsNhap=ok;
+  }catch(e){ toast('❌ '+e.message); } }
+async function nhapExcel(btn){ await bam(btn,async()=>{ let n=0; for(const o of window._dsNhap){ const v=Object.assign({},o); delete v.dong; delete v.loi; const cuId=v.cuId; delete v.cuId;
+    if(cuId){ const cu=DL.hopDong[cuId]; const moi=Object.assign({},cu); Object.entries(v).forEach(([k,x])=>{ if(x!==''&&x!==0) moi[k]=x; }); await luuBanGhi('hopDong','',cuId,moi); } else { v.baoHanh={hinhThuc:'giuTien'}; await luuBanGhi('hopDong','',null,v,v.soHopDong+' · '+v.tenGoiThau+' (nhập Excel)'); } n++; }
+    toast('✅ Đã nhập '+n+' hợp đồng'); chuyenTab('hopdong'); }); }
+
+// ===== 12. MÀN HÌNH: Quản trị — yêu cầu xoá (giám đốc duyệt), thông tin 3 công ty, người dùng, danh sách công trình =====
+function veQuanTri(){
+  const yc=Object.entries(DL.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho').sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
+  $('khac-badge').hidden=!(laGiamDoc()&&yc.length); $('khac-badge').textContent=yc.length; $('qt-yeucauxoa-n').hidden=!yc.length; $('qt-yeucauxoa-n').textContent=yc.length+' chờ';
+  $('qt-yeucauxoa').innerHTML=yc.length?yc.map(([k,y])=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${esc(TEN_BANG[y.bang]||y.bang)}</b>: ${esc(y.tomTat||'')}</div><div class="hint">${esc(y.nguoiYeuCau)} · ${lucVN(y.luc)}${y.lyDo?' · '+esc(y.lyDo):''}</div>
+    ${laGiamDoc()?`<div class="row" style="margin-top:6px"><button class="btn sm red" onclick="duyetXoa('${k}',true,this)">✅ Đồng ý xoá</button><button class="btn sm sec" onclick="duyetXoa('${k}',false,this)">✖ Từ chối</button>${y.hopDongId&&DL.hopDong[y.hopDongId]?`<button class="btn sm sec" onclick="moChiTiet('${y.hopDongId}')">Xem</button>`:''}</div>`:''}</div>`).join(''):'<div class="hint">Không có yêu cầu xoá nào đang chờ.</div>';
+  $('qt-congty').innerHTML=MA_CONG_TY.map(m=>{ const c=Object.assign({},CONG_TY[m],DL.congTy[m]||{}); return `<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${m}</b> — ${esc(c.ten)}</div><div class="hint">MST: ${esc(c.maSoThue||'—')} · Đại diện: ${esc(c.nguoiDaiDien||'—')}${c.diaChi?' · '+esc(c.diaChi):''}${c.ghiChu?' · '+esc(c.ghiChu):''}</div>${laGiamDoc()?`<button class="btn sm sec" style="margin-top:4px" onclick="formCongTy('${m}')">✏️ Sửa</button>`:''}</div>`; }).join('');
+  const nd=Object.entries(DL.nguoiDung).sort((a,b)=>String(a[1].ten).localeCompare(String(b[1].ten),'vi'));
+  $('qt-nguoidung').innerHTML=nd.length?nd.map(([u,n])=>`<div class="item-sub" style="padding:4px 0;font-size:14px;color:var(--text)">${n.vaiTro==='GD'?'👑':'👤'} <b>${esc(n.ten)}</b> · ${esc(n.email||'')} · ${n.vaiTro==='GD'?'Giám đốc':'Nhân viên'} · vào lần cuối ${lucVN(n.lanCuoi)}</div>`).join(''):'<div class="hint">Chưa ai đăng nhập.</div>';
 }
-async function importRows(btn){
-  await busy(btn,async()=>{
-    const byCode={}; Object.entries(contracts).forEach(([k,c])=>byCode[c.code]=k);
-    const up={}, now=Date.now();
-    for(const r of window._xlList){
-      const isNew=!byCode[r.code], id=byCode[r.code]||db.ref(ROOT+'/contracts').push().key;
-      const data=Object.assign({},r,{updatedAt:now,updatedBy:userName}); const adv=data.adv; delete data.adv;
-      if(isNew){ Object.assign(data,{status:'active',createdAt:now,createdBy:userName});
-        if(adv>0) data.advances={[db.ref().push().key]:Object.assign({no:1,date:data.signDate||now,value:adv,note:'Nhập từ Excel'},who())};
-        up['contracts/'+id]=data; up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'create',text:'🆕 Nhập từ Excel · giá trị '+fmtMoney(data.value)+(adv>0?' · tạm ứng '+fmtMoney(adv):'')},who()); }
-      else { // cập nhật: ô trống không xoá dữ liệu cũ; KHÔNG đụng phụ lục/tạm ứng/thanh toán đã ghi
-        Object.entries(data).forEach(([k,v])=>{ if(v!==''&&v!==0||k==='updatedAt'||k==='updatedBy') up['contracts/'+id+'/'+k]=v; });
-        up['log/'+id+'/'+db.ref().push().key]=Object.assign({type:'edit',text:'✏️ Cập nhật từ Excel'},who()); }
-    }
-    await db.ref(ROOT).update(up); filterPhase=''; filterCo=''; $('q').value=''; renderAll(); toast('✅ Đã nhập '+window._xlList.length+' hợp đồng'); showTab('list');
-  });
-}
-async function exportAll(){
-  try{ const X=await loadXLSX();
-    const all=Object.entries(contracts).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
-    const s1=[['Công ty','Công trình','Số hợp đồng','Tên gói thầu','Bên A','Bên B','Ngày ký','Giá trị HĐ','Phụ lục','Tổng giá trị','Tạm ứng','Đã thu hồi TƯ','TƯ còn phải thu','Đã thanh toán','Còn lại chưa TT','% TT','KL đã thực hiện','Còn lại chưa thi công','Giữ lại BH','Đã hoàn BH','Còn giữ BH','Giữ chờ QT','Đã hoàn giữ QT','Còn giữ QT','Thực nhận','Ngày bàn giao','BH (tháng)','Hết bảo hành','Ngày quyết toán','Giá trị quyết toán','Tình trạng','Ghi chú']]
-      .concat(all.map(([id,c])=>{ const k=calc(c); return [c.company||'',c.site||'',c.code,c.name,c.partyA||'',c.partyB||'',fmtDate(c.signDate),k.val,k.add,k.total,k.adv,k.recov,k.advLeft,k.paid,k.remain,k.pct,k.done,k.unbuilt,k.retain,k.refund,k.retainLeft,k.hold,k.refundQt,k.holdLeft,k.received,fmtDate(c.handoverDate),c.warrantyMonths||'',fmtDate(c.warrantyEnd),fmtDate(c.settleDate),c.settleValue||'',PH_TXT[phase(c)],c.note||'']; }));
-    const s2=[['Công ty','Công trình','Số hợp đồng','Tên gói thầu','Loại','Lần','Ngày','Giá trị TT','Trừ tạm ứng','Giữ lại BH','Giữ chờ QT','Thực nhận','Ghi chú','Người ghi']];
-    const s3=[['Công ty','Công trình','Số hợp đồng','Tên gói thầu','Loại','Số / lần','Ngày','Giá trị','Ghi chú','Người ghi']];
-    all.forEach(([id,c])=>{
-      sortNo(c.payments).forEach(([k,x])=>{ const v=Number(x.value)||0, r=Number(x.recover)||0, h=Number(x.retain)||0, q=Number(x.hold)||0, t=x.type||'kl'; s2.push([c.company||'',c.site||'',c.code,c.name,t==='bh'?'Hoàn tiền BH':t==='qt'?'Hoàn tiền giữ QT':'Thanh toán KL',x.no||'',fmtDate(x.date),t==='kl'?v:'',t==='kl'?r:'',t==='bh'?-v:t==='kl'?h:'',t==='qt'?-v:t==='kl'?q:'',t==='kl'?v-r-h-q:v,x.note||'',x.by||'']); });
-      sortNo(c.advances).forEach(([k,x])=>s3.push([c.company||'',c.site||'',c.code,c.name,'Tạm ứng',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
-      sortNo(c.addenda).forEach(([k,x])=>s3.push([c.company||'',c.site||'',c.code,c.name,'Phụ lục',x.no||'',fmtDate(x.date),Number(x.value)||0,x.note||'',x.by||'']));
-    });
-    const s0=[['Công ty','Số HĐ (chưa thanh lý)','Tổng giá trị đã ký','Tổng tạm ứng','Đã trừ tạm ứng','Tạm ứng còn lại','Đã thanh toán','% TT','Còn lại chưa TT','Còn lại chưa thi công','Tiền BH đang giữ','Tiền giữ chờ QT đang giữ','Tổng thực nhận','Số HĐ chờ QT','Chờ QT còn phải thu']];
-    const live=all.map(([id,c])=>c).filter(c=>phase(c)!=='closed'), coKeys=COMPANIES.concat([...new Set(live.map(c=>c.company||''))].filter(k=>!COMPANIES.includes(k)));
-    coKeys.map(k=>[k||'(chưa ghi)',sumOf(live.filter(c=>(c.company||'')===k))]).concat([['TỔNG',sumOf(live)]]).forEach(([k,t])=>s0.push([k,t.n,t.total,t.adv,t.recov,t.advLeft,t.paid,t.pct,t.remain,t.unbuilt,t.retainLeft,t.holdLeft,t.received,t.nSettling,t.settlingRemain]));
-    const wb=X.utils.book_new(), mk=(aoa,w)=>{ const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=w.map(x=>({wch:x})); return ws; };
-    X.utils.book_append_sheet(wb,mk(s0,[12,10,18,16,16,16,16,6,18,18,16,16,18,10,18]),'Tong hop');
-    X.utils.book_append_sheet(wb,mk(s1,[8,22,16,30,20,20,11,16,14,16,14,14,14,16,16,6,16,16,14,12,12,14,12,12,16,12,8,12,12,16,14,25]),'Hop dong');
-    X.utils.book_append_sheet(wb,mk(s2,[8,22,16,30,14,6,11,16,14,14,14,16,25,14]),'Thanh toan');
-    X.utils.book_append_sheet(wb,mk(s3,[8,22,16,30,10,10,11,16,25,14]),'Tam ung - Phu luc');
-    X.writeFile(wb,'Hop-dong-'+toISO(Date.now())+'.xlsx');
-  }catch(e){ toast('❌ '+e.message); }
-}
+function formCongTy(m){ _cacO=[{k:'ten',nhan:'Tên công ty',batBuoc:true},{k:'maSoThue',nhan:'Mã số thuế'},{k:'nguoiDaiDien',nhan:'Người đại diện',nua:true},{k:'diaChi',nhan:'Địa chỉ'},{k:'ghiChu',nhan:'Ghi chú'}];
+  moForm('🏢 Công ty '+m,_cacO,Object.assign({},CONG_TY[m],DL.congTy[m]||{}),`<button class="btn" onclick="luuCongTy('${m}',this)">💾 Lưu</button>`); }
+async function luuCongTy(m,btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); v.tenVietTat=m; const cu=DL.congTy[m]||CONG_TY[m]; const up={}; up['congTy/'+m]=v; soSanh(cu,v).forEach(t=>{ up['lichSu/'+khoaMoi()]=dongLichSu('congTy',m,'','sua',t.truong,t.giaTriCu,t.giaTriMoi); }); await ghiNhieu(up); toast('✅ Đã lưu'); }); }
+// Danh sách dự án / công trình dùng chung với Duyệt Chi (duyetchi/meta/sites) — chỉ giám đốc sửa (luật Duyệt Chi)
+function veCongTrinh(){ $('site-add').hidden=!laGiamDoc();
+  $('site-list').innerHTML=danhSachCongTrinh.length?danhSachCongTrinh.map((s,i)=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border)"><div style="font-size:15px">🏗 ${esc(s)}</div>${laGiamDoc()?`<button class="btn sm sec" style="flex:0 0 auto;color:var(--red)" onclick="xoaCongTrinh(${i})">✕</button>`:''}</div>`).join(''):'<div class="hint">Chưa có công trình nào.</div>'; }
+async function themCongTrinh(){ const s=$('new-site').value.trim(); if(!s) return; if(danhSachCongTrinh.includes(s)) return toast('Đã có'); try{ await db.ref('duyetchi/meta/sites').set(danhSachCongTrinh.concat([s])); $('new-site').value=''; toast('✅ Đã thêm: '+s); }catch(e){ toast('❌ '+e.message); } }
+async function xoaCongTrinh(i){ const s=danhSachCongTrinh[i]; if(!confirm('Xoá "'+s+'" khỏi danh sách công trình (cả app Duyệt Chi)?')) return; try{ await db.ref('duyetchi/meta/sites').set(danhSachCongTrinh.filter((x,j)=>j!==i)); }catch(e){ toast('❌ '+e.message); } }
+
+// ===== 13. XUAT_EXCEL — dashboard và danh sách hợp đồng (chỉ cần Excel — mục 1.3) =====
+async function xuatExcelDanhSach(){ try{ const X=await napSheetJs(); const kq=tatCaKetQua().map(k=>Object.assign({},DL.hopDong[k.id],k)).sort((a,b)=>String(a.congTyId+a.soHopDong).localeCompare(String(b.congTyId+b.soHopDong),'vi',{numeric:true}));
+    const cot=[['congTyId','Công ty'],['soHopDong','Số hợp đồng'],['tenGoiThau','Tên gói thầu'],['tenDuAn','Tên dự án'],['chuDauTu','Chủ đầu tư'],['ngayKy','Ngày ký',1],['loaiHopDong','Loại HĐ',2],['giaTriGoc','Giá trị gốc'],['dieuChinhPhuLuc','Điều chỉnh PL'],['giaTriHienHanh','Giá trị hiện hành'],['nghiemThuLuyKe','Đã nghiệm thu'],['tamUngLuyKe','Tạm ứng'],['thuHoiTamUngLuyKe','Đã thu hồi TƯ'],['tamUngChuaThuHoi','TƯ chưa thu hồi'],['thucNhanLuyKe','Thực nhận'],['tienDaVe','Tiền đã về'],['conPhaiThu','Còn phải thu'],['giuBaoHanhDangGiu','Đang giữ BH'],['giuQuyetToanDangGiu','Đang giữ QT'],['conLaiChuaNghiemThu','Chưa nghiệm thu'],['conLaiChuaThiCong','Chưa thi công'],['doanhThuCuoiCung','Doanh thu cuối cùng'],['trangThai','Trạng thái',3],['ngayKhoiCong','Khởi công',1],['ngayHoanThanhHienHanh','Hoàn thành hiện hành',1],['ngayHetBaoHanh','Hết bảo hành',1],['noiBo','Nội bộ',4]];
+    const aoa=[cot.map(c=>c[1])].concat(kq.map(r=>cot.map(c=>{ const v=r[c[0]]; return c[2]===1?ngayVN(v):c[2]===2?(LOAI_HOP_DONG[v]||v||''):c[2]===3?(TRANG_THAI[v]||v||''):c[2]===4?(v?'nội bộ':''):(v==null?'':v); })));
+    const wb=X.utils.book_new(), ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=cot.map(()=>({wch:16})); X.utils.book_append_sheet(wb,ws,'HopDong');
+    const tt=[['Công ty','Số HĐ','Tên gói thầu','Đợt','Ngày nghiệm thu','Giá trị nghiệm thu','Đề nghị','Thu hồi TƯ','Giữ BH','Giữ QT','Thực nhận','Ngày tiền về','Ghi chú']];
+    kq.forEach(r=>danhSachBanGhi('thanhToan',r.id).sort((a,b)=>(a.dot||0)-(b.dot||0)).forEach(x=>tt.push([r.congTyId,r.soHopDong,r.tenGoiThau,x.dot,ngayVN(x.ngayNghiemThu),x.giaTriNghiemThu||0,x.soTienDeNghi||0,x.thuHoiTamUng||0,x.giuBaoHanh||0,x.giuQuyetToan||0,x.soTienThucNhan||0,ngayVN(x.ngayTienVe),x.ghiChu||''])));
+    X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(tt),'ThanhToan');
+    X.writeFile(wb,'Hop-dong-'+homNay()+'.xlsx'); }catch(e){ toast('❌ '+e.message); } }
+async function xuatExcelDashboard(){ try{ const X=await napSheetJs(); const kq=tatCaKetQua();
+    const dong=[['Phạm vi','Số HĐ','Đang thực hiện (số HĐ)','Giá trị đang thực hiện','Đã nghiệm thu','Tiền đã về','Còn phải thu','Đang giữ BH','Đang giữ QT','TƯ chưa thu hồi','Chưa thi công','Số HĐ chờ QT','Tiền đọng chờ QT']];
+    [['','Cả 3 công ty (trừ nội bộ)']].concat(MA_CONG_TY.map(m=>[m,'Công ty '+m])).forEach(([id,ten])=>{ const t=TINH_TOAN.tinhTongHop(kq,id); dong.push([ten,t.soHopDong,t.soDangThucHien,t.giaTriDangThucHien,t.nghiemThuLuyKe,t.tienDaVe,t.conPhaiThu,t.giuBaoHanhDangGiu,t.giuQuyetToanDangGiu,t.tamUngChuaThuHoi,t.conLaiChuaThiCong,t.soChoQuyetToan,t.conDongChoQuyetToan]); });
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(dong),'TongHop');
+    const du=Object.keys(DL.hopDong).map(id=>duLieuHopDong(id)); ['thang','quy'].forEach(ky=>{ const dt=TINH_TOAN.dongTien(du,ky,locCongTy); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([['Kỳ','Kế hoạch về','Thực tế về','Chênh lệch']].concat(dt.map(x=>[thangVN(x.ky),x.keHoach,x.thucTe,x.thucTe-x.keHoach]))),ky==='thang'?'DongTienThang':'DongTienQuy'); });
+    X.writeFile(wb,'Tong-hop-hop-dong-'+homNay()+'.xlsx'); }catch(e){ toast('❌ '+e.message); } }
+
+// ===== 14. THONG_BAO_DAY — TẠM: thông báo trên máy khi mở app (Notification API). Push thật lên màn hình khoá + GitHub Actions 7:00 làm ở bước sau =====
+const coThongBao=()=>'Notification' in window;
+function veThongBao(){ const info=$('notify-info'), btn=$('notify-btn'); if(!coThongBao()){ info.textContent='Trình duyệt này không hỗ trợ thông báo. Vẫn xem được ở tab Nhắc hạn.'; btn.hidden=true; return; }
+  const p=Notification.permission; info.textContent=p==='granted'?'✅ Đã bật. Mỗi lần mở app, việc đến hạn sẽ hiện thông báo trên máy này (mỗi việc 1 lần/ngày).':p==='denied'?'⛔ Đã bị chặn trong cài đặt trình duyệt.':'Bấm để cho phép app hiện thông báo nhắc hạn trên máy này.'; btn.hidden=p!=='default'; }
+async function batThongBao(){ try{ const p=await Notification.requestPermission(); veThongBao(); if(p==='granted'){ toast('✅ Đã bật'); hienThongBao('📑 Hợp đồng PVA-379-279','Đã bật nhắc nhở trên máy này.','test'); nhacTrenMay(); } }catch(e){ toast('❌ '+e.message); } }
+async function hienThongBao(t,b,tag){ try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); if(reg&&reg.showNotification) return reg.showNotification(t,{body:b,tag}); new Notification(t,{body:b,tag}); }catch(e){} }
+function nhacTrenMay(){ if(!coThongBao()||Notification.permission!=='granted'||!nguoiHienTai) return; const key='hd_noted_'+homNay(); let done={}; try{ done=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
+  danhSachDangNhac().forEach(n=>{ if(done[n.id]) return; done[n.id]=1; const m=moTaNhac(n); hienThongBao(m.ten+' — '+m.loai, n.conNgay<0?'QUÁ HẠN '+(-n.conNgay)+' ngày ('+ngayVN(n.ngayMoc)+')':'còn '+n.conNgay+' ngày ('+ngayVN(n.ngayMoc)+')', n.id); });
+  try{ localStorage.setItem(key,JSON.stringify(done)); Object.keys(localStorage).forEach(x=>{ if(x.startsWith('hd_noted_')&&x!==key) localStorage.removeItem(x); }); }catch(e){} }
+
+// ===== 15. DONG_BO_SHEETS — gọi Apps Script kiểu JSONP (chưa làm; cần apps-script/Code.gs và URL trong CAU_HINH) =====
+function dongBoSheets(){ /* bước sau */ }
+
+// ===== 16. KHOI_DONG =====
+setTimeout(kiemTraBanMoi,4000); setInterval(kiemTraBanMoi,3*60*1000);
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ kiemTraBanMoi(); nhacTrenMay(); } });
 </script>
 </body>
 </html>

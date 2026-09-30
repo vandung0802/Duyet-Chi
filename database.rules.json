@@ -393,22 +393,26 @@
       "$other": { ".validate": false }
     },
 
-    // ══ APP HỢP ĐỒNG (hopdong.html) — cùng cơ chế với thietbi: ai đã được duyệt (approved) hoặc 3 người nhà đều đọc/ghi ══
-    // contracts/{id} = 1 hợp đồng A-B; bên trong có addenda (phụ lục), advances (tạm ứng), payments (thanh toán từng lần).
-    // log/{id}/{k} = lịch sử ai làm gì. Mọi bản ghi đều có by/updatedBy.
+    // ══ APP HỢP ĐỒNG (hopdong.html) — cấu trúc dữ liệu mục 4.3 của docs/hopdong/CLAUDE.md, tất cả dưới hopdong/ ══
+    // Đọc: ai đã được duyệt (approved) hoặc 3 người nhà. Ghi: từng nhánh con (không đặt .write ở cấp cha vì lan xuống không thu hồi được).
+    // XOÁ (newData không tồn tại) chỉ tài khoản role 'dung' (giám đốc); người khác gửi yeuCauXoa. lichSu chỉ THÊM, không sửa/xoá.
     "hopdong": {
       ".read":  "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
-      // v6: KHÔNG đặt ".write" ở cấp này (write ở cha lan xuống, con không thu hồi được). Ghi mở ở từng nhánh con;
-      // XOÁ cả hợp đồng (newData không tồn tại) chỉ tài khoản role 'dung' (D) làm được — người khác gửi "xin xoá" trong app.
-      "contracts": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
-                              ".validate": "!newData.exists() || (newData.hasChildren(['code', 'name']) && newData.child('code').isString() && newData.child('code').val().length <= 100 && newData.child('name').isString() && newData.child('name').val().length <= 300)",
-                              "note":     { ".validate": "newData.isString() && newData.val().length <= 4000" },
-                              "addenda":  { "$k": { ".validate": "!newData.exists() || newData.hasChildren(['value'])", "note": { ".validate": "newData.isString() && newData.val().length <= 2000" } } },
-                              "advances": { "$k": { ".validate": "!newData.exists() || newData.hasChildren(['value'])", "note": { ".validate": "newData.isString() && newData.val().length <= 2000" } } },
-                              "payments": { "$k": { ".validate": "!newData.exists() || newData.hasChildren(['value'])", "note": { ".validate": "newData.isString() && newData.val().length <= 2000" } } } } },
-      "log":    { "$c": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
-                          "$id": { ".validate": "!newData.exists() || (newData.hasChildren(['type', 'text']) && newData.child('text').val().length <= 4000)" } } },
-      "$other": { ".validate": false }
+      "hopDong":   { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+                              ".validate": "!newData.exists() || (newData.hasChildren(['congTyId', 'soHopDong', 'tenGoiThau']) && newData.child('soHopDong').isString() && newData.child('soHopDong').val().length <= 100 && newData.child('tenGoiThau').val().length <= 300)" } },
+      "phuLuc":    { "$hopDongId": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } } },
+      "tamUng":    { "$hopDongId": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } } },
+      "thanhToan": { "$hopDongId": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } } },
+      "hoanTra":   { "$hopDongId": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } } },
+      "baoLanh":   { "$hopDongId": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } } },
+      "nhacNho":   { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')" } },
+      "yeuCauXoa": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+                              ".validate": "!newData.exists() || newData.child('trangThai').val() !== 'dongY' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'" } },
+      "lichSu":    { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && !data.exists() && newData.exists()",
+                              ".validate": "newData.hasChildren(['nguoi', 'luc', 'bang', 'hanhDong'])" } },
+      "congTy":    { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'" } },
+      "nguoiDung": { "$uid": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } },
+      "$other":    { ".validate": false }
     },
 
     // ══ NHÁNH NỘI BỘ của Cloud Functions — CẤM mọi client (chỉ admin SDK chạm được) ══
