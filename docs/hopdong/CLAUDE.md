@@ -31,15 +31,15 @@ Dữ liệu ban đầu: khoảng **20 hợp đồng đang dở dang** trên cả
 | Hạng mục | Quyết định | Lý do |
 |---|---|---|
 | Kiểu ứng dụng | Web app, cài được lên màn hình chính điện thoại (PWA) | Dùng được trên máy tính và iPhone, không phải cài gì |
-| Mã nguồn | **Một file `index.html`** chứa toàn bộ giao diện và logic | Cùng cách với app Duyệt Chi và app Tiến độ, anh Dũng đã quen sửa |
-| Đưa lên mạng | GitHub Pages, repo `vandung0802/hop-dong-pva-379-279` | Miễn phí, đã dùng cho hai app trước |
-| Kho dữ liệu chính | Firebase Realtime Database | Nhiều người nhập cùng lúc, đồng bộ ngay |
+| Mã nguồn | **Một file HTML** chứa toàn bộ giao diện và logic — hiện là `hopdong.html` trong repo Duyet-Chi (chốt 30/09/2026) | Cùng cách với app Duyệt Chi (`app3.html`) và app Tiến độ, anh Dũng đã quen sửa |
+| Đưa lên mạng | GitHub Pages — **chốt 30/09/2026: giữ trong repo `vandung0802/Duyet-Chi`** (`/Duyet-Chi/hopdong.html`), vì đang chạy, dùng chung đăng nhập và luật Firebase tự deploy. Tách repo riêng `hop-dong-pva-379-279` khi app ổn (chuyển 1 file) | Miễn phí, đã dùng cho hai app trước |
+| Kho dữ liệu chính | Firebase Realtime Database — dùng chung project `duyetchi-pva379` của Duyệt Chi, mọi nhánh mục 4.3 nằm dưới `hopdong/` | Nhiều người nhập cùng lúc, đồng bộ ngay; chung tài khoản và danh sách người dùng |
 | Bản sao Google Sheets | Đồng bộ một chiều Firebase → Google Sheets qua Google Apps Script (gọi kiểu JSONP như Duyệt Chi) | Kế toán quen xem bảng; tránh lỗi CORS của GitHub Pages |
 | File đính kèm (scan hợp đồng, phụ lục, bảo lãnh) | Tải lên **Google Drive** của tài khoản vandung0802@gmail.com qua Apps Script; lưu link công khai "ai có link đều tải được" vào Firebase | Ai cũng tải xuống được, không hạn chế |
 | OneDrive | Giai đoạn đầu chỉ cho **dán link** OneDrive vào ô đính kèm; chưa làm tải lên tự động | Kết nối OneDrive phức tạp hơn nhiều, để giai đoạn sau |
 | Thông báo đẩy | Web push (Firebase Cloud Messaging), hiện trên màn hình khóa điện thoại | Như app Duyệt Chi; iPhone cần cài app lên màn hình chính, iOS 16.4 trở lên |
 | Chạy nhắc định kỳ | GitHub Actions chạy mỗi sáng 7:00 giờ Việt Nam, đọc Firebase, gửi push cho mốc đến hạn | Cách đơn giản nhất, không tốn tiền |
-| Đăng nhập | Chọn tên + mã PIN (như Duyệt Chi), PIN đặt riêng cho app này | Người dùng quen rồi |
+| Đăng nhập | **Email + mật khẩu Firebase Auth, dùng chung tài khoản app Duyệt Chi** (chốt 30/09/2026; Duyệt Chi thật dùng email + mật khẩu, không phải tên + PIN). Ai được duyệt trong Duyệt Chi vào được ngay | Người dùng quen rồi; tên + PIN không bảo vệ được dữ liệu trên Firebase |
 | Xuất báo cáo | Nút "Xuất Excel" trên dashboard và bảng hợp đồng | Chỉ cần Excel, không cần gửi Zalo/Telegram |
 
 ### 1.4. Nghiệp vụ đã chốt
@@ -161,6 +161,8 @@ Tiền lưu bằng **số nguyên VND**, không dùng số thập phân. Ngày l
 - Không tách thuế GTGT trong từng đợt thanh toán.
 - OneDrive: giai đoạn đầu chỉ dán link. Tải lên tự động để sau khi app chạy ổn vài tháng, hoặc bỏ nếu Google Drive đủ dùng.
 - Mã đang viết dở: sửa theo file này, thiếu tự bổ sung, thừa tự bỏ (xem mục 1.2).
+- Chốt thêm 30/09/2026 (anh Dũng "cứ làm" theo đề nghị của agent): (1) giữ mã trong repo Duyet-Chi, file `hopdong.html`; (2) giữ đăng nhập email + mật khẩu chung Duyệt Chi; (3) công thức mục 1.5 giữ **nguyên văn** — tiền hoàn trả (`hoanTra`) không cộng vào `tienDaVe`, không trừ khỏi `conPhaiThu` (muốn đổi phải chốt lại); (4) giữ ô "Còn lại chưa thi công" = giá trị hiện hành − khối lượng đã thực hiện nhập tay (không nhập thì tạm = chưa nghiệm thu; đã bàn giao/quyết toán/xong = 0); (5) "Tổng giá trị hợp đồng đang thực hiện" = mọi trạng thái trừ `daXong` và `biChamDut`.
+- Bảo lãnh tạm ứng lưu ở bảng `baoLanh` (loại `tamUng`, có `tamUngId`), `tamUng.baoLanhId` trỏ sang — để nhắc gia hạn dùng chung một chỗ.
 
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
