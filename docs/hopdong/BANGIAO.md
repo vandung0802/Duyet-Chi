@@ -2,11 +2,11 @@
 
 > Phiên sau đọc file này (và `CLAUDE.md` cùng thư mục) trước khi sửa `hopdong.html`. Ghi ngắn: đã làm gì, còn gì, chỗ nào đang lỗi, câu nào đang chờ anh Dũng chốt.
 
-## Tình trạng chung (29/09/2026)
+## Tình trạng chung (30/09/2026)
 
-- App đang chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, bản v7). **Chưa có repo `hop-dong-pva-379-279`** như spec ghi — chờ anh Dũng chốt (câu hỏi 1).
-- Firebase: dùng **chung project `duyetchi-pva379`** với app Duyệt Chi (cùng tài khoản đăng nhập, cùng danh sách người được duyệt). Dữ liệu ở nhánh `hopdong/` (luật trong `database.rules.json` của repo Duyet-Chi, tự deploy bằng GitHub Actions khi đổi).
-- Dữ liệu thật: chưa có (chỉ có 1 hợp đồng anh Dũng nhập thử). Vì thế **đổi cấu trúc dữ liệu bây giờ không mất gì.**
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v8 = viết lại theo spec**). Anh Dũng chốt 30/09 ("cứ làm"): giữ chỗ hiện tại, giữ đăng nhập email + mật khẩu, công thức đúng nguyên văn spec, giữ ô "chưa thi công", "đang thực hiện" = mọi trạng thái trừ Đã xong và Bị chấm dứt.
+- Firebase: dùng **chung project `duyetchi-pva379`** với app Duyệt Chi. Dữ liệu theo mục 4.3, tất cả dưới `hopdong/`: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, `baoLanh/{hdId}`, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung`. Luật trong `database.rules.json` (repo Duyet-Chi) tự deploy bằng GitHub Actions khi gộp vào main.
+- Dữ liệu cũ của bản v1–v7 (`hopdong/contracts`, `hopdong/log`, chỉ có hợp đồng thử) không còn được đọc; muốn dọn thì xoá tay trong Firebase Console.
 
 ## Bảng đối chiếu mã hiện có với spec (mục 1.2) — làm ngày 29/09/2026
 
@@ -36,7 +36,7 @@
 | Thông báo đẩy (web push) + GitHub Actions nhắc 7:00 | Thiếu | Có thể dùng hạ tầng VAPID sẵn của project Duyệt Chi |
 | Quản trị: người dùng, công ty, yêu cầu xoá | Thiếu | |
 | Bố cục 16 khối, tên biến tiếng Việt không dấu | Thiếu | Đã đánh dấu khối 1, 3, 4/5, 6; tên biến còn tiếng Anh, sẽ đổi ở bước đổi cấu trúc |
-| Công thức mục 1.5 | **Đã làm** (29/09) | Khối `6. TINH_TOAN` + `test-hopdong-tinhtoan.js` (45 phép tính đúng). Giao diện chưa nối vào |
+| Công thức mục 1.5 | **Đã làm** | Khối `6. TINH_TOAN` + `test-hopdong-tinhtoan.js` (48 phép tính). Giao diện đã nối vào từ v8 |
 | Tài liệu: README, huong-dan-su-dung, cai-dat-firebase | Thiếu | |
 
 **Thừa so với spec** (đang có trong app, spec không nhắc):
@@ -55,6 +55,23 @@
 5. **"Tổng giá trị hợp đồng đang thực hiện"** (ô số 1 dashboard) tính trạng thái nào? Đang tạm: tất cả trừ `daXong` và `biChamDut`.
 
 Mặc định nếu anh Dũng nói "cứ làm": 1 giữ chỗ hiện tại, 2 giữ email + mật khẩu, 3 giữ nguyên văn spec, 4 giữ, 5 như đang tạm.
+
+## Đã làm 30/09/2026 (phiên 2 — viết lại theo spec, bản v8)
+
+`hopdong.html` viết lại theo bố cục 16 khối mục 4.2, tên biến tiếng Việt không dấu, chú thích tiếng Việt có dấu:
+
+- **Dữ liệu** theo mục 4.3 (xem trên). Mọi lần ghi đều qua `luuBanGhi()` → ghi `lichSu` từng trường (cũ → mới) trong cùng một lần ghi. Xoá chỉ giám đốc (`xoaBanGhi`), người khác `yeuCauXoa` → giám đốc duyệt ở tab Khác. Luật Firebase chặn tương ứng (xoá cả bản ghi = role `dung`; `lichSu` chỉ thêm; `congTy` chỉ GD).
+- **Dashboard**: lọc Cả 3 (trừ nội bộ)/PVA/379/279; ô: tổng giá trị HĐ đang thực hiện, đã nghiệm thu, tiền đã về, còn phải thu, đang giữ BH, đang giữ QT, việc đang nhắc, còn lại chưa thi công; dòng tiền tháng/quý (bảng + biểu đồ Chart.js) kế hoạch vs thực tế; danh sách chờ quyết toán kèm tiền còn đọng; xuất Excel tổng hợp.
+- **Danh sách**: bảng đúng cột spec, bấm tiêu đề cột để sắp xếp, lọc công ty/trạng thái/tìm kiếm, dòng cộng; xuất Excel (sheet HopDong + ThanhToan).
+- **Chi tiết 9 tab**: Thông tin (đủ trường spec + bảng tài chính mục 1.5 + KL thực hiện), Phụ lục (±, gia hạn), Tạm ứng (kèm bảo lãnh tạm ứng → tự tạo bản ghi `baoLanh` loại `tamUng`, nối `baoLanhId`), Thanh toán (nghiệm thu / đề nghị / thu hồi TƯ / giữ BH / giữ QT / thực nhận nhập tay, gợi ý = đề nghị − các khoản trừ / ngày tiền về), Bảo lãnh (3 loại; nộp thư BH → hỏi đã nhận lại tiền giữ chưa → tự ghi `hoanTra`), BH & Quyết toán (hình thức, bàn giao + số tháng → hết BH; ngày nộp/duyệt/giá trị duyệt/đã nhận đủ/còn nợ; bảng hoàn trả), Kế hoạch tiền về (12 tháng/năm), File (dán link OneDrive/Drive), Lịch sử.
+- **Nhắc hạn**: `nhacNho` tự đồng bộ từ `TINH_TOAN.cacMoc` (hết BH, hết bảo lãnh, đến hạn hoàn thành) + mốc tự thêm; hiện khi còn ≤ 30 ngày, nút Đã xong (ghi tên/giờ), mở lại được; badge + ô đếm trên dashboard; thông báo trên máy khi mở app (tạm).
+- **Quản trị (tab Khác)**: yêu cầu xoá, thông tin 3 công ty (MST, người đại diện — GD sửa), người dùng (tự ghi khi đăng nhập), danh sách dự án/công trình chung Duyệt Chi.
+- **Nhập Excel**: file mẫu do app xuất, xem trước + báo dòng lỗi, xác nhận mới ghi (trùng công ty + số HĐ → cập nhật).
+- Kiểm tra: `node test-hopdong-tinhtoan.js` 48 phép tính đúng; kịch bản Chromium 13 bước (tạo HĐ, phụ lục ±, tạm ứng + bảo lãnh, thanh toán, hoàn trả tự tạo, bảo hành/quyết toán, kế hoạch, dashboard, sắp xếp, lịch sử, xin xoá → duyệt, Excel) đạt hết; 0 lỗi JS.
+
+**Chưa làm (theo thứ tự)**: push thật lên màn hình khoá + GitHub Actions 7:00 (`scripts/nhac-han.js`, cần lưu pushTokens) → Apps Script (Google Sheets + tải file lên Drive) → tài liệu README/hướng dẫn → cân nhắc tách repo riêng khi app ổn.
+
+**Khác spec, đã chốt**: bảo lãnh tạm ứng lưu ở bảng `baoLanh` (loại `tamUng`, có `tamUngId`) thay vì lồng trong `tamUng.baoLanh` — để nhắc gia hạn dùng chung 1 chỗ; `tamUng.baoLanhId` trỏ sang.
 
 ## Đã làm 29/09/2026 (phiên 1 theo spec)
 
@@ -76,4 +93,4 @@ Mặc định nếu anh Dũng nói "cứ làm": 1 giữ chỗ hiện tại, 2 gi
 
 ## Chỗ đang lỗi
 
-- Không có. App v7 chạy bình thường; TINH_TOAN mới chưa nối vào giao diện nên chưa ảnh hưởng.
+- Không có lỗi đã biết. Chưa kiểm tra trên iPhone thật (mới mô phỏng 390px).

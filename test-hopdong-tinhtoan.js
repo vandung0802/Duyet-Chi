@@ -54,6 +54,9 @@ check('  trong đó giữ bảo hành', k.conPhaiThuTrongDo.giuBaoHanh, 20000000
 check('  trong đó giữ quyết toán', k.conPhaiThuTrongDo.giuQuyetToan, 250000000);
 check('  trong đó khác (= 150 tr đã hoàn trả — xem câu hỏi 3)', k.conPhaiThuTrongDo.khac, 150000000);
 check('conLaiChuaNghiemThu = 10,3 tỷ − 7 tỷ', k.conLaiChuaNghiemThu, 3300000000);
+check('conLaiChuaThiCong = 0 vì đã bàn giao', k.conLaiChuaThiCong, 0);
+check('conLaiChuaThiCong chưa bàn giao, KL nhập tay 8 tỷ → 2,3 tỷ', T.tinhHopDong({ hopDong: { giaTriGoc: 10300000000, khoiLuongDaThucHien: { soTien: 8000000000 } }, thanhToan }).conLaiChuaThiCong, 2300000000);
+check('conLaiChuaThiCong không nhập KL → = chưa nghiệm thu', T.tinhHopDong({ hopDong: { giaTriGoc: 10300000000 }, thanhToan }).conLaiChuaThiCong, 3300000000);
 check('doanhThuCuoiCung khi CHƯA duyệt QT = giá trị hiện hành', k.doanhThuCuoiCung, 10300000000);
 check('ngayHoanThanhHienHanh = phụ lục gia hạn sau cùng', k.ngayHoanThanhHienHanh, '2027-03-31');
 check('ngayHetBaoHanh = 31/08/2026 + 12 tháng', k.ngayHetBaoHanh, '2027-08-31');
