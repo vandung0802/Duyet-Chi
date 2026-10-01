@@ -214,7 +214,7 @@ canvas{max-width:100%}
       </div></div>
       <div class="card"><div class="card-body">
         <h3 style="font-size:15px;margin-bottom:8px">📥 Nhập hợp đồng từ Excel</h3>
-        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">File mẫu có 7 sheet: Hợp đồng, Phụ lục, Tạm ứng, Thanh toán, Bảo lãnh, Hoàn trả, Kế hoạch tiền về (nối nhau bằng Công ty + Số hợp đồng). Chọn file → xem trước → xác nhận mới ghi. Dòng trùng → cập nhật, không tạo đôi.</p>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">File mẫu 1 sheet: cột đầu "Loại dòng" (Hợp đồng / Phụ lục / Tạm ứng / Thanh toán / Bảo lãnh / Hoàn trả / Kế hoạch), mỗi dòng ghi Công ty + Số hợp đồng. Chọn file → xem trước → xác nhận mới ghi. Dòng trùng → cập nhật, không tạo đôi.</p>
         <div class="row">
           <button class="btn sec" onclick="taiFileMau()">⬇️ File mẫu</button>
           <button class="btn" onclick="document.getElementById('xl-file').click()">📂 Chọn file</button>
@@ -258,7 +258,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20260930-v10',
+  PHIEN_BAN: '20261001-v11',
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
   URL_APPS_SCRIPT: '',            // khối 15 (Google Sheets / Drive) — chưa làm
@@ -1029,10 +1029,60 @@ const HUONG_DAN_MAU=[['HƯỚNG DẪN ĐIỀN FILE MẪU NHẬP HỢP ĐỒNG PV
   ['6. Thanh toán: Số tiền thực nhận để trống thì app lấy = Đề nghị − Thu hồi TƯ − Giữ BH − Giữ QT. Phụ lục giảm giá trị: ghi số âm (-200000000).'],
   ['7. Nhập lại lần 2: hợp đồng trùng Công ty + Số HĐ → cập nhật; phụ lục trùng Số PL, tạm ứng/thanh toán trùng Đợt, bảo lãnh trùng Loại + Ngày hết hạn, hoàn trả trùng Loại + Ngày + Số tiền, kế hoạch trùng Tháng → cập nhật, không tạo đôi.'],
   ['8. Nhập: mở app → tab Khác → Chọn file → xem trước (dòng lỗi báo đỏ, bị bỏ qua) → bấm Ghi. Mọi dòng ghi đều có lịch sử.']];
+// --- File mẫu MỘT SHEET "NhapLieu" (anh Dũng 01/10: "cho thành 1 sheet thôi"): cột đầu "Loại dòng" quyết định dòng là gì.
+// 10 cột đầu dùng chung cho mọi loại dòng; các cột sau chỉ dùng cho dòng Hợp đồng / Thanh toán / Tạm ứng (bảo lãnh TƯ) / Hoàn trả.
+const LOAI_DONG={ hopDong:'Hợp đồng', phuLuc:'Phụ lục', tamUng:'Tạm ứng', thanhToan:'Thanh toán', baoLanh:'Bảo lãnh', hoanTra:'Hoàn trả', keHoach:'Kế hoạch' };
+const COT_MOT=[
+  ['loaiDong','Loại dòng (Hợp đồng/Phụ lục/Tạm ứng/Thanh toán/Bảo lãnh/Hoàn trả/Kế hoạch)'],['congTyId','Công ty (PVA/379/279)'],['soHopDong','Số hợp đồng'],
+  ['stt','Số thứ tự (số PL / đợt TƯ / đợt TT / tháng kế hoạch MM/YYYY)'],['ngay','Ngày (ký HĐ / ký PL / nhận TƯ / nghiệm thu / phát hành BL / tiền về hoàn trả)'],
+  ['loai','Loại (loại HĐ / loại PL / loại bảo lãnh / loại hoàn trả — xem HuongDan)'],['soTien','Số tiền (giá trị sau thuế HĐ / điều chỉnh PL, âm = giảm / tạm ứng / giá trị nghiệm thu / bảo lãnh / hoàn trả / kế hoạch tháng)'],
+  ['nganHang','Ngân hàng (bảo lãnh)'],['ngayHetHan','Ngày hết hạn bảo lãnh / ngày hoàn thành mới (PL gia hạn)'],['ghiChu','Ghi chú / nội dung / số thư'],
+  ['chuDauTu','HĐ: Chủ đầu tư'],['tenGoiThau','HĐ: Tên gói thầu'],['tenDuAn','HĐ: Tên dự án'],['giaTriTruocThue','HĐ: Giá trị trước thuế'],['thue','HĐ: Thuế'],['thoiGianThucHien','HĐ: Thời gian thực hiện'],['ngayKhoiCong','HĐ: Ngày khởi công'],['ngayHoanThanhHopDong','HĐ: Ngày hoàn thành theo HĐ'],['trangThai','HĐ: Trạng thái'],
+  ['hinhThucBH','HĐ: Hình thức bảo hành (Chủ đầu tư giữ tiền/Nộp thư bảo lãnh bảo hành/Cả hai)'],['ngayBanGiao','HĐ: Ngày nghiệm thu bàn giao'],['soThangBH','HĐ: Số tháng bảo hành'],['ngayNopQT','HĐ: Ngày nộp hồ sơ QT'],['ngayDuyetQT','HĐ: Ngày duyệt QT'],['giaTriQT','HĐ: Giá trị QT được duyệt'],
+  ['soTienDeNghi','TT: Số tiền đề nghị thanh toán'],['thuHoiTamUng','TT: Thu hồi tạm ứng'],['giuBaoHanh','TT: Giữ lại bảo hành'],['giuQuyetToan','TT: Giữ lại chờ quyết toán'],['soTienThucNhan','TT: Số tiền thực nhận'],['ngayTienVe','TT: Ngày tiền về'],
+  ['blSoTien','TƯ: Số tiền bảo lãnh tạm ứng'],['blNgayPhatHanh','TƯ: Ngày phát hành bảo lãnh TƯ'],['lyDo','HT: Lý do hoàn trả (Phát hành thư bảo lãnh bảo hành/Hết thời gian bảo hành/Quyết toán được duyệt/Khác)'] ];
+const MAU_MOT=[
+  ['Hợp đồng','PVA','MẪU-01/2026 (xoá dòng này)','','15/01/2026','Đơn giá điều chỉnh',12500000000,'','','', 'Ban QLDA huyện X','Gói thầu số 3 – cầu Km12','CT QL14e cầu',11363636364,1136363636,'540 ngày','01/02/2026','31/07/2027','Đang thi công','Chủ đầu tư giữ tiền','',12,'','','', '','','','','','', '','',''],
+  ['Phụ lục','PVA','MẪU-01/2026','PL01','01/06/2026','Điều chỉnh giá trị',500000000,'','','Bổ sung khối lượng'],
+  ['Phụ lục','PVA','MẪU-01/2026','PL02','01/08/2026','Cả hai',-200000000,'','30/09/2027','Cắt giảm + gia hạn'],
+  ['Tạm ứng','PVA','MẪU-01/2026',1,'10/02/2026','',2000000000,'BIDV Nghệ An','31/12/2026','', '','','','','','','','','','','','','','','', '','','','','','', 2000000000,'05/02/2026',''],
+  ['Thanh toán','PVA','MẪU-01/2026',1,'01/04/2026','',3000000000,'','','Đợt 1', '','','','','','','','','','','','','','','', 3000000000,900000000,150000000,100000000,1850000000,'15/04/2026'],
+  ['Bảo lãnh','PVA','MẪU-01/2026','','20/01/2026','Bảo lãnh thực hiện hợp đồng',600000000,'Vietcombank','31/08/2027','Thư số 123/BL'],
+  ['Hoàn trả','PVA','MẪU-01/2026','','01/09/2027','Tiền giữ bảo hành',150000000,'','','', '','','','','','','','','','','','','','','', '','','','','','', '','','Hết thời gian bảo hành'],
+  ['Kế hoạch','PVA','MẪU-01/2026','10/2026','','',2000000000],
+  ['Kế hoạch','PVA','MẪU-01/2026','12/2026','','',3000000000] ];
+// Đọc sheet NhapLieu → tách thành 7 nhóm giống định dạng docSheet (để dùng chung phần kiểm tra + ghi)
+function docSheetMot(X, wb){ const ws=wb.Sheets.NhapLieu; if(!ws) return null; const rows=X.utils.sheet_to_json(ws,{header:1,defval:'',raw:true}); const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase());
+  const I=Object.fromEntries(COT_MOT.map(c=>{ const pref=c[1].toLowerCase().split(' (')[0]; return [c[0],hdr.findIndex(h=>h.split(' (')[0].trim()===pref)]; })); // so khớp đúng tên cột (trước dấu ngoặc), tránh "Loại" trúng "Loại dòng"
+  const g=(r,k)=>I[k]>=0?r[I[k]]:''; const gs=(r,k)=>String(g(r,k)??'').trim();
+  const D={HopDong:[],PhuLuc:[],TamUng:[],ThanhToan:[],BaoLanh:[],HoanTra:[],KeHoach:[]};
+  rows.slice(1).forEach((r,i)=>{ const ld=timKhoa(LOAI_DONG,gs(r,'loaiDong')); const chung={dong:i+2,loi:[],congTyId:gs(r,'congTyId').toUpperCase(),soHopDong:gs(r,'soHopDong')};
+    if(!ld){ if(r.some(x=>x!==''&&x!=null)) D.HopDong.push(Object.assign(chung,{loi:['"Loại dòng" phải là: '+Object.values(LOAI_DONG).join(' / ')]})); return; }
+    const ngay=docNgayExcel(g(r,'ngay')), tien=docSoExcel(g(r,'soTien')), stt=gs(r,'stt'), gc=gs(r,'ghiChu'), chon=(ds,k)=>{ const v=timKhoa(ds,gs(r,k)); if(gs(r,k)&&!v) chung.loi.push('"Loại" không đúng lựa chọn'); return v; };
+    if(ld==='hopDong'){ D.HopDong.push(Object.assign(chung,{ngayKy:ngay,chuDauTu:gs(r,'chuDauTu'),tenGoiThau:gs(r,'tenGoiThau'),tenDuAn:gs(r,'tenDuAn'),loaiHopDong:chon(LOAI_HOP_DONG,'loai'),giaTriTruocThue:docSoExcel(g(r,'giaTriTruocThue')),thue:docSoExcel(g(r,'thue')),giaTriGoc:tien,thoiGianThucHien:gs(r,'thoiGianThucHien'),ngayKhoiCong:docNgayExcel(g(r,'ngayKhoiCong')),ngayHoanThanhHopDong:docNgayExcel(g(r,'ngayHoanThanhHopDong')),trangThai:chon(TRANG_THAI,'trangThai'),
+      baoHanh:{hinhThuc:chon(HINH_THUC_BAO_HANH,'hinhThucBH'),ngayNghiemThuBanGiao:docNgayExcel(g(r,'ngayBanGiao')),soThang:Number(gs(r,'soThangBH'))||0},quyetToan:{ngayNop:docNgayExcel(g(r,'ngayNopQT')),ngayDuyet:docNgayExcel(g(r,'ngayDuyetQT')),giaTriDuyet:docSoExcel(g(r,'giaTriQT'))},ghiChu:gc})); }
+    else if(ld==='phuLuc') D.PhuLuc.push(Object.assign(chung,{soPhuLuc:stt,ngayKy:ngay,loai:chon(LOAI_PHU_LUC,'loai'),giaTriDieuChinh:docSoAmExcel(g(r,'soTien')),ngayHoanThanhMoi:docNgayExcel(g(r,'ngayHetHan')),noiDung:gc}));
+    else if(ld==='tamUng') D.TamUng.push(Object.assign(chung,{dot:Number(stt)||0,ngay,soTien:tien,ghiChu:gc,bl:{nganHang:gs(r,'nganHang'),soTien:docSoExcel(g(r,'blSoTien')),ngayPhatHanh:docNgayExcel(g(r,'blNgayPhatHanh')),ngayHetHan:docNgayExcel(g(r,'ngayHetHan'))}}));
+    else if(ld==='thanhToan') D.ThanhToan.push(Object.assign(chung,{dot:Number(stt)||0,ngayNghiemThu:ngay,giaTriNghiemThu:tien,soTienDeNghi:docSoExcel(g(r,'soTienDeNghi')),thuHoiTamUng:docSoExcel(g(r,'thuHoiTamUng')),giuBaoHanh:docSoExcel(g(r,'giuBaoHanh')),giuQuyetToan:docSoExcel(g(r,'giuQuyetToan')),soTienThucNhan:docSoExcel(g(r,'soTienThucNhan')),ngayTienVe:docNgayExcel(g(r,'ngayTienVe')),ghiChu:gc}));
+    else if(ld==='baoLanh') D.BaoLanh.push(Object.assign(chung,{loai:chon(LOAI_BAO_LANH,'loai'),nganHang:gs(r,'nganHang'),soTien:tien,ngayPhatHanh:ngay,ngayHetHan:docNgayExcel(g(r,'ngayHetHan')),ghiChu:gc}));
+    else if(ld==='hoanTra') D.HoanTra.push(Object.assign(chung,{loai:chon(LOAI_HOAN_TRA,'loai'),ngay,soTien:tien,lyDo:timKhoa(LY_DO_HOAN_TRA,gs(r,'lyDo')),ghiChu:gc}));
+    else if(ld==='keHoach') D.KeHoach.push(Object.assign(chung,{thang:stt,soTien:tien})); });
+  return D; }
+
+// File mẫu tải về = 1 sheet NhapLieu (+ sheet HuongDan chỉ để đọc). App vẫn đọc được file 7 sheet cũ.
 async function taiFileMau(){ try{ const X=await napSheetJs(); const wb=X.utils.book_new();
-    Object.entries(SHEET_NHAP).forEach(([ten,cot])=>{ const ws=X.utils.aoa_to_sheet([cot.map(c=>c[1])].concat(MAU_HANG[ten]||[])); ws['!cols']=cot.map(c=>({wch:Math.min(40,Math.max(14,c[1].length+2))})); X.utils.book_append_sheet(wb,ws,ten); });
-    const hd=X.utils.aoa_to_sheet(HUONG_DAN_MAU); hd['!cols']=[{wch:130}]; X.utils.book_append_sheet(wb,hd,'HuongDan');
+    const ws=X.utils.aoa_to_sheet([COT_MOT.map(c=>c[1])].concat(MAU_MOT)); ws['!cols']=COT_MOT.map((c,i)=>({wch:i<10?18:16})); ws['!freeze']={xSplit:3,ySplit:1}; X.utils.book_append_sheet(wb,ws,'NhapLieu');
+    const hd=X.utils.aoa_to_sheet(HUONG_DAN_MOT); hd['!cols']=[{wch:130}]; X.utils.book_append_sheet(wb,hd,'HuongDan');
     X.writeFile(wb,'mau-nhap-hop-dong.xlsx'); }catch(e){ toast('❌ '+e.message); } }
+const HUONG_DAN_MOT=[['HƯỚNG DẪN ĐIỀN FILE MẪU NHẬP HỢP ĐỒNG (1 SHEET "NhapLieu")'],[''],
+  ['1. Mỗi dòng là một thứ, cột A "Loại dòng" cho biết đó là gì: Hợp đồng / Phụ lục / Tạm ứng / Thanh toán / Bảo lãnh / Hoàn trả / Kế hoạch. Cột B, C (Công ty, Số hợp đồng) phải ghi ở MỌI dòng, đúng y nhau để app biết dòng nào thuộc hợp đồng nào.'],
+  ['2. 10 cột đầu (A–J) dùng chung: Số thứ tự = số phụ lục / đợt tạm ứng / đợt thanh toán / tháng kế hoạch (10/2026). Ngày = ngày ký (HĐ, PL) / ngày nhận tạm ứng / ngày nghiệm thu / ngày phát hành bảo lãnh / ngày tiền về (hoàn trả). Số tiền = giá trị sau thuế (HĐ) / điều chỉnh (PL, âm là giảm) / tạm ứng / giá trị nghiệm thu / bảo lãnh / hoàn trả / kế hoạch tháng.'],
+  ['3. Cột "HĐ: …" chỉ điền ở dòng Hợp đồng. Cột "TT: …" chỉ ở dòng Thanh toán. Cột "TƯ: …" ở dòng Tạm ứng khi có bảo lãnh tạm ứng (ngân hàng ghi cột H, hết hạn cột I). Cột "HT: Lý do" ở dòng Hoàn trả.'],
+  ['4. Ô "Loại" theo từng dòng: Hợp đồng → Trọn gói / Đơn giá cố định / Đơn giá điều chỉnh. Phụ lục → Điều chỉnh giá trị / Gia hạn thời gian / Cả hai. Bảo lãnh → Bảo lãnh thực hiện hợp đồng / Bảo lãnh tạm ứng / Bảo lãnh bảo hành. Hoàn trả → Tiền giữ bảo hành / Tiền giữ chờ quyết toán.'],
+  ['5. Công ty: PVA, 379 hoặc 279. Ngày: 15/01/2026. Tiền: số nguyên đồng. Trạng thái: Đang thi công / Chờ nghiệm thu hoàn thành / Đang bảo hành / Chờ quyết toán / Đã xong / Tạm dừng / Bị chấm dứt.'],
+  ['6. Thanh toán: Số tiền thực nhận để trống thì app lấy = Đề nghị − Thu hồi TƯ − Giữ BH − Giữ QT. Đề nghị để trống thì = giá trị nghiệm thu.'],
+  ['7. Các dòng MẪU-01/2026 là ví dụ, xoá trước khi nhập. Nhập lại lần 2 → dòng trùng được cập nhật, không tạo đôi.'],
+  ['8. Nhập: mở app → tab Khác → Chọn file → xem trước (dòng lỗi báo đỏ, bị bỏ qua) → bấm Ghi.']];
 function docNgayExcel(v){ if(!v) return ''; if(v instanceof Date) return isNaN(v)?'':v.getFullYear()+'-'+pad(v.getMonth()+1)+'-'+pad(v.getDate()); if(typeof v==='number'){ const d=new Date(Math.round((v-25569)*86400000)); return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate()); }
   const s=String(v).trim(); let m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); if(m) return m[3]+'-'+pad(+m[2])+'-'+pad(+m[1]); m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]); return ''; }
 function docThangExcel(v){ if(v instanceof Date) return v.getFullYear()+'-'+pad(v.getMonth()+1); const s=String(v||'').trim(); let m=/^(\d{1,2})[\/\-](\d{4})$/.exec(s); if(m) return m[2]+'-'+pad(+m[1]); m=/^(\d{4})-(\d{1,2})$/.exec(s); if(m) return m[1]+'-'+pad(+m[2]); const n=docNgayExcel(v); return n?n.slice(0,7):''; }
@@ -1052,8 +1102,8 @@ function docSheet(X, wb, ten){ const ws=wb.Sheets[ten]; if(!ws) return null; con
 const khoaHD=(ct,so)=>ct+'|'+String(so||'').trim().toLowerCase();
 async function chonFileExcel(ev){ const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
   try{ const X=await napSheetJs(); const wb=X.read(await f.arrayBuffer(),{cellDates:true});
-    const D={}; Object.keys(SHEET_NHAP).forEach(t=>{ D[t]=docSheet(X,wb,t)||[]; });
-    if(!wb.Sheets.HopDong&&!Object.values(D).some(a=>a.length)) throw new Error('File phải theo file mẫu (sheet HopDong, PhuLuc, TamUng, ThanhToan, BaoLanh, HoanTra, KeHoach)');
+    let D=docSheetMot(X,wb); if(!D){ D={}; Object.keys(SHEET_NHAP).forEach(t=>{ D[t]=docSheet(X,wb,t)||[]; }); }
+    if(!Object.values(D).some(a=>a.length)) throw new Error('File phải theo file mẫu (sheet NhapLieu)');
     const coHD={}; Object.entries(DL.hopDong).forEach(([id,h])=>coHD[khoaHD(h.congTyId,h.soHopDong)]=id);
     D.HopDong.forEach(o=>{ if(!o.giaTriGoc&&o.giaTriTruocThue) o.giaTriGoc=o.giaTriTruocThue+(o.thue||0); if(!o.loaiHopDong) o.loaiHopDong='donGiaDieuChinh'; if(!o.trangThai) o.trangThai='dangThiCong'; if(!o.baoHanh.hinhThuc) o.baoHanh.hinhThuc='giuTien';
       if(!MA_CONG_TY.includes(o.congTyId)) o.loi.push('công ty phải là PVA/379/279'); if(!o.soHopDong) o.loi.push('thiếu số HĐ'); if(!o.tenGoiThau) o.loi.push('thiếu tên gói thầu'); if(!o.ngayKy) o.loi.push('ngày ký sai'); if(!o.giaTriGoc) o.loi.push('thiếu giá trị'); if(/MẪU/i.test(o.soHopDong)) o.loi.push('dòng mẫu, hãy xoá');
