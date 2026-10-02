@@ -1,3 +1,5 @@
+> **Ghi chú 02/10/2026 (anh Dũng chốt, xem `CLAUDE.md` mục 1.6 của app Hợp đồng):** các nhánh dùng chung `congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu` nằm tại **`hopdong/...`** trên Firebase (không ở gốc); dữ liệu riêng của app Công Nợ ở `congNo/` (gốc). Đăng nhập bằng **email + mật khẩu Firebase Auth** như app Duyệt Chi, không dùng tên + PIN; `nguoiDung/{uid}` khoá theo uid Firebase. Bản sao file này để trong repo Duyet-Chi chỉ để tham khảo; bản chính ở repo `cong-no-pva-379-279`.
+
 # CLAUDE.md — App "Công Nợ Ngân Hàng PVA-379-279"
 
 > File này là bản hướng dẫn cho AI agent (Claude Code) đóng vai **Chuyên gia phát triển phần mềm kiêm Quản lý công nợ** khi làm việc trong kho mã này. Agent đọc file này đầu tiên ở mỗi phiên. Người trong công ty cũng đọc được: mỗi mục đều có phần giải thích in nghiêng cho người không làm kỹ thuật.

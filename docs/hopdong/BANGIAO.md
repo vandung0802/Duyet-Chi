@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v12**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v13**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (công thức, 51 kiểm tra) + 3 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -22,13 +22,20 @@
 | 1.3 Push thật (FCM) + GitHub Actions 7:00; Apps Script Sheets/Drive | Thông báo trên máy khi mở app; stub Sheets | Thiếu | Việc tiếp theo |
 | Thừa | — | `conLaiChuaThiCong`, `khoiLuongDaThucHien` (anh Dũng yêu cầu 29/09, chốt giữ 30/09) | Giữ |
 
-## Câu hỏi đang chờ anh Dũng chốt (gom một lượt — quy tắc 26)
+## Câu hỏi đang chờ anh Dũng chốt
 
-1. **Đường dẫn nhánh dùng chung**: spec 02/10 (cả hai app) vẽ `baoLanh`, `nguoiDung`, `congTy`, `nhacNho`, `yeuCauXoa`, `lichSu` ở **gốc** Firebase, nhưng app này (và luật) đang để **dưới `hopdong/`**. Đề nghị: **app Công Nợ dùng chung các nhánh tại `hopdong/...`** (sửa 1 dòng cấu hình bên đó), không chuyển dữ liệu đang chạy ra gốc. Nếu anh muốn ra gốc: cần đổi luật + chuyển dữ liệu, làm riêng một bước.
-2. **Đăng nhập**: spec vẫn ghi tên + PIN dùng chung `nguoiDung.pinHash`. App này đang dùng email + mật khẩu Firebase (chốt 30/09). Đề nghị app Công Nợ cũng đăng nhập email + mật khẩu Firebase như Duyệt Chi; không làm PIN.
-3. **File Excel kế toán** `Theo-doi-cong-trinh-Dai-Thanh.xls`: chưa có trong repo. Gửi file (hoặc kéo vào chat) thì làm được mẫu 3 sheet + bộ đọc file gốc kiểu khối. Lưu ý repo public: file thật **không** đưa lên GitHub, chỉ làm mẫu rỗng.
+- Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
+- Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
 
-Mặc định nếu anh Dũng nói "cứ làm": 1 Công Nợ dùng `hopdong/...`, 2 email + mật khẩu, 3 chờ file.
+## Đã làm 02/10/2026 chiều (phiên 3b — nhắc hạn 07:00 + push, bản v13)
+
+- `sw-hopdong.js`: service worker riêng (scope `hopdong`), chỉ nhận push và mở app; không cache. Không đụng `sw.js` của Duyệt Chi.
+- Khối 14 `hopdong.html`: bật thông báo → đăng ký web push (khoá VAPID công khai chung với Duyệt Chi) → lưu `hopdong/pushSubs/{uid}/{khoá}`; đăng ký lại mỗi lần mở app; nhắc tại chỗ chỉ còn cho máy không nhận được push.
+- Luật: `hopdong/pushSubs/$uid/$khoa` (chỉ ghi dưới uid của mình, kiểm endpoint/keys như `push-subs`).
+- `scripts/nhac-han-hopdong.js` (+ `scripts/package.json` web-push): đọc Firebase bằng `firebase database:get` (FIREBASE_TOKEN), nạp TINH_TOAN từ `hopdong.html`, đồng bộ `nhacNho` (như app), chọn mốc ≤ 30 ngày chưa xong và cách lần nhắc trước ≥ 5 ngày, gửi push tới mọi máy đã đăng ký (tối đa 6 thông báo, dư thì gộp), ghi `soLanDaNhac`, `lanNhacCuoi`, `ngayNhacTiep`; xoá đăng ký chết (404/410). Không có việc → không gửi. `--thu` = chạy thử.
+- `.github/workflows/nhac-han-hopdong.yml`: cron `0 0 * * *` UTC = 07:00 VN + chạy tay (có ô "chạy thử").
+- Test: `node test-nhac-han-hopdong.js` (13 kiểm tra) + 4 bộ test cũ.
+- Chưa kiểm được trên điện thoại thật: cần anh Dũng bật thông báo trong app (tab Khác) rồi chạy tay workflow "Nhac han Hop dong" để xem có nhận không.
 
 ## Đã làm 02/10/2026 (phiên 3 — theo spec 02/10, bản v12)
 
@@ -113,11 +120,10 @@ Mặc định nếu anh Dũng nói "cứ làm": 1 giữ chỗ hiện tại, 2 gi
 
 ## Việc tiếp theo (theo thứ tự, mỗi bước một việc)
 
-1. Chờ 3 câu trả lời ở trên. Nếu chốt câu 1 "ra gốc": đổi luật (`baoLanh`, `nguoiDung`, `congTy`, `nhacNho`, `yeuCauXoa`, `lichSu` ở gốc) + script chuyển dữ liệu + đổi `ref()` trong app.
+1. Anh Dũng thử push trên điện thoại: mở app → Khác → "Bật thông báo"; rồi GitHub → Actions → "Nhac han Hop dong" → Run workflow. Lỗi thì xem log tác vụ.
 2. Nhận file Đại Thành → mẫu `mau/mau-nhap-hop-dong.xlsx` 3 sheet (hợp đồng / đợt nghiệm thu / tiền về) + bộ đọc file gốc kiểu khối nhiều dòng có xem trước ghép tiền về vào đợt.
-3. Push thật (FCM) + `scripts/nhac-han.js` + GitHub Actions 07:00 giờ VN (cần `FIREBASE_SERVICE_ACCOUNT`).
-4. Apps Script (`apps-script/Code.gs`): đồng bộ Sheets một chiều + tải file lên Drive; URL vào `CAU_HINH`.
-5. `docs/huong-dan-su-dung.md`, `docs/cai-dat-firebase.md`.
+3. Apps Script (`apps-script/Code.gs`): đồng bộ Sheets một chiều + tải file lên Drive; URL vào `CAU_HINH`.
+4. `docs/huong-dan-su-dung.md`, `docs/cai-dat-firebase.md`.
 
 ## Chỗ đang lỗi
 
