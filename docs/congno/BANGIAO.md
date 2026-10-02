@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v2**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v3**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **Đã xong bước 1 và bước 2** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (48 phép tính, có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
@@ -36,6 +36,7 @@
 - **Bảo lãnh dùng chung hạn mức** (anh Dũng: "bảo lãnh của công ty nào thì tính vào hạn mức của ngân hàng đó"): `TINH_TOAN.baoLanhCuaHanMuc` cộng thư đang hiệu lực **cùng `nganHangId` + cùng `congTyId` = `congTyVay`**. App đã ĐỌC `hopdong/baoLanh` (chưa ghi). Thư nhập từ app Hợp Đồng chỉ có tên ngân hàng gõ tay (`nganHang`), chưa có `nganHangId` → chưa được tính cho tới khi bước 6 cho kế toán gắn ngân hàng. Lưu ý bước 6: một ngân hàng + một công ty có 2 hạn mức (cũ hết hạn + mới) thì thư bị cộng vào cả hai — xử lý khi làm màn Bảo lãnh.
 - **File đính kèm = dán link** (anh Dũng: ok): bảng con `fileDinhKem/{id}` `{ten, link, nguon, nguoiTai, luc}` dưới `hanMuc/{id}` và `khoanVay/{id}` (thẻ "File đính kèm" ở chi tiết hạn mức, tab "File" ở khế ước). Chỉ nhận link `http(s)://`. Xoá theo quy tắc chung (giám đốc / yêu cầu xoá).
 - **Cách tính lãi ước, `theoDoiLaiTu`** (anh Dũng: không sai) → giữ nguyên.
+- **v3 (02/10)**: bị thoát từ tab khác (Duyệt Chi / Hợp Đồng cùng origin, không qua `dangXuat()`) thì `onAuthStateChanged` tự tải lại trang khi `!user && _daKetNoi` — trước đó `_daKetNoi` còn `true` nên đăng nhập lại không nối lại dữ liệu (giống Hợp Đồng v14).
 
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 

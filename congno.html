@@ -235,7 +235,7 @@ const CAU_HINH = {
   APP: 'congNo',                  // dấu nhận biết dòng của app này trong các bảng dùng chung (lichSu, yeuCauXoa…)
   GOC: 'congNo',                  // dữ liệu RIÊNG của app nằm dưới congNo/ (spec mục 4.3)
   GOC_CHUNG: 'hopdong',           // bảng DÙNG CHUNG với app Hợp Đồng nằm dưới hopdong/: congTy, nguoiDung, yeuCauXoa, lichSu (sau này: baoLanh, nhacNho)
-  PHIEN_BAN: '20261002-v2',
+  PHIEN_BAN: '20261002-v3',
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
   NHAC_HAN_MUC_NGAY: 60           // hạn mức sắp hết hạn: báo trước 60 ngày (mục 1.4)
@@ -346,6 +346,7 @@ async function dangNhap(){
 }
 function dangXuat(){ firebase.auth().signOut().then(()=>location.reload()); }   // tải lại trang để ngắt hẳn các kết nối dữ liệu của người vừa thoát
 firebase.auth().onAuthStateChanged(async user=>{
+  if(!user&&_daKetNoi){ location.reload(); return; }   // vừa thoát (bấm Đăng xuất, hoặc thoát ở tab khác): tải lại trang để ngắt hẳn kết nối + xoá dữ liệu của người vừa thoát
   nguoiHienTai=user;
   $('login-screen').hidden=!!user; $('app').hidden=true; $('wait-screen').hidden=true;
   if(!user) return;
