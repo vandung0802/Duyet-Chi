@@ -4,11 +4,11 @@
 const fs = require('fs'), vm = require('vm');
 const L = fs.readFileSync(__dirname + '/congno.html', 'utf8').split(/\r?\n/);
 const a = L.findIndex(x => x.startsWith('// ===== 6. TINH_TOAN'));
-const b = L.findIndex(x => x.startsWith('// ===== HẾT 6. TINH_TOAN'));
-if (a < 0 || b < 0) { console.log('Không tìm thấy khối TINH_TOAN'); process.exit(1); }
+const b = L.findIndex(x => x.startsWith('// ===== HẾT 7. SINH_LICH'));   // lấy cả khối 6. TINH_TOAN và 7. SINH_LICH (nằm liền nhau)
+if (a < 0 || b < 0) { console.log('Không tìm thấy khối TINH_TOAN / SINH_LICH'); process.exit(1); }
 const ctx = { console }; vm.createContext(ctx);
-vm.runInContext(L.slice(a, b + 1).join('\n') + '\nthis.TINH_TOAN = TINH_TOAN;', ctx);
-const T = ctx.TINH_TOAN;
+vm.runInContext(L.slice(a, b + 1).join('\n') + '\nthis.TINH_TOAN = TINH_TOAN; this.SINH_LICH = SINH_LICH;', ctx);
+const T = ctx.TINH_TOAN, S = ctx.SINH_LICH;
 
 let sai = 0, n = 0;
 const tien = x => (typeof x === 'number' ? x.toLocaleString('vi-VN') : JSON.stringify(x));
@@ -124,6 +124,34 @@ console.log('--- hạn mức ---');
 check('đã dùng, bảo lãnh DÙNG CHUNG hạn mức (200tr)', T.hanMucDaDung({ soTien: 5000000000, hanMucBaoLanhRieng: false }, [A], 200000000), 1400000000);
 check('đã dùng, bảo lãnh tách RIÊNG', T.hanMucDaDung({ soTien: 5000000000, hanMucBaoLanhRieng: true }, [A], 200000000), 1200000000);
 check('còn trống = hạn mức − đã dùng', T.hanMucConTrong({ soTien: 5000000000 }, 1400000000), 3600000000);
+
+console.log('--- SINH LỊCH trả gốc vay trung dài hạn (khối 7) ---');
+check('1 tỷ / 3 kỳ chia đều, kỳ đầu 31/01 → cuối tháng, kỳ cuối gánh phần lẻ',
+  S.sinhLich({ soTien: 1000000000, soKy: 3, ngayTraDau: '2026-01-31' }).map(x => [x.ky, x.ngay, x.goc]),
+  [[1, '2026-01-31', 333333333], [2, '2026-02-28', 333333333], [3, '2026-03-31', 333333334]]);
+check('1 tỷ / 3 kỳ, mỗi kỳ 400tr → kỳ cuối 200tr',
+  S.sinhLich({ soTien: 1000000000, soKy: 3, gocMoiKy: 400000000, ngayTraDau: '2026-03-25' }).map(x => x.goc), [400000000, 400000000, 200000000]);
+check('trả gốc 3 tháng một lần, qua năm',
+  S.sinhLich({ soTien: 900000000, soKy: 3, kyCachThang: 3, ngayTraDau: '2026-11-15' }).map(x => x.ngay), ['2026-11-15', '2027-02-15', '2027-05-15']);
+check('60 kỳ: tổng các kỳ đúng bằng số tiền vay', S.sinhLich({ soTien: 2350000000, soKy: 60, ngayTraDau: '2026-01-25' }).reduce((s, x) => s + x.goc, 0), 2350000000);
+check('thiếu số liệu → không sinh', S.sinhLich({ soTien: 0, soKy: 3, ngayTraDau: '2026-01-31' }).length, 0);
+
+console.log('--- KHỚP LỊCH sau trả trước hạn: trừ dần từ các kỳ cuối ---');
+// Vay 1,2 tỷ, 3 kỳ × 400tr. Đã trả kỳ 1 (400tr). Dư nợ 800tr.
+const D = () => ({ loai: 'daiHan', soTien: 1200000000, giaiNgan: { g: { ngay: '2026-01-01', soTien: 1200000000 } },
+  kyTra: { k1: { ky: 1, ngay: '2026-03-25', goc: 400000000, daTra: true }, k2: { ky: 2, ngay: '2026-04-25', goc: 400000000 }, k3: { ky: 3, ngay: '2026-05-25', goc: 400000000 } },
+  traNo: { t1: { ngay: '2026-03-25', goc: 400000000, kyTraId: 'k1' } } });
+check('lịch đang khớp → không đổi gì', S.khopLich(D()), { sua: {}, xoa: [], thua: 0 });
+const D1 = D(); D1.traNo.t2 = { ngay: '2026-04-01', goc: 100000000, traTruocHan: true };   // trả trước 100tr → còn 700tr
+check('trả trước 100tr → kỳ cuối còn 300tr', S.khopLich(D1), { sua: { k3: 300000000 }, xoa: [], thua: 0 });
+const D2 = D(); D2.traNo.t2 = { ngay: '2026-04-01', goc: 500000000, traTruocHan: true };   // trả trước 500tr → còn 300tr
+check('trả trước 500tr → kỳ 2 còn 300tr, bỏ kỳ 3', S.khopLich(D2), { sua: { k2: 300000000 }, xoa: ['k3'], thua: 0 });
+const D3 = D(); D3.traNo.t2 = { ngay: '2026-04-10', goc: 100000000, kyTraId: 'k2' };       // trả một phần kỳ 2 (gắn kỳ) → lịch vẫn khớp
+check('trả một phần có gắn kỳ → lịch vẫn khớp', S.khopLich(D3), { sua: {}, xoa: [], thua: 0 });
+const D4 = D(); D4.soTien = 1500000000;                                                     // hợp đồng tăng 300tr chưa giải ngân → cộng vào kỳ cuối
+check('hợp đồng tăng 300tr → cộng vào kỳ cuối', S.khopLich(D4), { sua: { k3: 700000000 }, xoa: [], thua: 0 });
+check('chuaGiaiNgan trong bảng số', T.tinhKhoan(D4, '2026-04-01').chuaGiaiNgan, 300000000);
+check('khế ước (không có soTien) → chuaGiaiNgan = 0', T.tinhKhoan(A, '2026-03-25').chuaGiaiNgan, 0);
 
 console.log(sai ? '\n❌ ' + sai + '/' + n + ' phép tính SAI' : '\n✅ ' + n + ' phép tính đều đúng');
 process.exit(sai ? 1 : 0);

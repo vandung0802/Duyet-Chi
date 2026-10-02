@@ -4,10 +4,10 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v4**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v5**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
-- **Đã xong bước 1 và bước 2** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả).
-- Kiểm tra công thức: `node test-congno-tinhtoan.js` (48 phép tính, có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
+- **Đã xong bước 1, 2, 3** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món).
+- Kiểm tra công thức: `node test-congno-tinhtoan.js` (60 phép tính, gồm cả khối 7 SINH_LICH; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
 ## Khác spec — làm theo thực tế app Hợp Đồng (anh Dũng dặn "dùng lại y nguyên, không viết cách mới")
@@ -48,6 +48,18 @@
 - **Rác còn lại từ v1–v3** (nếu anh Dũng đã thử trên mạng thật trước v4): vài dòng trong `hopdong/lichSu`, `hopdong/yeuCauXoa` có `app:"congNo"` và trường `hopdong/nguoiDung/{uid}/app/congNo`. App Hợp Đồng lọc theo `app` nên không hiện; `lichSu` luật không cho xoá. Không chuyển sang `congNo/lichSu` (dữ liệu thử). Muốn dọn thì giám đốc xoá bằng Firebase Console.
 - **Khi làm bước 6 (bảo lãnh)**: chỉ `tamUng` + `thucHienHopDong` ghi vào `hopdong/baoLanh` (giữ nguyên trường app Hợp Đồng đang đọc, thêm `nganHangId`, `phi`, `kyQuy`, `keToanTheoDoi`); dự thầu / bảo hành của app Công Nợ để ở `congNo/baoLanh` (hỏi anh Dũng có theo dõi bảo hành ở đây không); ký quỹ giảm trừ nhập tay, KHÔNG đọc `hopdong/thanhToan`; hạn mức đã dùng cộng cả hai bảng.
 
+## Đã làm 02/10/2026 (bản v5 — đổi màu + bước 3: vay trung dài hạn)
+
+- **Màu**: anh Dũng bảo "sửa lại màu sáng hơn cho đẹp" → tông **xanh ngọc** (`--blue:#0891b2`, đầu trang chuyển màu nhẹ, nền `#f2f9fb`); `manifest-congno.json` + `theme-color` theo. Tên biến CSS vẫn là `--blue*` như app Hợp Đồng.
+- **Tab "Khoản vay"** (trước là "Hạn mức"): 2 nút chọn — 💳 Hạn mức ngắn hạn / 🏗 Vay trung dài hạn; chung ô tìm + lọc (`veVay` → `veHanMuc`, `veDaiHan`). Sau này Thấu chi, Thuê tài chính thêm nút chọn vào đây.
+- **Vay trung dài hạn** = `congNo/khoanVay` với `loai:"daiHan"` (không có `hanMucId`, không lưu `ngayDenHan` — ngày kết thúc = kỳ gốc cuối). Trường thêm: `soTien`, `soKy`, `gocMoiKy`, `ngayTraDau`, `kyCachThang`, `ngayTraGocTrongThang` (tự lấy từ ngày kỳ đầu). Form `oDaiHan`, kiểm tra `kiemTraDaiHan`; chi tiết dùng chung `veCtKhoanVay` (biến `dh`).
+- **Khối 7 `SINH_LICH`** (thuần, có test): `sinhLich` (tạo khoản là sinh đủ `kyTra`, lưu thật), `khopLich` (trừ dần từ kỳ cuối). Nút "Khớp lịch với dư nợ" (`khopLichKhoan`) hiện trong ô cảnh báo khi lịch lệch `dư nợ + chưa giải ngân` — dùng được cho cả khế ước.
+- **Khoản cũ**: ô "số kỳ gốc đã trả" → ghi sẵn N dòng `traNo` (chứng từ "Đã trả trước khi nhập vào app") gắn N kỳ đầu, `daTra:true`.
+- **Trả trước hạn + phí phạt**: ô tích + ô phí phạt chỉ hiện ở form trả nợ của vay dài hạn; cột Phí của bảng trả nợ = phí + phí phạt, dấu ⏩ = trước hạn.
+- Giải ngân nhiều lần: tổng không vượt `soTien`; `tinhKhoan` có thêm `chuaGiaiNgan`, `phiPhatDaTra`, `soKyConLai`.
+- Chi tiết ngân hàng có thêm bảng "Vay trung dài hạn tại đây". Lịch trả ghi `Vay DH <số HĐ>` / `KƯ <số>` (`tenKhoan`).
+- Luật Firebase không đổi (vẫn nhánh `congNo/khoanVay`).
+
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
@@ -65,7 +77,7 @@
 
 ## Việc tiếp theo (mục 1.2)
 
-3. Vay trung dài hạn theo món: `khoanVay` `loai:"daiHan"`, nhiều lần giải ngân, khối `7. SINH_LICH` (số kỳ + gốc mỗi kỳ + ngày đầu → `kyTra`), trả trước hạn + phí phạt.
+3. ~~Vay trung dài hạn theo món~~ — xong v5.
 4. Thấu chi → 5. Thuê tài chính → 6. Bảo lãnh, phí, ký quỹ → 7. Tài sản bảo đảm → 8. Nhắc hạn + push → 9. Dashboard, biểu đồ, xuất Excel → 10. Nhập Excel.
 
 ## Chỗ đang lỗi

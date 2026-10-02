@@ -213,6 +213,13 @@ Chốt tối 02/10/2026 — **hai app độc lập** (anh Dũng: "app công nợ
 - Không đọc `thanhToan.thuHoiTamUng` của app Hợp Đồng: ký quỹ bảo lãnh tạm ứng giảm dần do **kế toán nhập tay** từng lần.
 - Bảo lãnh dự thầu, bảo lãnh bảo hành trong app Công Nợ (nếu theo dõi) để riêng ở `congNo/` — chốt chi tiết khi làm bước 6.
 
+Ghi thêm khi làm bước 3 (vay trung dài hạn, bản v5) — Claude tự định, anh Dũng xem sai thì sửa:
+
+- **Kỳ trả gốc không nhất thiết hằng tháng**: thêm trường `kyCachThang` (1 / 3 / 6 / 12 tháng). Lãi vẫn trả hằng tháng.
+- **Sinh lịch**: kỳ 1 vào `ngayTraDau`, các kỳ sau cùng ngày đó trong tháng; `gocMoiKy` bỏ trống = chia đều; kỳ cuối = phần còn lại. Lịch sinh trên **số tiền vay theo hợp đồng** (`soTien`), kể cả phần chưa giải ngân.
+- **Khoản vay cũ nhập lại**: ô "số kỳ gốc đã trả" → app ghi sẵn mỗi kỳ đã trả một dòng `traNo` gắn đúng kỳ, để dư nợ đúng và không báo quá hạn oan.
+- **Trả trước hạn** (`traNo.traTruocHan`, `phiPhat`): gốc trả trước không gắn kỳ; nút **"Khớp lịch với dư nợ"** trừ dần từ các kỳ cuối (kỳ hết gốc thì bỏ), có hỏi lại và ghi lịch sử. Ngân hàng tính khác thì kế toán sửa tay từng kỳ.
+
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
 ---
@@ -397,7 +404,8 @@ Nhánh **dùng chung** (cấu trúc gốc ở CLAUDE.md app Hợp Đồng; dư�
     │     ngayGiaiNganDau, ngayDenHan, thoiHanThang
     │     ngayTraLaiTrongThang, ngayTraGocTrongThang
     │     mucDich: { congTrinh, khachHang, noiDung }
-    │     soKy, goxMoiKy, ngayTraDau                           ← để sinh lịch (dài hạn)
+    │     soTien, soKy, gocMoiKy, ngayTraDau, kyCachThang      ← để sinh lịch (dài hạn); kyCachThang = 1|3|6|12 tháng giữa hai kỳ gốc
+    │     theoDoiLaiTu                                         ← ngày bắt đầu theo dõi lãi trong app (khoản cũ nhập lại)
     │     trangThai, coCauLai: { co, ngay, ghiChu }, nhomNo (1-5)
     │     keToanTheoDoi, fileDinhKem/{id}
     │     giaiNgan/{id}: { ngay, soTien, ghiChu }
