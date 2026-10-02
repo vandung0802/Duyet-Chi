@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v13**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v14**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (công thức, 51 kiểm tra) + 3 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,10 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 02/10/2026 tối (bản v14 — sửa lỗi đăng xuất rồi đăng nhập lại)
+
+- Lỗi: đăng xuất rồi đăng nhập lại trong cùng tab → `ketNoiDuLieu()` thoát sớm vì `_daKetNoi` vẫn `true`, trong khi Firebase đã huỷ hết listener lúc thoát → màn hình giữ dữ liệu của phiên trước, không tự cập nhật. Sửa: trong `onAuthStateChanged`, hễ mất đăng nhập mà đã từng kết nối thì `location.reload()` — bắt cả trường hợp bấm Đăng xuất lẫn bị thoát do đăng xuất ở tab khác (Duyệt Chi / Công nợ chung tài khoản). Chưa thử trên trình duyệt thật (cần tài khoản).
 
 ## Đã làm 02/10/2026 chiều (phiên 3b — nhắc hạn 07:00 + push, bản v13)
 

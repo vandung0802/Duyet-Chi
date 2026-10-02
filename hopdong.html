@@ -258,7 +258,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261002-v13',
+  PHIEN_BAN: '20261002-v14',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -373,6 +373,7 @@ async function dangNhap(){
 }
 function dangXuat(){ firebase.auth().signOut(); }
 firebase.auth().onAuthStateChanged(async user=>{
+  if(!user&&_daKetNoi){ location.reload(); return; }   // vừa thoát (bấm Đăng xuất, hoặc thoát ở tab khác): tải lại trang để ngắt hẳn kết nối + xoá dữ liệu của người vừa thoát
   nguoiHienTai=user;
   $('login-screen').hidden=!!user; $('app').hidden=true; $('wait-screen').hidden=true;
   if(!user) return;
