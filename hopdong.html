@@ -258,7 +258,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261001-v11',
+  PHIEN_BAN: '20261002-v12',
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
   URL_APPS_SCRIPT: '',            // khối 15 (Google Sheets / Drive) — chưa làm
@@ -286,13 +286,15 @@ const MA_CONG_TY = ['PVA','379','279'];
 const TRANG_THAI = { dangThiCong:'Đang thi công', choNghiemThuHoanThanh:'Chờ nghiệm thu hoàn thành', dangBaoHanh:'Đang bảo hành', choQuyetToan:'Chờ quyết toán', daXong:'Đã xong', tamDung:'Tạm dừng', biChamDut:'Bị chấm dứt' };
 const LOAI_HOP_DONG = { tronGoi:'Trọn gói', donGiaCoDinh:'Đơn giá cố định', donGiaDieuChinh:'Đơn giá điều chỉnh' };
 const LOAI_PHU_LUC = { dieuChinhGia:'Điều chỉnh giá trị', giaHan:'Gia hạn thời gian', caHai:'Cả hai' };
-const LOAI_BAO_LANH = { thucHienHopDong:'Bảo lãnh thực hiện hợp đồng', tamUng:'Bảo lãnh tạm ứng', baoHanh:'Bảo lãnh bảo hành' };
+const LOAI_BAO_LANH = { thucHienHopDong:'Bảo lãnh thực hiện hợp đồng', tamUng:'Bảo lãnh tạm ứng', baoHanh:'Bảo lãnh bảo hành' }; // 3 loại nhập ở app này
+const TEN_BAO_LANH = Object.assign({ duThau:'Bảo lãnh dự thầu' }, LOAI_BAO_LANH); // + dự thầu (chỉ app Công Nợ nhập) — dùng để hiển thị
 const HINH_THUC_BAO_HANH = { giuTien:'Chủ đầu tư giữ tiền', baoLanh:'Nộp thư bảo lãnh bảo hành', caHai:'Cả hai' };
 const LOAI_HOAN_TRA = { baoHanh:'Tiền giữ bảo hành', quyetToan:'Tiền giữ chờ quyết toán' };
 const LY_DO_HOAN_TRA = { phatHanhBaoLanh:'Phát hành thư bảo lãnh bảo hành', hetBaoHanh:'Hết thời gian bảo hành', duyetQuyetToan:'Quyết toán được duyệt', khac:'Khác' };
 const LOAI_MOC = { hetBaoHanh:'Hết bảo hành', hetBaoLanh:'Hết hạn bảo lãnh', hoanThanhHopDong:'Đến hạn hoàn thành hợp đồng', khac:'Mốc tự thêm' };
 const TEN_BANG = { hopDong:'Hợp đồng', phuLuc:'Phụ lục', tamUng:'Tạm ứng', thanhToan:'Đợt thanh toán', hoanTra:'Hoàn trả', baoLanh:'Bảo lãnh', keHoachTienVe:'Kế hoạch tiền về', fileDinhKem:'File đính kèm', nhacNho:'Nhắc hạn', congTy:'Công ty' };
-const BANG_CON = ['phuLuc','tamUng','thanhToan','hoanTra','baoLanh'];   // các bảng treo dưới hợp đồng theo hopDongId
+const BANG_CON = ['phuLuc','tamUng','thanhToan','hoanTra'];   // các bảng treo dưới hợp đồng: bang/{hopDongId}/{id}
+// baoLanh KHÔNG treo dưới hợp đồng: bảng PHẲNG baoLanh/{id} có trường hopDongId, dùng chung với app Công Nợ (mục 4.3, 02/10)
 
 // ===== TIỆN ÍCH: định dạng tiền / ngày, đọc ô nhập =====
 const $ = id => document.getElementById(id);
@@ -381,7 +383,7 @@ firebase.auth().onAuthStateChanged(async user=>{
   dangKyNguoiDung(); veThongBao(); ketNoiDuLieu();
 });
 
-// ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3, tất cả dưới hopdong/) =====
+// ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3, tất cả dưới hopdong/; baoLanh dạng phẳng từ 02/10) =====
 const DL = { hopDong:{}, phuLuc:{}, tamUng:{}, thanhToan:{}, hoanTra:{}, baoLanh:{}, nhacNho:{}, yeuCauXoa:{}, lichSu:{}, congTy:{}, nguoiDung:{} };
 let danhSachCongTrinh=[], _daKetNoi=false, _lanDauCoDuLieu=false;
 const duongDan = p => CAU_HINH.GOC+'/'+p;
@@ -389,16 +391,28 @@ const ref = p => db.ref(duongDan(p));
 function ketNoiDuLieu(){
   if(_daKetNoi) return; _daKetNoi=true;
   const loi=e=>{ $('ds-hopdong').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh hopdong) có thể chưa được đưa lên máy chủ.</div>'; };
-  Object.keys(DL).forEach(bang=>{ ref(bang).on('value',s=>{ DL[bang]=s.val()||{}; veTatCa(); if(bang==='hopDong'&&!_lanDauCoDuLieu){ _lanDauCoDuLieu=true; setTimeout(()=>{ dongBoNhacNho(); nhacTrenMay(); },800); } }, bang==='hopDong'?loi:()=>{}); });
+  Object.keys(DL).forEach(bang=>{ ref(bang).on('value',s=>{ DL[bang]=s.val()||{}; veTatCa(); if(bang==='hopDong'&&!_lanDauCoDuLieu){ _lanDauCoDuLieu=true; setTimeout(()=>{ donBaoLanhCu().then(()=>{ dongBoNhacNho(); nhacTrenMay(); }); },800); } }, bang==='hopDong'?loi:()=>{}); });
   db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); danhSachCongTrinh=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); veCongTrinh(); },()=>{});
 }
 function dangKyNguoiDung(){ // mỗi lần đăng nhập ghi lại hồ sơ của mình vào hopdong/nguoiDung (danh sách người dùng của app)
   try{ ref('nguoiDung/'+nguoiHienTai.uid).update({ ten:tenNguoiDung, email:nguoiHienTai.email||'', vaiTro:laGiamDoc()?'GD':'NV', dangHoatDong:true, lanCuoi:luc() }); }catch(e){}
 }
-// Gom dữ liệu của 1 hợp đồng để đưa vào TINH_TOAN
-function duLieuHopDong(id){ const c={ hopDong:Object.assign({id},DL.hopDong[id]||{}) }; BANG_CON.forEach(b=>c[b]=DL[b][id]||{}); return c; }
+// Bảo lãnh của 1 hợp đồng: lọc bảng phẳng theo hopDongId (thư dự thầu / thư của hợp đồng khác không hiện)
+function baoLanhCuaHD(hopDongId){ const o={}; Object.entries(DL.baoLanh).forEach(([k,b])=>{ if(b&&typeof b==='object'&&b.hopDongId===hopDongId&&b.loai!=='duThau') o[k]=b; }); return o; }
+function bangCuaHD(bang, hopDongId){ return bang==='baoLanh'?baoLanhCuaHD(hopDongId):((DL[bang]||{})[hopDongId]||{}); }
+function gan1BanGhi(bang, hopDongId, id){ return bang==='hopDong'?DL.hopDong[id]:bang==='baoLanh'?DL.baoLanh[id]:((DL[bang]||{})[hopDongId]||{})[id]; }
+// Gom dữ liệu của 1 hợp đồng để đưa vào TINH_TOAN (mỗi bản ghi con kèm id để nhắc hạn tham chiếu đúng thư)
+function duLieuHopDong(id){ const c={ hopDong:Object.assign({id},DL.hopDong[id]||{}) }; BANG_CON.concat('baoLanh').forEach(b=>{ c[b]={}; Object.entries(bangCuaHD(b,id)).forEach(([k,x])=>c[b][k]=Object.assign({id:k},x)); }); return c; }
 function ketQua(id){ return TINH_TOAN.tinhHopDong(duLieuHopDong(id)); }
-function danhSachBanGhi(bang, hopDongId){ return Object.entries((DL[bang]||{})[hopDongId]||{}).map(([id,x])=>Object.assign({id},x)); }
+function danhSachBanGhi(bang, hopDongId){ return Object.entries(bangCuaHD(bang,hopDongId)).map(([id,x])=>Object.assign({id},x)); }
+// (02/10) Dọn dữ liệu cũ: trước đây baoLanh/{hopDongId}/{id}; nay baoLanh/{id} + hopDongId. Chỉ giám đốc chạy (luật chỉ cho GD xoá). Chạy 1 lần, tự dừng khi không còn gì.
+async function donBaoLanhCu(){
+  if(!laGiamDoc()) return; const up={}; let n=0;
+  Object.entries(DL.baoLanh).forEach(([hdId,v])=>{ if(!v||typeof v!=='object'||v.loai||v.soTien!=null||v.hopDongId) return; // bản ghi phẳng → bỏ qua
+    const con=Object.entries(v).filter(([k,b])=>b&&typeof b==='object'&&b.loai); if(!con.length) return;
+    con.forEach(([k,b])=>{ up['baoLanh/'+k]=Object.assign({app:'hopDong',hopDongId:hdId,congTyId:(DL.hopDong[hdId]||{}).congTyId||''},b); n++; }); up['baoLanh/'+hdId]=null; });
+  if(!n) return; try{ await ghiNhieu(up); toast('🔧 Đã chuyển '+n+' bảo lãnh sang cấu trúc mới (dùng chung app Công Nợ)'); }catch(e){ console.warn('donBaoLanhCu',e); }
+}
 async function ghiNhieu(capNhat){ await db.ref(CAU_HINH.GOC).update(capNhat); }
 async function bam(btn, viec){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await viec(); dongModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
 
@@ -416,11 +430,14 @@ function dongLichSu(bang, banGhiId, hopDongId, hanhDong, truong, giaTriCu, giaTr
 function khoaMoi(){ return db.ref().push().key; }
 // Lưu 1 bản ghi (tạo hoặc sửa) + ghi lịch sử từng trường thay đổi trong CÙNG một lần ghi (không bao giờ thiếu vết)
 async function luuBanGhi(bang, hopDongId, id, moi, tomTat){
-  const duongBang = bang==='hopDong' ? 'hopDong/'+(id||'') : bang+'/'+hopDongId+'/'+(id||'');
-  const cu = bang==='hopDong' ? DL.hopDong[id] : ((DL[bang]||{})[hopDongId]||{})[id];
+  const tienTo = bang==='hopDong' ? 'hopDong/' : bang==='baoLanh' ? 'baoLanh/' : bang+'/'+hopDongId+'/'; // baoLanh phẳng (mục 4.3)
+  const duongBang = tienTo+(id||'');
+  const cu = gan1BanGhi(bang,hopDongId,id);
+  if(bang==='baoLanh') moi=Object.assign({app:'hopDong',hopDongId,congTyId:(DL.hopDong[hopDongId]||{}).congTyId||''},cu||{},moi); // giữ nguyên trường app Công Nợ ghi (phi, kyQuy…) — quy tắc 17b
+  else if(bang!=='hopDong'&&id) moi=Object.assign({},cu||{},moi); // sửa bản ghi con: trường không có trên form (vd baoLanhId) giữ nguyên
   const up={}; const now=luc();
   if(!id){ id=khoaMoi(); const dl=Object.assign({},moi,{taoBoi:tenNguoiDung,taoLuc:now,suaBoi:tenNguoiDung,suaLuc:now});
-    up[(bang==='hopDong'?'hopDong/':bang+'/'+hopDongId+'/')+id]=dl;
+    up[tienTo+id]=dl;
     up['lichSu/'+khoaMoi()]=dongLichSu(bang,id,bang==='hopDong'?id:hopDongId,'tao','',''
       ,tomTat||'');
   } else {
@@ -436,7 +453,9 @@ async function xoaBanGhi(bang, hopDongId, id, tomTat){
   if(!laGiamDoc()) throw new Error('Chỉ giám đốc được xoá. Hãy bấm "Yêu cầu xoá".');
   const up={};
   if(bang==='hopDong'){ up['hopDong/'+id]=null; BANG_CON.forEach(b=>up[b+'/'+id]=null);
+    Object.entries(baoLanhCuaHD(id)).forEach(([k,b])=>{ if(!b.app||b.app==='hopDong') up['baoLanh/'+k]=null; }); // thư do app Công Nợ tạo giữ nguyên (họ còn theo dõi phí, ký quỹ)
     Object.entries(DL.nhacNho).forEach(([k,n])=>{ if(n.hopDongId===id) up['nhacNho/'+k]=null; }); }
+  else if(bang==='baoLanh') up['baoLanh/'+id]=null;
   else up[bang+'/'+hopDongId+'/'+id]=null;
   up['lichSu/'+khoaMoi()]=dongLichSu(bang,id,bang==='hopDong'?id:hopDongId,'xoa','',tomTat||'','');
   await ghiNhieu(up);
@@ -471,8 +490,8 @@ async function duyetXoa(k, dongY, btn){
 async function rutYeuCauXoa(k){ await ref('yeuCauXoa/'+k).update({ trangThai:'rut', lucDuyet:luc() }); toast('Đã rút yêu cầu'); dongModal(); }
 function tomTatBanGhi(bang, hopDongId, id){
   if(bang==='hopDong'){ const h=DL.hopDong[id]||{}; return (h.soHopDong||'')+' · '+(h.tenGoiThau||''); }
-  const x=((DL[bang]||{})[hopDongId]||{})[id]||{}, h=DL.hopDong[hopDongId]||{};
-  return (h.soHopDong||'')+' · '+TEN_BANG[bang]+' '+(x.dot||x.soPhuLuc||LOAI_BAO_LANH[x.loai]||LOAI_HOAN_TRA[x.loai]||'')+' '+tienD(x.soTien||x.giaTriDieuChinh||x.giaTriNghiemThu||0);
+  const x=gan1BanGhi(bang,hopDongId,id)||{}, h=DL.hopDong[hopDongId]||{};
+  return (h.soHopDong||'')+' · '+TEN_BANG[bang]+' '+(x.dot||x.soPhuLuc||TEN_BAO_LANH[x.loai]||LOAI_HOAN_TRA[x.loai]||'')+' '+tienD(x.soTien||x.giaTriDieuChinh||x.giaTriNghiemThu||0);
 }
 // ===== 6. TINH_TOAN — toàn bộ công thức mục 1.5 của docs/hopdong/CLAUDE.md, thuần túy, KHÔNG đụng giao diện =====
 // Cách dùng:
@@ -779,7 +798,7 @@ function veTabPhuLuc(id,h,k){
 }
 // --- Tab Tạm ứng ---
 function veTabTamUng(id,h,k){
-  const ds=danhSachBanGhi('tamUng',id).sort((a,b)=>(a.dot||0)-(b.dot||0)); const bl=DL.baoLanh[id]||{};
+  const ds=danhSachBanGhi('tamUng',id).sort((a,b)=>(a.dot||0)-(b.dot||0)); const bl=DL.baoLanh;
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>💵 Tạm ứng</h3><button class="btn sm" onclick="formTamUng('${id}')">＋ Thêm đợt</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đợt</th><th>Ngày</th><th>Số tiền</th><th class="tr">Bảo lãnh tạm ứng</th><th class="tr">Ghi chú</th></tr></thead><tbody>
       ${ds.map(x=>{ const b=x.baoLanhId&&bl[x.baoLanhId]; return `<tr onclick="formTamUng('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b></td><td>${ngayVN(x.ngay)}</td><td><b>${tien(x.soTien)}</b></td><td class="tr">${b?esc(b.nganHang||'')+' · '+tienNgan(b.soTien)+' · hết hạn '+ngayVN(b.ngayHetHan):'—'}</td><td class="tr" style="white-space:normal">${esc(x.ghiChu||'')}</td></tr>`; }).join('')}</tbody>
@@ -798,7 +817,7 @@ function veTabBaoLanh(id,h,k){
   const ds=danhSachBanGhi('baoLanh',id).sort((a,b)=>String(a.ngayHetHan||'').localeCompare(String(b.ngayHetHan||'')));
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🏦 Bảo lãnh ngân hàng</h3><button class="btn sm" onclick="formBaoLanh('${id}')">＋ Thêm</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Loại</th><th class="tr">Ngân hàng</th><th>Số tiền</th><th>Phát hành</th><th>Hết hạn</th><th>Còn</th></tr></thead><tbody>
-      ${ds.map(x=>{ const d=TINH_TOAN.soNgayGiua(homNay(),x.ngayHetHan); return `<tr onclick="formBaoLanh('${id}','${x.id}')"><td class="tr"><b>${esc(LOAI_BAO_LANH[x.loai]||x.loai)}</b>${x.daGiaHan?' <span class="hint">(đã gia hạn)</span>':''}</td><td class="tr">${esc(x.nganHang||'')}</td><td>${tien(x.soTien)}</td><td>${ngayVN(x.ngayPhatHanh)}</td><td>${ngayVN(x.ngayHetHan)}</td><td class="${d!=null&&d<=CAU_HINH.NHAC_TRUOC_NGAY?'neg':''}">${d==null?'—':d<0?'quá '+(-d)+' ngày':d+' ngày'}</td></tr>`; }).join('')}</tbody></table></div><div class="hint">App nhắc gia hạn trước ${CAU_HINH.NHAC_TRUOC_NGAY} ngày.</div>`:'<div class="hint">Chưa có bảo lãnh nào. Ba loại: thực hiện hợp đồng, tạm ứng, bảo hành.</div>'}</div></div>`;
+      ${ds.map(x=>{ const d=TINH_TOAN.soNgayGiua(homNay(),x.ngayHetHan); return `<tr onclick="formBaoLanh('${id}','${x.id}')"><td class="tr"><b>${esc(TEN_BAO_LANH[x.loai]||x.loai)}</b>${x.soThu?' <span class="hint">số '+esc(x.soThu)+'</span>':''}${x.daGiaHan?' <span class="hint">(đã gia hạn)</span>':''}${x.app==='congNo'?' <span class="hint">· từ app Công Nợ</span>':''}</td><td class="tr">${esc(x.nganHang||(x.nganHangId?'NH #'+x.nganHangId:''))}</td><td>${tien(x.soTien)}</td><td>${ngayVN(x.ngayPhatHanh)}</td><td>${ngayVN(x.ngayHetHan)}</td><td class="${d!=null&&d<=CAU_HINH.NHAC_TRUOC_NGAY?'neg':''}">${d==null?'—':d<0?'quá '+(-d)+' ngày':d+' ngày'}</td></tr>`; }).join('')}</tbody></table></div><div class="hint">App nhắc gia hạn trước ${CAU_HINH.NHAC_TRUOC_NGAY} ngày. Bảng bảo lãnh dùng chung với app Công Nợ: nhập ở app nào bên kia cũng thấy; phí và ký quỹ xem ở app Công Nợ.</div>`:'<div class="hint">Chưa có bảo lãnh nào. Ba loại: thực hiện hợp đồng, tạm ứng, bảo hành. (Bảo lãnh dự thầu nhập ở app Công Nợ.)</div>'}</div></div>`;
 }
 // --- Tab Bảo hành & Quyết toán (+ hoàn trả tiền giữ) ---
 function veTabBaoHanh(id,h,k){
@@ -879,7 +898,7 @@ function hienGiaTri(truong,v){ if(v===''||v==null) return '(trống)'; if(typeof
 // ----- 9b. Các form nhập liệu của chi tiết hợp đồng (dùng moForm/docForm ở khối tiện ích) -----
 let _cacO=null, _formId=null, _formBang='', _formHopDongId='';
 function goiYChuDauTu(){ return Object.values(DL.hopDong).map(h=>h.chuDauTu); }
-function goiYNganHang(){ return Object.values(DL.baoLanh).flatMap(o=>Object.values(o)).map(b=>b.nganHang); }
+function goiYNganHang(){ return [...new Set(Object.values(DL.baoLanh).map(b=>b&&b.nganHang).filter(Boolean))]; }
 
 // --- Hợp đồng (tạo / sửa thông tin chung) ---
 function formHopDong(id){
@@ -937,7 +956,7 @@ function formQuyetToan(id){ const h=DL.hopDong[id], k=ketQua(id);
   moForm('📋 Quyết toán',_cacO,h,`<button class="btn" onclick="luuPhan('${id}',this)">💾 Lưu</button>`); }
 
 // --- Bảng con dùng chung: phụ lục / tạm ứng / thanh toán / bảo lãnh / hoàn trả ---
-function moFormCon(bang,hopDongId,id,tieuDe,cacO,macDinh){ _formBang=bang; _formHopDongId=hopDongId; _formId=id||''; _cacO=cacO; const x=id?((DL[bang]||{})[hopDongId]||{})[id]:macDinh;
+function moFormCon(bang,hopDongId,id,tieuDe,cacO,macDinh){ _formBang=bang; _formHopDongId=hopDongId; _formId=id||''; _cacO=cacO; const x=id?gan1BanGhi(bang,hopDongId,id):macDinh;
   moForm((id?'✏️ Sửa ':'＋ Thêm ')+tieuDe,cacO,x,`<div class="row"><button class="btn" onclick="luuCon(this)">💾 Lưu</button></div>${id?'<div style="margin-top:10px">'+nutXoa(bang,hopDongId,id,tomTatBanGhi(bang,hopDongId,id))+'</div>':''}`); }
 async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); if(window._kiemTraCon) window._kiemTraCon(v); const id=await luuBanGhi(_formBang,_formHopDongId,_formId,v,tomTatMoi(_formBang,v)); if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v); toast('✅ Đã lưu'); }); }
 function tomTatMoi(bang,v){ return (DL.hopDong[_formHopDongId]||{}).soHopDong+' · '+TEN_BANG[bang]+' '+(v.dot||v.soPhuLuc||LOAI_BAO_LANH[v.loai]||LOAI_HOAN_TRA[v.loai]||'')+' '+tienD(v.soTien||v.giaTriDieuChinh||v.giaTriNghiemThu||0); }
@@ -946,7 +965,7 @@ function dotTiep(bang,hopDongId){ return danhSachBanGhi(bang,hopDongId).reduce((
 function formPhuLuc(hopDongId,id){ window._kiemTraCon=v=>{ if(v.loai!=='giaHan'&&!v.giaTriDieuChinh) throw new Error('Nhập giá trị điều chỉnh'); if(v.loai!=='dieuChinhGia'&&!v.ngayHoanThanhMoi) throw new Error('Nhập ngày hoàn thành mới'); if(v.loai==='giaHan') v.giaTriDieuChinh=0; if(v.loai==='dieuChinhGia') v.ngayHoanThanhMoi=''; }; window._sauKhiLuuCon=null;
   moFormCon('phuLuc',hopDongId,id,'phụ lục',[{k:'soPhuLuc',nhan:'Số phụ lục',batBuoc:true,placeholder:'VD: PL01'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',batBuoc:true,nua:true},{k:'loai',nhan:'Loại phụ lục',kieu:'chon',ds:LOAI_PHU_LUC,batBuoc:true},{k:'giaTriDieuChinh',nhan:'Giá trị điều chỉnh (đ)',kieu:'tien',choAm:true,hint:'Tăng: nhập số. Giảm: nhập số và tích "Giá trị GIẢM"'},{k:'ngayHoanThanhMoi',nhan:'Ngày hoàn thành mới (nếu gia hạn)',kieu:'ngay'},{k:'noiDung',nhan:'Nội dung',kieu:'vanBan'}],{soPhuLuc:'PL'+pad(danhSachBanGhi('phuLuc',hopDongId).length+1),ngayKy:homNay(),loai:'dieuChinhGia'}); }
 
-function formTamUng(hopDongId,id){ const x=id?DL.tamUng[hopDongId][id]:null; const bl=x&&x.baoLanhId&&(DL.baoLanh[hopDongId]||{})[x.baoLanhId]||{};
+function formTamUng(hopDongId,id){ const x=id?DL.tamUng[hopDongId][id]:null; const bl=x&&x.baoLanhId&&DL.baoLanh[x.baoLanhId]||{};
   window._kiemTraCon=null;
   // bảo lãnh tạm ứng nhập ngay trong form: ghi thành 1 bản ghi baoLanh loại tamUng và nối bằng baoLanhId
   window._sauKhiLuuCon=async(tuId,v)=>{ const b=v._baoLanh; delete v._baoLanh; if(!b||!b.soTien) return; const blId=await luuBanGhi('baoLanh',hopDongId,x&&x.baoLanhId||'',{loai:'tamUng',nganHang:b.nganHang,soTien:b.soTien,ngayPhatHanh:b.ngayPhatHanh,ngayHetHan:b.ngayHetHan,tamUngId:tuId},'Bảo lãnh tạm ứng đợt '+v.dot); if(!(x&&x.baoLanhId)) await ref('tamUng/'+hopDongId+'/'+tuId).update({baoLanhId:blId}); };
@@ -965,13 +984,13 @@ function formThanhToan(hopDongId,id){ const k=ketQua(hopDongId);
   goiYThucNhan(); }
 function goiYThucNhan(){ const g=k=>docTien(($('f-'+k)||{}).value); const n=g('soTienDeNghi')-g('thuHoiTamUng')-g('giuBaoHanh')-g('giuQuyetToan'); const o=$('f-soTienThucNhan'); if(o&&!o.value) o.placeholder='gợi ý '+tien(n); }
 
-function formBaoLanh(hopDongId,id){ const k=ketQua(hopDongId);
+function formBaoLanh(hopDongId,id){ const k=ketQua(hopDongId); const cuBL=id?DL.baoLanh[id]||{}:{}; // thư nhập từ app Công Nợ chỉ có nganHangId (mã) → không bắt nhập tên ngân hàng
   window._kiemTraCon=null;
   // Phát hành thư bảo lãnh bảo hành → hỏi "đã nhận lại tiền giữ bảo hành chưa?" → tự tạo bản ghi hoanTra (mục 1.4)
   window._sauKhiLuuCon=async(blId,v)=>{ if(v.loai!=='baoHanh'||id) return; const dangGiu=ketQua(hopDongId).giuBaoHanhDangGiu; if(dangGiu<=0) return;
     if(confirm('Đã nhận lại tiền giữ bảo hành ('+tienD(dangGiu)+') sau khi nộp thư bảo lãnh chưa?\nBấm OK nếu đã nhận → app ghi 1 dòng "Hoàn trả tiền giữ bảo hành" ngày '+ngayVN(v.ngayPhatHanh||homNay())+'.'))
       await luuBanGhi('hoanTra',hopDongId,'',{loai:'baoHanh',ngay:v.ngayPhatHanh||homNay(),soTien:dangGiu,lyDo:'phatHanhBaoLanh',baoLanhId:blId,ghiChu:'Tự ghi khi phát hành thư bảo lãnh bảo hành'},'Hoàn trả tiền giữ BH '+tienD(dangGiu)); };
-  moFormCon('baoLanh',hopDongId,id,'bảo lãnh',[{k:'loai',nhan:'Loại bảo lãnh',kieu:'chon',ds:LOAI_BAO_LANH,batBuoc:true},{k:'nganHang',nhan:'Ngân hàng',kieu:'goiY',goiY:goiYNganHang(),batBuoc:true},{k:'soTien',nhan:'Số tiền bảo lãnh (đ)',kieu:'tien',batBuoc:true},{k:'ngayPhatHanh',nhan:'Ngày phát hành',kieu:'ngay',batBuoc:true},{k:'ngayHetHan',nhan:'Ngày hết hạn',kieu:'ngay',batBuoc:true,nua:true,hint:'App nhắc gia hạn trước 30 ngày'},{k:'daGiaHan',nhan:'Đã gia hạn (thư mới thay thư cũ)',kieu:'check'},{k:'ghiChu',nhan:'Ghi chú / số thư'}],{loai:'thucHienHopDong',ngayPhatHanh:homNay()}); }
+  moFormCon('baoLanh',hopDongId,id,'bảo lãnh',[{k:'loai',nhan:'Loại bảo lãnh',kieu:'chon',ds:LOAI_BAO_LANH,batBuoc:true},{k:'nganHang',nhan:'Ngân hàng',kieu:'goiY',goiY:goiYNganHang(),batBuoc:!cuBL.nganHangId,hint:cuBL.nganHangId?'Ngân hàng chọn ở app Công Nợ (mã '+cuBL.nganHangId+')':''},{k:'soTien',nhan:'Số tiền bảo lãnh (đ)',kieu:'tien',batBuoc:true},{k:'ngayPhatHanh',nhan:'Ngày phát hành',kieu:'ngay',batBuoc:!cuBL.app||cuBL.app==='hopDong'},{k:'ngayHetHan',nhan:'Ngày hết hạn',kieu:'ngay',batBuoc:true,nua:true,hint:'App nhắc gia hạn trước 30 ngày'},{k:'soThu',nhan:'Số thư bảo lãnh',nua:true},{k:'daGiaHan',nhan:'Đã gia hạn (thư mới thay thư cũ)',kieu:'check'},{k:'ghiChu',nhan:'Ghi chú'}],{loai:'thucHienHopDong',ngayPhatHanh:homNay()}); }
 
 function formHoanTra(hopDongId,id){ const k=ketQua(hopDongId);
   window._kiemTraCon=null; window._sauKhiLuuCon=null;
@@ -1141,7 +1160,7 @@ async function nhapExcel(btn){ await bam(btn,async()=>{ const D=window._dsNhap; 
     const con=(t,bang,khop,chuan)=>D[t].filter(x=>!x.loi.length).map(async o=>{ const hdId=idCua[khoaHD(o.congTyId,o.soHopDong)]; if(!hdId) return; const v=chuan(JSON.parse(JSON.stringify(o))); delete v.dong; delete v.loi; delete v.congTyId; delete v.soHopDong;
       const cu=danhSachBanGhi(bang,hdId).find(x=>khop(x,v)); const id=await luuBanGhi(bang,hdId,cu?cu.id:'',cu?Object.assign({},cu,v):v,tomTatMoiNhap(bang,o)); n++; return {hdId,id,v,cu}; });
     for(const p of con('PhuLuc','phuLuc',(x,v)=>String(x.soPhuLuc).toLowerCase()===String(v.soPhuLuc).toLowerCase(),v=>v)) await p;
-    for(const p of con('TamUng','tamUng',(x,v)=>Number(x.dot)===Number(v.dot),v=>{ v._bl=v.bl; delete v.bl; return v; })){ const r=await p; if(r&&r.v._bl&&r.v._bl.soTien){ const b=r.v._bl; const cuBl=(r.cu&&r.cu.baoLanhId&&(DL.baoLanh[r.hdId]||{})[r.cu.baoLanhId])?r.cu.baoLanhId:''; const blId=await luuBanGhi('baoLanh',r.hdId,cuBl,{loai:'tamUng',nganHang:b.nganHang,soTien:b.soTien,ngayPhatHanh:b.ngayPhatHanh,ngayHetHan:b.ngayHetHan,tamUngId:r.id},'Bảo lãnh tạm ứng (Excel)'); if(!cuBl) await ref('tamUng/'+r.hdId+'/'+r.id).update({baoLanhId:blId}); } }
+    for(const p of con('TamUng','tamUng',(x,v)=>Number(x.dot)===Number(v.dot),v=>{ v._bl=v.bl; delete v.bl; return v; })){ const r=await p; if(r&&r.v._bl&&r.v._bl.soTien){ const b=r.v._bl; const cuBl=(r.cu&&r.cu.baoLanhId&&DL.baoLanh[r.cu.baoLanhId])?r.cu.baoLanhId:''; const blId=await luuBanGhi('baoLanh',r.hdId,cuBl,{loai:'tamUng',nganHang:b.nganHang,soTien:b.soTien,ngayPhatHanh:b.ngayPhatHanh,ngayHetHan:b.ngayHetHan,tamUngId:r.id},'Bảo lãnh tạm ứng (Excel)'); if(!cuBl) await ref('tamUng/'+r.hdId+'/'+r.id).update({baoLanhId:blId}); } }
     for(const p of con('ThanhToan','thanhToan',(x,v)=>Number(x.dot)===Number(v.dot),v=>v)) await p;
     for(const p of con('BaoLanh','baoLanh',(x,v)=>x.loai===v.loai&&x.ngayHetHan===v.ngayHetHan,v=>v)) await p;
     for(const p of con('HoanTra','hoanTra',(x,v)=>x.loai===v.loai&&x.ngay===v.ngay&&Number(x.soTien)===Number(v.soTien),v=>v)) await p;
