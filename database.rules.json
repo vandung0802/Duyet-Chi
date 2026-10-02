@@ -419,6 +419,21 @@
       "$other":    { ".validate": false }
     },
 
+    // ══ APP CÔNG NỢ (congno.html) — dữ liệu RIÊNG dưới congNo/ (mục 4.3 của docs/hopdong/CLAUDE-cong-no.md) ══
+    // Bảng DÙNG CHUNG với app Hợp Đồng (congTy, nguoiDung, yeuCauXoa, lichSu) vẫn nằm ở hopdong/ phía trên — khối này KHÔNG đụng tới.
+    // Đọc/ghi: ai đã được duyệt (approved) hoặc 3 người nhà. XOÁ cả bản ghi (newData không tồn tại) chỉ tài khoản role 'dung' (giám đốc);
+    // người khác gửi hopdong/yeuCauXoa. Bảng con (tài khoản, giải ngân, lãi suất, kỳ trả, trả nợ) nằm TRONG bản ghi nên luật không chặn xoá từng dòng con — app chặn + ghi lịch sử.
+    "congNo": {
+      ".read":  "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+      "nganHang": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+                             ".validate": "!newData.exists() || (newData.hasChildren(['ten', 'loai']) && newData.child('ten').isString() && newData.child('ten').val().length <= 200)" } },
+      "hanMuc":   { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+                             ".validate": "!newData.exists() || (newData.hasChildren(['nganHangId', 'congTyVay', 'soHopDong', 'soTien']) && newData.child('soTien').isNumber() && newData.child('soHopDong').isString() && newData.child('soHopDong').val().length <= 100)" } },
+      "khoanVay": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
+                             ".validate": "!newData.exists() || newData.hasChildren(['loai', 'nganHangId', 'congTyVay'])" } },
+      "$other":   { ".validate": false }
+    },
+
     // ══ NHÁNH NỘI BỘ của Cloud Functions — CẤM mọi client (chỉ admin SDK chạm được) ══
     // Vốn đã bị cấm mặc định vì không có luật nào mở; khai TƯỜNG MINH ở đây để (a) ai đọc file cũng thấy,
     // (b) lỡ sau này có người thêm luật mở ở cấp gốc thì nhìn vào đây biết ngay là KHÔNG ĐƯỢC.

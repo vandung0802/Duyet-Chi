@@ -1,0 +1,10 @@
+{
+  "id": "cn-v1",
+  "name": "Công nợ ngân hàng PVA-379-279",
+  "short_name": "Công nợ",
+  "start_url": "/Duyet-Chi/congno.html?t=pwa",
+  "scope": "/Duyet-Chi/congno.html",
+  "display": "standalone",
+  "background_color": "#334155",
+  "theme_color": "#334155"
+}
