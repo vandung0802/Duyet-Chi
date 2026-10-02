@@ -1,0 +1,61 @@
+# NHẮC HẠN app Công nợ ngân hàng PVA-379-279: mỗi sáng 07:00 giờ Việt Nam (= 00:00 UTC) chạy scripts/nhac-han-congno.js
+# → tính các mốc đến hạn (trả gốc, trả lãi, nộp thấu chi, phí bảo lãnh, hạn mức / bảo lãnh / bảo hiểm hết hạn, định giá lại…),
+#   gửi thông báo đẩy tới máy đã bật thông báo trong app. KHÔNG có việc thì KHÔNG gửi gì.
+# Chìa khoá: dùng lại FIREBASE_TOKEN (hoặc FIREBASE_SERVICE_ACCOUNT) đã có trong GitHub Secrets — không cần thêm gì.
+# Chạy tay để thử: tab Actions → "Nhac han Cong no" → Run workflow (tích "chạy thử" thì chỉ in ra, không gửi).
+name: Nhac han Cong no
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      thu:
+        description: 'Chạy thử (chỉ in ra, không ghi, không gửi)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: nhac-han-congno
+  cancel-in-progress: false
+
+jobs:
+  nhac:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cai firebase-tools va web-push
+        run: |
+          npm install -g firebase-tools
+          npm install --prefix scripts --no-audit --no-fund
+
+      - name: Kiem tra da co chia khoa chua
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ] && [ "$HAS_SA" != "true" ]; then
+            echo "::error::Chua co chia khoa FIREBASE_TOKEN (lay bang LAY-KHOA-TU-DONG.bat) trong GitHub → Settings → Secrets → Actions."
+            exit 1
+          fi
+
+      - name: Chay nhac han
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          THU: ${{ github.event.inputs.thu }}
+        run: |
+          if [ "$HAS_SA" = "true" ]; then
+            printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+            unset FIREBASE_TOKEN
+          fi
+          if [ "$THU" = "true" ]; then node scripts/nhac-han-congno.js --thu; else node scripts/nhac-han-congno.js; fi
+          rm -f "$RUNNER_TEMP/sa.json"

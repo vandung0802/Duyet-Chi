@@ -4,11 +4,11 @@
 const fs = require('fs'), vm = require('vm');
 const L = fs.readFileSync(__dirname + '/congno.html', 'utf8').split(/\r?\n/);
 const a = L.findIndex(x => x.startsWith('// ===== 6. TINH_TOAN'));
-const b = L.findIndex(x => x.startsWith('// ===== HẾT 7. SINH_LICH'));   // lấy cả khối 6. TINH_TOAN và 7. SINH_LICH (nằm liền nhau)
+const b = L.findIndex(x => x.startsWith('// ===== HẾT NHAC_HAN'));   // lấy cả 3 khối nằm liền nhau: 6. TINH_TOAN, 7. SINH_LICH, NHAC_HAN
 if (a < 0 || b < 0) { console.log('Không tìm thấy khối TINH_TOAN / SINH_LICH'); process.exit(1); }
 const ctx = { console }; vm.createContext(ctx);
-vm.runInContext(L.slice(a, b + 1).join('\n') + '\nthis.TINH_TOAN = TINH_TOAN; this.SINH_LICH = SINH_LICH;', ctx);
-const T = ctx.TINH_TOAN, S = ctx.SINH_LICH;
+vm.runInContext(L.slice(a, b + 1).join('\n') + '\nthis.TINH_TOAN = TINH_TOAN; this.SINH_LICH = SINH_LICH; this.NHAC_HAN = NHAC_HAN;', ctx);
+const T = ctx.TINH_TOAN, S = ctx.SINH_LICH, N = ctx.NHAC_HAN;
 
 let sai = 0, n = 0;
 const tien = x => (typeof x === 'number' ? x.toLocaleString('vi-VN') : JSON.stringify(x));
@@ -195,6 +195,41 @@ check('kỳ cuối không vượt ngày hết hạn thư', T.kyPhiToi(thu, { p1:
 check('đã nộp tới ngày hết hạn → hết kỳ', T.kyPhiToi(thu, { p1: { kyDen: '2026-12-31' } }), null);
 check('thư cũ: phí đã nộp đến 10/07 (nhập tay)', T.kyPhiToi(Object.assign({}, thu, { phi: Object.assign({ daNopDen: '2026-07-10' }, thu.phi) }), null).ngay, '2026-07-10');
 check('thư thu phí MỘT LẦN → không có kỳ phí', T.kyPhiToi(Object.assign({}, thu, { phi: { hinhThuc: 'motLan' } }), null), null);
+
+console.log('--- NHẮC HẠN: mốc tính từ dữ liệu, số ngày nhắc trước theo bảng mục 1.4 ---');
+// Hôm nay 20/03/2026. Khoản A: kỳ lãi 25/03 (còn 5 ngày → nhắc), kỳ gốc 01/07 (còn xa → chưa nhắc).
+const duNhac = { nganHang: { nh1: { ten: 'NH MẪU' } },
+  khoanVay: { A: Object.assign(khoan(), { nganHangId: 'nh1', loai: 'kheUoc', keToanTheoDoi: 'uKT' }) },
+  hanMuc: { h1: { nganHangId: 'nh1', congTyVay: 'PVA', soHopDong: 'HM-MẪU', ngayHetHan: '2026-05-09', keToanTheoDoi: 'uKT' },     // còn 50 ngày ≤ 60 → nhắc
+            h2: { nganHangId: 'nh1', congTyVay: '379', soHopDong: 'HM-XA', ngayHetHan: '2026-12-31' } },                           // còn xa → không
+  thauChi: { tc1: Object.assign(TC(), { nganHangId: 'nh1', congTyVay: 'PVA', ngayHetHan: '2027-01-01' }) },                         // kỳ nộp 25/03 còn 5 ngày → nhắc
+  taiSanBaoDam: { ts1: { moTa: 'đất MẪU', nganHangId: 'nh1', ngayDinhGia: '2025-04-10' } },                                        // định giá lại 10/04/2026: còn 21 ngày ≤ 40 → nhắc
+  baoLanh: N.gopBaoLanh({ b1: Object.assign({}, thu, { nganHangId: 'nh1', congTyId: 'PVA', soThu: 'T1', ngayHetHan: '2026-03-30' }),   // hết hạn sau 10 ngày ≤ 15 → nhắc; phí kỳ đầu 10/01 quá hạn → nhắc
+                          b9: { loai: 'baoHanh', nganHangId: 'nh1', soTien: 1, ngayHetHan: '2026-03-25' } }, {}),                   // bảo hành của app Hợp Đồng → KHÔNG theo dõi
+  phiBaoLanh: {} };
+const moc = N.cacMoc(duNhac, '2026-03-20');
+check('các mốc đang nhắc (loại · còn mấy ngày)', moc.map(m => m.loai + ':' + m.conNgay),
+  ['phiBaoLanh:-69', 'traLai:5', 'nopThauChi:5', 'baoLanhHetHan:10', 'dinhGiaLai:21', 'hanMucHetHan:50']);
+const mLai = moc.find(m => m.loai === 'traLai');
+check('mốc trả lãi: số tiền ước, kế toán, tiêu đề', [mLai.soTien, mLai.nguoi, mLai.tieuDe], [11013699, 'uKT', 'NH MẪU — KƯ MẪU-01 trả lãi']);
+check('nội dung thông báo trả lãi', N.soanThongBao(mLai), { title: 'NH MẪU — KƯ MẪU-01 trả lãi', body: '~11.013.699đ · sau 5 ngày (25/03)', tag: 'cn-kv_A_lai_2026-03-25' });
+check('trả lãi nhắc các hôm còn 5, 1, 0 ngày và mỗi ngày khi quá hạn', [5, 4, 2, 1, 0, -1, -9].map(c => N.guiHomNay({ loai: 'traLai', conNgay: c })), [true, false, false, true, true, true, true]);
+check('trả gốc nhắc các hôm còn 10, 5, 1, 0 ngày', [10, 9, 5, 3, 1, 0].map(c => N.guiHomNay({ loai: 'traGoc', conNgay: c })), [true, false, true, false, true, true]);
+check('hạn mức hết hạn: 60 ngày, lặp mỗi 10 ngày', [60, 55, 50, 10, 3, 0].map(c => N.guiHomNay({ loai: 'hanMucHetHan', conNgay: c })), [true, false, true, true, false, true]);
+check('bảo lãnh hết hạn: 15 ngày, lặp mỗi 5 ngày', [15, 12, 10, 5, 0].map(c => N.guiHomNay({ loai: 'baoLanhHetHan', conNgay: c })), [true, false, true, true, true]);
+const duTra = JSON.parse(JSON.stringify(duNhac)); duTra.khoanVay.A.traNo.t9 = { ngay: '2026-03-24', lai: 11000000, kyLai: '2026-03-25' };
+check('nhập dòng trả lãi kỳ 25/03 → mốc trả lãi tự tắt', N.cacMoc(duTra, '2026-03-20').some(m => m.loai === 'traLai'), false);
+check('mốc không phải trả tiền quá hạn > 30 ngày thì thôi nhắc', N.cacMoc({ nganHang: {}, hanMuc: { h: { ngayHetHan: '2026-01-01', soHopDong: 'x' } } }, '2026-03-20').length, 0);
+// kịch bản 07:00: chia việc theo người nhận
+const K = require('./scripts/nhac-han-congno.js');
+const cn = Object.assign({}, duNhac, { baoLanh: {}, nguoiDung: { uGD: { vaiTro: 'GD' }, uH: { vaiTro: 'NV', nhanTatCa: true }, uKT: { vaiTro: 'NV' }, uX: { vaiTro: 'NV' } }, nhacNho: {} });
+const blChungThu = { b1: Object.assign({}, thu, { nganHangId: 'nh1', congTyId: 'PVA', soThu: 'T1', ngayHetHan: '2026-03-30' }) };
+const viec = K.chonViecNhac(cn, blChungThu, '2026-03-20');
+check('kịch bản: việc gửi hôm 20/03', viec.moc.map(m => m.loai), ['phiBaoLanh', 'traLai', 'nopThauChi', 'baoLanhHetHan', 'hanMucHetHan']);   // định giá lại còn 21 ngày: không rơi vào hôm lặp
+check('kịch bản: giám đốc + người được tích nhận tất cả; kế toán chỉ nhận khoản mình; người khác không nhận',
+  [viec.theoNguoi.uGD.length, viec.theoNguoi.uH.length, viec.theoNguoi.uKT.map(m => m.loai), viec.theoNguoi.uX], [5, 5, ['traLai', 'hanMucHetHan'], undefined]);
+cn.nhacNho = { [viec.moc.find(m => m.loai === 'hanMucHetHan').khoa]: { daXong: true } };
+check('kịch bản: mốc đã bấm "Đã xong" thì không gửi nữa', K.chonViecNhac(cn, blChungThu, '2026-03-20').moc.some(m => m.loai === 'hanMucHetHan'), false);
 
 console.log(sai ? '\n❌ ' + sai + '/' + n + ' phép tính SAI' : '\n✅ ' + n + ' phép tính đều đúng');
 process.exit(sai ? 1 : 0);

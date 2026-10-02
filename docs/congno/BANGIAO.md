@@ -4,9 +4,9 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v10**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v11**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
-- **Đã xong bước 1 → 7** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
+- **Đã xong bước 1 → 8** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (68 phép tính, gồm cả khối 7 SINH_LICH và thấu chi; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
@@ -91,6 +91,16 @@
 - **Bảng nối để NGAY TRONG tài sản**: `taiSanBaoDam/{id}/baoDamCho/{id}` `{khoan:'hanMuc/<id>'|'khoanVay/<id>'|'thauChi/<id>', mucDichVay, khachHangGiaiNgan, ghiChu}` (spec vẽ bảng riêng `taiSanBaoDam_khoanVay`; để lồng cho gọn, tra ngược bằng `taiSanCua(khoa)`). Chi tiết hạn mức / khoản vay / thấu chi hiện thẻ "Tài sản bảo đảm cho khoản này".
 - Định giá lại: tô vàng trước 40 ngày, đỏ khi quá hạn. Sổ tiết kiệm thế chấp cộng vào "tiền đang bị giam". Quyền đòi nợ: chỉ ghi chú tay.
 - Luật: thêm `congNo/taiSanBaoDam`.
+## Đã làm 02/10/2026 (bản v11 — bước 8: nhắc hạn + thông báo đẩy)
+
+- **Khối `NHAC_HAN`** (thuần, nằm ngay sau `7. SINH_LICH`, có test): `BANG_NHAC` = bảng số ngày nhắc mục 1.4 (sửa một chỗ ở đây), `cacMoc(du, homNay)` tính mọi mốc đang trong thời gian nhắc THẲNG từ dữ liệu, `guiHomNay`, `soanThongBao`, `gopBaoLanh`. Mốc KHÔNG lưu vào Firebase.
+- **Tự tắt**: mốc trả tiền (gốc, lãi, nộp thấu chi, phí bảo lãnh) lấy từ lịch "chưa trả" nên nhập dòng trả / nộp là hết. Mốc khác (hạn mức / thấu chi hết hạn, kết thúc thuê, bảo hiểm, định giá lại, bảo lãnh hết hạn): bấm **"Đã xong"** → `congNo/nhacNho/<khoá mốc>` `{daXong, nguoiXong, lucXong, tieuDe, loai, ngay}`; "Mở lại" = xoá dòng đó. Khoá mốc có ngày nên gia hạn (đổi ngày) là thành mốc mới.
+- Quá hạn chưa xử lý: nhắc mỗi ngày. Mốc không phải trả tiền quá hạn > 30 ngày mà không ai bấm thì thôi nhắc (tránh thư bảo lãnh cũ nhắc mãi).
+- **Màn "🔔 Nhắc hạn"** (mục trong trang Khác; số đỏ trên nút Khác = số việc đang nhắc + yêu cầu xoá với giám đốc).
+- **Thông báo đẩy** y nguyên cách app Hợp Đồng: `sw-congno.js` (phạm vi `congno`), đăng ký lưu `congNo/pushSubs/{uid}/{khoá}`, khoá VAPID chung Duyệt Chi; `scripts/nhac-han-congno.js` + `.github/workflows/nhac-han-congno.yml` chạy 07:00 giờ VN (dùng lại `FIREBASE_TOKEN`), nạp công thức từ chính `congno.html`. Chạy thử: `node scripts/nhac-han-congno.js --thu` hoặc Actions → "Nhac han Cong no" → tích "chạy thử".
+- **Người nhận**: giám đốc (vaiTro GD) + người được tích **"nhận mọi nhắc hạn"** ở trang Khác → Người dùng (`congNo/nguoiDung/{uid}/nhanTatCa` — anh Dũng tích cho Hiền, Ngọc) + kế toán theo dõi của khoản đó. Mỗi người tối đa 6 thông báo/lần, còn lại gộp.
+- Luật: thêm `congNo/nhacNho`, `congNo/pushSubs` (chỉ ghi dưới uid của mình).
+- **Chưa thử được**: bật thông báo thật trên điện thoại và lần chạy 07:00 đầu tiên (cần máy thật + dữ liệu thật).
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
