@@ -104,6 +104,14 @@ check('đợt chưa có ngày tiền về → không rơi vào kỳ nào', T.don
 console.log('== 6. Các mốc cần nhắc ==');
 check('mốc: hết bảo lãnh, hết BH, hoàn thành HĐ (xếp theo ngày)', T.cacMoc({ hopDong, phuLuc, tamUng, thanhToan, hoanTra, baoLanh }).map(m => m.loai + ' ' + m.ngayMoc),
   ['hetBaoLanh 2027-01-15', 'hoanThanhHopDong 2027-03-31', 'hetBaoHanh 2027-08-31']);
+// (02/10) bảng baoLanh PHẲNG dùng chung với app Công Nợ: chỉ lấy thư có hopDongId trùng, bỏ thư của hợp đồng khác và thư dự thầu
+const baoLanhPhang = { b1: { id: 'b1', hopDongId: 'MAU-HD', loai: 'thucHienHopDong', soTien: 500000000, ngayHetHan: '2027-01-15' },
+  b2: { id: 'b2', hopDongId: 'HD-KHAC', loai: 'tamUng', soTien: 1, ngayHetHan: '2026-02-01' },
+  b3: { id: 'b3', loai: 'duThau', tenGoiThau: 'MẪU dự thầu', soTien: 1, ngayHetHan: '2026-03-01' },
+  b4: { id: 'b4', hopDongId: 'MAU-HD', loai: 'baoHanh', soTien: 2, ngayHetHan: '2028-06-30' } };
+check('baoLanhCua: lọc đúng thư của hợp đồng (bảng phẳng)', T.baoLanhCua({ hopDong: Object.assign({ id: 'MAU-HD' }, hopDong), baoLanh: baoLanhPhang }).map(b => b.id).join(), 'b1,b4');
+check('baoLanhCua: bảng con cũ chưa có hopDongId vẫn nhận', T.baoLanhCua({ hopDong: Object.assign({ id: 'MAU-HD' }, hopDong), baoLanh }).map(b => b.id).join(), 'b1');
+check('cacMoc với bảng phẳng: 2 mốc bảo lãnh của đúng hợp đồng', T.cacMoc({ hopDong: Object.assign({ id: 'MAU-HD' }, hopDong), phuLuc, tamUng, thanhToan, hoanTra, baoLanh: baoLanhPhang }).filter(m => m.loai === 'hetBaoLanh').map(m => m.thamChieuId).join(), 'b1,b4');
 
 console.log('== 7. Dữ liệu rác không làm sập ==');
 check('không có gì → toàn 0', T.tinhHopDong({}).giaTriHienHanh, 0);

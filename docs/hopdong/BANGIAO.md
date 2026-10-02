@@ -1,12 +1,42 @@
 # BANGIAO — nhật ký bàn giao app Hợp Đồng PVA-379-279
 
-> Phiên sau đọc file này (và `CLAUDE.md` cùng thư mục) trước khi sửa `hopdong.html`. Ghi ngắn: đã làm gì, còn gì, chỗ nào đang lỗi, câu nào đang chờ anh Dũng chốt.
+> Phiên sau đọc file này (và `CLAUDE.md` cùng thư mục — bản 02/10/2026, kèm `CLAUDE-cong-no.md` của app Công Nợ) trước khi sửa `hopdong.html`. Ghi ngắn: đã làm gì, còn gì, chỗ nào đang lỗi, câu nào đang chờ anh Dũng chốt.
 
-## Tình trạng chung (30/09/2026)
+## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v8 = viết lại theo spec**). Anh Dũng chốt 30/09 ("cứ làm"): giữ chỗ hiện tại, giữ đăng nhập email + mật khẩu, công thức đúng nguyên văn spec, giữ ô "chưa thi công", "đang thực hiện" = mọi trạng thái trừ Đã xong và Bị chấm dứt.
-- Firebase: dùng **chung project `duyetchi-pva379`** với app Duyệt Chi. Dữ liệu theo mục 4.3, tất cả dưới `hopdong/`: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, `baoLanh/{hdId}`, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung`. Luật trong `database.rules.json` (repo Duyet-Chi) tự deploy bằng GitHub Actions khi gộp vào main.
-- Dữ liệu cũ của bản v1–v7 (`hopdong/contracts`, `hopdong/log`, chỉ có hợp đồng thử) không còn được đọc; muốn dọn thì xoá tay trong Firebase Console.
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v12**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
+- Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
+- Test: `node test-hopdong-tinhtoan.js` (công thức, 51 kiểm tra) + 3 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
+
+## Bảng đối chiếu với spec 02/10 (mục 1.2) — làm ngày 02/10/2026
+
+| Mục spec | Đã có | Thiếu / làm khác | Xử lý |
+|---|---|---|---|
+| 1.5 Công thức TINH_TOAN | Đủ, đúng nguyên văn; 48 kiểm tra | Chỉ cần đọc được bảng bảo lãnh phẳng | **Xong v12**: `baoLanhCua()` lọc theo `hopDongId`, bỏ dự thầu |
+| 4.3 `baoLanh` phẳng, dùng chung | Có 3 loại, nhắc hạn, nối tạm ứng | Đang treo dưới `baoLanh/{hdId}/{id}`; thiếu `app`, `hopDongId`, `congTyId`, `soThu`, `duThau`, `nganHangId` | **Xong v12**: bảng phẳng; giám đốc mở app là tự dọn dữ liệu cũ; sửa thư của Công Nợ không mất `phi`/`kyQuy`; xoá hợp đồng chỉ xoá thư do app này tạo |
+| 17b `app = "hopDong"` ở `lichSu`/`nhacNho`/`yeuCauXoa` | Chưa có | Thiếu | **Xong v12**; app chỉ hiện/đồng bộ dòng của mình, không đụng dòng app Công Nợ |
+| `nguoiDung` dùng chung | Có (`ten`, `email`, `vaiTro`, `dangHoatDong`) | Thiếu `pinHash`, `boPhan`, `nhanThongBaoCongNo` | Chỉ **thêm** `app/hopDong`; PIN không làm (xem câu hỏi 2) |
+| Không đọc/ghi `congNo/`, không đổi tên `thuHoiTamUng` | Đúng | — | Giữ |
+| 1.2 File mẫu Excel theo file kế toán Đại Thành (3 sheet) + đọc file gốc kiểu khối | Mẫu 1 sheet `NhapLieu` (v11) + nhập 7 sheet | **Chưa làm** — chưa có file `docs/Theo-doi-cong-trinh-Dai-Thanh.xls` trong repo/upload | Chờ anh Dũng gửi file (câu hỏi 3) |
+| 1.3 Push thật (FCM) + GitHub Actions 7:00; Apps Script Sheets/Drive | Thông báo trên máy khi mở app; stub Sheets | Thiếu | Việc tiếp theo |
+| Thừa | — | `conLaiChuaThiCong`, `khoiLuongDaThucHien` (anh Dũng yêu cầu 29/09, chốt giữ 30/09) | Giữ |
+
+## Câu hỏi đang chờ anh Dũng chốt (gom một lượt — quy tắc 26)
+
+1. **Đường dẫn nhánh dùng chung**: spec 02/10 (cả hai app) vẽ `baoLanh`, `nguoiDung`, `congTy`, `nhacNho`, `yeuCauXoa`, `lichSu` ở **gốc** Firebase, nhưng app này (và luật) đang để **dưới `hopdong/`**. Đề nghị: **app Công Nợ dùng chung các nhánh tại `hopdong/...`** (sửa 1 dòng cấu hình bên đó), không chuyển dữ liệu đang chạy ra gốc. Nếu anh muốn ra gốc: cần đổi luật + chuyển dữ liệu, làm riêng một bước.
+2. **Đăng nhập**: spec vẫn ghi tên + PIN dùng chung `nguoiDung.pinHash`. App này đang dùng email + mật khẩu Firebase (chốt 30/09). Đề nghị app Công Nợ cũng đăng nhập email + mật khẩu Firebase như Duyệt Chi; không làm PIN.
+3. **File Excel kế toán** `Theo-doi-cong-trinh-Dai-Thanh.xls`: chưa có trong repo. Gửi file (hoặc kéo vào chat) thì làm được mẫu 3 sheet + bộ đọc file gốc kiểu khối. Lưu ý repo public: file thật **không** đưa lên GitHub, chỉ làm mẫu rỗng.
+
+Mặc định nếu anh Dũng nói "cứ làm": 1 Công Nợ dùng `hopdong/...`, 2 email + mật khẩu, 3 chờ file.
+
+## Đã làm 02/10/2026 (phiên 3 — theo spec 02/10, bản v12)
+
+- Chép spec 02/10 vào `docs/hopdong/CLAUDE.md`, spec app Công Nợ vào `docs/hopdong/CLAUDE-cong-no.md` (để tham khảo cấu trúc dùng chung).
+- Bước 1 TINH_TOAN: thêm `baoLanhCua(du)` (lọc thư theo `hopDongId`, bỏ `duThau`), `cacMoc` dùng nó; +3 kiểm tra.
+- Bước 2 bảng `baoLanh` phẳng: `baoLanhCuaHD`, `bangCuaHD`, `gan1BanGhi`; `luuBanGhi` ghi `baoLanh/{id}` kèm `app`, `hopDongId`, `congTyId`, giữ nguyên trường app khác ghi; sửa bản ghi con giữ trường không có trên form (sửa lỗi cũ: sửa tạm ứng làm mất `baoLanhId`); `xoaBanGhi`; tab Bảo lãnh hiện số thư / nguồn Công Nợ / mã ngân hàng; form có ô Số thư; `donBaoLanhCu()` dọn dữ liệu cũ một lần (giám đốc). Luật `baoLanh/$id`. Mỗi bản ghi con đưa vào TINH_TOAN có `id` → mỗi thư một mốc nhắc riêng (trước đây các thư cùng hợp đồng gộp 1 mốc).
+- Bước 3: `app:'hopDong'` cho `lichSu`, `nhacNho`, `yeuCauXoa`; danh sách nhắc / yêu cầu xoá / lịch sử chỉ lấy dòng của app này; `nguoiDung` thêm `app/hopDong`.
+- Test: tinhtoan 51 ✅, UI v8 ✅, nhập Excel ✅, dọn bảo lãnh (mới, 13 kiểm tra) ✅.
 
 ## Bảng đối chiếu mã hiện có với spec (mục 1.2) — làm ngày 29/09/2026
 
@@ -83,15 +113,12 @@ Mặc định nếu anh Dũng nói "cứ làm": 1 giữ chỗ hiện tại, 2 gi
 
 ## Việc tiếp theo (theo thứ tự, mỗi bước một việc)
 
-1. Chờ 5 câu trả lời (hoặc "cứ làm" → mặc định). Nếu chốt tách repo: tạo repo, chuyển file, bật Pages.
-2. **Đổi cấu trúc dữ liệu theo mục 4.3** (việc lớn — cần anh Dũng gật): `hopdong/contracts` → `hopDong`, `phuLuc`, `tamUng`, `thanhToan`, `hoanTra`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu` (dưới gốc `hopdong/` của project chung); đổi tên trường tiếng Việt; sửa luật Firebase tương ứng (báo trước, có bản sao lưu); nối giao diện vào `TINH_TOAN`, bỏ `calc()/sumOf()`.
-3. Bổ sung trường hợp đồng (loại HĐ, thuế, thời gian, khởi công, hoàn thành, liên danh, nội bộ, trạng thái), phụ lục gia hạn, tạm ứng có bảo lãnh, thanh toán đủ trường (nghiệm thu/đề nghị/thực nhận/ngày tiền về).
-4. Bảo lãnh 3 loại; bảo hành hình thức; hoàn trả bảng riêng + hỏi khi phát hành bảo lãnh BH.
-5. Lịch sử theo trường (cũ/mới) cho mọi lần ghi; màn Quản trị (người dùng, công ty, yêu cầu xoá).
-6. Dashboard 6 ô + kế hoạch tiền về + dòng tiền tháng/quý + biểu đồ (Chart.js) + chờ quyết toán; bảng danh sách dạng cột; chi tiết dạng tab.
-7. Nhắc hạn 30/5 ngày + nút Đã xong; push thật + GitHub Actions 7:00.
-8. Excel theo trường mới + file mẫu `mau/`; Apps Script (Sheets + Drive); tài liệu.
+1. Chờ 3 câu trả lời ở trên. Nếu chốt câu 1 "ra gốc": đổi luật (`baoLanh`, `nguoiDung`, `congTy`, `nhacNho`, `yeuCauXoa`, `lichSu` ở gốc) + script chuyển dữ liệu + đổi `ref()` trong app.
+2. Nhận file Đại Thành → mẫu `mau/mau-nhap-hop-dong.xlsx` 3 sheet (hợp đồng / đợt nghiệm thu / tiền về) + bộ đọc file gốc kiểu khối nhiều dòng có xem trước ghép tiền về vào đợt.
+3. Push thật (FCM) + `scripts/nhac-han.js` + GitHub Actions 07:00 giờ VN (cần `FIREBASE_SERVICE_ACCOUNT`).
+4. Apps Script (`apps-script/Code.gs`): đồng bộ Sheets một chiều + tải file lên Drive; URL vào `CAU_HINH`.
+5. `docs/huong-dan-su-dung.md`, `docs/cai-dat-firebase.md`.
 
 ## Chỗ đang lỗi
 
-- Không có lỗi đã biết. Chưa kiểm tra trên iPhone thật (mới mô phỏng 390px).
+- Không có lỗi đã biết. Chưa kiểm tra trên iPhone thật (mới mô phỏng 390px). Thư bảo lãnh nhập từ app Công Nợ chỉ hiện mã ngân hàng (`nganHangId`) vì app này không đọc `congNo/nganHang` (quy tắc 17b).
