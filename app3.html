@@ -27,13 +27,17 @@
   --text:#111827;--text-sub:#6b7280;--white:#ffffff;
   --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,0.08);
 }
-body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);min-height:100vh;font-size:18px}
-.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+html{height:100%;height:-webkit-fill-available}
+/* v179: KHUNG APP — body cao đúng màn hình, KHÔNG cuộn; từng trang (.main) tự cuộn; thanh dưới là phần tử thường ở đáy.
+   Chép nguyên mẫu đã chạy ổn ở app Gia Bình v76 (cùng lỗi "thanh dưới trượt lên giữa màn" trên iPhone, hết hẳn từ 27/09). */
+body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f2f5;color:var(--text);height:100vh;height:-webkit-fill-available;height:100dvh;min-height:0;overflow:hidden;display:flex;flex-direction:column;font-size:18px}
+.app-header{background:var(--blue);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:relative;flex-shrink:0;z-index:100}
 .app-header h1{font-size:16px;font-weight:700;letter-spacing:-0.3px}
-/* v173: iOS Safari vẽ lại position:fixed trễ khi cuộn (thanh địa chỉ co giãn làm
-   đổi cỡ màn hình) → thanh menu nhảy ra giữa màn hình. translateZ(0) đẩy thanh menu
-   sang lớp vẽ riêng của GPU nên nó đứng yên, không vẽ lại theo nội dung đang cuộn. */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0);-webkit-transform:translateZ(0);will-change:transform;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+/* v179: thanh dưới nằm TRONG LUỒNG ở đáy khung (không còn position:fixed). Bản v173 (translateZ) không đủ: thủ phạm thật
+   là BÀN PHÍM ẢO iOS — mở/đóng bàn phím làm khung bố cục lệch khỏi vùng nhìn thấy, phần tử cố định bị đẩy ra giữa màn. */
+.bottom-nav{position:relative;flex-shrink:0;width:100%;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
+body.kb-open .bottom-nav{display:none} /* đang gõ ô nhập → ẩn thanh dưới (như app Gia Bình v72) */
+#notif-remind-banner{flex-shrink:0}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:10px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative}
 /* v96: chấm số đỏ trên nút điều hướng — biết đang có việc chờ duyệt/chuyển ở khu nào */
 .nav-badge{position:absolute;top:2px;left:calc(50% + 6px);background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;box-shadow:0 0 0 2px #fff}
@@ -49,9 +53,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .nav-item:nth-child(5) .nav-icon{background:#d1fae5} /* Lương xanh lá nhạt */
 .nav-item:nth-child(6) .nav-icon{background:#eef2f6} /* Cài đặt xám nhạt */
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
-/* v173: cộng thêm vạch home iPhone — nav tự đẩy cao lên bằng safe-area nên chỗ chừa
-   phải cộng theo, không thì phần cuối danh sách bị che trên máy có vạch home. */
-.main{padding:10px 10px calc(80px + env(safe-area-inset-bottom))}
+.main{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:10px 10px 18px}
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);overflow:hidden;margin-bottom:10px}
 .card-header{padding:12px 14px 8px;border-bottom:1px solid var(--gray-border);font-size:13px;font-weight:700;color:var(--text)}
 .card-body{padding:10px 14px}
@@ -1435,7 +1437,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260922-v178';
+const APP_VERSION = '20261003-v179';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -8981,6 +8983,16 @@ function _snMonthTable(name){
   </div>`;
 }
 function salMonthJump(month,name){ if(month && month!=='?') salaryMonth=month; salNameJump(name); }
+// ══ v179: BÀN PHÍM ẢO trên điện thoại — đang gõ ô nhập thì ẨN thanh dưới (chép từ app Gia Bình v72, chạy ổn từ 27/09). ══
+// Khung app v179 đã bỏ position:fixed nên thanh không còn bị đẩy lên giữa màn; đoạn này chỉ để lúc gõ có thêm chỗ
+// và chắc chắn không còn ca nào thanh dưới đè lên ô đang gõ.
+(function(){
+  const nav=document.querySelector('.bottom-nav'); if(!nav) return;
+  const isField=el=>!!el&&((el.tagName==='INPUT'&&['checkbox','radio','button','file','submit','range','color'].indexOf(String(el.type||'').toLowerCase())<0)||el.tagName==='TEXTAREA'||el.tagName==='SELECT'||el.isContentEditable);
+  let t=null;
+  document.addEventListener('focusin', e=>{ if(isField(e.target)){ clearTimeout(t); document.body.classList.add('kb-open'); } });
+  document.addEventListener('focusout', e=>{ if(isField(e.target)){ clearTimeout(t); t=setTimeout(()=>{ if(!isField(document.activeElement)) document.body.classList.remove('kb-open'); },250); } });
+})();
 
 </script>
 
