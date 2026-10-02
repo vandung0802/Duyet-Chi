@@ -172,6 +172,11 @@ const TC3 = TC(); TC3.giaoDich.n3 = { ngay: '2026-03-25', loai: 'nop', soTien: 1
 check('nộp hết → tháng sau không còn gì để nhắc', T.lichNopThauChi(TC3, '2026-06-30').length, 0);
 const tt = T.tinhThauChi(TC1, '2026-03-26');
 check('bảng số thấu chi', [tt.tongRut, tt.tongNop, tt.dangDung, tt.conTrong, tt.laiDaTra, tt.laiSuatHienHanh], [300000000, 150000000, 150000000, 350000000, 1850000, 12]);
+// anh Dũng chốt 02/10: có hạn mức mỗi tháng chỉ nộp lãi, có hạn mức phải nộp CẢ GỐC VÀ LÃI (gốc = số đang dùng cuối ngày phải nộp)
+const TC4 = TC(); TC4.nopHangThang = 'gocLai';
+check('hạn mức nộp cả gốc và lãi: mỗi kỳ có gốc = số đang dùng', T.lichNopThauChi(TC4, '2026-04-30').map(x => [x.ngay, x.goc, x.laiUoc]), [['2026-03-25', 150000000, 1841096], ['2026-04-25', 150000000, 1528767]]);
+const TC5 = TC4; TC5.giaoDich.n4 = { ngay: '2026-03-25', loai: 'nop', soTien: 150000000, lai: 1841096, kyNop: '2026-03-25' };
+check('nộp đủ gốc + lãi kỳ 25/03 → hết nhắc', T.lichNopThauChi(TC5, '2026-06-30').length, 0);
 check('chưa rút lần nào → không có kỳ nộp', T.lichNopThauChi({ hanMuc: 1, ngayNopHangThang: 25, laiSuat: {} }, '2026-12-31').length, 0);
 
 console.log(sai ? '\n❌ ' + sai + '/' + n + ' phép tính SAI' : '\n✅ ' + n + ' phép tính đều đúng');

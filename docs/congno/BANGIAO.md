@@ -4,9 +4,9 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v7**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v8**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
-- **Đã xong bước 1, 2, 3, 4** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
+- **Đã xong bước 1 → 5** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (68 phép tính, gồm cả khối 7 SINH_LICH và thấu chi; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
@@ -70,6 +70,12 @@
 - **Chờ anh Dũng xác nhận**: "nộp tiền hằng tháng" tôi hiểu là nộp LÃI thấu chi (số phải nộp = lãi ước của kỳ). Nếu thực tế là phải nộp cả gốc về 0 mỗi tháng thì đổi `lichNopThauChi`.
 - **Nhắc trước 5 ngày** (push) làm ở bước 8 — hiện mới hiện trên Lịch trả và tô vàng/đỏ.
 
+## Đã làm 02/10/2026 (bản v8 — bước 5: thuê tài chính + sửa thấu chi theo anh Dũng)
+
+- Anh Dũng dặn "làm hết các bước đi, không phải hỏi lại" → các bước 5–10 làm liền, chỗ chưa rõ tự quyết và ghi ở đây.
+- **Thuê tài chính lưu CHUNG bảng `congNo/khoanVay` với `loai:"thueTaiChinh"`** (spec vẽ nhánh `thueTaiChinh` riêng nhưng "cùng cấu trúc khoanVay" → dùng chung để lịch trả, lãi suất, trả nợ, khớp lịch, trạng thái chạy y như vay dài hạn). Khác tên trường so với spec: công ty thuê = `congTyVay`, số tiền tài trợ = `soTien`, kỳ hạn = `soKy`. Thêm: `ngayKy, thietBi{ten,nhanHieu,model,soKhung,soMay,bienSo}, giaTriThietBi, tienTraTruoc, tienKyQuy, kyQuyDaHoan, giaMuaLai, noiDangO, congTyDangDung, baoHiem{hang,soHopDong,ngayHetHan}`. Lãi tính từ ngày ký; gốc + lãi trả cùng ngày hằng tháng (ngày của kỳ đầu). Form `oThueTC`, cảnh báo `canhBaoThueTC` (kết thúc thuê / hết hạn bảo hiểm ≤ 60 ngày). Nút chọn "🚜 Thuê tài chính" trong tab Khoản vay.
+- **Thấu chi (anh Dũng trả lời 02/10)**: nộp hằng tháng là nộp lãi vay; "có khoản phải nộp cả gốc cả lãi, có khoản thì nộp mỗi lãi" → mỗi hạn mức có ô **"Hằng tháng phải nộp: Chỉ lãi / Cả gốc và lãi"** (`nopHangThang: lai|gocLai`). Loại `gocLai`: gốc phải nộp mỗi kỳ = toàn bộ số đang dùng cuối ngày đó. Kỳ không có gì phải nộp (không dùng, không lãi) thì không hiện.
+
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
@@ -89,7 +95,8 @@
 
 3. ~~Vay trung dài hạn theo món~~ — xong v5.
 4. ~~Thấu chi~~ — xong v7.
-5. Thuê tài chính → 6. Bảo lãnh, phí, ký quỹ → 7. Tài sản bảo đảm → 8. Nhắc hạn + push → 9. Dashboard, biểu đồ, xuất Excel → 10. Nhập Excel.
+5. ~~Thuê tài chính~~ — xong v8.
+6. Bảo lãnh, phí, ký quỹ → 7. Tài sản bảo đảm → 8. Nhắc hạn + push → 9. Dashboard, biểu đồ, xuất Excel → 10. Nhập Excel.
 
 ## Chỗ đang lỗi
 
