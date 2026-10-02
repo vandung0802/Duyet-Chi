@@ -286,6 +286,7 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
         <h3 style="font-size:15px;margin-bottom:8px">🔄 Bản sao Google Sheets &amp; thư mục Google Drive</h3>
         <div style="font-size:14px" id="dong-bo-info"></div>
         <button class="btn sec" id="dong-bo-btn" style="margin-top:8px" onclick="dongBoSheets(true)" hidden>🔄 Đồng bộ Google Sheets ngay</button>
+        <div id="dong-bo-gd" hidden><label class="f">Địa chỉ Apps Script (chỉ giám đốc sửa)</label><div class="row"><input id="dong-bo-url" type="url" placeholder="https://script.google.com/macros/s/…/exec" style="font-size:13px"><button class="btn sm" style="flex:0 0 auto" onclick="luuUrlAppsScript()">Lưu</button></div></div>
       </div></div>
       <div class="card"><div class="card-body">
         <h3 style="font-size:15px;margin-bottom:8px">🗑 Yêu cầu xoá <span class="badge tt-coCauLai" id="qt-yeucauxoa-n" hidden></span></h3>
@@ -335,7 +336,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261002-v14',
+  PHIEN_BAN: '20261002-v15',
   URL_APPS_SCRIPT: '',            // địa chỉ .../exec của Apps Script (AppsScript_CongNo.gs): bản sao Google Sheets + tải file lên Drive. Trống = chưa nối.
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
@@ -365,7 +366,7 @@ const TRANG_THAI = { dangVay:'Đang vay', sapDenHan:'Sắp đến hạn', quaHan
 const NHOM_NO = { 1:'Nhóm 1 (đủ tiêu chuẩn)', 2:'Nhóm 2 (cần chú ý)', 3:'Nhóm 3 (dưới tiêu chuẩn)', 4:'Nhóm 4 (nghi ngờ)', 5:'Nhóm 5 (có khả năng mất vốn)' };
 const KY_CACH_THANG = { 1:'Hằng tháng', 3:'3 tháng một lần', 6:'6 tháng một lần', 12:'Mỗi năm một lần' };   // vay trung dài hạn: khoảng cách giữa hai kỳ trả GỐC (lãi luôn trả hằng tháng)
 const TEN_BANG = { nganHang:'Ngân hàng', taiKhoan:'Số tài khoản', hanMuc:'Hạn mức', khoanVay:'Khoản vay', giaiNgan:'Giải ngân', laiSuat:'Lãi suất', kyTra:'Kỳ trả gốc', traNo:'Trả nợ', fileDinhKem:'File đính kèm', thauChi:'Thấu chi', giaoDich:'Giao dịch thấu chi',
-  blChung:'Bảo lãnh', baoLanh:'Bảo lãnh', phiBaoLanh:'Phí bảo lãnh', kyQuyGiamTru:'Giảm ký quỹ', taiSanBaoDam:'Tài sản bảo đảm', baoDamCho:'Khoản được bảo đảm' };
+  meta:'Cấu hình', blChung:'Bảo lãnh', baoLanh:'Bảo lãnh', phiBaoLanh:'Phí bảo lãnh', kyQuyGiamTru:'Giảm ký quỹ', taiSanBaoDam:'Tài sản bảo đảm', baoDamCho:'Khoản được bảo đảm' };
 
 // ===== TIỆN ÍCH: định dạng tiền / ngày, đọc ô nhập (chép từ app Hợp Đồng) =====
 const $ = id => document.getElementById(id);
@@ -462,7 +463,7 @@ firebase.auth().onAuthStateChanged(async user=>{
 });
 
 // ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3) =====
-const DL  = { nganHang:{}, hanMuc:{}, khoanVay:{}, thauChi:{}, baoLanh:{}, phiBaoLanh:{}, kyQuyGiamTru:{}, taiSanBaoDam:{}, nhacNho:{}, nguoiDung:{}, yeuCauXoa:{}, lichSu:{}, blChung:{} };   // mọi bảng của app: congNo/<bảng>/{id}; bảng con treo trong bản ghi (vd khoanVay/{id}/traNo/{id})
+const DL  = { nganHang:{}, hanMuc:{}, khoanVay:{}, thauChi:{}, baoLanh:{}, phiBaoLanh:{}, kyQuyGiamTru:{}, taiSanBaoDam:{}, nhacNho:{}, meta:{}, nguoiDung:{}, yeuCauXoa:{}, lichSu:{}, blChung:{} };   // mọi bảng của app: congNo/<bảng>/{id}; bảng con treo trong bản ghi (vd khoanVay/{id}/traNo/{id})
 // DL.blChung = bảng thư bảo lãnh dùng chung với app Hợp Đồng (CAU_HINH.BAO_LANH = hopdong/baoLanh) — chỗ thông nhau DUY NHẤT của hai app. Mọi bảng khác nằm dưới congNo/.
 let danhSachCongTrinh=[], _daKetNoi=false;
 const dRieng = p => p==='blChung'||p.startsWith('blChung/') ? CAU_HINH.BAO_LANH+p.slice(7) : CAU_HINH.GOC+'/'+p;   // đường dẫn thật trên Firebase của một bảng / bản ghi
@@ -616,7 +617,7 @@ const TEN_TRUONG = { ten:'Tên', chiNhanh:'Chi nhánh', loai:'Loại', 'canBo.te
   moTa:'Mô tả', 'chuSoHuu.congTyId':'Chủ sở hữu (công ty)', 'chuSoHuu.tenCaNhan':'Chủ sở hữu (cá nhân)', 'chuSoHuu.loai':'Kiểu chủ sở hữu', giaTriDinhGia:'Giá trị định giá', ngayDinhGia:'Ngày định giá', ngayDinhGiaLai:'Ngày định giá lại',
   'hopDongTheChap.so':'Số HĐ thế chấp', 'hopDongTheChap.ngay':'Ngày ký thế chấp', khoan:'Khoản được bảo đảm', mucDichVay:'Mục đích vay', khachHangGiaiNgan:'Khách hàng được giải ngân',
   soThu:'Số thư', ngayPhatHanh:'Ngày phát hành', hopDongId:'Hợp đồng (app Hợp Đồng)', tenGoiThau:'Gói thầu / hợp đồng', daGiaHan:'Đã gia hạn', nganHang:'Tên ngân hàng',
-  'phi.hinhThuc':'Cách thu phí', 'phi.kyThuPhiThang':'Kỳ thu phí (tháng)', 'phi.soTienMoiKy':'Phí mỗi kỳ', 'phi.daNopDen':'Phí đã nộp đến', 'kyQuy.banDau':'Ký quỹ ban đầu', 'kyQuy.hoanTra':'Ký quỹ đã hoàn', 'kyQuy.ngayHoanTra':'Ngày hoàn ký quỹ', kyTu:'Kỳ phí từ', kyDen:'Kỳ phí đến', noiDung:'Nội dung', kyNop:'Gắn kỳ nộp hằng tháng' };
+  'phi.hinhThuc':'Cách thu phí', 'phi.kyThuPhiThang':'Kỳ thu phí (tháng)', 'phi.soTienMoiKy':'Phí mỗi kỳ', 'phi.daNopDen':'Phí đã nộp đến', 'kyQuy.banDau':'Ký quỹ ban đầu', 'kyQuy.hoanTra':'Ký quỹ đã hoàn', 'kyQuy.ngayHoanTra':'Ngày hoàn ký quỹ', kyTu:'Kỳ phí từ', kyDen:'Kỳ phí đến', noiDung:'Nội dung', kyNop:'Gắn kỳ nộp hằng tháng', urlAppsScript:'Địa chỉ Apps Script' };
 function hienGiaTri(truong, v){ if(v===''||v==null) return '(trống)'; if(typeof v==='boolean') return v?'có':'không';
   if(truong==='nganHangId') return tenNganHang(v); if(truong==='keToanTheoDoi') return tenNguoi(v)||String(v); if(truong==='kyTraId') return 'kỳ gốc'; if(truong==='khoan') return tenKhoanTheoKhoa(v); if(truong==='loai'&&LOAI_TAI_SAN[v]) return LOAI_TAI_SAN[v]; if(truong==='loai'&&LOAI_BAO_LANH[v]) return LOAI_BAO_LANH[v];
   if(typeof v==='number'&&Math.abs(v)>=1000) return tien(v); if(typeof v==='number') return soVN(v); if(/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return ngayVN(v);
@@ -1206,7 +1207,13 @@ async function xuatTongHop(){ try{ const X=await napSheetJs(), wb=X.utils.book_n
 // ===== 22. DONG_BO_SHEETS — bản sao MỘT CHIỀU sang Google Sheets + tải file lên Google Drive, qua Apps Script (AppsScript_CongNo.gs) =====
 // App gửi các bảng đã tính sẵn (cacBangTongHop), Apps Script ghi đè toàn bộ từng sheet. Firebase vẫn là nguồn sự thật; không ghi ngược từ Sheets (quy tắc 11).
 // Apps Script chỉ nhận yêu cầu kèm mã đăng nhập Firebase của người đang dùng app và đã được duyệt — không có khoá bí mật nào trong mã.
-const coAppsScript = () => !!CAU_HINH.URL_APPS_SCRIPT;
+// Địa chỉ Apps Script: ghi cứng trong CAU_HINH, hoặc giám đốc dán ở trang Khác (lưu congNo/meta/urlAppsScript). Chỉ nhận đúng dạng https://script.google.com/macros/s/…/exec — địa chỉ lạ coi như chưa nối.
+function urlAppsScript(){ const u=CAU_HINH.URL_APPS_SCRIPT||(DL.meta||{}).urlAppsScript||''; try{ const x=new URL(u); return x.protocol==='https:'&&x.hostname==='script.google.com'&&/^\/macros\/s\/[\w-]+\/exec$/.test(x.pathname)?x.origin+x.pathname:''; }catch(e){ return ''; } }
+const coAppsScript = () => !!urlAppsScript();
+async function luuUrlAppsScript(){ const u=$('dong-bo-url').value.trim(), cu=(DL.meta||{}).urlAppsScript||''; 
+  try{ const x=new URL(u); if(!(x.hostname==='script.google.com'&&/^\/macros\/s\/[\w-]+\/exec$/.test(x.pathname))) throw 0; }catch(e){ if(u) return toast('❌ Địa chỉ phải có dạng https://script.google.com/macros/s/…/exec (chép ở bước Triển khai của Apps Script)'); }
+  try{ await db.ref().update({ [dRieng('meta/urlAppsScript')]:u||null, [dRieng('lichSu/'+khoaMoi())]:dongLichSu('meta','urlAppsScript','','sua','urlAppsScript',cu,u) }); toast(u?'✅ Đã lưu — đang thử kết nối…':'Đã bỏ nối Google Sheets'); _dongBo.daHoi=false; _dongBo.loi=''; setTimeout(veDongBo,400); }catch(e){ toast('❌ '+e.message); } }
+
 // Chưa có ngân hàng nào → hiện hộp hướng dẫn có NÚT đưa thẳng tới chỗ thêm ngân hàng (anh Dũng 02/10: lời nhắc phải rõ, biết thêm ở trang nào)
 const HUONG_DAN_NH='Ngân hàng cần chọn chưa có trong danh sách? Đóng ô này → bấm nút ⚙️ Khác (góc dưới bên phải) → ô 🏦 Ngân hàng → ＋ Thêm ngân hàng, rồi quay lại đây.';
 function thieuNganHang(){ if(danhSachCon(DL.nganHang).length) return false;
@@ -1214,7 +1221,7 @@ function thieuNganHang(){ if(danhSachCon(DL.nganHang).length) return false;
 async function goiAppsScript(duLieu){
   if(!coAppsScript()) throw new Error('App chưa được nối với Apps Script (CAU_HINH.URL_APPS_SCRIPT trống)');
   const idToken=await nguoiHienTai.getIdToken();
-  const r=await fetch(CAU_HINH.URL_APPS_SCRIPT,{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({idToken},duLieu)) });   // text/plain để trình duyệt không hỏi trước (CORS)
+  const r=await fetch(urlAppsScript(),{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({idToken},duLieu)) });   // text/plain để trình duyệt không hỏi trước (CORS)
   const kq=await r.json(); if(!kq.ok) throw new Error(kq.loi||'Apps Script báo lỗi'); return kq;
 }
 let _dongBo={ dang:false, luc:'', sheetUrl:'', thuMucUrl:'', loi:'' }, _henDongBo=null;
@@ -1228,7 +1235,9 @@ async function dongBoSheets(thuCong){
 function henDongBo(){ if(!coAppsScript()) return; clearTimeout(_henDongBo); _henDongBo=setTimeout(()=>dongBoSheets(false),40000); }
 async function napThongTinDongBo(){ if(!coAppsScript()||!nguoiHienTai) return veDongBo(); try{ const kq=await goiAppsScript({ action:'thongTin' }); Object.assign(_dongBo,{ luc:kq.lucDongBo, sheetUrl:kq.sheetUrl, thuMucUrl:kq.thuMucUrl, loi:'' }); }catch(e){ _dongBo.loi=e.message||String(e); } veDongBo(); }
 function veDongBo(){ const el=$('dong-bo-info'); if(!el) return;
-  el.innerHTML=!coAppsScript()?'Chưa nối với Google Sheets / Drive (chưa có địa chỉ Apps Script trong app). Vẫn dùng được nút "Xuất Excel tổng hợp" ở màn Tổng quan.'
+  $('dong-bo-gd').hidden=!laGiamDoc()||!!CAU_HINH.URL_APPS_SCRIPT; if(document.activeElement!==$('dong-bo-url')) $('dong-bo-url').value=(DL.meta||{}).urlAppsScript||'';
+  if(coAppsScript()&&nguoiHienTai&&!_dongBo.daHoi){ _dongBo.daHoi=true; napThongTinDongBo(); }   // vừa có địa chỉ → hỏi Apps Script một lần (thử kết nối, lấy link Sheets / Drive)
+  el.innerHTML=!coAppsScript()?'Chưa nối với Google Sheets / Drive. Vẫn dùng được nút "Xuất Excel tổng hợp" ở màn Tổng quan.'+(laGiamDoc()?' Giám đốc: làm theo hướng dẫn cài Apps Script rồi dán địa chỉ …/exec vào ô dưới đây.':'')
     :(_dongBo.dang?'⏳ Đang đồng bộ…':_dongBo.loi?'<span class="neg">⚠️ '+esc(_dongBo.loi)+'</span>':_dongBo.luc?'✅ Đồng bộ lần cuối: <b>'+esc(_dongBo.luc)+'</b>':'Chưa đồng bộ lần nào.')
       +(_dongBo.sheetUrl?' · <a href="'+esc(_dongBo.sheetUrl)+'" target="_blank" rel="noopener">Mở Google Sheets</a>':'')+(_dongBo.thuMucUrl?' · <a href="'+esc(_dongBo.thuMucUrl)+'" target="_blank" rel="noopener">Mở thư mục Drive</a>':'')
       +'<div class="hint">App tự đồng bộ sau mỗi lần nhập / sửa (khoảng 40 giây). Sheets chỉ để xem — sửa trong Sheets không vào app.</div>';
