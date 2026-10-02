@@ -137,7 +137,8 @@ check('Tien trong TK',k.tienTrongTk,400e6);
   if(c<0||d<0){ console.log('Khong tim thay cashBookRows'); process.exit(1); }
   vm.runInContext(L.slice(c,d).join(os.EOL), ctx);
 }
-const soDuCuoi=()=>{ const r=vm.runInContext('cashBookRows()',ctx); return r.length? r[r.length-1].bal : 0; };
+// Tu Gia Binh v41, cashBookRows() KHONG con tra ve bal (so du cong don tinh trong renderCashBook SAU khi loc tai khoan) -> test tu cong don y het renderCashBook
+const soDuCuoi=()=>{ const r=vm.runInContext('cashBookRows()',ctx); let bal=0; r.forEach(x=>{ bal += (x.kind==='in' ? x.amount : -x.amount); }); return bal; };
 
 console.log('\n== So quy KHOP Tong quan (co ky quy tu phieu chi + ky quy nhap tay + doi ve) ==');
 setup([
