@@ -174,6 +174,13 @@ Chốt thêm ngày 02/10/2026 (khi lập app Công Nợ):
 
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
+Ghi chú triển khai thực tế (Claude ghi 02/10/2026 — khác spec, chờ anh Dũng chốt, xem `BANGIAO.md`):
+
+- Mã đang ở `Duyet-Chi/hopdong.html` (không phải repo riêng `index.html`); mọi nhánh Firebase của app nằm dưới `hopdong/` (kể cả 6 nhánh dùng chung với app Công Nợ) — app Công Nợ cần trỏ vào `hopdong/...` hoặc chốt chuyển ra gốc.
+- Đăng nhập: email + mật khẩu Firebase Auth (chung tài khoản app Duyệt Chi, chốt 30/09), không dùng tên + PIN; `nguoiDung/{uid}` khoá theo uid Firebase.
+- Bảng `baoLanh` đã phẳng từ bản v12; `nhacNho` dùng khoá `{hopDongId}__{loai}__{thamChieuId}` thay vì `push()`.
+- File Excel kế toán Đại Thành chưa có trong repo (repo public — chỉ để file mẫu rỗng).
+
 ---
 
 ## 2. ABOUT US — Về chúng tôi

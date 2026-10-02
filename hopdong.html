@@ -395,7 +395,7 @@ function ketNoiDuLieu(){
   db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); danhSachCongTrinh=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); veCongTrinh(); },()=>{});
 }
 function dangKyNguoiDung(){ // mỗi lần đăng nhập ghi lại hồ sơ của mình vào hopdong/nguoiDung (danh sách người dùng của app)
-  try{ ref('nguoiDung/'+nguoiHienTai.uid).update({ ten:tenNguoiDung, email:nguoiHienTai.email||'', vaiTro:laGiamDoc()?'GD':'NV', dangHoatDong:true, lanCuoi:luc() }); }catch(e){}
+  try{ ref('nguoiDung/'+nguoiHienTai.uid).update({ ten:tenNguoiDung, email:nguoiHienTai.email||'', vaiTro:laGiamDoc()?'GD':'NV', dangHoatDong:true, lanCuoi:luc(), 'app/hopDong':luc() }); /* nhánh nguoiDung dùng chung với app Công Nợ: chỉ thêm trường, không đổi tên (17b) */ }catch(e){}
 }
 // Bảo lãnh của 1 hợp đồng: lọc bảng phẳng theo hopDongId (thư dự thầu / thư của hợp đồng khác không hiện)
 function baoLanhCuaHD(hopDongId){ const o={}; Object.entries(DL.baoLanh).forEach(([k,b])=>{ if(b&&typeof b==='object'&&b.hopDongId===hopDongId&&b.loai!=='duThau') o[k]=b; }); return o; }
@@ -425,7 +425,7 @@ function phang(o, tienTo){ // {baoHanh:{soThang:12}} → {'baoHanh.soThang':12};
 function soSanh(cu, moi){ const a=phang(cu), b=phang(moi), ks=[...new Set([...Object.keys(a),...Object.keys(b)])], kq=[];
   ks.forEach(k=>{ const x=a[k]==null?'':a[k], y=b[k]==null?'':b[k]; if(String(x)!==String(y)) kq.push({truong:k,giaTriCu:x,giaTriMoi:y}); }); return kq; }
 function dongLichSu(bang, banGhiId, hopDongId, hanhDong, truong, giaTriCu, giaTriMoi){
-  return { nguoi:tenNguoiDung, uid:nguoiHienTai?nguoiHienTai.uid:'', luc:luc(), bang, banGhiId:banGhiId||'', hopDongId:hopDongId||'', hanhDong, truong:truong||'', giaTriCu:giaTriCu==null?'':giaTriCu, giaTriMoi:giaTriMoi==null?'':giaTriMoi };
+  return { app:'hopDong', nguoi:tenNguoiDung, uid:nguoiHienTai?nguoiHienTai.uid:'', luc:luc(), bang, banGhiId:banGhiId||'', hopDongId:hopDongId||'', hanhDong, truong:truong||'', giaTriCu:giaTriCu==null?'':giaTriCu, giaTriMoi:giaTriMoi==null?'':giaTriMoi };
 }
 function khoaMoi(){ return db.ref().push().key; }
 // Lưu 1 bản ghi (tạo hoặc sửa) + ghi lịch sử từng trường thay đổi trong CÙNG một lần ghi (không bao giờ thiếu vết)
@@ -463,7 +463,7 @@ async function xoaBanGhi(bang, hopDongId, id, tomTat){
 // Nhân viên: gửi yêu cầu xoá, giám đốc duyệt ở tab Khác
 async function yeuCauXoa(bang, hopDongId, id, tomTat){
   const lyDo=prompt('Lý do xin xoá '+TEN_BANG[bang]+' "'+tomTat+'"? (giám đốc sẽ thấy và duyệt)'); if(lyDo===null) return;
-  await ref('yeuCauXoa').push({ bang, banGhiId:id, hopDongId:bang==='hopDong'?id:hopDongId, tomTat, nguoiYeuCau:tenNguoiDung, uid:nguoiHienTai.uid, luc:luc(), lyDo:lyDo.trim(), trangThai:'cho' });
+  await ref('yeuCauXoa').push({ app:'hopDong', bang, banGhiId:id, hopDongId:bang==='hopDong'?id:hopDongId, tomTat, nguoiYeuCau:tenNguoiDung, uid:nguoiHienTai.uid, luc:luc(), lyDo:lyDo.trim(), trangThai:'cho' });
   toast('✅ Đã gửi yêu cầu xoá, chờ giám đốc duyệt');
 }
 function yeuCauXoaDangCho(bang, id){ return Object.entries(DL.yeuCauXoa).find(([k,y])=>y.bang===bang&&y.banGhiId===id&&y.trangThai==='cho'); }
@@ -656,7 +656,7 @@ function doiKyDongTien(k){ kyDongTien=k; veDashboard(); }
 function veDashboard(){
   const kq=tatCaKetQua(), t=TINH_TOAN.tinhTongHop(kq,locCongTy);
   $('db-congty').innerHTML=[['','Cả 3 công ty']].concat(MA_CONG_TY.map(m=>[m,'Công ty '+m])).map(([k,l])=>`<div class="chip ${locCongTy===k?'on':''}" onclick="chonCongTyDashboard('${k}')">${l}</div>`).join('');
-  const dangNhac=danhSachDangNhac().length, ycx=Object.values(DL.yeuCauXoa).filter(y=>y.trangThai==='cho').length;
+  const dangNhac=danhSachDangNhac().length, ycx=Object.values(DL.yeuCauXoa).filter(y=>y.trangThai==='cho'&&(!y.app||y.app==='hopDong')).length;
   $('db-tiles').innerHTML=`
     <div class="tile"><span>Tổng giá trị HĐ đang thực hiện</span><b>${tienD(t.giaTriDangThucHien)}</b><small>${t.soDangThucHien} hợp đồng · ${locCongTy?'công ty '+locCongTy:'cả 3, đã trừ nội bộ'}</small></div>
     <div class="tile acc"><span>Đã nghiệm thu lũy kế</span><b>${tienD(t.nghiemThuLuyKe)}</b><small>còn ${tienNgan(t.conLaiChuaNghiemThu)} chưa nghiệm thu</small></div>
@@ -879,7 +879,7 @@ async function luuFile(id,btn){ await bam(btn,async()=>{ const v=docForm(window.
 async function xoaFile(id,fid){ const f=(DL.hopDong[id].fileDinhKem||{})[fid]; if(!confirm('Xoá link "'+(f&&f.ten)+'"?')) return; const up={}; up['hopDong/'+id+'/fileDinhKem/'+fid]=null; up['lichSu/'+khoaMoi()]=dongLichSu('fileDinhKem',fid,id,'xoa','',f&&f.ten,''); await ghiNhieu(up); }
 // --- Tab Lịch sử ---
 function veTabLichSu(id,h,k){
-  const ds=Object.values(DL.lichSu).filter(l=>l.hopDongId===id).sort((a,b)=>String(b.luc).localeCompare(String(a.luc)));
+  const ds=Object.values(DL.lichSu).filter(l=>l.hopDongId===id&&(!l.app||l.app==='hopDong')).sort((a,b)=>String(b.luc).localeCompare(String(a.luc)));
   const hd={tao:'🆕 Tạo',sua:'✏️ Sửa',xoa:'🗑 Xoá'};
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🕘 Lịch sử thay đổi</h3></div>
     <div class="tl">${ds.length?ds.map(l=>`<div class="tl-e"><div class="tl-t">${lucVN(l.luc)} · ${esc(l.nguoi)}</div><div class="tl-b">${hd[l.hanhDong]||l.hanhDong} <b>${esc(TEN_BANG[l.bang]||l.bang)}</b>${l.truong?' · '+esc(tenTruong(l.truong)):''}${l.hanhDong==='sua'?': <span class="neg">'+esc(hienGiaTri(l.truong,l.giaTriCu))+'</span> → <span class="pos">'+esc(hienGiaTri(l.truong,l.giaTriMoi))+'</span>':(l.giaTriMoi||l.giaTriCu?': '+esc(l.giaTriMoi||l.giaTriCu):'')}</div></div>`).join(''):'<div class="empty">Chưa có gì.</div>'}</div></div></div>`;
@@ -1002,15 +1002,15 @@ async function dongBoNhacNho(){
   const up={}, con=new Set();
   Object.keys(DL.hopDong).forEach(id=>{ if((DL.hopDong[id].trangThai)==='biChamDut') return;
     TINH_TOAN.cacMoc(duLieuHopDong(id)).forEach(m=>{ const k=khoaNhac(id,m.loai,m.thamChieuId); con.add(k); const cu=DL.nhacNho[k];
-      if(!cu) up['nhacNho/'+k]={ hopDongId:id, loai:m.loai, thamChieuId:m.thamChieuId||'', loaiBaoLanh:m.loaiBaoLanh||'', ngayMoc:m.ngayMoc, ngayNhacTiep:TINH_TOAN.congThang(m.ngayMoc,0), soLanDaNhac:0, daXong:false, taoLuc:luc() };
+      if(!cu) up['nhacNho/'+k]={ app:'hopDong', hopDongId:id, loai:m.loai, thamChieuId:m.thamChieuId||'', loaiBaoLanh:m.loaiBaoLanh||'', ngayMoc:m.ngayMoc, ngayNhacTiep:TINH_TOAN.congThang(m.ngayMoc,0), soLanDaNhac:0, daXong:false, taoLuc:luc() };
       else if(cu.ngayMoc!==m.ngayMoc){ up['nhacNho/'+k+'/ngayMoc']=m.ngayMoc; up['nhacNho/'+k+'/daXong']=false; up['nhacNho/'+k+'/soLanDaNhac']=0; } }); });
-  Object.entries(DL.nhacNho).forEach(([k,n])=>{ if(n.loai!=='khac'&&!con.has(k)) up['nhacNho/'+k]=null; });
+  Object.entries(DL.nhacNho).forEach(([k,n])=>{ if(n.loai!=='khac'&&(!n.app||n.app==='hopDong')&&!con.has(k)) up['nhacNho/'+k]=null; }); // mốc app Công Nợ tạo giữ nguyên
   if(Object.keys(up).length){ try{ await ghiNhieu(up); }catch(e){} }
 }
 function moTaNhac(n){ const h=DL.hopDong[n.hopDongId]||{}; const ten=h.tenGoiThau||h.soHopDong||'(hợp đồng đã xoá)';
   const loai=n.loai==='hetBaoLanh'?'hết '+(LOAI_BAO_LANH[n.loaiBaoLanh]||'bảo lãnh').toLowerCase():n.loai==='khac'?(n.ghiChu||'mốc tự thêm'):LOAI_MOC[n.loai].toLowerCase();
   return {ten, loai}; }
-function danhSachDangNhac(){ const hn=homNay(); return Object.entries(DL.nhacNho).map(([k,n])=>Object.assign({id:k,conNgay:TINH_TOAN.soNgayGiua(hn,n.ngayMoc)},n)).filter(n=>!n.daXong&&n.conNgay!=null&&n.conNgay<=CAU_HINH.NHAC_TRUOC_NGAY).sort((a,b)=>a.conNgay-b.conNgay); }
+function danhSachDangNhac(){ const hn=homNay(); return Object.entries(DL.nhacNho).filter(([k,n])=>!n.app||n.app==='hopDong').map(([k,n])=>Object.assign({id:k,conNgay:TINH_TOAN.soNgayGiua(hn,n.ngayMoc)},n)).filter(n=>!n.daXong&&n.conNgay!=null&&n.conNgay<=CAU_HINH.NHAC_TRUOC_NGAY).sort((a,b)=>a.conNgay-b.conNgay); }
 function veNhacHan(){
   $('nhac-truoc').textContent=CAU_HINH.NHAC_TRUOC_NGAY; $('nhac-lap').textContent=CAU_HINH.NHAC_LAP_NGAY;
   const ds=danhSachDangNhac(); $('nhac-badge').hidden=!ds.length; $('nhac-badge').textContent=ds.length;
@@ -1023,7 +1023,7 @@ async function daXongNhac(k){ await ref('nhacNho/'+k).update({daXong:true,nguoiX
 async function moLaiNhac(k){ await ref('nhacNho/'+k).update({daXong:false,nguoiXong:null,lucXong:null}); }
 function formMocTuThem(){ _cacO=[{k:'hopDongId',nhan:'Hợp đồng',kieu:'chon',ds:Object.fromEntries(Object.entries(DL.hopDong).map(([k,h])=>[k,h.soHopDong+' · '+h.tenGoiThau])),rong:'— chọn —',batBuoc:true},{k:'ngayMoc',nhan:'Ngày mốc',kieu:'ngay',batBuoc:true},{k:'ghiChu',nhan:'Nhắc việc gì?',batBuoc:true,placeholder:'VD: nộp hồ sơ xin hoàn trả tiền bảo hành'}];
   moForm('＋ Mốc tự nhắc',_cacO,{ngayMoc:homNay()},`<button class="btn" onclick="luuMocTuThem(this)">💾 Lưu</button>`); }
-async function luuMocTuThem(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); await ref('nhacNho').push({hopDongId:v.hopDongId,loai:'khac',thamChieuId:'',ngayMoc:v.ngayMoc,ghiChu:v.ghiChu,ngayNhacTiep:v.ngayMoc,soLanDaNhac:0,daXong:false,nguoiTao:tenNguoiDung,taoLuc:luc()}); toast('✅ Đã thêm mốc'); }); }
+async function luuMocTuThem(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); await ref('nhacNho').push({app:'hopDong',hopDongId:v.hopDongId,loai:'khac',thamChieuId:'',ngayMoc:v.ngayMoc,ghiChu:v.ghiChu,ngayNhacTiep:v.ngayMoc,soLanDaNhac:0,daXong:false,nguoiTao:tenNguoiDung,taoLuc:luc()}); toast('✅ Đã thêm mốc'); }); }
 
 // ===== 11. MÀN HÌNH: Nhập từ Excel (xem trước → xác nhận) — file mẫu 7 sheet do app xuất ra (quy tắc 16) =====
 // Mỗi sheet con nối với hợp đồng bằng 2 cột đầu: Công ty + Số hợp đồng. Thứ tự ghi: HopDong trước, rồi các sheet con.
@@ -1171,7 +1171,7 @@ function tomTatMoiNhap(bang,o){ return o.congTyId+' '+o.soHopDong+' · '+TEN_BAN
 
 // ===== 12. MÀN HÌNH: Quản trị — yêu cầu xoá (giám đốc duyệt), thông tin 3 công ty, người dùng, danh sách công trình =====
 function veQuanTri(){
-  const yc=Object.entries(DL.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho').sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
+  const yc=Object.entries(DL.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho'&&(!y.app||y.app==='hopDong')).sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
   $('khac-badge').hidden=!(laGiamDoc()&&yc.length); $('khac-badge').textContent=yc.length; $('qt-yeucauxoa-n').hidden=!yc.length; $('qt-yeucauxoa-n').textContent=yc.length+' chờ';
   $('qt-yeucauxoa').innerHTML=yc.length?yc.map(([k,y])=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${esc(TEN_BANG[y.bang]||y.bang)}</b>: ${esc(y.tomTat||'')}</div><div class="hint">${esc(y.nguoiYeuCau)} · ${lucVN(y.luc)}${y.lyDo?' · '+esc(y.lyDo):''}</div>
     ${laGiamDoc()?`<div class="row" style="margin-top:6px"><button class="btn sm red" onclick="duyetXoa('${k}',true,this)">✅ Đồng ý xoá</button><button class="btn sm sec" onclick="duyetXoa('${k}',false,this)">✖ Từ chối</button>${y.hopDongId&&DL.hopDong[y.hopDongId]?`<button class="btn sm sec" onclick="moChiTiet('${y.hopDongId}')">Xem</button>`:''}</div>`:''}</div>`).join(''):'<div class="hint">Không có yêu cầu xoá nào đang chờ.</div>';
