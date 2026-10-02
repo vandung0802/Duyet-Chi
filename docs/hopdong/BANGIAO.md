@@ -35,7 +35,7 @@
 - `scripts/nhac-han-hopdong.js` (+ `scripts/package.json` web-push): đọc Firebase bằng `firebase database:get` (FIREBASE_TOKEN), nạp TINH_TOAN từ `hopdong.html`, đồng bộ `nhacNho` (như app), chọn mốc ≤ 30 ngày chưa xong và cách lần nhắc trước ≥ 5 ngày, gửi push tới mọi máy đã đăng ký (tối đa 6 thông báo, dư thì gộp), ghi `soLanDaNhac`, `lanNhacCuoi`, `ngayNhacTiep`; xoá đăng ký chết (404/410). Không có việc → không gửi. `--thu` = chạy thử.
 - `.github/workflows/nhac-han-hopdong.yml`: cron `0 0 * * *` UTC = 07:00 VN + chạy tay (có ô "chạy thử").
 - Test: `node test-nhac-han-hopdong.js` (13 kiểm tra) + 4 bộ test cũ.
-- Chưa kiểm được trên điện thoại thật: cần anh Dũng bật thông báo trong app (tab Khác) rồi chạy tay workflow "Nhac han Hop dong" để xem có nhận không.
+- Đã chạy thử tác vụ trên GitHub (run #2, chế độ "chạy thử"): đọc Firebase OK, thấy 1 hợp đồng, 1 mốc quá hạn, nội dung đúng quy tắc 20. Lần 1 đỏ vì firebase-tools in cảnh báo trước JSON → đã sửa đọc qua file tạm (PR #16). Chưa kiểm push trên điện thoại thật: cần anh Dũng bật thông báo trong app (tab Khác) rồi chạy tay workflow (bỏ tích "chạy thử") để xem có nhận không.
 
 ## Đã làm 02/10/2026 (phiên 3 — theo spec 02/10, bản v12)
 
