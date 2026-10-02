@@ -120,6 +120,11 @@
 - **App (khối 22)**: `cacBangTongHop()` trả 18 bảng dùng chung cho Excel tổng hợp và Sheets (TongHop, TheoNganHang, KhoanVay, HanMuc, ThauChi, BaoLanh, TaiSanBaoDam, LichTra90Ngay, NganHang, GiaiNgan, LaiSuat, KyTra, TraNo, ThauChiGiaoDich, PhiBaoLanh, KyQuyGiamTru, NhacNho, LichSu). `goiAppsScript` = `fetch` POST `text/plain` (không dùng JSONP vì dữ liệu lớn). Tự đồng bộ 40 giây sau mỗi lần ghi (`henDongBo` trong `ghiNhieu`) + nút "Đồng bộ ngay" ở trang Khác. Nút "📤 Tải file lên" ở thẻ File đính kèm (≤ 20 MB) → ghi `fileDinhKem` `{ten, link, nguon:'drive', driveId}`.
 - **Địa chỉ Apps Script**: `CAU_HINH.URL_APPS_SCRIPT` (để trống) hoặc giám đốc dán ở trang Khác → `congNo/meta/urlAppsScript` (luật: chỉ giám đốc ghi, phải bắt đầu `https://script.google.com/macros/s/`). App chỉ nhận đúng dạng `…/exec`.
 - **ĐÃ TRIỂN KHAI THẬT 02/10/2026 (17:30)**: anh Dũng tự cài theo `docs/congno/cai-dat-apps-script.md` (dự án Apps Script riêng trong tài khoản vandung0802, đã chạy `khoiTao`, triển khai ứng dụng web), dán địa chỉ vào trang Khác → thẻ hiện "✅ Đồng bộ lần cuối 17:30 02/10/2026" + link Sheets / Drive. Nghĩa là gọi Apps Script từ trình duyệt (POST `text/plain`, đọc JSON trả về) và kiểm tra mã đăng nhập đều chạy trên bản thật. Địa chỉ `/exec` lưu ở `congNo/meta/urlAppsScript` (không ghi vào repo). Sửa `AppsScript_CongNo.gs` về sau: dán lại mã rồi Triển khai → Quản lý → Sửa → Phiên bản mới (giữ nguyên URL). Bẫy đã gặp: dán mã mà không Ctrl+A trước → mã lọt vào trong `function myFunction(){` nên không thấy `khoiTao`. Chưa có xác nhận của anh Dũng về nút "Tải file lên".
+## Đã làm 03/10/2026 (không đổi mã app — vẫn v15)
+
+- **`docs/congno/huong-dan-su-dung.md`** — hướng dẫn dùng app cho kế toán, viết từ chính mã v15: 15 mục (đăng nhập + cài ra màn hình chính, bố cục, nhập lần đầu theo thứ tự ngân hàng → hạn mức → khế ước / Excel, việc hằng tháng: trả lãi số thật, trả gốc, đổi lãi suất, trả trước hạn + khớp lịch; vay dài hạn, thuê tài chính, thấu chi, bảo lãnh, tài sản, nhắc hạn + bảng số ngày + bật thông báo, sửa/xoá/yêu cầu xoá, file đính kèm, Tổng quan/Excel/Sheets, cách app tính, câu hỏi hay gặp). Mọi lời chỉ đường ghi đủ "nút nào → ô nào". Sửa giao diện thì sửa file này cùng lúc.
+- Kiểm tra sáng 03/10: `node test-congno-tinhtoan.js` 107 phép tính đúng; Actions "Dua luat Firebase len may chu" #12 (v15) xanh; "Nhac han Cong no" chưa có lần chạy nào vì 07:00 03/10 là lần đầu (workflow thêm chiều 02/10) — xem lại sau 07:00.
+
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
@@ -143,7 +148,7 @@ Cả 10 bước mục 1.2 đã xong (v13). Còn lại, theo thứ tự nên làm
 2. Trong trang Khác → Người dùng: tích "nhận mọi nhắc hạn" cho Hiền, Ngọc.
 3. Nhận file Excel theo dõi vay của kế toán → chỉnh `MAU_NHAP` theo cột của file đó.
 4. ~~Google Sheets + Drive~~ — đã nối thật 02/10 (v15). Còn: anh Dũng thử nút "Tải file lên", chia sẻ file Sheets cho kế toán (quyền Người xem).
-5. `docs/congno/huong-dan-su-dung.md` cho kế toán (viết sau khi anh Dũng duyệt giao diện).
+5. ~~`docs/congno/huong-dan-su-dung.md` cho kế toán~~ — đã viết 03/10 (theo bản v15; đổi giao diện thì sửa file này theo). Có thể gửi link GitHub cho kế toán hoặc in ra.
 6. Các câu tự định ở trên (thấu chi, khớp lịch, kỳ trả gốc theo quý, bảo hành / dự thầu để riêng…) — anh Dũng thấy sai chỗ nào thì sửa chỗ đó.
 
 ## Chỗ đang lỗi
