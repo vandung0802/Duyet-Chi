@@ -27,6 +27,10 @@
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
 
+## Đã làm 03/10/2026 (cùng đợt rà lỗi 4 app)
+
+- `scripts/nhac-han-hopdong.js` không in tên gói thầu/nội dung mốc ra log GitHub Actions (repo công khai) — chỉ in số lượng.
+
 ## Đã làm 02/10/2026 tối (phiên 3c — rà lỗi toàn app, bản v15)
 
 Anh Dũng yêu cầu rà toàn bộ app tìm lỗi làm app hỏng khi chạy và tự sửa. Cách làm: 3 lượt đọc mã độc lập theo khối (1–6, 7–9, 10–16) + kịch bản bấm thử mọi màn hình/nút/form với dữ liệu xấu, 2 vai GD/NV (`test-smoke.js`, ngoài repo). Đã sửa 20 điểm:

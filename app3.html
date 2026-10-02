@@ -1437,7 +1437,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261003-v179';
+const APP_VERSION = '20261003-v180';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -1970,9 +1970,10 @@ function toggleAuthPass(){
 
 function nameToRole(name){
   const n=(name||'').normalize('NFC').trim();
-  if(n==='Dũng') return 'dung';
-  if(n==='Hiền') return 'hien';
-  if(n==='Trang') return 'trang';
+  const em=((firebase.auth().currentUser||{}).email||'').toLowerCase(); // v180: luật userRoles chỉ cho vai D/H/T đúng email; người khác trùng tên → 'other'
+  if(n==='Dũng' && em==='vandung0802@gmail.com') return 'dung';
+  if(n==='Hiền' && em==='hiensbgt@gmail.com') return 'hien';
+  if(n==='Trang' && em==='phantrang770@gmail.com') return 'trang';
   return 'other';
 }
 
@@ -2193,10 +2194,17 @@ function initAuth(){
         } catch(e){}
       }
       // Fetch OTP + userRoles song song (chạy ngầm)
-      const [otpSnap, snap] = await Promise.all([
-        db.ref('duyetchi/pendingOtp/'+user.uid).get(),
-        db.ref('duyetchi/userRoles/'+user.uid).get()
-      ]);
+      let otpSnap, snap;
+      try{
+        [otpSnap, snap] = await Promise.all([
+          db.ref('duyetchi/pendingOtp/'+user.uid).get(),
+          db.ref('duyetchi/userRoles/'+user.uid).get()
+        ]);
+      }catch(e){ // v180: trước đây lỗi ở đây chết im → màn trắng không có nút đăng nhập
+        if(!cached) document.getElementById('role-screen').style.display='';
+        showToast('⚠️ Không đọc được tài khoản ('+(e.message||'lỗi mạng')+') — kiểm tra mạng rồi mở lại');
+        return;
+      }
       if(otpSnap.exists()){
         // v98: tài khoản ĐÃ ĐƯỢC DUYỆT mà còn OTP treo (đăng ký xưa chưa nhập mã, Dũng đã duyệt tay)
         // → OTP vô nghĩa, tự xoá và cho vào luôn. Trước đây kẹt vĩnh viễn ở màn "Nhập mã 6 số"
@@ -2260,7 +2268,7 @@ async function logoutRole(){
   // khi CÒN đăng nhập (luật cần auth). Lỗi thì bỏ qua, không chặn đăng xuất.
   try{
     if('serviceWorker' in navigator){
-      const _reg = await navigator.serviceWorker.ready;
+      const _reg = await _swReady(3000);
       const _sub = await _reg.pushManager.getSubscription();
       if(_sub){
         const _sk = btoa(_sub.endpoint).replace(/[^a-zA-Z0-9]/g, '').substring(0, 80);
@@ -2326,9 +2334,10 @@ function urlB64ToUint8Array(b64) {
   return arr;
 }
 
+function _swReady(ms){ return Promise.race([navigator.serviceWorker.ready, new Promise((_,rej)=>setTimeout(()=>rej(new Error('service worker chưa sẵn sàng')),ms||4000))]); } // v180: .ready không bao giờ xong nếu register thất bại
 async function fcmRegister(role) {
   try {
-    const swReg = await navigator.serviceWorker.ready;
+    const swReg = await _swReady(4000);
     let sub = await swReg.pushManager.getSubscription();
     if (!sub) {
       sub = await swReg.pushManager.subscribe({
@@ -2468,7 +2477,8 @@ async function _pushOutboxFlush(){
         // (chống người lạ tự đăng ký rồi nhồi hàng nghìn mục vào hàng đợi). Luồng duy nhất dính: báo mã đăng ký cho Dũng.
         const _u = firebase.auth().currentUser;
         if(!_u) throw e1;
-        await db.ref('push-queue/'+_u.uid).set(item);
+        try{ await db.ref('push-queue/'+_u.uid).set(item); }
+        catch(e2){ if((e2&&e2.code)==='PERMISSION_DENIED'&&(e1&&e1.code)==='PERMISSION_DENIED'){ box.shift(); _pushOutboxSave(box); continue; } throw e2; } // v180: bị từ chối vĩnh viễn → bỏ mục này, không chặn mọi thông báo sau trong 24h
       }
       // v177: NẠP LẠI hộp trước khi gạch. Trong lúc chờ mạng ở lệnh trên, tin MỚI có thể đã được thêm vào cuối hộp;
       // gạch trên bản sao cũ rồi lưu đè là MẤT tin đó (duyệt 2 phiếu liên tiếp lúc sóng yếu → chỉ tin đầu tới nơi).
@@ -2514,6 +2524,8 @@ function save(){
 // và so sánh để CHỈ ghi đúng phần đã đổi. Vừa ổn định hơn, vừa tiết kiệm hơn.
 // ══════════════════════════════════════════
 let lastPushedSnapshot = null; // bản sao gần nhất đã ghi lên Firebase, dùng để so sánh tìm phần thay đổi
+// v180: trước khi tải xong, pushToFirebase() bỏ qua im lặng nhưng app vẫn báo "đã gửi/đã duyệt" → lúc dữ liệu về thì bị ghi đè mất
+function _chuaTaiXong(){ if(fbInitialLoadDone) return false; showToast('⏳ Dữ liệu đang tải về — chờ vài giây rồi bấm lại'); return true; }
 
 function pushToFirebase(){
   if(!fbInitialLoadDone) return; // chưa load lần đầu xong thì chưa ghi, tránh ghi đè rác
@@ -2523,7 +2535,8 @@ function pushToFirebase(){
 
   // 1) Phần meta gồm người đề xuất, công trình, link Sheets — thường nhỏ và ít đổi, gộp chung 1 node
   const metaNow = JSON.stringify({persons, sites, sheetUrl});
-  if(!lastPushedSnapshot || lastPushedSnapshot.meta !== metaNow){
+  // v180: luật chỉ cho D ghi duyetchi/meta — máy khác mà gộp meta vào batch thì CẢ batch (kể cả duyệt/chuyển) bị từ chối
+  if(currentRole==='dung' && (!lastPushedSnapshot || lastPushedSnapshot.meta !== metaNow)){
     // v167: ghi TỪNG KHÓA thay vì set đè cả nhánh meta — kẻo xoá mất các khóa khác
     // (telegramBotToken/telegramChatId do D thêm tay trong Firebase Console).
     updates['duyetchi/meta/persons'] = persons;
@@ -2574,7 +2587,24 @@ function pushToFirebase(){
     const lightJson = JSON.stringify(lightFields);
     nowProposalsMap[p.id] = lightJson;
     if(prevProposalsMap[p.id] !== lightJson){
-      updates[_propNodeFor(p.id)+p.id] = lightFields; // v125: phiếu P.KH → khProposals
+      const goc = _propNodeFor(p.id)+p.id; // v125: phiếu P.KH → khProposals
+      let prev = null; try{ prev = prevProposalsMap[p.id] ? JSON.parse(prevProposalsMap[p.id]) : null; }catch(e){}
+      if(!prev || typeof prev!=='object'){ updates[goc] = lightFields; } // phiếu mới → ghi cả node
+      else {
+        // v180: phiếu đã có → CHỈ ghi trường đã đổi. Trước đây ghi đè cả node: máy chưa kịp nhận lần duyệt mới
+        // của D (sóng yếu) mà bấm chuyển tiền là ghi đè MẤT lần duyệt đó. Mảng lịch sử duyệt/chuyển ghi theo
+        // TỪNG PHẦN TỬ mới/đổi; chỉ khi mảng cục bộ NGẮN đi (bỏ duyệt / hoàn tác — thao tác chủ ý) mới ghi cả mảng.
+        const MANG_LICH_SU = ['approvedDHistory','approvedHHistory','transfers'];
+        Object.keys(Object.assign({}, prev, lightFields)).forEach(k=>{
+          const a = prev[k], b = lightFields[k];
+          if(JSON.stringify(a===undefined?null:a) === JSON.stringify(b===undefined?null:b)) return;
+          if(MANG_LICH_SU.includes(k) && Array.isArray(b) && Array.isArray(a) && b.length >= a.length){
+            b.forEach((x,i)=>{ if(JSON.stringify(a[i]===undefined?null:a[i]) !== JSON.stringify(x)) updates[goc+'/'+k+'/'+i] = x; });
+            return;
+          }
+          updates[goc+'/'+k] = (b===undefined ? null : b);
+        });
+      }
       hasChange = true;
     }
   });
@@ -2757,8 +2787,8 @@ function initFirebaseSync(){
     if(!_metaLoaded || !_proposalsLoaded || !_khLoaded) return; // v125: chờ cả kho P.KH (bị chặn quyền thì đã tự đánh dấu loaded-rỗng)
     fbConnected=true; updateFbBadge(true);
     const meta = _metaData;
-    persons = meta.persons || [];
-    sites   = meta.sites   || [];
+    persons = Array.isArray(meta.persons) ? meta.persons : Object.values(meta.persons||{}); // v180: xoá tay 1 phần tử trong Console → Firebase trả object
+    sites   = Array.isArray(meta.sites)   ? meta.sites   : Object.values(meta.sites||{});
     _tgToken = meta.telegramBotToken || ''; _tgChatId = meta.telegramChatId || ''; // v167: cấu hình bot Telegram (chỉ nằm trong Firebase, không nằm trong file)
     if(meta.sheetUrl){
       sheetUrl = sanitizeSheetUrl(meta.sheetUrl); // v78: chặn URL lạ từ Firebase
@@ -2766,13 +2796,14 @@ function initFirebaseSync(){
       const inp = document.getElementById('inp-sheet-url');
       if(inp) inp.value = sheetUrl;
     }
-    proposals = Object.keys(_proposalsData).map(id=>{
+    const _laPhieu = id => _proposalsData[id] && typeof _proposalsData[id]==='object'; // v180: bản ghi rác (chuỗi/null do sửa tay Console) → bỏ qua, kẻo tạo phiếu "undefined" và lặp vô hạn
+    proposals = Object.keys(_proposalsData).filter(_laPhieu).map(id=>{
       const p = _proposalsData[id];
       const imgs = _imagesData[id] || {};
       return {...p, imgImages: imgs.imgImages||[], proofImages: imgs.proofImages||[]};
     }).concat(
       // v125 P.KH: trộn phiếu Kế hoạch (kho riêng) vào danh sách chung — LUÔN đóng dấu kind:'kh'
-      Object.keys(_khData).map(id=>{
+      Object.keys(_khData).filter(id=>_khData[id]&&typeof _khData[id]==='object').map(id=>{
         const p = _khData[id];
         const imgs = _imagesData[id] || {};
         return {...p, kind:'kh', imgImages: imgs.imgImages||[], proofImages: imgs.proofImages||[]};
@@ -2808,6 +2839,13 @@ function initFirebaseSync(){
       if(currentRole === 'dung'){
         // Chỉ thiết bị Dũng đẩy bản sửa lệch lên máy chủ — luật bảo mật v77 chỉ cho đúng vai trò
         // ghi lịch sử duyệt, thiết bị khác đẩy sẽ bị máy chủ từ chối làm KẸT đồng bộ cả thiết bị.
+        // v180: phần sửa thuộc trường của H (approvedH*) D cũng KHÔNG được ghi → đánh dấu "đã đẩy" để không đưa vào batch
+        _fixedIds.forEach(id=>{
+          const p = proposals.find(x=>x.id===id);
+          if(p && lastPushedSnapshot && lastPushedSnapshot.proposalsMap && lastPushedSnapshot.proposalsMap[id]){
+            try{ const sv = JSON.parse(lastPushedSnapshot.proposalsMap[id]); ['approvedHAmount','approvedHHistory','approvedH'].forEach(k=>{ if(p[k]===undefined) delete sv[k]; else sv[k]=p[k]; }); lastPushedSnapshot.proposalsMap[id] = JSON.stringify(sv); }catch(e){}
+          }
+        });
         pushToFirebase();
       } else {
         // Thiết bị khác: giữ bản sửa CỤC BỘ để hiển thị đúng, nhưng đánh dấu "đã đẩy rồi" cho các
@@ -3396,7 +3434,7 @@ function getMyPendingItems(){
 }
 
 function getSeenIds(){ try{ return new Set(JSON.parse(localStorage.getItem('dc_notif_seen')||'[]')); }catch(e){ return new Set(); } }
-function markAllSeen(items){ localStorage.setItem('dc_notif_seen', JSON.stringify(items.map(i=>i.id))); }
+function markAllSeen(items){ try{ localStorage.setItem('dc_notif_seen', JSON.stringify(items.map(i=>i.id))); }catch(e){} }
 
 function updateNotifBadge(){
   const items = getMyPendingItems();
@@ -3633,7 +3671,7 @@ const _cardCache = new Map();
 function _cardHash(p){
   // v126: thêm desc/person/site vào hash — trước đây SỬA nội dung/người/công trình mà thẻ vẫn hiện
   // bản cũ (cache không biết có thay đổi; lỗi user báo trên phiếu P.KH, nhưng ảnh hưởng mọi loại phiếu)
-  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0)+'|'+(p.desc||'')+'|'+(p.person||'')+'|'+(p.site||'');
+  return currentRole+'|'+p.id+'|'+p.status+'|'+p.amount+'|'+p.ts+'|'+approvedAmtOf(p,'D')+'|'+approvedAmtOf(p,'H')+'|'+(p.priority||'')+'|'+(p.transfers?p.transfers.length:0)+'|'+(p.imgImages?p.imgImages.length:0)+'|'+(p.proofImages?p.proofImages.length:0)+'|'+(p.remindCount||0)+'|'+(p.lastRemindAt||0)+'|'+(p.note||'')+'|'+(p.opinionD||'')+'|'+(p.opinionH||'')+'|'+(p.urgentReason||'')+'|'+(p.chat?p.chat.length:0)+'|'+(p.chat&&p.chat.length?(p.chat[p.chat.length-1].ts||0):0)+'|'+(p.desc||'')+'|'+(p.person||'')+'|'+(p.site||'')+'|'+(p.rejectedByD?p.rejectedByD.ts:0)+'|'+(p.rejectedByH?p.rejectedByH.ts:0)+'|'+(p.rejectedBy||''); // v180: từ chối lần 2 phải vẽ lại thẻ
 }
 function renderCard(p){
   const hash = _cardHash(p);
@@ -4202,6 +4240,7 @@ function aaFillFull(){
 }
 function confirmApproveAmount(){
   if(!pendingApproveField) return;
+  if(_chuaTaiXong()) return;
   const { id, field } = pendingApproveField;
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
@@ -4303,7 +4342,7 @@ function undoApprove(id, field){
   // Chỉ xóa lần cuối cùng
   hist.pop();
   p[historyField] = hist;
-  const newTotal = hist.reduce((s, t) => s + (t.amount || 0), 0);
+  const newTotal = hist.reduce((s, t) => s + (parseFloat(t.amount) || 0), 0); // v180: amount có thể là chuỗi
   p[amountField] = newTotal > 0 ? newTotal : null;
   p[field] = hist.length > 0 ? hist[hist.length - 1].ts : null;
 
@@ -4363,6 +4402,7 @@ function taFillFull(){
 }
 function confirmTransferAmount(){
   if(!pendingTransferId) return;
+  if(_chuaTaiXong()) return;
   const id = pendingTransferId;
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
@@ -4400,7 +4440,7 @@ function confirmTransferAmount(){
   renderAll();
   closeTransferAmountModal();
   const remaining = officialApproved - totalAfter;
-  showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ số đã duyệt)':' — còn '+fmt(remaining)+'tr chưa chuyển'}`);
+  showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ số đã duyệt)':' — còn '+fmtVND(remaining)+' chưa chuyển'}`);
   sendPushNotif('💸 Trang đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien']);
   if(isFullyDone) setTimeout(()=>uploadProof(id),500);
 }
@@ -4420,6 +4460,7 @@ function shareProof(id){
 
 // ── TỪ CHỐI: hỏi lý do, lưu riêng cho D và H ──
 function rejectBy(id, who){
+  if(_chuaTaiXong()) return;
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
   // v175: đã có tiền chuyển đi thì KHÔNG cho từ chối. Trước đây phiếu chuyển MỘT PHẦN vẫn từ chối được →
@@ -4507,6 +4548,7 @@ function _canEditDelete(p){
   return currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||_isMyProposal(p);
 }
 function del(id){
+  if(_chuaTaiXong()) return;
   const p = proposals.find(x=>x.id===id);
   // v135: không phải chủ phiếu và không phải D/H/T → KHÔNG được xóa phiếu người khác
   if(p && !_canEditDelete(p)){ showToast('🔒 Chỉ người tạo phiếu hoặc D/H/T mới xóa được đề xuất này'); return; }
@@ -4685,6 +4727,7 @@ function removeEditImage(idx){
 }
 
 function saveEditProposal(){
+  if(_chuaTaiXong()) return;
   const p = proposals.find(x=>x.id===editingProposalId);
   if(!p){ closeEditModal(); return; }
   if(p.status!=='pending' && currentRole!=='dung' && currentRole!=='hien' && currentRole!=='trang'){ showToast('🔒 Chỉ D, H hoặc T mới sửa được phiếu đã duyệt'); closeEditModal(); return; }
@@ -5031,6 +5074,7 @@ function uploadProof(id){
   inp.type='file'; inp.accept='image/*'; inp.multiple=true;
   inp.onchange=e=>{
     const files=Array.from(e.target.files||[]);
+    pendingUploadProofId=null; // v180: không để ảnh dán (Ctrl+V) sau này bị gắn nhầm vào phiếu này
     if(!files.length) return;
     addProofImages(id, files);
   };
@@ -5068,6 +5112,7 @@ document.addEventListener('paste', (e)=>{
   if(!pendingUploadProofId) return;
   const items = (e.clipboardData||window.clipboardData)?.items;
   if(!items) return;
+  setTimeout(()=>{ pendingUploadProofId=null; },0); // v180: dùng 1 lần rồi thôi
   const files=[];
   for(const item of items){
     if(item.kind==='file' && item.type.startsWith('image/')){
@@ -5124,6 +5169,7 @@ function removeZaloImage(id, idx){
 // ── SUBMIT ──
 function submitProposal(){
   try{
+    if(_chuaTaiXong()) return;
     const desc=document.getElementById('inp-desc').value.trim();
     const roInput = document.getElementById('inp-person-readonly');
     const person = roInput && roInput.style.display!=='none' ? roInput.value : document.getElementById('inp-person').value;
@@ -5173,7 +5219,7 @@ function submitProposal(){
     // (chỉ thêm, không đụng logic tạo phiếu bình thường ở trên khi không đến từ kế hoạch)
     if(_pendingPlanLink){
       const _plan = plans.find(x=>x.id===_pendingPlanLink);
-      if(_plan){ _plan.linkedProposalId = p.id; savePlans(); }
+      if(_plan){ _plan.linkedProposalId = p.id; savePlans(_plan.id); }
       _pendingPlanLink = null;
     }
 
@@ -5233,14 +5279,20 @@ function populateSelects(){
 // bảo mật chỉ cấp quyền ghi ở CẤP CON $id, không cấp ở cấp ngăn cha (set() đè cả ngăn bị DENY dù
 // từng phiếu con vẫn được phép ghi riêng lẻ — đây là lỗi thật đã gặp, không phải lỗi mạng/luật).
 let _lastPlanIds = new Set();
-function savePlans(){
+function savePlans(id){
   try{ localStorage.setItem('dc_plans', JSON.stringify(plans)); }catch(e){}
   if(!fbInitialLoadDone) return; // dùng chung cờ với proposals, tránh ghi đè rác lúc mới mở app
   const updates = {};
+  if(id){ // v180: có id → CHỈ ghi đúng kế hoạch đó (ghi cả danh sách thì máy mở lâu chưa cập nhật sẽ đè mất sửa đổi của người khác)
+    const p = plans.find(x=>x.id===id);
+    updates['duyetchi/plans/'+id] = p ? p : null;
+    if(p) _lastPlanIds.add(id); else _lastPlanIds.delete(id);
+  } else {
   const nowIds = new Set();
   plans.forEach(p=>{ updates['duyetchi/plans/'+p.id] = p; nowIds.add(p.id); });
   _lastPlanIds.forEach(id=>{ if(!nowIds.has(id)) updates['duyetchi/plans/'+id] = null; }); // kế hoạch đã xoá ở local → xoá luôn trên Firebase
   _lastPlanIds = nowIds;
+  }
   db.ref().update(updates).catch(err=>{
     console.warn('Lỗi ghi Kế hoạch lên Firebase:', err.message);
     showToast('⚠️ Không đồng bộ được kế hoạch — kiểm tra mạng. Dữ liệu vẫn lưu tạm trên máy này.');
@@ -5443,7 +5495,7 @@ function openPlanModal(id){
   document.getElementById('plan-inp-material').value = p ? p.material : '';
   document.getElementById('plan-inp-qty').value = p ? (p.quantity||'') : '';
   document.getElementById('plan-inp-amount').value = (p && p.estimatedAmount) ? Number(p.estimatedAmount).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
-  document.getElementById('plan-inp-date').value = p ? new Date(p.neededDate).toISOString().slice(0,10) : '';
+  document.getElementById('plan-inp-date').value = p ? (d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'))(new Date(p.neededDate)) : ''; // v180: toISOString() là giờ UTC → lùi 1 ngày
   document.getElementById('plan-inp-assignee').value = p ? (p.assignee||'') : '';
   document.getElementById('plan-inp-note').value = p ? (p.note||'') : '';
   document.getElementById('plan-modal-overlay').style.display = 'flex';
@@ -5464,12 +5516,14 @@ function savePlanFromModal(){
   if(!material){ showToast('Vui lòng nhập loại vật tư'); return; }
   if(!dateStr){ showToast('Vui lòng chọn ngày cần có'); return; }
   const neededDate = new Date(dateStr+'T00:00:00').getTime();
+  let _idMoi = null;
   if(_editingPlanId){
     const p = plans.find(x=>x.id===_editingPlanId);
     if(p) Object.assign(p, { site, material, quantity: qty, estimatedAmount, neededDate, assignee, note });
   } else {
+    _idMoi = Date.now().toString();
     plans.unshift({
-      id: Date.now().toString(),
+      id: _idMoi,
       site, material, quantity: qty, estimatedAmount, neededDate, assignee, note,
       status: 'pending',
       createdBy: getCurrentUserName(),
@@ -5478,7 +5532,7 @@ function savePlanFromModal(){
       linkedProposalId: null,
     });
   }
-  savePlans();
+  savePlans(_editingPlanId||_idMoi);
   closePlanModal();
   renderPlans();
   showToast('✅ Đã lưu kế hoạch');
@@ -5488,7 +5542,7 @@ function deletePlan(id){
   const idx = plans.findIndex(x=>x.id===id);
   if(idx<0) return;
   plans.splice(idx,1);
-  savePlans();
+  savePlans(id);
   renderPlans();
   showToast('🗑 Đã xoá kế hoạch');
 }
@@ -5496,14 +5550,14 @@ function setPlanStatus(id, status){
   const p = plans.find(x=>x.id===id);
   if(!p) return;
   p.status = status;
-  savePlans();
+  savePlans(id);
   renderPlans();
 }
 function confirmPlan(id, who){
   const p = plans.find(x=>x.id===id);
   if(!p) return;
   if(who==='D') p.confirmedByD = Date.now(); else p.confirmedByH = Date.now();
-  savePlans();
+  savePlans(id);
   renderPlans();
   showToast(`✅ ${who} đã xác nhận kế hoạch`);
 }
@@ -5546,6 +5600,7 @@ function jumpToPlanCard(id){
   }, 150);
 }
 function attachPlanDoubleTap(container){
+  if(!container||container.dataset.dtapOn) return; container.dataset.dtapOn='1'; // v180: vẽ lại nhiều lần → gắn chồng N listener → chạm đúp chạy N lần, máy đơ
   let lastTap = 0, lastTarget = null;
   container.addEventListener('touchend', e=>{
     const row = e.target.closest('.plan-row-link');
@@ -5584,8 +5639,9 @@ async function confirmFirstLogin(){
   if(name.length < 2){ msg.textContent='Họ tên quá ngắn'; return; }
   if(!currentUser){ return; }
   const role = nameToRole(name);
+  try{ await db.ref('duyetchi/userRoles/'+currentUser.uid).update(Object.assign({ role, name }, currentUser.email ? { email: currentUser.email } : {})); } // v81: update giu co approved · v177: kèm email
+  catch(e){ msg.textContent='❌ Không lưu được tên ('+(e.message||'lỗi mạng')+') — thử lại'; return; } // v180: trước đây lỗi ở đây làm màn chọn tên đứng im
   currentUserName = name;
-  await db.ref('duyetchi/userRoles/'+currentUser.uid).update(Object.assign({ role, name }, currentUser.email ? { email: currentUser.email } : {})); // v81: update giu co approved · v177: kèm email
   document.getElementById('first-login-overlay').style.display = 'none';
   setRole(role);
 }
@@ -5769,6 +5825,8 @@ async function doChangePassword(){
 }
 
 function renderSettings(){
+  // v180: luật chỉ cho D ghi duyetchi/meta → với vai khác ẩn 3 thẻ này (bấm nhầm × là mọi lần ghi sau của máy đó bị từ chối)
+  (function(){ const laD = currentRole==='dung'; ['person-list','site-list','inp-sheet-url'].forEach(id=>{ const el=document.getElementById(id); const card=el&&el.closest('.card'); if(card) card.style.display = laD ? '' : 'none'; }); })();
   // Hiển thị thông tin tài khoản
   const infoEl = document.getElementById('auth-account-info');
   if(infoEl && currentUser){
@@ -5824,6 +5882,7 @@ function renderSettings(){
 }
 
 function addPerson(){
+  if(currentRole!=='dung'){ showToast('🔒 Chỉ D sửa được danh sách này'); return; }
   const name=document.getElementById('new-person-name').value.trim();
   const role=document.getElementById('new-person-role').value.trim();
   if(!name){ showToast('Vui lòng nhập tên'); return; }
@@ -5832,15 +5891,16 @@ function addPerson(){
   document.getElementById('new-person-name').value='';
   document.getElementById('new-person-role').value='';
 }
-function delPerson(i){ persons.splice(i,1); save(); renderSettings(); }
+function delPerson(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ D sửa được danh sách này'); return; } if(!confirm('Xoá "'+((persons[i]||{}).name||'')+'" khỏi danh sách người đề xuất?')) return; persons.splice(i,1); save(); renderSettings(); }
 
 function addSite(){
+  if(currentRole!=='dung'){ showToast('🔒 Chỉ D sửa được danh sách này'); return; }
   const s=document.getElementById('new-site').value.trim();
   if(!s){ showToast('Vui lòng nhập tên công trình'); return; }
   sites.push(s); save(); renderSettings(); showToast('Đã thêm: '+s);
   document.getElementById('new-site').value='';
 }
-function delSite(i){ sites.splice(i,1); save(); renderSettings(); }
+function delSite(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ D sửa được danh sách này'); return; } if(!confirm('Xoá công trình "'+(sites[i]||'')+'" khỏi danh sách?')) return; sites.splice(i,1); save(); renderSettings(); }
 
 // ── REPORT SUB-TABS ──
 function setReportTab(tab, btn){
@@ -5908,6 +5968,7 @@ function jumpToProposal(id){
 
 // Double-tap cho mobile trên các hàng report
 function attachReportDoubleTap(container){
+  if(!container||container.dataset.dtapOn) return; container.dataset.dtapOn='1'; // v180: vẽ lại nhiều lần → gắn chồng N listener → chạm đúp chạy N lần, máy đơ
   let lastTap = 0, lastTarget = null;
   container.addEventListener('touchend', e=>{
     const row = e.target.closest('.report-row-link');
@@ -6403,9 +6464,9 @@ function saveSheet(){
   const _raw = document.getElementById('inp-sheet-url').value.trim();
   sheetUrl = sanitizeSheetUrl(_raw); // v78: chỉ nhận URL Google Apps Script hợp lệ
   if(_raw && !sheetUrl){ showToast('❌ URL không hợp lệ — phải là link Google Apps Script (https://script.google.com/macros/s/.../exec)'); return; }
+  if(!sheetUrl){ showToast('❌ URL không hợp lệ'); return; } // v180: kiểm TRƯỚC khi ghi — trước đây xoá URL chung của cả công ty rồi mới báo lỗi
   localStorage.setItem('dc_sheetUrl',sheetUrl);
   pushToFirebase(); // đồng bộ URL Sheets này tới mọi thiết bị khác
-  if(!sheetUrl){ showToast('❌ URL không hợp lệ'); return; }
   // Dùng no-cors để tránh bị chặn, chỉ cần gọi được là OK
   showToast('⏳ Đang kiểm tra kết nối...');
   fetch(sheetUrl, {method:'GET', mode:'no-cors'})
@@ -7133,7 +7194,7 @@ function _zaloJump(id){
   closeZaloListModal();
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
-  if(p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
+  else if(p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
 let _zaloModalMode='p';
@@ -7457,8 +7518,10 @@ function renderKhImgPreview(){
   wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(src)}" alt="Ảnh ${idx+1}"></div>`).join('');
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{ const idx=parseInt(item.dataset.idx,10); const img=item.querySelector('img'); attachLongPress(img, ()=>uploadedImages[idx], ()=>(()=>{ uploadedImages.splice(idx,1); renderKhImgPreview(); })); });
 }
+let _anhThemMoiTam=null; // v180: giữ ảnh đang chọn ở form Thêm mới trong lúc mở form P.KH / Ứng lương (3 form dùng chung mảng uploadedImages)
 function _khClearImages(){ uploadedImages=[]; renderKhImgPreview(); const fi=document.getElementById('kh-file-input'); if(fi) fi.value=''; }
 function openKhModal(){
+  _anhThemMoiTam=uploadedImages.slice();
   _khClearImages();
   // Nạp danh sách công trình dùng chung của app (Chi phí chung đứng đầu)
   const sel=document.getElementById('kh-inp-site');
@@ -7471,7 +7534,7 @@ function openKhModal(){
   document.getElementById('kh-inp-note').value='';
   document.getElementById('kh-modal-overlay').style.display='flex';
 }
-function closeKhModal(){ document.getElementById('kh-modal-overlay').style.display='none'; _khClearImages(); }
+function closeKhModal(){ document.getElementById('kh-modal-overlay').style.display='none'; _khClearImages(); if(_anhThemMoiTam){ uploadedImages=_anhThemMoiTam; _anhThemMoiTam=null; try{ renderUploadPreview(); }catch(e){} } }
 function saveKhFromModal(){
   const site=document.getElementById('kh-inp-site').value||'Chi phí chung';
   const desc=document.getElementById('kh-inp-desc').value.trim();
@@ -7487,6 +7550,7 @@ function saveKhFromModal(){
     desc, person: me, site,
     amount, amountUnit:'dong', note,
     priority:'normal', status:'pending', ts: Date.now(),
+    createdBy: getCurrentUserName()||'', createdByUid: (currentUser&&currentUser.uid)||'', // v180
     imgB64: uploadedImages[0]||null, imgImages: uploadedImages.slice(), proofImages: [],
     approvedD:null, approvedH:null, approvedDAmount:null, approvedHAmount:null,
     approvedDHistory:[], approvedHHistory:[], transfers:[]
@@ -7664,7 +7728,7 @@ function chatRemindGo(id){
   markChatSeen(id);
   const p=proposals.find(x=>x.id===id);
   if(p && p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
-  if(p && p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
+  else if(p && p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
 
@@ -7701,7 +7765,7 @@ function chatOpenRef(id){
   closeChatPage();
   const p=proposals.find(x=>x.id===id); if(!p) return;
   if(p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); } // v125
-  if(p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
+  else if(p.kind==='salary'){ showPage('luong', document.getElementById('nav-luong')); jumpToSalaryAdvance(id); }
   else jumpToProposal(id);
 }
 // ══ v126 CHAT 2 KÊNH ══ 'kt' = Nhóm Kế Toán (groupChat — dữ liệu CŨ, giữ nguyên) | 'kh' = Nhóm Kế Hoạch (khChat).
@@ -8341,6 +8405,7 @@ function _advClearImages(){ uploadedImages=[]; renderAdvImgPreview(); const fi=d
 function openAdvModal(){
   ensureSalaryMonth();
   if(!employees.length){ showToast('Chưa có nhân viên — thêm ở tab 👥 Nhân viên trước'); setLuongTab('emp', document.querySelector('#page-luong .report-subtab[data-tab="emp"]')); return; }
+  _anhThemMoiTam=uploadedImages.slice();
   _advClearImages();
   const monthUsed = salaryMonth;
   document.getElementById('adv-modal-title').textContent='Đề xuất ứng lương';
@@ -8354,7 +8419,7 @@ function openAdvModal(){
   document.getElementById('adv-inp-note').value='';
   const ov=document.getElementById('adv-modal-overlay'); ov.dataset.month=monthUsed; ov.style.display='flex';
 }
-function closeAdvModal(){ document.getElementById('adv-modal-overlay').style.display='none'; _advClearImages(); }
+function closeAdvModal(){ document.getElementById('adv-modal-overlay').style.display='none'; _advClearImages(); if(_anhThemMoiTam){ uploadedImages=_anhThemMoiTam; _anhThemMoiTam=null; try{ renderUploadPreview(); }catch(e){} } }
 // ══════════════════════════════════════════════════════════════════════
 // v154: NHẬP NHIỀU ỨNG LƯƠNG TỪ EXCEL (Mẫu 3: Họ tên | Công trình | Số tiền | Số TK | Ghi chú)
 // SheetJS tải LƯỜI (chỉ khi bấm nút) để không làm chậm mở app. Luôn có bảng xem trước, KHÔNG tự tạo tên lạ.
@@ -8450,7 +8515,7 @@ function _lxParseRows(rows, sheetName){
   let hdrIdx=-1, col={};
   for(let i=0;i<Math.min(rows.length,15);i++){
     const cells=rows[i].map(x=>_normName(x));
-    const findCol=(keys)=>cells.findIndex(c=>keys.some(k=>c.includes(k)));
+    const findCol=(keys)=>{ for(const k of keys){ const i=cells.findIndex(c=>c.includes(k)); if(i>=0) return i; } return -1; }; // v180: theo thứ tự ưu tiên, kẻo 'Lương cơ bản' đứng trước 'Số tiền ứng'
     const cName=findCol(['ho va ten','ho ten','ten']);
     const cMoney=findCol(['so tien','tien','luong']);
     if(cName>=0 && cMoney>=0){
@@ -8600,6 +8665,7 @@ function createLuongFromExcel(){
       amount:row.money, amountUnit:'dong',
       note:(row.note?row.note+' · ':'')+'📥 Nhập Excel lúc '+new Date().toLocaleString('vi-VN'),
       priority:'normal', status:'pending', ts:Date.now(),
+      createdBy:getCurrentUserName()||'', createdByUid:(currentUser&&currentUser.uid)||'', // v180
       imgB64:null, imgImages:[], proofImages:[],
       approvedD:null, approvedH:null, approvedDAmount:null, approvedHAmount:null,
       approvedDHistory:[], approvedHHistory:[], transfers:[]
@@ -8635,6 +8701,7 @@ function saveAdvFromModal(){
     person: emp.name, site: emp.group,
     amount, amountUnit:'dong', note,
     priority:'normal', status:'pending', ts: Date.now(),
+    createdBy: getCurrentUserName()||'', createdByUid: (currentUser&&currentUser.uid)||'', // v180
     imgB64: uploadedImages[0]||null, imgImages: uploadedImages.slice(), proofImages: [],
     approvedD:null, approvedH:null, approvedDAmount:null, approvedHAmount:null,
     approvedDHistory:[], approvedHHistory:[], transfers:[]
@@ -8777,6 +8844,7 @@ function jumpToSalaryAdvance(id){
   }, 180);
 }
 function attachSalaryStatsDoubleTap(container){
+  if(!container||container.dataset.dtapOn) return; container.dataset.dtapOn='1'; // v180: vẽ lại nhiều lần → gắn chồng N listener → chạm đúp chạy N lần, máy đơ
   let lastTap=0, lastTarget=null;
   container.addEventListener('touchend', e=>{
     const row=e.target.closest('.sal-row-link'); if(!row) return;

@@ -154,3 +154,13 @@ Cả 10 bước mục 1.2 đã xong (v13). Còn lại, theo thứ tự nên làm
 ## Chỗ đang lỗi
 
 - Không có lỗi đã biết. Chưa thử trên iPhone thật (mới mô phỏng 375px). Chưa thử với Firebase thật — luật `congNo` mới kiểm tra cú pháp + mô phỏng; thông báo đẩy chưa thử trên máy thật.
+
+## Đã làm 03/10/2026 (bản v16 — rà lỗi toàn app bằng subagent)
+
+2 lượt đọc mã độc lập (1–1112, 1112–2103 + sw-congno.js + scripts/nhac-han-congno.js) + bộ bấm thử Chromium 2 vai với dữ liệu xấu: **không có lỗi nặng**. Đã sửa:
+- `kiemTraDaiHan`: số kỳ đã trả âm (gõ `-1`) → TypeError khó hiểu; nay chặn.
+- `TINH_TOAN.kyPhiToi`: thư thu phí định kỳ chưa nhập "phí mỗi kỳ" không còn nhắc "nộp phí 0 đ" mãi.
+- `scripts/nhac-han-congno.js` (và `nhac-han-hopdong.js`): KHÔNG in tên khoản/ngân hàng/số tiền ra log GitHub Actions nữa — repo công khai, log Actions ai cũng đọc được. Chỉ in số lượng.
+- Luật `congNo/pushSubs` thêm `.read: false` (endpoint push của người khác không đọc được).
+- Ghi nhận, chưa làm: `sw-congno.js` trỏ `icon-192.png` không có trong repo (thông báo vẫn hiện, thiếu icon); `manifest-congno.json` chưa có `icons` (Chrome Android không cho "Cài đặt app").
+

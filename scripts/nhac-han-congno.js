@@ -93,7 +93,7 @@ async function chay() {
   const kq = chonViecNhac(congNo, blChung, homNay);
   console.log('Khoản vay: ' + Object.keys(congNo.khoanVay || {}).length + ' · việc gửi hôm nay: ' + kq.moc.length + ' · người nhận: ' + Object.keys(kq.theoNguoi).length);
   if (!kq.moc.length) { console.log('Không có việc nào đến hạn hôm nay → không gửi gì.'); return; }
-  kq.moc.forEach(m => { const t = NHAC_HAN.soanThongBao(m); console.log('  • ' + t.title + ' | ' + t.body); });
+  console.log('  → ' + kq.moc.length + ' mốc đến hạn (không in nội dung: log GitHub Actions của repo công khai ai cũng đọc được)'); // v16
   if (thu) return;
   const g = await guiPush(kq.theoNguoi, congNo.pushSubs);
   console.log('Đã gửi ' + g.sent + ' thông báo tới ' + g.may + ' máy, lỗi ' + g.failed);
