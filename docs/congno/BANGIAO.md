@@ -1,4 +1,4 @@
-﻿# BANGIAO — nhật ký bàn giao app Công Nợ Ngân Hàng PVA-379-279
+# BANGIAO — nhật ký bàn giao app Công Nợ Ngân Hàng PVA-379-279
 
 > Phiên sau đọc file này + spec `docs/hopdong/CLAUDE-cong-no.md` (bản chốt 02/10/2026) + `docs/hopdong/CLAUDE.md` mục 4.3 trước khi sửa `congno.html`. Ghi ngắn: đã làm gì, còn gì, chỗ nào khác spec, câu nào chờ anh Dũng chốt.
 
