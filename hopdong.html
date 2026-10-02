@@ -603,19 +603,26 @@ const TINH_TOAN = (function () {
     return Object.values(gop).sort((a, b) => a.ky.localeCompare(b.ky));
   }
 
+  // Bảo lãnh của 1 hợp đồng từ bảng baoLanh PHẲNG dùng chung với app Công Nợ (mục 4.3, 02/10): chỉ lấy thư có hopDongId trùng;
+  // thư dự thầu (không có hopDongId) bỏ qua. Vẫn nhận được bảng con cũ dạng {id: thư} chưa có hopDongId (dữ liệu trước 02/10).
+  function baoLanhCua(du) {
+    const hdId = du && du.hopDong && du.hopDong.id;
+    return danhSach(du && du.baoLanh).filter(b => b.loai !== 'duThau' && (!b.hopDongId || !hdId || b.hopDongId === hdId));
+  }
+
   // Các mốc cần nhắc của 1 hợp đồng (mục 1.4 "Nhắc hạn"): hết bảo hành, hết bảo lãnh (3 loại), ngày hoàn thành theo hợp đồng.
   // Chỉ liệt kê mốc có ngày; việc "nhắc trước 30 ngày, lặp 5 ngày, Đã xong" làm ở khối 10 (MÀN HÌNH: Nhắc hạn).
   function cacMoc(du) {
     du = du || {}; const kq = tinhHopDong(du), moc = [];
     if (kq.ngayHetBaoHanh) moc.push({ loai: 'hetBaoHanh', ngayMoc: kq.ngayHetBaoHanh, thamChieuId: '' });
-    danhSach(du.baoLanh).forEach(b => { if (laNgay(b.ngayHetHan)) moc.push({ loai: 'hetBaoLanh', ngayMoc: b.ngayHetHan, thamChieuId: b.id || '', loaiBaoLanh: b.loai || '' }); });
+    baoLanhCua(du).forEach(b => { if (laNgay(b.ngayHetHan)) moc.push({ loai: 'hetBaoLanh', ngayMoc: b.ngayHetHan, thamChieuId: b.id || '', loaiBaoLanh: b.loai || '' }); });
     if (laNgay(kq.ngayHoanThanhHienHanh) && kq.dangThucHien) moc.push({ loai: 'hoanThanhHopDong', ngayMoc: kq.ngayHoanThanhHienHanh, thamChieuId: '' });
     return moc.sort((a, b) => a.ngayMoc.localeCompare(b.ngayMoc));
   }
 
   return { soNguyen, danhSach, tongTruong, laNgay, congThang, soNgayGiua, thangCua, quyCua, quyCuaThang, kyCua,
     TRANG_THAI_KET_THUC, giaTriHienHanh, ngayHoanThanhHienHanh, ngayHetBaoHanh, daDuyetQuyetToan, doanhThuCuoiCung,
-    tinhHopDong, tinhTongHop, dongTien, cacMoc };
+    tinhHopDong, tinhTongHop, dongTien, baoLanhCua, cacMoc };
 })();
 // ===== HẾT 6. TINH_TOAN =====
 // ===== ĐIỀU PHỐI MÀN HÌNH =====

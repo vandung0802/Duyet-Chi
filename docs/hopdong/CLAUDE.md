@@ -2,7 +2,7 @@
 
 > File này là bản hướng dẫn cho AI agent (Claude Code) đóng vai **Chuyên gia phát triển phần mềm kiêm Quản lý dự án xây dựng** khi làm việc trong kho mã này. Agent đọc file này đầu tiên ở mỗi phiên. Người trong công ty cũng đọc được: mỗi mục đều có phần giải thích in nghiêng cho người không làm kỹ thuật.
 >
-> Bản này chốt ngày 30/09/2026 sau buổi phỏng vấn anh Dũng. Chỗ nào chưa chốt được ghi ở cuối mục 1 (mục "Việc còn phải chốt").
+> Bản này chốt ngày 30/09/2026 sau buổi phỏng vấn anh Dũng; **cập nhật 02/10/2026** khi có thêm app Công Nợ (repo `cong-no-pva-379-279`) dùng chung Firebase và đăng nhập với app này — các chỗ đổi được đánh dấu *(02/10)*.
 
 ---
 
@@ -26,20 +26,22 @@ App **không** quản lý hợp đồng thầu phụ, nhà cung cấp (tiền ra
 
 Dữ liệu ban đầu: khoảng **20 hợp đồng đang dở dang** trên cả ba công ty, hiện theo dõi bằng Excel và nhắc nhở thủ công. File Excel có nhưng chưa đầy đủ, nên app phải cho nhập cả từ Excel lẫn nhập tay.
 
+*(02/10)* Đã có file Excel mẫu thật của kế toán: `docs/Theo-doi-cong-trinh-Dai-Thanh.xls` (3 sheet theo năm). Cách kế toán đang ghi: **mỗi hợp đồng một khối nhiều dòng** — dòng đầu có TT, tên công trình, chủ đầu tư, số HĐ, ngày ký, giá trị; các dòng dưới mỗi dòng một đợt (Đợt 1, Đợt 2, Quyết toán, Quyết toán BS, "ĐC giảm của Đ3"…) với ngày nghiệm thu, giá trị, lũy kế, ngày/số hóa đơn, doanh thu, thuế; cột "Nhận tiền" (ngày, số tiền) chạy song song nhưng **không khớp dòng với đợt**; sheet 2024 có thêm cột tạm ứng / thu hồi / còn lại và cột chênh lệch tiền về. **File mẫu nhập liệu `mau/mau-nhap-hop-dong.xlsx` phải theo bố cục này** (một sheet hợp đồng, một sheet đợt nghiệm thu, một sheet tiền về — mỗi dòng có số HĐ để nối), và bộ nhập Excel phải đọc được cả file gốc kiểu khối nhiều dòng nói trên, hiện xem trước để kế toán ghép tiền về vào đúng đợt trước khi ghi.
+
 ### 1.3. Nền tảng và công nghệ (đã chốt)
 
 | Hạng mục | Quyết định | Lý do |
 |---|---|---|
 | Kiểu ứng dụng | Web app, cài được lên màn hình chính điện thoại (PWA) | Dùng được trên máy tính và iPhone, không phải cài gì |
-| Mã nguồn | **Một file HTML** chứa toàn bộ giao diện và logic — hiện là `hopdong.html` trong repo Duyet-Chi (chốt 30/09/2026) | Cùng cách với app Duyệt Chi (`app3.html`) và app Tiến độ, anh Dũng đã quen sửa |
-| Đưa lên mạng | GitHub Pages — **chốt 30/09/2026: giữ trong repo `vandung0802/Duyet-Chi`** (`/Duyet-Chi/hopdong.html`), vì đang chạy, dùng chung đăng nhập và luật Firebase tự deploy. Tách repo riêng `hop-dong-pva-379-279` khi app ổn (chuyển 1 file) | Miễn phí, đã dùng cho hai app trước |
-| Kho dữ liệu chính | Firebase Realtime Database — dùng chung project `duyetchi-pva379` của Duyệt Chi, mọi nhánh mục 4.3 nằm dưới `hopdong/` | Nhiều người nhập cùng lúc, đồng bộ ngay; chung tài khoản và danh sách người dùng |
+| Mã nguồn | **Một file `index.html`** chứa toàn bộ giao diện và logic | Cùng cách với app Duyệt Chi và app Tiến độ, anh Dũng đã quen sửa |
+| Đưa lên mạng | GitHub Pages, repo `vandung0802/hop-dong-pva-379-279` | Miễn phí, đã dùng cho hai app trước |
+| Kho dữ liệu chính | Firebase Realtime Database. *(02/10)* **Dùng chung project với app Công Nợ**: các nhánh `congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu` là chung; app Công Nợ để dữ liệu riêng dưới `congNo/` | Nhiều người nhập cùng lúc; bảo lãnh nhập một nơi cả hai app cùng thấy |
 | Bản sao Google Sheets | Đồng bộ một chiều Firebase → Google Sheets qua Google Apps Script (gọi kiểu JSONP như Duyệt Chi) | Kế toán quen xem bảng; tránh lỗi CORS của GitHub Pages |
 | File đính kèm (scan hợp đồng, phụ lục, bảo lãnh) | Tải lên **Google Drive** của tài khoản vandung0802@gmail.com qua Apps Script; lưu link công khai "ai có link đều tải được" vào Firebase | Ai cũng tải xuống được, không hạn chế |
 | OneDrive | Giai đoạn đầu chỉ cho **dán link** OneDrive vào ô đính kèm; chưa làm tải lên tự động | Kết nối OneDrive phức tạp hơn nhiều, để giai đoạn sau |
 | Thông báo đẩy | Web push (Firebase Cloud Messaging), hiện trên màn hình khóa điện thoại | Như app Duyệt Chi; iPhone cần cài app lên màn hình chính, iOS 16.4 trở lên |
 | Chạy nhắc định kỳ | GitHub Actions chạy mỗi sáng 7:00 giờ Việt Nam, đọc Firebase, gửi push cho mốc đến hạn | Cách đơn giản nhất, không tốn tiền |
-| Đăng nhập | **Email + mật khẩu Firebase Auth, dùng chung tài khoản app Duyệt Chi** (chốt 30/09/2026; Duyệt Chi thật dùng email + mật khẩu, không phải tên + PIN). Ai được duyệt trong Duyệt Chi vào được ngay | Người dùng quen rồi; tên + PIN không bảo vệ được dữ liệu trên Firebase |
+| Đăng nhập | Chọn tên + mã PIN (như Duyệt Chi). *(02/10)* Danh sách người dùng và PIN **dùng chung với app Công Nợ** (nhánh `nguoiDung`) | Một người một mật khẩu cho cả bộ app |
 | Xuất báo cáo | Nút "Xuất Excel" trên dashboard và bảng hợp đồng | Chỉ cần Excel, không cần gửi Zalo/Telegram |
 
 ### 1.4. Nghiệp vụ đã chốt
@@ -94,6 +96,8 @@ Dữ liệu ban đầu: khoảng **20 hợp đồng đang dở dang** trên cả
 - Bảo lãnh thực hiện hợp đồng
 - Bảo lãnh tạm ứng
 - Bảo lãnh bảo hành
+
+*(02/10)* Nhánh `baoLanh` **dùng chung với app Công Nợ**. Thực tế kế toán nhập bảo lãnh ở app Công Nợ (kèm phí và ký quỹ), phòng kế hoạch xem ở app này; nhập ở app này cũng được, bên kia thấy ngay. App này chỉ hiện các thư có `hopDongId` trùng hợp đồng đang mở; bảo lãnh dự thầu (chưa có hợp đồng) chỉ hiện bên app Công Nợ. Phí bảo lãnh và ký quỹ do app Công Nợ quản, app này không hiện. Khi nhập `thanhToan.thuHoiTamUng`, app Công Nợ sẽ đọc để giảm ký quỹ bảo lãnh tạm ứng — vì vậy **không được đổi tên trường `thuHoiTamUng`**.
 
 **Bảo hành**
 
@@ -161,8 +165,12 @@ Tiền lưu bằng **số nguyên VND**, không dùng số thập phân. Ngày l
 - Không tách thuế GTGT trong từng đợt thanh toán.
 - OneDrive: giai đoạn đầu chỉ dán link. Tải lên tự động để sau khi app chạy ổn vài tháng, hoặc bỏ nếu Google Drive đủ dùng.
 - Mã đang viết dở: sửa theo file này, thiếu tự bổ sung, thừa tự bỏ (xem mục 1.2).
-- Chốt thêm 30/09/2026 (anh Dũng "cứ làm" theo đề nghị của agent): (1) giữ mã trong repo Duyet-Chi, file `hopdong.html`; (2) giữ đăng nhập email + mật khẩu chung Duyệt Chi; (3) công thức mục 1.5 giữ **nguyên văn** — tiền hoàn trả (`hoanTra`) không cộng vào `tienDaVe`, không trừ khỏi `conPhaiThu` (muốn đổi phải chốt lại); (4) giữ ô "Còn lại chưa thi công" = giá trị hiện hành − khối lượng đã thực hiện nhập tay (không nhập thì tạm = chưa nghiệm thu; đã bàn giao/quyết toán/xong = 0); (5) "Tổng giá trị hợp đồng đang thực hiện" = mọi trạng thái trừ `daXong` và `biChamDut`.
-- Bảo lãnh tạm ứng lưu ở bảng `baoLanh` (loại `tamUng`, có `tamUngId`), `tamUng.baoLanhId` trỏ sang — để nhắc gia hạn dùng chung một chỗ.
+
+Chốt thêm ngày 02/10/2026 (khi lập app Công Nợ):
+
+- Dùng chung Firebase project và danh sách người dùng + PIN với app Công Nợ.
+- Bảng `baoLanh` đổi sang dạng phẳng, dùng chung; thêm loại dự thầu; phí và ký quỹ do app Công Nợ quản.
+- File Excel thật của kế toán (Đại Thành) là chuẩn để thiết kế mẫu nhập liệu.
 
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
@@ -218,6 +226,7 @@ Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào 
 15. Không sửa Firebase Security Rules, không đổi cấu hình Firebase, không đổi Apps Script đang chạy mà không nói trước và có bản sao lưu.
 16. Nhập từ Excel phải theo file mẫu do app xuất ra (`mau/mau-nhap-hop-dong.xlsx`). Trước khi ghi vào Firebase phải hiện bảng xem trước, báo dòng lỗi, người dùng bấm xác nhận mới ghi.
 17. Công thức tính chỉ dùng đúng mục 1.5. Muốn đổi công thức phải hỏi anh Dũng, vì công thức là nghiệp vụ, không phải kỹ thuật.
+17b. *(02/10)* Nhánh dùng chung với app Công Nợ (`congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu`): được **thêm** trường, **không đổi tên, không xóa** trường đang có, không đổi cấu trúc — app kia đang đọc. Mọi ghi vào `lichSu`, `nhacNho`, `yeuCauXoa` phải có `app = "hopDong"`. Không đọc, không ghi vào `congNo/`.
 
 ### 3.4. Nhắc hạn và thông báo
 
@@ -353,28 +362,37 @@ Mỗi nhánh dưới đây là một "bảng". Khóa `{id}` do Firebase sinh (`p
 │     lyDo ("phatHanhBaoLanh"|"hetBaoHanh"|"duyetQuyetToan"|"khac")
 │     baoLanhId                                  ← nếu trả tiền do phát hành thư bảo lãnh
 │
-├── baoLanh/{hopDongId}/{id}
-│     loai ("thucHienHopDong"|"tamUng"|"baoHanh")
-│     nganHang, soTien, ngayPhatHanh, ngayHetHan, daGiaHan, fileId
+├── baoLanh/{id}                                ← (02/10) DÙNG CHUNG với app Công Nợ, dạng phẳng
+│     app ("hopDong"|"congNo")                  ← app nào tạo
+│     loai ("duThau"|"thucHienHopDong"|"tamUng"|"baoHanh")
+│     hopDongId (bắt buộc với 3 loại sau; dự thầu thì để trống, ghi tenGoiThau)
+│     nganHangId (trỏ congNo/nganHang) hoặc nganHang (tên, nếu nhập từ app này)
+│     congTyId, soThu, soTien, ngayPhatHanh, ngayHetHan, daGiaHan
+│     phi, kyQuy, keToanTheoDoi                 ← app Công Nợ ghi; app này không đụng
+│     fileDinhKem/{id}
 │
-├── nhacNho/{id}
+├── nhacNho/{id}                                ← (02/10) dùng chung, có trường app
+│     app ("hopDong"|"congNo")
 │     hopDongId, loai ("hetBaoHanh"|"hetBaoLanh"|"hoanThanhHopDong"|"khac")
 │     thamChieuId, ngayMoc, ngayNhacTiep, soLanDaNhac
 │     daXong (bool), nguoiXong, lucXong
 │
-├── yeuCauXoa/{id}
-│     bang, banGhiId, nguoiYeuCau, luc, lyDo
+├── yeuCauXoa/{id}                              ← (02/10) dùng chung, có trường app
+│     app, bang, banGhiId, nguoiYeuCau, luc, lyDo
 │     trangThai ("cho"|"dongY"|"tuChoi"), nguoiDuyet, lucDuyet
 │
-└── lichSu/{id}
-      nguoi, luc, bang, banGhiId, hopDongId
+├── lichSu/{id}                                 ← (02/10) dùng chung, có trường app
+│     app, nguoi, luc, bang, banGhiId, hopDongId
       hanhDong ("tao"|"sua"|"xoa")
       truong, giaTriCu, giaTriMoi
+│
+└── congNo/                                     ← (02/10) dữ liệu riêng của app Công Nợ,
+                                                   app này KHÔNG đọc, KHÔNG ghi
 ```
 
 Ghi chú cho người đọc không kỹ thuật:
 
-- `hopDong` là bảng chính. Mỗi hợp đồng có các bảng con `phuLuc`, `tamUng`, `thanhToan`, `baoLanh`, `hoanTra` treo bên dưới theo `hopDongId`.
+- `hopDong` là bảng chính. Mỗi hợp đồng có các bảng con `phuLuc`, `tamUng`, `thanhToan`, `hoanTra` treo bên dưới theo `hopDongId`. Riêng `baoLanh` nằm phẳng ở gốc và nối với hợp đồng bằng trường `hopDongId`, vì app Công Nợ cũng dùng.
 - Các con số tổng (giá trị hiện hành, đã nghiệm thu, tiền về, còn phải thu) **không lưu** trong Firebase mà app **tự tính** mỗi lần hiển thị từ các bảng con, theo công thức mục 1.5. Làm vậy để không bao giờ lệch giữa số tổng và số chi tiết.
 - `lichSu` là sổ ghi ai làm gì. Chỉ thêm, không sửa, không xóa.
 
