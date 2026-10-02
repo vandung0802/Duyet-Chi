@@ -239,6 +239,20 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
       <div class="card"><div class="card-body" style="font-size:13px;color:var(--text-sub)" id="nhac-bang"></div></div>
     </section>
 
+    <!-- ===== 18. MÀN HÌNH: Nhập từ Excel (mục trong trang Khác) ===== -->
+    <section id="tab-excel" hidden>
+      <button class="btn sec sm" style="margin-bottom:10px" onclick="chuyenTab('khac')">‹ Khác</button>
+      <div class="card"><div class="card-body">
+        <h3 style="font-size:15px;margin-bottom:8px">📥 Nhập dữ liệu ban đầu từ Excel</h3>
+        <p style="font-size:14px;color:var(--text-sub);margin-bottom:8px">1. Bấm <b>File mẫu</b> để tải file có sẵn tiêu đề cột (6 sheet: NganHang, HanMuc, KheUoc, VayDaiHan, ThueTaiChinh, ThauChi + sheet HuongDan).<br>2. Điền số liệu vào file mẫu (mỗi dòng một khoản; ngày ghi dd/mm/yyyy).<br>3. Bấm <b>Chọn file</b> → app hiện bảng XEM TRƯỚC, báo dòng lỗi → bấm xác nhận mới ghi.<br>Dòng trùng với khoản đã có trong app thì tự bỏ qua, không tạo đôi. Bảo lãnh và tài sản bảo đảm nhập tay trong app.</p>
+        <div class="row">
+          <button class="btn sec" onclick="taiFileMau()">⬇️ File mẫu</button>
+          <button class="btn" onclick="document.getElementById('xl-file').click()">📂 Chọn file</button>
+        </div>
+        <input id="xl-file" type="file" accept=".xlsx,.xls" hidden onchange="chonFileExcel(event)">
+      </div></div>
+    </section>
+
     <!-- ===== 16. MÀN HÌNH: Tài sản bảo đảm (mục trong trang Khác) ===== -->
     <section id="tab-taisan" hidden>
       <button class="btn sec sm" style="margin-bottom:10px" onclick="chuyenTab('khac')">‹ Khác</button>
@@ -316,7 +330,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261002-v12',
+  PHIEN_BAN: '20261002-v13',
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
   NHAC_HAN_MUC_NGAY: 60           // hạn mức sắp hết hạn: báo trước 60 ngày (mục 1.4)
@@ -950,7 +964,7 @@ const tinhKV = k => TINH_TOAN.tinhKhoan(k, homNay(), CAU_HINH.SAP_DEN_HAN_NGAY);
 function tinhHanMuc(id){ const h=DL.hanMuc[id]||{}, ku=kheUocCua(id), baoLanh=TINH_TOAN.baoLanhCuaHanMuc(h,dsBaoLanh(),homNay()), daDung=TINH_TOAN.hanMucDaDung(h,ku,baoLanh); return { daDung, conTrong:TINH_TOAN.hanMucConTrong(h,daDung), kheUoc:ku, baoLanh }; }
 
 // ===== ĐIỀU PHỐI MÀN HÌNH =====
-const CAC_TAB = ['tongquan','hanmuc','lich','baolanh','khac','nganhang','thauchi','taisan','nhac'];   // 4 tab có nút ở thanh dưới + các mục con mở từ trang Khác
+const CAC_TAB = ['tongquan','hanmuc','lich','baolanh','khac','nganhang','thauchi','taisan','nhac','excel'];   // 4 tab có nút ở thanh dưới + các mục con mở từ trang Khác
 function chuyenTab(t){ CAC_TAB.forEach(x=>$('tab-'+x).hidden=x!==t); const coNut=!!document.querySelector(`.nav-item[data-tab="${t}"]`);
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===(coNut?t:'khac'))); window.scrollTo(0,0); }
 let soDangNhac=0;   // số việc đang nhắc (hiện ở ô Nhắc hạn, số đỏ trên nút Khác)
@@ -1908,10 +1922,87 @@ async function dangKyPush(){
 // Giám đốc chọn ai nhận MỌI nhắc hạn (anh Dũng, Hiền, Ngọc…); kế toán theo dõi thì luôn nhận nhắc của khoản mình
 async function datNhanTatCa(uid, co){ try{ await ghiNhieu({ [dRieng('nguoiDung/'+uid+'/nhanTatCa')]:co?true:null }); toast(co?'✅ Người này sẽ nhận mọi nhắc hạn':'Đã bỏ'); }catch(e){ toast('❌ '+e.message); } }
 
+// ===== 18. MÀN HÌNH: Nhập từ Excel — theo file mẫu do app xuất; xem trước → báo dòng lỗi → xác nhận mới ghi (quy tắc 19) =====
+// Mỗi sheet một loại; cột: [khoá, tiêu đề cột, kiểu ('' chữ | tien | so | thapPhan | ngay), bắt buộc]. Khoá bắt đầu bằng _ là cột để TÌM (ngân hàng, hạn mức), không lưu.
+// Chưa có file theo dõi vay của kế toán nên mẫu làm theo cấu trúc app (mục 1.2); khi có file thật thì chỉnh MAU_NHAP cho giống cách kế toán ghi.
+const C_NH=[['_nh','Ngân hàng','',1],['_cn','Chi nhánh']], C_CTY=[['congTyVay','Công ty đứng tên (PVA/379/279)','',1],['congTyChiu','Công ty thực chịu (PVA/379/279)']];
+const MAU_NHAP = {
+  NganHang: [['ten','Tên ngân hàng / công ty cho thuê','',1],['chiNhanh','Chi nhánh'],['loai','Loại (Ngân hàng / Cho thuê tài chính)'],['canBo.ten','Cán bộ tín dụng'],['canBo.dienThoai','Điện thoại cán bộ']],
+  HanMuc: C_NH.concat(C_CTY,[['soHopDong','Số hợp đồng hạn mức','',1],['soTien','Hạn mức','tien',1],['ngayHieuLuc','Ngày hiệu lực','ngay'],['ngayHetHan','Ngày hết hạn','ngay',1],['ghiChu','Ghi chú']]),
+  KheUoc: C_NH.concat([['_hm','Số hợp đồng hạn mức','',1],['soKheUoc','Số khế ước','',1],['ngayGiaiNganDau','Ngày giải ngân','ngay',1],['soTien','Số tiền giải ngân','tien',1],['thoiHanThang','Thời hạn (tháng)','so'],['ngayDenHan','Ngày đến hạn','ngay'],
+    ['laiSuatDau','Lãi suất (%/năm)','thapPhan',1],['ngayTraLaiTrongThang','Ngày trả lãi hằng tháng (1-31)','so',1],['mucDich.congTrinh','Trả cho công trình'],['mucDich.khachHang','Khách hàng / nhà cung cấp'],['mucDich.noiDung','Nội dung']]),
+  VayDaiHan: C_NH.concat(C_CTY,[['soHopDong','Số hợp đồng tín dụng','',1],['soTien','Số tiền vay theo hợp đồng','tien',1],['ngayGiaiNganDau','Ngày giải ngân lần đầu','ngay',1],['soTienGiaiNganDau','Số tiền đã giải ngân (trống = hết)','tien'],
+    ['laiSuatDau','Lãi suất (%/năm)','thapPhan',1],['ngayTraLaiTrongThang','Ngày trả lãi hằng tháng (1-31)','so',1],['soKy','Số kỳ trả gốc','so',1],['kyCachThang','Các kỳ cách nhau (tháng: 1/3/6/12)','so'],['ngayTraDau','Ngày trả gốc kỳ đầu','ngay',1],
+    ['gocMoiKy','Gốc mỗi kỳ (trống = chia đều)','tien'],['soKyDaTra','Số kỳ gốc đã trả','so'],['mucDich.noiDung','Mục đích vay'],['mucDich.khachHang','Bên bán / nhà cung cấp']]),
+  ThueTaiChinh: C_NH.concat(C_CTY,[['soHopDong','Số hợp đồng thuê','',1],['ngayKy','Ngày ký','ngay',1],['thietBi.ten','Tên thiết bị','',1],['thietBi.nhanHieu','Nhãn hiệu'],['thietBi.model','Model'],['thietBi.soKhung','Số khung'],['thietBi.soMay','Số máy'],['thietBi.bienSo','Biển số'],
+    ['giaTriThietBi','Giá trị thiết bị','tien'],['tienTraTruoc','Tiền trả trước','tien'],['tienKyQuy','Tiền ký quỹ','tien'],['soTien','Số tiền tài trợ (gốc thuê)','tien',1],['giaMuaLai','Giá mua lại cuối kỳ','tien'],['laiSuatDau','Lãi suất (%/năm)','thapPhan',1],
+    ['soKy','Kỳ hạn (số tháng)','so',1],['ngayTraDau','Ngày trả kỳ đầu','ngay',1],['gocMoiKy','Gốc mỗi kỳ (trống = chia đều)','tien'],['soKyDaTra','Số kỳ đã trả','so'],['noiDangO','Thiết bị đang ở đâu'],['baoHiem.hang','Hãng bảo hiểm'],['baoHiem.ngayHetHan','Ngày hết hạn bảo hiểm','ngay']]),
+  ThauChi: C_NH.concat(C_CTY,[['soHopDong','Số hợp đồng / tài khoản thấu chi'],['hanMuc','Hạn mức thấu chi','tien',1],['ngayHieuLuc','Hiệu lực từ ngày','ngay',1],['ngayHetHan','Ngày hết hạn','ngay',1],['laiSuatDau','Lãi suất (%/năm)','thapPhan',1],
+    ['ngayNopHangThang','Ngày nộp tiền hằng tháng (1-31)','so',1],['nopHangThang','Hằng tháng nộp (Chỉ lãi / Cả gốc và lãi)'],['_dangDung','Số đang dùng hiện tại','tien']])
+};
+const BANG_NHAP = { NganHang:'nganHang', HanMuc:'hanMuc', KheUoc:'khoanVay', VayDaiHan:'khoanVay', ThueTaiChinh:'khoanVay', ThauChi:'thauChi' };
+async function taiFileMau(){ try{ const X=await napSheetJs(), wb=X.utils.book_new();
+    Object.entries(MAU_NHAP).forEach(([ten,cot])=>{ const ws=X.utils.aoa_to_sheet([cot.map(c=>c[1]+(c[3]?' *':''))]); ws['!cols']=cot.map(c=>({wch:Math.max(14,c[1].length+2)})); X.utils.book_append_sheet(wb,ws,ten); });
+    X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([['HƯỚNG DẪN NHẬP CÔNG NỢ NGÂN HÀNG'],['• Mỗi sheet một loại: NganHang → HanMuc → KheUoc → VayDaiHan → ThueTaiChinh → ThauChi. Không đổi tên sheet, không đổi dòng tiêu đề.'],['• Cột có dấu * là bắt buộc. Mỗi dòng một khoản.'],['• Ngày ghi dd/mm/yyyy. Tiền ghi số nguyên đồng (có dấu chấm ngăn nghìn cũng được). Lãi suất ghi %/năm, ví dụ 9,5.'],['• Cột "Ngân hàng" + "Chi nhánh" phải trùng tên ngân hàng đã có trong app hoặc trong sheet NganHang của chính file này.'],['• KheUoc: cột "Số hợp đồng hạn mức" phải trùng một hợp đồng ở sheet HanMuc (hoặc đã có trong app) của đúng ngân hàng đó.'],['• VayDaiHan / ThueTaiChinh: app tự sinh lịch trả gốc từ số kỳ + ngày kỳ đầu. Khoản vay cũ: ghi "Số kỳ đã trả" để dư nợ đúng.'],['• ThauChi: "Số đang dùng hiện tại" sẽ thành một dòng Rút ghi ngày hôm nhập.'],['• Dòng trùng với khoản đã có trong app thì bỏ qua, không tạo đôi. Chọn file xong app hiện XEM TRƯỚC, bấm xác nhận mới ghi.']]),'HuongDan');
+    X.writeFile(wb,'mau-nhap-cong-no.xlsx'); }catch(e){ toast('❌ '+e.message); } }
+// Đọc một ô Excel theo kiểu của cột
+function docOExcel(x, kieu){ if(x==null) x='';
+  if(kieu==='tien') return typeof x==='number'?Math.round(x):docTien(x);
+  if(kieu==='so') return Math.round(Number(String(x).replace(/[^\d-]/g,''))||0);
+  if(kieu==='thapPhan'){ const n=typeof x==='number'?x:Number(String(x).replace('%','').trim().replace(',','.'))||0; return typeof x==='number'&&n>0&&n<1?Math.round(n*1e6)/1e4:n; }   // ô định dạng phần trăm (0,095) → 9,5
+  if(kieu==='ngay'){ if(typeof x==='number') return new Date(Date.UTC(1899,11,30)+Math.round(x)*86400000).toISOString().slice(0,10);   // ô kiểu ngày của Excel = số ngày từ 30/12/1899
+    const s=String(x).trim(), m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); return m?m[3]+'-'+pad(m[2])+'-'+pad(m[1]):/^\d{4}-\d{2}-\d{2}$/.test(s)?s:''; }
+  return String(x).trim(); }
+const docCongTy = s => { s=String(s||'').trim().toUpperCase(); return MA_CONG_TY.includes(s)?s:''; };
+// Dựng gói ghi từ file Excel trong một "bản nháp" của dữ liệu: dùng ĐÚNG các hàm kiểm tra của form nhập tay (KIEM_TRA), không ghi gì cho tới khi người dùng xác nhận.
+function xuLyNhap(X, wb){
+  const goc={}, kq={ up:{}, sheet:[], soMoi:0, soLoi:0 }, canhBao=[], hoiGoc=window.confirm, formGoc=_form;
+  ['nganHang','hanMuc','khoanVay','thauChi'].forEach(b=>{ goc[b]=DL[b]; DL[b]=banSao(DL[b]); });   // bản nháp: dòng sau thấy được dòng trước (ngân hàng → hạn mức → khế ước)
+  window.confirm=m=>{ canhBao.push(m); return true; };
+  const timNH=(ten,cn)=>{ const ds=danhSachCon(DL.nganHang).filter(n=>khop(n.ten,ten)); return (ds.find(n=>khop(n.chiNhanh,cn))||(!cn&&ds.length===1?ds[0]:null)); };
+  try{ Object.entries(MAU_NHAP).forEach(([tenSheet,cot])=>{
+    const tenThat=wb.SheetNames.find(s=>khop(s,tenSheet)); if(!tenThat) return;
+    const hang=X.utils.sheet_to_json(wb.Sheets[tenThat],{header:1,defval:''}), td=(hang[0]||[]).map(h=>String(h).replace(/\*/g,'').trim().toLowerCase()), vt=cot.map(c=>td.indexOf(c[1].toLowerCase())), ds=[], bang=BANG_NHAP[tenSheet];
+    const thieuCot=cot.filter((c,i)=>c[3]&&vt[i]<0).map(c=>c[1]);
+    hang.slice(1).forEach((h,i)=>{ if(!h.some(x=>String(x).trim()!=='')) return;   // dòng trống
+      const r={ so:i+2, tomTat:'', kq:'', loai:'' }; ds.push(r);
+      try{ if(thieuCot.length) throw new Error('Sheet thiếu cột: '+thieuCot.join(', '));
+        const v={}, tim={}; cot.forEach((c,j)=>{ const gt=docOExcel(vt[j]<0?'':h[vt[j]],c[2]); if(c[0][0]==='_') tim[c[0]]=gt; else datO(v,c[0],gt); });
+        const thieu=cot.filter((c,j)=>c[3]&&(c[0][0]==='_'?!tim[c[0]]:!layO(v,c[0]))).map(c=>c[1]); if(thieu.length) throw new Error('Thiếu: '+thieu.join(', '));
+        canhBao.length=0; _form={duongBang:bang,id:'',them:{}};
+        if(tenSheet==='NganHang') v.loai=/thuê/i.test(v.loai)?'choThueTaiChinh':'nganHang';
+        else { const nh=timNH(tim._nh,tim._cn); if(!nh) throw new Error('Chưa có ngân hàng "'+tim._nh+(tim._cn?' — '+tim._cn:'')+'" (thêm vào sheet NganHang hoặc ghi đúng chi nhánh)'); v.nganHangId=nh.id;
+          if('congTyVay' in v){ v.congTyVay=docCongTy(v.congTyVay); if(!v.congTyVay) throw new Error('Công ty đứng tên phải là PVA, 379 hoặc 279'); v.congTyChiu=docCongTy(v.congTyChiu); } }
+        if(bang==='khoanVay'){ Object.assign(v,{ loaiLaiSuat:'thaNoi', nhomNo:1, coCauLai:{co:false,ngay:'',ghiChu:''}, mucDich:v.mucDich||{} });
+          if(tenSheet==='KheUoc'){ const hm=danhSachCon(DL.hanMuc).find(x=>x.nganHangId===v.nganHangId&&khop(x.soHopDong,tim._hm)); if(!hm) throw new Error('Chưa có hợp đồng hạn mức "'+tim._hm+'" ở ngân hàng này (thêm vào sheet HanMuc)'); _form.them={hanMucId:hm.id}; delete v.nganHangId; v.congTyChiu=''; }
+          else { _form.them={loai:tenSheet==='VayDaiHan'?'daiHan':'thueTaiChinh'}; v.kyCachThang=v.kyCachThang||1; } }
+        if(bang==='hanMuc') Object.assign(v,{ hanMucBaoLanhRieng:false, soTienHanMucBaoLanh:0 });
+        if(bang==='thauChi'){ v.loaiLaiSuat='thaNoi'; v.nopHangThang=/gốc/i.test(v.nopHangThang)?'gocLai':'lai'; }
+        r.tomTat=tomTatMoi(bang,Object.assign({loai:_form.them.loai},v))+(bang!=='hanMuc'&&(v.soTien||v.hanMuc)?' · '+tien(v.soTien||v.hanMuc)+' đ':'');
+        KIEM_TRA[bang](v,bang,'');
+        if(bang==='thauChi'&&tim._dangDung>0) v.giaoDich={ [khoaMoi()]:{ ngay:homNay(), loai:'rut', soTien:tim._dangDung, noiDung:'Số đang dùng khi bắt đầu nhập app' } };
+        const id=soanLuu(kq.up,bang,'',v,r.tomTat+' (nhập từ Excel)'); DL[bang][id]=kq.up[dRieng(bang+'/'+id)];
+        r.loai='moi'; r.kq='sẽ thêm'+(canhBao.length?' — ⚠️ vượt hạn mức còn trống':''); kq.soMoi++;
+      }catch(e){ const trung=/đã có/i.test(e.message); r.loai=trung?'boQua':'loi'; r.kq=e.message; if(!trung) kq.soLoi++; }
+    });
+    kq.sheet.push({ ten:tenSheet, dong:ds });
+  }); } finally { Object.assign(DL,goc); window.confirm=hoiGoc; _form=formGoc; }
+  return kq;
+}
+let _goiNhap=null;
+async function chonFileExcel(ev){ const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
+  try{ const X=await napSheetJs(), wb=X.read(await f.arrayBuffer()), kq=xuLyNhap(X,wb); _goiNhap=kq;
+    if(!kq.sheet.length) return toast('File không có sheet nào đúng tên mẫu (NganHang, HanMuc, KheUoc…). Hãy dùng "File mẫu".');
+    moModal(`<h3>📥 Xem trước — ${esc(f.name)}</h3><div class="hint" style="margin-bottom:8px">✅ sẽ thêm <b>${kq.soMoi}</b> dòng · ❌ lỗi <b class="${kq.soLoi?'neg':''}">${kq.soLoi}</b> dòng (dòng lỗi KHÔNG được ghi; sửa trong Excel rồi nhập lại — dòng đã ghi sẽ tự bỏ qua).</div>
+      ${kq.sheet.map(s=>`<h4 style="margin:10px 0 4px;font-size:14px;color:var(--blue-dark)">${esc(s.ten)} — ${s.dong.length} dòng</h4>${s.dong.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Dòng</th><th class="tr">Nội dung</th><th class="tr">Kết quả</th></tr></thead><tbody>${s.dong.map(r=>`<tr class="${r.loai==='loi'?'over':''}" style="cursor:default"><td class="tr">${r.so}</td><td class="tr" style="white-space:normal">${esc(r.tomTat)}</td><td class="tr" style="white-space:normal">${r.loai==='moi'?'✅':r.loai==='boQua'?'⏭ bỏ qua:':'❌'} ${esc(r.kq)}</td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Không có dòng nào.</div>'}`).join('')}
+      <div class="row" style="margin-top:14px"><button class="btn sec" onclick="dongModal()">Huỷ</button><button class="btn" ${kq.soMoi?'':'disabled'} onclick="ghiNhapExcel(this)">✅ Ghi ${kq.soMoi} dòng hợp lệ</button></div>`);
+  }catch(e){ toast('❌ Không đọc được file: '+e.message); } }
+async function ghiNhapExcel(btn){ await bam(btn,async()=>{ if(!_goiNhap||!_goiNhap.soMoi) return; await ghiNhieu(_goiNhap.up); toast('✅ Đã nhập '+_goiNhap.soMoi+' dòng từ Excel'); _goiNhap=null; }); }
+
 // ===== 19. MÀN HÌNH: Quản trị — yêu cầu xoá (giám đốc duyệt), ba công ty (chỉ xem), người dùng =====
 function veQuanTri(){
   // các mục con mở từ trang Khác
-  $('khac-menu').innerHTML=[ ['nhac','🔔 Nhắc hạn',soDangNhac,'việc đến hạn, bật thông báo 7:00 sáng'], ['nganhang','🏦 Ngân hàng',danhSachCon(DL.nganHang).length,'ngân hàng, công ty cho thuê; số tài khoản'], ['thauchi','🔄 Thấu chi',danhSachCon(DL.thauChi).length,'hạn mức thấu chi, rút / nộp'], ['taisan','🏠 Tài sản bảo đảm',danhSachCon(DL.taiSanBaoDam).length,'tài sản thế chấp, định giá lại'] ]
+  $('khac-menu').innerHTML=[ ['nhac','🔔 Nhắc hạn',soDangNhac,'việc đến hạn, bật thông báo 7:00 sáng'], ['nganhang','🏦 Ngân hàng',danhSachCon(DL.nganHang).length,'ngân hàng, công ty cho thuê; số tài khoản'], ['thauchi','🔄 Thấu chi',danhSachCon(DL.thauChi).length,'hạn mức thấu chi, rút / nộp'], ['taisan','🏠 Tài sản bảo đảm',danhSachCon(DL.taiSanBaoDam).length,'tài sản thế chấp, định giá lại'], ['excel','📥 Nhập từ Excel','','file mẫu, nhập dữ liệu ban đầu'] ]
     .map(([t,ten,n,moTa])=>`<div class="tile" style="cursor:pointer" onclick="chuyenTab('${t}')"><span>${ten}</span><b>${n}</b><small>${moTa} ›</small></div>`).join('');
   const yc=Object.entries(DL.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho').sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
   { const n=soDangNhac+(laGiamDoc()?yc.length:0); $('khac-badge').hidden=!n; $('khac-badge').textContent=n; } $('qt-yeucauxoa-n').hidden=!yc.length; $('qt-yeucauxoa-n').textContent=yc.length+' chờ';

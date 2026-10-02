@@ -4,9 +4,9 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v12**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v13**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
-- **Đã xong bước 1 → 9** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
+- **ĐÃ XONG CẢ 10 BƯỚC** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (68 phép tính, gồm cả khối 7 SINH_LICH và thấu chi; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
@@ -107,6 +107,12 @@
 - **Tab "📊 Tổng quan"** là màn đầu: nút chọn Cả 3 / PVA / 379 / 279; chọn một công ty thì hiện thêm nút "theo công ty ĐỨNG TÊN ↔ THỰC CHỊU". 9 ô số (bấm vào ô để tới màn liên quan), lịch 30 ngày (12 dòng gần nhất), bảng theo ngân hàng, 2 biểu đồ Chart.js kèm bảng số (không có mạng thì vẫn có bảng số).
 - **Xuất Excel ở mọi bảng**: `ganNutXuat()` tự gắn nút "📤 Xuất Excel" dưới mọi bảng (`.tw` có `<table>`) sau mỗi lần vẽ; `xuatBang` đổi ô số kiểu `1.200.000` thành số. Nút **"Xuất Excel tổng hợp"** ở cuối Tổng quan: 8 sheet (TongHop, TheoNganHang, KhoanVay, HanMuc, ThauChi, BaoLanh, TaiSanBaoDam, LichTra90Ngay) — dùng thay bản sao Google Sheets khi chưa có Apps Script.
 - Thanh dưới giờ có 5 nút: Tổng quan · Khoản vay · Lịch trả · Bảo lãnh · Khác.
+## Đã làm 02/10/2026 (bản v13 — bước 10: nhập từ Excel) — HẾT 10 BƯỚC
+
+- Mục "📥 Nhập từ Excel" trong trang Khác. **File mẫu do app xuất** (`taiFileMau`, tên `mau-nhap-cong-no.xlsx`, không để file .xlsx trong repo vì `.gitignore` chặn): 6 sheet `NganHang, HanMuc, KheUoc, VayDaiHan, ThueTaiChinh, ThauChi` + `HuongDan`; cột khai trong `MAU_NHAP` (sửa một chỗ).
+- `xuLyNhap` dựng gói ghi trong **bản nháp** của `DL` (dòng sau thấy dòng trước: ngân hàng → hạn mức → khế ước) và gọi ĐÚNG các hàm `KIEM_TRA` của form nhập tay → cùng luật, cùng cách sinh lịch. Hiện bảng xem trước từng sheet: ✅ sẽ thêm / ⏭ bỏ qua (đã có) / ❌ lỗi kèm lý do; bấm xác nhận mới ghi (một lần `update`, có lịch sử "nhập từ Excel"). Nhập lại cùng file không tạo đôi.
+- Đọc được: ngày kiểu Excel hoặc chữ `dd/mm/yyyy`; tiền có dấu chấm; lãi suất `9,5` hoặc ô định dạng phần trăm.
+- **Chưa có file theo dõi vay thật của kế toán** → mẫu theo cấu trúc app. Khi anh Dũng gửi file: chỉnh `MAU_NHAP` (tên cột, thứ tự) cho giống cách kế toán ghi. Bảo lãnh, tài sản bảo đảm: nhập tay.
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
@@ -122,13 +128,17 @@
 2. ~~File đính kèm~~ — đã chốt dán link, đã làm.
 3. ~~Chỉ mục `app` cho `hopdong/lichSu`~~ — hết cần: từ v4 lịch sử nằm riêng ở `congNo/lichSu`.
 
-## Việc tiếp theo (mục 1.2)
+## Việc tiếp theo
 
-3. ~~Vay trung dài hạn theo món~~ — xong v5.
-4. ~~Thấu chi~~ — xong v7.
-5. ~~Thuê tài chính~~ — xong v8.
-6. Bảo lãnh, phí, ký quỹ → 7. Tài sản bảo đảm → 8. Nhắc hạn + push → 9. Dashboard, biểu đồ, xuất Excel → 10. Nhập Excel.
+Cả 10 bước mục 1.2 đã xong (v13). Còn lại, theo thứ tự nên làm:
+
+1. **Anh Dũng dùng thử với dữ liệu thật** (đăng nhập, nhập vài khoản, bật thông báo trên iPhone đã cài app ra màn hình chính) — mọi thứ mới chỉ được thử bằng Firebase giả trên máy. Xem tab Actions trên GitHub: "Dua luat Firebase len may chu" phải xanh; "Nhac han Cong no" chạy 07:00 mỗi sáng.
+2. Trong trang Khác → Người dùng: tích "nhận mọi nhắc hạn" cho Hiền, Ngọc.
+3. Nhận file Excel theo dõi vay của kế toán → chỉnh `MAU_NHAP` theo cột của file đó.
+4. **Chưa làm (ngoài 10 bước, cần anh Dũng triển khai Apps Script)**: đồng bộ Google Sheets, tải file lên Google Drive. Hiện thay bằng nút "Xuất Excel tổng hợp" và dán link file.
+5. `docs/congno/huong-dan-su-dung.md` cho kế toán (viết sau khi anh Dũng duyệt giao diện).
+6. Các câu tự định ở trên (thấu chi, khớp lịch, kỳ trả gốc theo quý, bảo hành / dự thầu để riêng…) — anh Dũng thấy sai chỗ nào thì sửa chỗ đó.
 
 ## Chỗ đang lỗi
 
-- Không có lỗi đã biết. Chưa thử trên iPhone thật (mới mô phỏng 375px). Chưa thử với Firebase thật (cần anh Dũng đăng nhập) — luật `congNo` mới chỉ kiểm tra cú pháp.
+- Không có lỗi đã biết. Chưa thử trên iPhone thật (mới mô phỏng 375px). Chưa thử với Firebase thật — luật `congNo` mới kiểm tra cú pháp + mô phỏng; thông báo đẩy chưa thử trên máy thật.

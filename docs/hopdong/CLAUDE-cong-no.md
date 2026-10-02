@@ -227,6 +227,15 @@ Ghi thêm khi làm bước 4 (thấu chi, bản v7) — Claude tự định, anh
 - Rút vượt hạn mức: hỏi lại rồi vẫn cho lưu (số liệu thật có thể đã vượt). Nộp gốc nhiều hơn số đang dùng: không cho.
 - Hạn mức thấu chi sắp hết hạn: báo trước 60 ngày như hạn mức tín dụng.
 
+Ghi thêm khi làm bước 5 → 10 (bản v8 → v13, anh Dũng dặn "làm hết các bước, không phải hỏi lại") — chi tiết ở `docs/congno/BANGIAO.md`:
+
+- **Thấu chi** (anh Dũng trả lời): nộp hằng tháng là nộp lãi vay; có hạn mức phải nộp cả gốc cả lãi, có hạn mức chỉ nộp lãi → trường `thauChi.nopHangThang` (`lai` | `gocLai`). Thấu chi ít nên để **mục riêng** trong trang Khác.
+- **Thuê tài chính** lưu chung bảng `khoanVay` với `loai:"thueTaiChinh"` (không tách nhánh `thueTaiChinh`); công ty thuê = `congTyVay`, số tiền tài trợ = `soTien`, kỳ hạn = `soKy`.
+- **Bảo lãnh**: tạm ứng + thực hiện hợp đồng ở bảng chung `hopdong/baoLanh`; dự thầu + bảo hành của app này ở `congNo/baoLanh`; phí ở `congNo/phiBaoLanh/<id thư>`, giảm ký quỹ ở `congNo/kyQuyGiamTru/<id thư>` (nhập tay). App đọc thêm `hopdong/hopDong` (chỉ đọc) để chọn / hiện tên hợp đồng của thư.
+- **Tài sản bảo đảm**: bảng nối để lồng trong tài sản (`taiSanBaoDam/{id}/baoDamCho/{id}`), không tách bảng `taiSanBaoDam_khoanVay`.
+- **Nhắc hạn**: mốc tính thẳng từ dữ liệu, không lưu; `congNo/nhacNho/<khoá mốc>` chỉ lưu ai bấm "Đã xong". Người nhận mọi nhắc: giám đốc + người được tích `nguoiDung/{uid}/nhanTatCa`.
+- **Google Sheets / Drive (Apps Script)**: chưa làm; thay bằng "Xuất Excel tổng hợp" và dán link.
+
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
 ---
