@@ -1,10 +1,10 @@
-# BANGIAO — nhật ký bàn giao app Công Nợ Ngân Hàng PVA-379-279
+﻿# BANGIAO — nhật ký bàn giao app Công Nợ Ngân Hàng PVA-379-279
 
 > Phiên sau đọc file này + spec `docs/hopdong/CLAUDE-cong-no.md` (bản chốt 02/10/2026) + `docs/hopdong/CLAUDE.md` mục 4.3 trước khi sửa `congno.html`. Ghi ngắn: đã làm gì, còn gì, chỗ nào khác spec, câu nào chờ anh Dũng chốt.
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v5**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v6**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
 - **Đã xong bước 1, 2, 3** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (60 phép tính, gồm cả khối 7 SINH_LICH; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
@@ -50,7 +50,7 @@
 
 ## Đã làm 02/10/2026 (bản v5 — đổi màu + bước 3: vay trung dài hạn)
 
-- **Màu**: anh Dũng bảo "sửa lại màu sáng hơn cho đẹp" → tông **xanh ngọc** (`--blue:#0891b2`, đầu trang chuyển màu nhẹ, nền `#f2f9fb`); `manifest-congno.json` + `theme-color` theo. Tên biến CSS vẫn là `--blue*` như app Hợp Đồng.
+- **Màu (v6, anh Dũng tự chọn bằng ảnh)**: **hồng đất `#E6B8B7`** cho đầu trang + nút (`--blue`); vì màu nhạt nên chữ trên nó dùng `--on-blue:#5a2322`, chữ nhấn / viền / thanh tiến độ dùng `--blue-dark:#8a3a38`; nền `#fbf6f6`. Dòng QUÁ HẠN thêm vạch đỏ bên trái cho khỏi lẫn với nền hồng. Tên biến CSS vẫn là `--blue*` như app Hợp Đồng. (v5 từng là xanh ngọc — anh Dũng đổi.)
 - **Tab "Khoản vay"** (trước là "Hạn mức"): 2 nút chọn — 💳 Hạn mức ngắn hạn / 🏗 Vay trung dài hạn; chung ô tìm + lọc (`veVay` → `veHanMuc`, `veDaiHan`). Sau này Thấu chi, Thuê tài chính thêm nút chọn vào đây.
 - **Vay trung dài hạn** = `congNo/khoanVay` với `loai:"daiHan"` (không có `hanMucId`, không lưu `ngayDenHan` — ngày kết thúc = kỳ gốc cuối). Trường thêm: `soTien`, `soKy`, `gocMoiKy`, `ngayTraDau`, `kyCachThang`, `ngayTraGocTrongThang` (tự lấy từ ngày kỳ đầu). Form `oDaiHan`, kiểm tra `kiemTraDaiHan`; chi tiết dùng chung `veCtKhoanVay` (biến `dh`).
 - **Khối 7 `SINH_LICH`** (thuần, có test): `sinhLich` (tạo khoản là sinh đủ `kyTra`, lưu thật), `khopLich` (trừ dần từ kỳ cuối). Nút "Khớp lịch với dư nợ" (`khopLichKhoan`) hiện trong ô cảnh báo khi lịch lệch `dư nợ + chưa giải ngân` — dùng được cho cả khế ước.

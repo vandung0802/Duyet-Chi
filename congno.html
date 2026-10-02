@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<meta name="theme-color" content="#0891b2">
+<meta name="theme-color" content="#E6B8B7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Công nợ PVA-379-279">
@@ -17,7 +17,7 @@
 /* ===== CSS toàn bộ app — chép từ app Hợp Đồng (hopdong.html) cho quen tay. Chữ tối thiểu 16px, nút tối thiểu 44px trên điện thoại (quy tắc 10) ===== */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --blue:#0891b2;--blue-light:#dff6fb;--blue-dark:#0e7490; /* app Công nợ: tông XANH NGỌC sáng, khác 379 (xanh dương), Gia Bình (xanh lá), Thiết bị (cam), Hợp đồng (tím) */
+  --blue:#E6B8B7;--blue-light:#fbf0ef;--blue-dark:#8a3a38;--on-blue:#5a2322; /* app Công nợ: tông HỒNG ĐẤT #E6B8B7 (anh Dũng chọn 02/10). --blue = màu nền nút/đầu trang (nhạt → chữ trên nó dùng --on-blue sẫm); --blue-dark = chữ nhấn, viền, thanh tiến độ */
   --green:#057a55;--green-light:#def7ec;
   --yellow:#9f580a;--yellow-light:#fdf6b2;
   --red:#c81e1e;--red-light:#fde8e8;
@@ -25,9 +25,9 @@
   --text:#111827;--text-sub:#6b7280;--white:#fff;
   --radius:10px;--radius-lg:14px;--shadow:0 1px 3px rgba(0,0,0,.08);
 }
-body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f2f9fb;color:var(--text);min-height:100vh;font-size:16px}
+body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#fbf6f6;color:var(--text);min-height:100vh;font-size:16px}
 [hidden]{display:none!important}
-.app-header{background:linear-gradient(135deg,#0ea5c6,#0891b2);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:8px}
+.app-header{background:var(--blue);color:var(--on-blue);padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;gap:8px}
 .app-header h1{font-size:16px;font-weight:700}
 .app-header small{font-size:11px;opacity:.85;margin-left:6px;font-weight:400}
 .hdr-user{font-size:12px;opacity:.9;white-space:nowrap}
@@ -35,9 +35,9 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 .main{padding:10px 10px calc(80px + env(safe-area-inset-bottom));max-width:1100px;margin:0 auto}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0)}
 .nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:11px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative;min-height:44px}
-.nav-item.active{color:var(--blue);font-weight:700}
-.nav-icon{font-size:20px;line-height:1;width:44px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#e6f6fa}
-.nav-item.active .nav-icon{box-shadow:0 0 0 2px var(--blue)}
+.nav-item.active{color:var(--blue-dark);font-weight:700}
+.nav-icon{font-size:20px;line-height:1;width:44px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#f8ecec}
+.nav-item.active .nav-icon{box-shadow:0 0 0 2px var(--blue-dark)}
 .nav-badge{position:absolute;top:2px;left:calc(50% + 8px);background:#ef4444;color:#fff;font-size:10px;font-weight:800;min-width:17px;height:17px;line-height:17px;border-radius:9px;padding:0 4px;text-align:center;box-shadow:0 0 0 2px #fff}
 .card{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);margin-bottom:10px;overflow:hidden}
 .card-body{padding:12px 14px}
@@ -48,14 +48,14 @@ input[type=checkbox]{width:22px;height:22px;min-height:0}
 textarea{min-height:70px;resize:vertical}
 label.f{display:block;font-size:13px;color:var(--text-sub);font-weight:600;margin:10px 0 4px}
 label.ck{display:flex;gap:8px;align-items:center;font-size:16px;margin-top:10px;min-height:44px}
-.btn{font:inherit;font-size:15px;font-weight:700;padding:11px 14px;border-radius:var(--radius);border:none;background:var(--blue);color:#fff;cursor:pointer;width:100%;min-height:44px}
+.btn{font:inherit;font-size:15px;font-weight:700;padding:11px 14px;border-radius:var(--radius);border:none;background:var(--blue);color:var(--on-blue);cursor:pointer;width:100%;min-height:44px}
 .btn.sec{background:var(--gray-light);color:var(--text)}
-.btn.red{background:var(--red)}.btn.green{background:var(--green)}.btn.yel{background:#d97706}
+.btn.red{background:var(--red);color:#fff}.btn.green{background:var(--green);color:#fff}.btn.yel{background:#d97706;color:#fff}
 .btn:disabled{opacity:.6}
 .btn.sm{width:auto;padding:7px 12px;font-size:13px;min-height:36px}
 .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;margin-bottom:8px}
 .chip{flex:0 0 auto;background:#fff;border-radius:var(--radius);padding:8px 12px;box-shadow:var(--shadow);cursor:pointer;text-align:center;min-width:78px;border:2px solid transparent;font-size:14px;font-weight:600;min-height:44px;display:flex;align-items:center;justify-content:center}
-.chip.on{border-color:var(--blue);background:var(--blue-light);color:var(--blue-dark)}
+.chip.on{border-color:var(--blue-dark);background:var(--blue-light);color:var(--blue-dark)}
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .tile{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:12px 14px}
 .tile span{display:block;font-size:12px;color:var(--text-sub);font-weight:600;text-transform:uppercase;letter-spacing:.02em}
@@ -79,8 +79,9 @@ table.p th,table.p td{border-bottom:1px solid var(--gray-border);padding:8px 6px
 table.p th:first-child,table.p td:first-child,table.p th.tr,table.p td.tr{text-align:left}
 table.p th{color:var(--text-sub);font-weight:600;font-size:12px}
 table.p tbody tr{cursor:pointer}
-table.p tbody tr:hover{background:#ecfeff}
+table.p tbody tr:hover{background:#fdf3f3}
 table.p tr.over td{background:var(--red-light)}
+table.p tr.over td:first-child,.al.over{box-shadow:inset 4px 0 0 var(--red)} /* nền app màu hồng nên dòng QUÁ HẠN có thêm vạch đỏ bên trái cho khỏi lẫn */
 table.p tr.due td{background:#fff7ed}
 table.p tr.on td{background:var(--blue-light)}
 table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
@@ -89,18 +90,18 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .sec-h h3{font-size:15px}
 .neg{color:var(--red)}.pos{color:var(--green)}
 .empty{text-align:center;color:var(--text-sub);padding:30px 10px;font-size:15px}
-.overlay{position:fixed;inset:0;background:#f2f9fb;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.overlay{position:fixed;inset:0;background:#fbf6f6;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:#fff;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .modal h3{font-size:17px;margin-bottom:6px}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px}
 .kv div:nth-child(odd){color:var(--text-sub)}
-.tabs{display:flex;gap:4px;overflow-x:auto;padding:6px 0 8px;position:sticky;top:50px;background:#f2f9fb;z-index:5}
+.tabs{display:flex;gap:4px;overflow-x:auto;padding:6px 0 8px;position:sticky;top:50px;background:#fbf6f6;z-index:5}
 .tab{flex:0 0 auto;padding:9px 12px;border-radius:999px;background:#fff;font-size:14px;font-weight:600;cursor:pointer;border:2px solid transparent;min-height:40px;white-space:nowrap}
-.tab.on{border-color:var(--blue);color:var(--blue-dark);background:var(--blue-light)}
+.tab.on{border-color:var(--blue-dark);color:var(--blue-dark);background:var(--blue-light)}
 .tl{border-left:3px solid var(--gray-border);margin-left:8px;padding-left:14px}
 .tl-e{position:relative;padding-bottom:14px}
-.tl-e::before{content:'';position:absolute;left:-21px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--blue);border:2px solid #fff}
+.tl-e::before{content:'';position:absolute;left:-21px;top:5px;width:11px;height:11px;border-radius:50%;background:var(--blue-dark);border:2px solid #fff}
 .tl-t{font-size:12px;color:var(--text-sub)}
 .tl-b{font-size:15px}
 .warn{background:var(--red-light);color:var(--red);padding:8px 12px;border-radius:var(--radius);font-size:14px;margin-bottom:8px;font-weight:600}
@@ -114,7 +115,7 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .item-name{font-weight:700;font-size:16px}
 .item-sub{font-size:13px;color:var(--text-sub)}
 .thanh{height:6px;background:var(--gray-light);border-radius:3px;margin:6px 0 4px;overflow:hidden}
-.thanh i{display:block;height:100%;background:var(--blue)}
+.thanh i{display:block;height:100%;background:var(--blue-dark)}
 .thanh i.day{background:var(--red)}
 .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;z-index:999;max-width:90vw;text-align:center}
 .login{max-width:420px;margin:40px auto;padding:20px}
@@ -236,7 +237,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261002-v5',
+  PHIEN_BAN: '20261002-v6',
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
   NHAC_HAN_MUC_NGAY: 60           // hạn mức sắp hết hạn: báo trước 60 ngày (mục 1.4)
