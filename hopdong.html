@@ -89,8 +89,8 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .sec-h h3{font-size:15px}
 .neg{color:var(--red)}.pos{color:var(--green)}
 .empty{text-align:center;color:var(--text-sub);padding:30px 10px;font-size:15px}
-.overlay{position:fixed;inset:0;background:#f0f2f5;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:#f0f2f5;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:#fff;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .modal h3{font-size:17px;margin-bottom:6px}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px}
@@ -258,7 +258,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261002-v14',
+  PHIEN_BAN: '20261002-v15',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -324,7 +324,7 @@ function moModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
 function dongModal(){ $('modal-bg').hidden=true; }
 function veO(o, gt){
   const id='f-'+o.k.replace(/\./g,'_'), v=layO(gt,o.k), nhan=`<label class="f">${esc(o.nhan)}${o.batBuoc?' *':''}</label>`;
-  const att=`id="${id}" ${o.onInput?`oninput="${o.onInput}"`:''}`;
+  const att=`id="${id}" ${o.onInput&&o.kieu!=='tien'?`oninput="${o.onInput}"`:''}`; // ô tiền gắn onInput ở dưới (cùng dinhDangO), tránh 2 thuộc tính oninput
   let inp='';
   if(o.kieu==='tien') inp=`<input ${att} inputmode="numeric" value="${v?tien(Math.abs(Number(v))):''}" oninput="dinhDangO(this);${o.onInput||''}" onchange="dinhDangO(this);${o.onInput||''}" placeholder="${esc(o.placeholder||'0')}">`+(o.choAm?`<label class="ck" style="margin-top:4px"><input type="checkbox" id="${id}-am" ${Number(v)<0?'checked':''}> Giá trị GIẢM (số âm)</label>`:'');
   else if(o.kieu==='so') inp=`<input ${att} inputmode="numeric" value="${v!=null?esc(v):''}" placeholder="${esc(o.placeholder||'')}">`;
@@ -387,13 +387,16 @@ firebase.auth().onAuthStateChanged(async user=>{
 
 // ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3, tất cả dưới hopdong/; baoLanh dạng phẳng từ 02/10) =====
 const DL = { hopDong:{}, phuLuc:{}, tamUng:{}, thanhToan:{}, hoanTra:{}, baoLanh:{}, nhacNho:{}, yeuCauXoa:{}, lichSu:{}, congTy:{}, nguoiDung:{} };
-let danhSachCongTrinh=[], _daKetNoi=false, _lanDauCoDuLieu=false;
+let danhSachCongTrinh=[], _daKetNoi=false, _lanDauCoDuLieu=false; const _bangDaTai=new Set(); const BANG_CAN_NHAC=['hopDong','phuLuc','baoLanh','nhacNho'];
+const duBangDeNhac=()=>BANG_CAN_NHAC.every(b=>_bangDaTai.has(b));
 const duongDan = p => CAU_HINH.GOC+'/'+p;
 const ref = p => db.ref(duongDan(p));
 function ketNoiDuLieu(){
   if(_daKetNoi) return; _daKetNoi=true;
   const loi=e=>{ $('ds-hopdong').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh hopdong) có thể chưa được đưa lên máy chủ.</div>'; };
-  Object.keys(DL).forEach(bang=>{ ref(bang).on('value',s=>{ DL[bang]=s.val()||{}; veTatCa(); if(bang==='hopDong'&&!_lanDauCoDuLieu){ _lanDauCoDuLieu=true; setTimeout(()=>{ donBaoLanhCu().then(()=>{ dongBoNhacNho(); nhacTrenMay(); }); },800); } }, bang==='hopDong'?loi:()=>{}); });
+  Object.keys(DL).forEach(bang=>{ ref(bang).on('value',s=>{ DL[bang]=s.val()||{}; _bangDaTai.add(bang); veTatCa();
+    // chỉ đồng bộ nhắc hạn lần đầu khi 4 bảng liên quan đã về đủ — nếu chạy sớm sẽ tưởng mọi mốc là mới và ghi đè cờ "Đã xong"
+    if(!_lanDauCoDuLieu&&duBangDeNhac()){ _lanDauCoDuLieu=true; setTimeout(()=>{ donBaoLanhCu().then(()=>{ dongBoNhacNho(); nhacTrenMay(); }); },300); } }, bang==='hopDong'?loi:()=>{}); });
   db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); danhSachCongTrinh=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); veCongTrinh(); },()=>{});
 }
 function dangKyNguoiDung(){ // mỗi lần đăng nhập ghi lại hồ sơ của mình vào hopdong/nguoiDung (danh sách người dùng của app)
@@ -419,7 +422,7 @@ async function ghiNhieu(capNhat){ await db.ref(CAU_HINH.GOC).update(capNhat); }
 async function bam(btn, viec){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await viec(); dongModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
 
 // ===== 5. LICH_SU — mọi thao tác ghi đều để lại vết: ai, lúc nào, bảng nào, bản ghi nào, trường nào, cũ → mới (quy tắc 13) =====
-const TRUONG_BO_QUA = ['taoBoi','taoLuc','suaBoi','suaLuc','id','fileDinhKem','keHoachTienVe'];
+const TRUONG_BO_QUA = ['taoBoi','taoLuc','suaBoi','suaLuc','id','fileDinhKem','keHoachTienVe','_baoLanh'];
 function phang(o, tienTo){ // {baoHanh:{soThang:12}} → {'baoHanh.soThang':12}; bỏ object con phức tạp
   const kq={}; Object.entries(o||{}).forEach(([k,v])=>{ const kk=tienTo?tienTo+'.'+k:k; if(TRUONG_BO_QUA.includes(k)) return;
     if(v&&typeof v==='object'&&!Array.isArray(v)) Object.assign(kq,phang(v,kk)); else kq[kk]=v; }); return kq;
@@ -465,7 +468,8 @@ async function xoaBanGhi(bang, hopDongId, id, tomTat){
 // Nhân viên: gửi yêu cầu xoá, giám đốc duyệt ở tab Khác
 async function yeuCauXoa(bang, hopDongId, id, tomTat){
   const lyDo=prompt('Lý do xin xoá '+TEN_BANG[bang]+' "'+tomTat+'"? (giám đốc sẽ thấy và duyệt)'); if(lyDo===null) return;
-  await ref('yeuCauXoa').push({ app:'hopDong', bang, banGhiId:id, hopDongId:bang==='hopDong'?id:hopDongId, tomTat, nguoiYeuCau:tenNguoiDung, uid:nguoiHienTai.uid, luc:luc(), lyDo:lyDo.trim(), trangThai:'cho' });
+  try{ await ref('yeuCauXoa').push({ app:'hopDong', bang, banGhiId:id, hopDongId:bang==='hopDong'?id:hopDongId, tomTat, nguoiYeuCau:tenNguoiDung, uid:nguoiHienTai.uid, luc:luc(), lyDo:lyDo.trim(), trangThai:'cho' }); }
+  catch(e){ return toast('❌ Không gửi được: '+e.message); }
   toast('✅ Đã gửi yêu cầu xoá, chờ giám đốc duyệt');
 }
 function yeuCauXoaDangCho(bang, id){ return Object.entries(DL.yeuCauXoa).find(([k,y])=>y.bang===bang&&y.banGhiId===id&&y.trangThai==='cho'); }
@@ -486,10 +490,10 @@ async function duyetXoa(k, dongY, btn){
   const y=DL.yeuCauXoa[k]; if(!y) return;
   if(dongY){ if(!confirm('Đồng ý xoá '+TEN_BANG[y.bang]+' "'+(y.tomTat||'')+'"?')) return;
     try{ await xoaBanGhi(y.bang,y.hopDongId,y.banGhiId,y.tomTat); }catch(e){ return toast('❌ '+e.message); } }
-  await ref('yeuCauXoa/'+k).update({ trangThai:dongY?'dongY':'tuChoi', nguoiDuyet:tenNguoiDung, lucDuyet:luc() });
+  try{ await ref('yeuCauXoa/'+k).update({ trangThai:dongY?'dongY':'tuChoi', nguoiDuyet:tenNguoiDung, lucDuyet:luc() }); }catch(e){ return toast('❌ '+e.message); }
   toast(dongY?'🗑 Đã xoá':'✖ Đã từ chối'); if(dongY&&y.bang==='hopDong') dongChiTiet(); else dongModal();
 }
-async function rutYeuCauXoa(k){ await ref('yeuCauXoa/'+k).update({ trangThai:'rut', lucDuyet:luc() }); toast('Đã rút yêu cầu'); dongModal(); }
+async function rutYeuCauXoa(k){ try{ await ref('yeuCauXoa/'+k).update({ trangThai:'rut', lucDuyet:luc() }); toast('Đã rút yêu cầu'); dongModal(); }catch(e){ toast('❌ '+e.message); } }
 function tomTatBanGhi(bang, hopDongId, id){
   if(bang==='hopDong'){ const h=DL.hopDong[id]||{}; return (h.soHopDong||'')+' · '+(h.tenGoiThau||''); }
   const x=gan1BanGhi(bang,hopDongId,id)||{}, h=DL.hopDong[hopDongId]||{};
@@ -686,7 +690,7 @@ function veDashboard(){
     <tfoot><tr><td class="tr" colspan="2">${cho.length} hợp đồng</td><td>${tien(cho.reduce((s,k)=>s+k.conPhaiThu,0))}</td><td></td></tr></tfoot></table></div>`
     :'<div class="hint">Không có hợp đồng nào đang chờ quyết toán.</div>';
 }
-function napChartJs(){ return new Promise((res,rej)=>{ if(window.Chart) return res(window.Chart); const s=document.createElement('script'); s.src=CAU_HINH.URL_CHARTJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.Chart); s.onerror=()=>rej(new Error('Không tải được Chart.js')); document.head.appendChild(s); }); }
+let _chartP=null; function napChartJs(){ if(window.Chart) return Promise.resolve(window.Chart); if(_chartP) return _chartP; return _chartP=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=CAU_HINH.URL_CHARTJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.Chart); s.onerror=()=>{ _chartP=null; rej(new Error('Không tải được Chart.js')); }; document.head.appendChild(s); }); }
 async function veBieuDo(dt){
   const cv=$('db-chart'); if(!dt.length){ cv.hidden=true; if(_chart){ _chart.destroy(); _chart=null; } return; }
   try{ const Chart=await napChartJs(); cv.hidden=false;
@@ -718,8 +722,8 @@ function veDanhSach(){
 // ===== 9. MÀN HÌNH: Chi tiết hợp đồng — tab: Thông tin / Phụ lục / Tạm ứng / Thanh toán / Bảo lãnh / Bảo hành & Quyết toán / Kế hoạch tiền về / File / Lịch sử =====
 let chiTietId=null, tabChiTiet='thongTin';
 const TAB_CT={ thongTin:'Thông tin', phuLuc:'Phụ lục', tamUng:'Tạm ứng', thanhToan:'Thanh toán', baoLanh:'Bảo lãnh', baoHanh:'BH & Quyết toán', keHoach:'Kế hoạch tiền về', file:'File', lichSu:'Lịch sử' };
-function moChiTiet(id, tab){ chiTietId=id; if(tab) tabChiTiet=tab; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; veChiTiet(); }
-function dongChiTiet(){ $('detail').hidden=true; document.body.style.overflow=''; chiTietId=null; }
+function moChiTiet(id, tab){ if(id!==chiTietId) $('detail').innerHTML=''; chiTietId=id; if(tab) tabChiTiet=tab; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; veChiTiet(); }
+function dongChiTiet(){ $('detail').hidden=true; $('detail').innerHTML=''; document.body.style.overflow=''; chiTietId=null; }
 function chonTabChiTiet(t){ tabChiTiet=t; veChiTiet(); }
 function veChiTiet(){
   const id=chiTietId, h=DL.hopDong[id]; if(!h){ dongChiTiet(); return; }
@@ -846,7 +850,7 @@ function veTabBaoHanh(id,h,k){
 // --- Tab Kế hoạch tiền về: bảng 12 tháng của 1 năm, nhập số dự kiến ---
 let namKeHoach=new Date().getFullYear();
 function dangGoDoKeHoach(h){ const kh=(h&&h.keHoachTienVe)||{}; return [...document.querySelectorAll('.kh-o')].some(o=>docTien(o.value)!==(Number(kh[o.dataset.thang])||0)); }
-function doiNamKeHoach(d){ namKeHoach+=d; veChiTiet(); }
+function doiNamKeHoach(d){ if(dangGoDoKeHoach(DL.hopDong[chiTietId])&&!confirm('Kế hoạch đang nhập chưa lưu. Bỏ thay đổi và đổi năm?')) return; namKeHoach+=d; $('detail').querySelectorAll('.kh-o').forEach(o=>o.remove()); veChiTiet(); }
 function veTabKeHoach(id,h,k){
   const kh=h.keHoachTienVe||{}; const du=duLieuHopDong(id); const tt=Object.fromEntries(TINH_TOAN.dongTien([du],'thang','').map(x=>[x.ky,x.thucTe]));
   const thangs=Array.from({length:12},(_,i)=>namKeHoach+'-'+pad(i+1));
@@ -960,17 +964,20 @@ function formQuyetToan(id){ const h=DL.hopDong[id], k=ketQua(id);
 // --- Bảng con dùng chung: phụ lục / tạm ứng / thanh toán / bảo lãnh / hoàn trả ---
 function moFormCon(bang,hopDongId,id,tieuDe,cacO,macDinh){ _formBang=bang; _formHopDongId=hopDongId; _formId=id||''; _cacO=cacO; const x=id?gan1BanGhi(bang,hopDongId,id):macDinh;
   moForm((id?'✏️ Sửa ':'＋ Thêm ')+tieuDe,cacO,x,`<div class="row"><button class="btn" onclick="luuCon(this)">💾 Lưu</button></div>${id?'<div style="margin-top:10px">'+nutXoa(bang,hopDongId,id,tomTatBanGhi(bang,hopDongId,id))+'</div>':''}`); }
-async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); if(window._kiemTraCon) window._kiemTraCon(v); const id=await luuBanGhi(_formBang,_formHopDongId,_formId,v,tomTatMoi(_formBang,v)); if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v); toast('✅ Đã lưu'); }); }
+async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); if(window._kiemTraCon) window._kiemTraCon(v);
+  const phu=v._baoLanh; delete v._baoLanh; // phần phụ (bảo lãnh tạm ứng) tách ra trước khi ghi, không nằm trong bản ghi chính
+  const id=await luuBanGhi(_formBang,_formHopDongId,_formId,v,tomTatMoi(_formBang,v)); _formId=id; // đã ghi xong bản chính: bấm Lưu lại (nếu bước phụ lỗi) là SỬA, không tạo trùng
+  if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v,phu); toast('✅ Đã lưu'); }); }
 function tomTatMoi(bang,v){ return (DL.hopDong[_formHopDongId]||{}).soHopDong+' · '+TEN_BANG[bang]+' '+(v.dot||v.soPhuLuc||LOAI_BAO_LANH[v.loai]||LOAI_HOAN_TRA[v.loai]||'')+' '+tienD(v.soTien||v.giaTriDieuChinh||v.giaTriNghiemThu||0); }
 function dotTiep(bang,hopDongId){ return danhSachBanGhi(bang,hopDongId).reduce((m,x)=>Math.max(m,Number(x.dot)||0),0)+1; }
 
 function formPhuLuc(hopDongId,id){ window._kiemTraCon=v=>{ if(v.loai!=='giaHan'&&!v.giaTriDieuChinh) throw new Error('Nhập giá trị điều chỉnh'); if(v.loai!=='dieuChinhGia'&&!v.ngayHoanThanhMoi) throw new Error('Nhập ngày hoàn thành mới'); if(v.loai==='giaHan') v.giaTriDieuChinh=0; if(v.loai==='dieuChinhGia') v.ngayHoanThanhMoi=''; }; window._sauKhiLuuCon=null;
   moFormCon('phuLuc',hopDongId,id,'phụ lục',[{k:'soPhuLuc',nhan:'Số phụ lục',batBuoc:true,placeholder:'VD: PL01'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',batBuoc:true,nua:true},{k:'loai',nhan:'Loại phụ lục',kieu:'chon',ds:LOAI_PHU_LUC,batBuoc:true},{k:'giaTriDieuChinh',nhan:'Giá trị điều chỉnh (đ)',kieu:'tien',choAm:true,hint:'Tăng: nhập số. Giảm: nhập số và tích "Giá trị GIẢM"'},{k:'ngayHoanThanhMoi',nhan:'Ngày hoàn thành mới (nếu gia hạn)',kieu:'ngay'},{k:'noiDung',nhan:'Nội dung',kieu:'vanBan'}],{soPhuLuc:'PL'+pad(danhSachBanGhi('phuLuc',hopDongId).length+1),ngayKy:homNay(),loai:'dieuChinhGia'}); }
 
-function formTamUng(hopDongId,id){ const x=id?DL.tamUng[hopDongId][id]:null; const bl=x&&x.baoLanhId&&DL.baoLanh[x.baoLanhId]||{};
+function formTamUng(hopDongId,id){ const x=id?gan1BanGhi('tamUng',hopDongId,id):null; const bl=x&&x.baoLanhId&&DL.baoLanh[x.baoLanhId]||{};
   window._kiemTraCon=null;
   // bảo lãnh tạm ứng nhập ngay trong form: ghi thành 1 bản ghi baoLanh loại tamUng và nối bằng baoLanhId
-  window._sauKhiLuuCon=async(tuId,v)=>{ const b=v._baoLanh; delete v._baoLanh; if(!b||!b.soTien) return; const blId=await luuBanGhi('baoLanh',hopDongId,x&&x.baoLanhId||'',{loai:'tamUng',nganHang:b.nganHang,soTien:b.soTien,ngayPhatHanh:b.ngayPhatHanh,ngayHetHan:b.ngayHetHan,tamUngId:tuId},'Bảo lãnh tạm ứng đợt '+v.dot); if(!(x&&x.baoLanhId)) await ref('tamUng/'+hopDongId+'/'+tuId).update({baoLanhId:blId}); };
+  window._sauKhiLuuCon=async(tuId,v,b)=>{ if(!b||!b.soTien) return; const blId=await luuBanGhi('baoLanh',hopDongId,x&&x.baoLanhId||'',{loai:'tamUng',nganHang:b.nganHang,soTien:b.soTien,ngayPhatHanh:b.ngayPhatHanh,ngayHetHan:b.ngayHetHan,tamUngId:tuId},'Bảo lãnh tạm ứng đợt '+v.dot); if(!(x&&x.baoLanhId)) await ref('tamUng/'+hopDongId+'/'+tuId).update({baoLanhId:blId}); };
   moFormCon('tamUng',hopDongId,id,'đợt tạm ứng',[{k:'dot',nhan:'Đợt',kieu:'so',batBuoc:true},{k:'ngay',nhan:'Ngày nhận tạm ứng',kieu:'ngay',batBuoc:true,nua:true},{k:'soTien',nhan:'Số tiền tạm ứng (đ)',kieu:'tien',batBuoc:true},{k:'ghiChu',nhan:'Ghi chú'},
     {tieuDe:'Bảo lãnh tạm ứng (nếu có)'},{k:'_baoLanh.nganHang',nhan:'Ngân hàng',kieu:'goiY',goiY:goiYNganHang()},{k:'_baoLanh.soTien',nhan:'Số tiền bảo lãnh (đ)',kieu:'tien',nua:true},{k:'_baoLanh.ngayPhatHanh',nhan:'Ngày phát hành',kieu:'ngay'},{k:'_baoLanh.ngayHetHan',nhan:'Ngày hết hạn',kieu:'ngay',nua:true,hint:'App nhắc gia hạn trước 30 ngày'}],
     Object.assign({dot:dotTiep('tamUng',hopDongId),ngay:homNay()},x||{},{_baoLanh:{nganHang:bl.nganHang,soTien:bl.soTien,ngayPhatHanh:bl.ngayPhatHanh,ngayHetHan:bl.ngayHetHan}})); }
@@ -1001,6 +1008,7 @@ function formHoanTra(hopDongId,id){ const k=ketQua(hopDongId);
 function khoaNhac(hopDongId,loai,thamChieuId){ return (hopDongId+'__'+loai+'__'+(thamChieuId||'x')).replace(/[.#$\[\]\/]/g,'_'); }
 // Đồng bộ bảng nhacNho với dữ liệu: mốc mới → tạo; ngày mốc đổi → cập nhật và mở lại; mốc không còn → xoá (mốc tự thêm giữ nguyên)
 async function dongBoNhacNho(){
+  if(!duBangDeNhac()) return; // chưa tải đủ bảng → chưa biết mốc nào đã có, không được đồng bộ
   const up={}, con=new Set();
   Object.keys(DL.hopDong).forEach(id=>{ if((DL.hopDong[id].trangThai)==='biChamDut') return;
     TINH_TOAN.cacMoc(duLieuHopDong(id)).forEach(m=>{ const k=khoaNhac(id,m.loai,m.thamChieuId); con.add(k); const cu=DL.nhacNho[k];
@@ -1010,15 +1018,15 @@ async function dongBoNhacNho(){
   if(Object.keys(up).length){ try{ await ghiNhieu(up); }catch(e){} }
 }
 function moTaNhac(n){ const h=DL.hopDong[n.hopDongId]||{}; const ten=h.tenGoiThau||h.soHopDong||'(hợp đồng đã xoá)';
-  const loai=n.loai==='hetBaoLanh'?'hết '+(LOAI_BAO_LANH[n.loaiBaoLanh]||'bảo lãnh').toLowerCase():n.loai==='khac'?(n.ghiChu||'mốc tự thêm'):LOAI_MOC[n.loai].toLowerCase();
+  const loai=n.loai==='hetBaoLanh'?'hết '+(TEN_BAO_LANH[n.loaiBaoLanh]||'bảo lãnh').toLowerCase():n.loai==='khac'?(n.ghiChu||'mốc tự thêm'):String(LOAI_MOC[n.loai]||n.loai||'mốc').toLowerCase();
   return {ten, loai}; }
-function danhSachDangNhac(){ const hn=homNay(); return Object.entries(DL.nhacNho).filter(([k,n])=>!n.app||n.app==='hopDong').map(([k,n])=>Object.assign({id:k,conNgay:TINH_TOAN.soNgayGiua(hn,n.ngayMoc)},n)).filter(n=>!n.daXong&&n.conNgay!=null&&n.conNgay<=CAU_HINH.NHAC_TRUOC_NGAY).sort((a,b)=>a.conNgay-b.conNgay); }
+function danhSachDangNhac(){ const hn=homNay(); return Object.entries(DL.nhacNho).filter(([k,n])=>n&&typeof n==='object'&&(!n.app||n.app==='hopDong')).map(([k,n])=>Object.assign({id:k,conNgay:TINH_TOAN.soNgayGiua(hn,n.ngayMoc)},n)).filter(n=>!n.daXong&&n.conNgay!=null&&n.conNgay<=CAU_HINH.NHAC_TRUOC_NGAY).sort((a,b)=>a.conNgay-b.conNgay); }
 function veNhacHan(){
   $('nhac-truoc').textContent=CAU_HINH.NHAC_TRUOC_NGAY; $('nhac-lap').textContent=CAU_HINH.NHAC_LAP_NGAY;
   const ds=danhSachDangNhac(); $('nhac-badge').hidden=!ds.length; $('nhac-badge').textContent=ds.length;
   $('ds-nhac').innerHTML=ds.length?ds.map(n=>{ const m=moTaNhac(n); return `<div class="al ${n.conNgay<0?'over':n.conNgay<=7?'due':''}"><div class="ic">${n.conNgay<0?'🔴':'⏰'}</div><div class="item-main" style="cursor:pointer" onclick="moChiTiet('${n.hopDongId}','${n.loai==='hetBaoLanh'?'baoLanh':n.loai==='hetBaoHanh'?'baoHanh':'thongTin'}')"><div class="item-name">${esc(m.ten)} — ${esc(m.loai)}</div><div class="item-sub">${n.conNgay<0?'<b class="neg">QUÁ HẠN '+(-n.conNgay)+' ngày</b>':n.conNgay===0?'<b class="neg">HÔM NAY</b>':'còn <b>'+n.conNgay+' ngày</b>'} · ${ngayVN(n.ngayMoc)}${n.soLanDaNhac?' · đã nhắc '+n.soLanDaNhac+' lần':''}</div></div><button class="btn sm green" style="flex:0 0 auto" onclick="daXongNhac('${n.id}')">✅ Đã xong</button></div>`; }).join('')
     :'<div class="empty">🎉 Không có việc nào đến hạn trong '+CAU_HINH.NHAC_TRUOC_NGAY+' ngày tới.</div>';
-  const xong=Object.entries(DL.nhacNho).filter(([k,n])=>n.daXong).sort((a,b)=>String(b[1].lucXong||'').localeCompare(String(a[1].lucXong||''))).slice(0,10);
+  const xong=Object.entries(DL.nhacNho).filter(([k,n])=>n&&typeof n==='object'&&n.daXong&&(!n.app||n.app==='hopDong')).sort((a,b)=>String(b[1].lucXong||'').localeCompare(String(a[1].lucXong||''))).slice(0,10);
   $('ds-nhac-xong').innerHTML=xong.length?xong.map(([k,n])=>{ const m=moTaNhac(n); return `<div class="item-sub" style="padding:4px 0">✅ ${esc(m.ten)} — ${esc(m.loai)} (${ngayVN(n.ngayMoc)}) · ${esc(n.nguoiXong||'')} ${lucVN(n.lucXong)} <a href="#" onclick="moLaiNhac('${k}');return false" style="color:var(--blue)">mở lại</a></div>`; }).join(''):'<div class="hint">Chưa có.</div>';
 }
 async function daXongNhac(k){ await ref('nhacNho/'+k).update({daXong:true,nguoiXong:tenNguoiDung,lucXong:luc()}); toast('✅ Đã đánh dấu xong'); }
@@ -1038,7 +1046,7 @@ const SHEET_NHAP={
   ThanhToan:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['dot','Đợt','so'],['ngayNghiemThu','Ngày nghiệm thu','ngay'],['giaTriNghiemThu','Giá trị nghiệm thu','tien'],['soTienDeNghi','Số tiền đề nghị TT','tien'],['thuHoiTamUng','Thu hồi tạm ứng','tien'],['giuBaoHanh','Giữ lại bảo hành','tien'],['giuQuyetToan','Giữ lại chờ quyết toán','tien'],['soTienThucNhan','Số tiền thực nhận','tien'],['ngayTienVe','Ngày tiền về','ngay'],['ghiChu','Ghi chú','text']],
   BaoLanh:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['loai','Loại (Bảo lãnh thực hiện hợp đồng/Bảo lãnh tạm ứng/Bảo lãnh bảo hành)','chon:LOAI_BAO_LANH'],['nganHang','Ngân hàng','text'],['soTien','Số tiền','tien'],['ngayPhatHanh','Ngày phát hành','ngay'],['ngayHetHan','Ngày hết hạn','ngay'],['ghiChu','Ghi chú / số thư','text']],
   HoanTra:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['loai','Loại (Tiền giữ bảo hành/Tiền giữ chờ quyết toán)','chon:LOAI_HOAN_TRA'],['ngay','Ngày tiền về','ngay'],['soTien','Số tiền','tien'],['lyDo','Lý do (Phát hành thư bảo lãnh bảo hành/Hết thời gian bảo hành/Quyết toán được duyệt/Khác)','chon:LY_DO_HOAN_TRA'],['ghiChu','Ghi chú','text']],
-  KeHoach:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['thang','Tháng (MM/YYYY)','text'],['soTien','Số tiền dự kiến về','tien']]
+  KeHoach:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['thang','Tháng (MM/YYYY)','thang'],['soTien','Số tiền dự kiến về','tien']]
 };
 const DS_CHON={TRANG_THAI,LOAI_HOP_DONG,LOAI_PHU_LUC,LOAI_BAO_LANH,HINH_THUC_BAO_HANH,LOAI_HOAN_TRA,LY_DO_HOAN_TRA};
 const MAU_HANG={ HopDong:[['PVA','MẪU-01/2026 (xoá dòng này)','15/01/2026','Ban QLDA huyện X','Gói thầu số 3 – cầu Km12','CT QL14e cầu','Đơn giá điều chỉnh',11363636364,1136363636,12500000000,'540 ngày','01/02/2026','31/07/2027','Đang thi công','Chủ đầu tư giữ tiền','','12','','','','']],
@@ -1082,7 +1090,7 @@ const MAU_MOT=[
 // Đọc sheet NhapLieu → tách thành 7 nhóm giống định dạng docSheet (để dùng chung phần kiểm tra + ghi)
 function docSheetMot(X, wb){ const ws=wb.Sheets.NhapLieu; if(!ws) return null; const rows=X.utils.sheet_to_json(ws,{header:1,defval:'',raw:true}); const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase());
   const I=Object.fromEntries(COT_MOT.map(c=>{ const pref=c[1].toLowerCase().split(' (')[0]; return [c[0],hdr.findIndex(h=>h.split(' (')[0].trim()===pref)]; })); // so khớp đúng tên cột (trước dấu ngoặc), tránh "Loại" trúng "Loại dòng"
-  const g=(r,k)=>I[k]>=0?r[I[k]]:''; const gs=(r,k)=>String(g(r,k)??'').trim();
+  const g=(r,k)=>I[k]>=0?r[I[k]]:''; const gs=(r,k)=>{ const x=g(r,k); return String(x==null?'':x).trim(); };
   const D={HopDong:[],PhuLuc:[],TamUng:[],ThanhToan:[],BaoLanh:[],HoanTra:[],KeHoach:[]};
   rows.slice(1).forEach((r,i)=>{ const ld=timKhoa(LOAI_DONG,gs(r,'loaiDong')); const chung={dong:i+2,loi:[],congTyId:gs(r,'congTyId').toUpperCase(),soHopDong:gs(r,'soHopDong')};
     if(!ld){ if(r.some(x=>x!==''&&x!=null)) D.HopDong.push(Object.assign(chung,{loi:['"Loại dòng" phải là: '+Object.values(LOAI_DONG).join(' / ')]})); return; }
@@ -1094,7 +1102,7 @@ function docSheetMot(X, wb){ const ws=wb.Sheets.NhapLieu; if(!ws) return null; c
     else if(ld==='thanhToan') D.ThanhToan.push(Object.assign(chung,{dot:Number(stt)||0,ngayNghiemThu:ngay,giaTriNghiemThu:tien,soTienDeNghi:docSoExcel(g(r,'soTienDeNghi')),thuHoiTamUng:docSoExcel(g(r,'thuHoiTamUng')),giuBaoHanh:docSoExcel(g(r,'giuBaoHanh')),giuQuyetToan:docSoExcel(g(r,'giuQuyetToan')),soTienThucNhan:docSoExcel(g(r,'soTienThucNhan')),ngayTienVe:docNgayExcel(g(r,'ngayTienVe')),ghiChu:gc}));
     else if(ld==='baoLanh') D.BaoLanh.push(Object.assign(chung,{loai:chon(LOAI_BAO_LANH,'loai'),nganHang:gs(r,'nganHang'),soTien:tien,ngayPhatHanh:ngay,ngayHetHan:docNgayExcel(g(r,'ngayHetHan')),ghiChu:gc}));
     else if(ld==='hoanTra') D.HoanTra.push(Object.assign(chung,{loai:chon(LOAI_HOAN_TRA,'loai'),ngay,soTien:tien,lyDo:timKhoa(LY_DO_HOAN_TRA,gs(r,'lyDo')),ghiChu:gc}));
-    else if(ld==='keHoach') D.KeHoach.push(Object.assign(chung,{thang:stt,soTien:tien})); });
+    else if(ld==='keHoach') D.KeHoach.push(Object.assign(chung,{thang:g(r,'stt'),soTien:tien})); }); // giữ nguyên ô (Excel hay đổi 10/2026 thành ngày) — docThangExcel xử lý
   return D; }
 
 // File mẫu tải về = 1 sheet NhapLieu (+ sheet HuongDan chỉ để đọc). App vẫn đọc được file 7 sheet cũ.
@@ -1112,11 +1120,14 @@ const HUONG_DAN_MOT=[['HƯỚNG DẪN ĐIỀN FILE MẪU NHẬP HỢP ĐỒNG (1
   ['7. Các dòng MẪU-01/2026 là ví dụ, xoá trước khi nhập. Nhập lại lần 2 → dòng trùng được cập nhật, không tạo đôi.'],
   ['8. Nhập: mở app → tab Khác → Chọn file → xem trước (dòng lỗi báo đỏ, bị bỏ qua) → bấm Ghi.']];
 function docNgayExcel(v){ if(!v) return ''; if(v instanceof Date) return isNaN(v)?'':v.getFullYear()+'-'+pad(v.getMonth()+1)+'-'+pad(v.getDate()); if(typeof v==='number'){ const d=new Date(Math.round((v-25569)*86400000)); return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate()); }
-  const s=String(v).trim(); let m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); if(m) return m[3]+'-'+pad(+m[2])+'-'+pad(+m[1]); m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]); return ''; }
+  const s=String(v).trim(); const hopLe=(y,mo,d)=>mo>=1&&mo<=12&&d>=1&&d<=31&&y>=1990&&y<=2100; // chặn ngày kiểu Mỹ 1/15/2026 → 2026-15-01
+  let m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); if(m) return hopLe(+m[3],+m[2],+m[1])?m[3]+'-'+pad(+m[2])+'-'+pad(+m[1]):'';
+  m=/^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return hopLe(+m[1],+m[2],+m[3])?m[1]+'-'+pad(+m[2])+'-'+pad(+m[3]):''; return ''; }
 function docThangExcel(v){ if(v instanceof Date) return v.getFullYear()+'-'+pad(v.getMonth()+1); const s=String(v||'').trim(); let m=/^(\d{1,2})[\/\-](\d{4})$/.exec(s); if(m) return m[2]+'-'+pad(+m[1]); m=/^(\d{4})-(\d{1,2})$/.exec(s); if(m) return m[1]+'-'+pad(+m[2]); const n=docNgayExcel(v); return n?n.slice(0,7):''; }
-const docSoExcel=v=>typeof v==='number'?Math.round(v):docTien(v);
-const docSoAmExcel=v=>{ if(typeof v==='number') return Math.round(v); const s=String(v||'').trim(); return (s.startsWith('-')?-1:1)*docTien(s); };
-const timKhoa=(ds,t)=>{ t=String(t||'').toLowerCase().trim(); return Object.entries(ds).find(([k,v])=>t===k.toLowerCase()||t===v.toLowerCase())?.[0]||''; };
+const boThapPhan=s=>String(s||'').trim().replace(/[.,]\d{1,2}$/,''); // tiền dạng chữ có phần lẻ: '1.136.363.636,36' → bỏ ',36' (nhóm nghìn luôn 3 chữ số nên không nhầm)
+const docSoExcel=v=>typeof v==='number'?Math.round(v):docTien(boThapPhan(v));
+const docSoAmExcel=v=>{ if(typeof v==='number') return Math.round(v); const s=boThapPhan(v); return (s.startsWith('-')?-1:1)*docTien(s); };
+const timKhoa=(ds,t)=>{ t=String(t||'').toLowerCase().trim(); return (Object.entries(ds).find(([k,v])=>t===k.toLowerCase()||t===v.toLowerCase())||[''])[0]; };
 // Đọc 1 sheet thành mảng object theo định nghĩa cột (tìm cột theo chữ đầu tiêu đề, không phân biệt hoa thường)
 function docSheet(X, wb, ten){ const ws=wb.Sheets[ten]; if(!ws) return null; const rows=X.utils.sheet_to_json(ws,{header:1,defval:'',raw:true}); const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase());
   const cot=SHEET_NHAP[ten]; const I=cot.map(c=>hdr.findIndex(h=>h.startsWith(c[1].toLowerCase().split(' (')[0])));
@@ -1124,7 +1135,8 @@ function docSheet(X, wb, ten){ const ws=wb.Sheets[ten]; if(!ws) return null; con
     cot.forEach((c,j)=>{ const raw=I[j]>=0?r[I[j]]:''; if(raw!==''&&raw!=null) coGi=true; let v;
       if(c[2]==='ngay') v=docNgayExcel(raw); else if(c[2]==='tien') v=docSoExcel(raw); else if(c[2]==='tienAm') v=docSoAmExcel(raw); else if(c[2]==='so') v=Number(String(raw).replace(',','.'))||0;
       else if(c[2].startsWith('chon:')){ const ds=DS_CHON[c[2].slice(5)]; v=timKhoa(ds,raw); if(String(raw).trim()&&!v) o.loi.push('"'+c[1].split(' (')[0]+'" không đúng lựa chọn'); }
-      else v=String(raw??'').trim();
+      else if(c[2]==='thang') v=docThangExcel(raw);
+      else v=String(raw==null?'':raw).trim();
       if(c[0]==='congTyId') v=String(v).toUpperCase(); datO(o,c[0],v); });
     return coGi?o:null; }).filter(Boolean); }
 const khoaHD=(ct,so)=>ct+'|'+String(so||'').trim().toLowerCase();
@@ -1133,9 +1145,11 @@ async function chonFileExcel(ev){ const f=ev.target.files[0]; ev.target.value=''
     let D=docSheetMot(X,wb); if(!D){ D={}; Object.keys(SHEET_NHAP).forEach(t=>{ D[t]=docSheet(X,wb,t)||[]; }); }
     if(!Object.values(D).some(a=>a.length)) throw new Error('File phải theo file mẫu (sheet NhapLieu)');
     const coHD={}; Object.entries(DL.hopDong).forEach(([id,h])=>coHD[khoaHD(h.congTyId,h.soHopDong)]=id);
-    D.HopDong.forEach(o=>{ if(!o.giaTriGoc&&o.giaTriTruocThue) o.giaTriGoc=o.giaTriTruocThue+(o.thue||0); if(!o.loaiHopDong) o.loaiHopDong='donGiaDieuChinh'; if(!o.trangThai) o.trangThai='dangThiCong'; if(!o.baoHanh.hinhThuc) o.baoHanh.hinhThuc='giuTien';
+    D.HopDong.forEach(o=>{ o.baoHanh=o.baoHanh||{}; o.quyetToan=o.quyetToan||{}; o.cuId=coHD[khoaHD(o.congTyId,o.soHopDong)]||'';
+      if(!o.giaTriGoc&&o.giaTriTruocThue) o.giaTriGoc=o.giaTriTruocThue+(o.thue||0);
+      if(!o.cuId){ if(!o.loaiHopDong) o.loaiHopDong='donGiaDieuChinh'; if(!o.trangThai) o.trangThai='dangThiCong'; if(!o.baoHanh.hinhThuc) o.baoHanh.hinhThuc='giuTien'; } // mặc định CHỈ cho hợp đồng mới; dòng cập nhật để trống = giữ nguyên
       if(!MA_CONG_TY.includes(o.congTyId)) o.loi.push('công ty phải là PVA/379/279'); if(!o.soHopDong) o.loi.push('thiếu số HĐ'); if(!o.tenGoiThau) o.loi.push('thiếu tên gói thầu'); if(!o.ngayKy) o.loi.push('ngày ký sai'); if(!o.giaTriGoc) o.loi.push('thiếu giá trị'); if(/MẪU/i.test(o.soHopDong)) o.loi.push('dòng mẫu, hãy xoá');
-      o.cuId=coHD[khoaHD(o.congTyId,o.soHopDong)]||''; });
+    });
     const trongFile=new Set(D.HopDong.filter(o=>!o.loi.length).map(o=>khoaHD(o.congTyId,o.soHopDong)));
     const kiem=(t,dk)=>D[t].forEach(o=>{ const k=khoaHD(o.congTyId,o.soHopDong); if(/MẪU/i.test(o.soHopDong)) o.loi.push('dòng mẫu, hãy xoá'); else if(!coHD[k]&&!trongFile.has(k)) o.loi.push('không có hợp đồng '+o.congTyId+' '+o.soHopDong+' (trong app lẫn sheet HopDong)'); dk(o); });
     kiem('PhuLuc',o=>{ if(!o.soPhuLuc) o.loi.push('thiếu số PL'); if(!o.ngayKy) o.loi.push('ngày ký sai'); if(!o.loai) o.loai=o.ngayHoanThanhMoi&&!o.giaTriDieuChinh?'giaHan':o.ngayHoanThanhMoi?'caHai':'dieuChinhGia'; });
@@ -1157,10 +1171,11 @@ function tomTatDongNhap(t,o){ switch(t){ case 'HopDong': return o.tenGoiThau+' �
 async function nhapExcel(btn){ await bam(btn,async()=>{ const D=window._dsNhap; const idCua={}; Object.entries(DL.hopDong).forEach(([id,h])=>idCua[khoaHD(h.congTyId,h.soHopDong)]=id); let n=0;
     for(const o of D.HopDong.filter(x=>!x.loi.length)){ const v=JSON.parse(JSON.stringify(o)); delete v.dong; delete v.loi; delete v.cuId; const k=khoaHD(v.congTyId,v.soHopDong);
       if(v.baoHanh.ngayNghiemThuBanGiao&&v.baoHanh.soThang) v.baoHanh.ngayHetBaoHanh=TINH_TOAN.ngayHetBaoHanh(v.baoHanh.ngayNghiemThuBanGiao,v.baoHanh.soThang);
-      if(o.cuId){ const cu=DL.hopDong[o.cuId]; const moi=JSON.parse(JSON.stringify(cu)); Object.entries(v).forEach(([kk,x])=>{ if(x&&typeof x==='object') moi[kk]=Object.assign({},moi[kk]||{},Object.fromEntries(Object.entries(x).filter(([a,b])=>b!==''&&b!==0))); else if(x!==''&&x!==0) moi[kk]=x; }); await luuBanGhi('hopDong','',o.cuId,moi); idCua[k]=o.cuId; }
+      const cuId=o.cuId||idCua[k]||''; // bấm Ghi lại sau khi lỗi giữa chừng: hợp đồng đã tạo ở lần trước → cập nhật, không tạo đôi
+      if(cuId&&DL.hopDong[cuId]){ const cu=DL.hopDong[cuId]; const moi=JSON.parse(JSON.stringify(cu)); Object.entries(v).forEach(([kk,x])=>{ if(x&&typeof x==='object') moi[kk]=Object.assign({},moi[kk]||{},Object.fromEntries(Object.entries(x).filter(([a,b])=>b!==''&&b!==0))); else if(x!==''&&x!==0) moi[kk]=x; }); await luuBanGhi('hopDong','',cuId,moi); idCua[k]=cuId; }
       else idCua[k]=await luuBanGhi('hopDong','',null,v,v.soHopDong+' · '+v.tenGoiThau+' (nhập Excel)'); n++; }
     const con=(t,bang,khop,chuan)=>D[t].filter(x=>!x.loi.length).map(async o=>{ const hdId=idCua[khoaHD(o.congTyId,o.soHopDong)]; if(!hdId) return; const v=chuan(JSON.parse(JSON.stringify(o))); delete v.dong; delete v.loi; delete v.congTyId; delete v.soHopDong;
-      const cu=danhSachBanGhi(bang,hdId).find(x=>khop(x,v)); const id=await luuBanGhi(bang,hdId,cu?cu.id:'',cu?Object.assign({},cu,v):v,tomTatMoiNhap(bang,o)); n++; return {hdId,id,v,cu}; });
+      const cu=danhSachBanGhi(bang,hdId).find(x=>khop(x,v)); const id=await luuBanGhi(bang,hdId,cu?cu.id:'',cu?Object.assign({},cu,Object.fromEntries(Object.entries(v).filter(([a,b])=>b!==''&&b!==0&&b!=null))):v,tomTatMoiNhap(bang,o)); /* cập nhật: ô để trống trong Excel = giữ nguyên, không xoá dữ liệu đã nhập tay */ n++; return {hdId,id,v,cu}; });
     for(const p of con('PhuLuc','phuLuc',(x,v)=>String(x.soPhuLuc).toLowerCase()===String(v.soPhuLuc).toLowerCase(),v=>v)) await p;
     for(const p of con('TamUng','tamUng',(x,v)=>Number(x.dot)===Number(v.dot),v=>{ v._bl=v.bl; delete v.bl; return v; })){ const r=await p; if(r&&r.v._bl&&r.v._bl.soTien){ const b=r.v._bl; const cuBl=(r.cu&&r.cu.baoLanhId&&DL.baoLanh[r.cu.baoLanhId])?r.cu.baoLanhId:''; const blId=await luuBanGhi('baoLanh',r.hdId,cuBl,{loai:'tamUng',nganHang:b.nganHang,soTien:b.soTien,ngayPhatHanh:b.ngayPhatHanh,ngayHetHan:b.ngayHetHan,tamUngId:r.id},'Bảo lãnh tạm ứng (Excel)'); if(!cuBl) await ref('tamUng/'+r.hdId+'/'+r.id).update({baoLanhId:blId}); } }
     for(const p of con('ThanhToan','thanhToan',(x,v)=>Number(x.dot)===Number(v.dot),v=>v)) await p;
@@ -1224,7 +1239,7 @@ async function dangKyServiceWorker(){ if(!coPush()) return null; try{ return awa
 // Đăng ký nhận push và lưu lên Firebase (uid của chính mình — luật kiểm). Gọi lại mỗi lần mở app để đăng ký không bị cũ.
 async function dangKyPush(){
   if(!coPush()||!nguoiHienTai||Notification.permission!=='granted') return;
-  try{ const reg=(await dangKyServiceWorker())||await navigator.serviceWorker.ready;
+  try{ const reg=await dangKyServiceWorker(); if(!reg) throw new Error('Không đăng ký được service worker (sw-hopdong.js)');
     let sub=await reg.pushManager.getSubscription();
     if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:_b64url(CAU_HINH.VAPID_PUBLIC)});
     const khoa=btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').slice(0,80);
