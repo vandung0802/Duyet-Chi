@@ -207,7 +207,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20260929-v7';
+const APP_VERSION = '20261003-v8';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database(), storage = firebase.storage();
@@ -311,6 +311,7 @@ function showTab(t){
 function renderAll(){ renderStats(); renderFilters(); renderList(); renderIssues(); renderReport(); renderSitesCard(); if(curId&&_logRef) renderDetail(_logs); }
 // tab Khác: danh sách công trình dùng chung với app Duyệt Chi (chỉ xem; thêm/xoá bên Duyệt Chi → Cài đặt, ở đây tự cập nhật)
 function renderSitesCard(){
+  if(document.activeElement&&document.activeElement.id==='new-site') return; // đang gõ tên công trình → không vẽ đè làm mất chữ
   const cnt={}; Object.values(items).forEach(i=>{ if(i.site&&i.status!=='sold') cnt[i.site]=(cnt[i.site]||0)+1; });
   const list=allSites();
   const jsName=sname=>JSON.stringify(sname).replace(/"/g,'&quot;');
@@ -436,7 +437,7 @@ function renderReport(){
       <div style="font-size:12px;color:var(--text-sub);margin-top:4px">Sự cố xếp vào kỳ theo ngày báo hỏng. Ngày nằm = từ báo hỏng đến sửa xong (chưa xong tính đến hôm nay). Chi phí = chi phí ghi lúc sửa xong.</div></div></div>
     ${tbl('🔧 Theo máy',R.byItem,'Máy',itemName)}
     ${R.site?'':tbl('📍 Theo công trình',R.bySite,'Công trình',k=>k)}
-    ${R.list.length?`<div class="card"><div class="card-body"><h3 style="font-size:15px;margin-bottom:8px">📋 Từng lần hỏng (${R.list.length})</h3><table class="x"><tr><th>Ngày</th><th>Máy · hỏng gì</th><th class="r">Chi phí</th></tr>${R.list.map(v=>`<tr onclick="openDetail('${v.itemId}')" style="cursor:pointer"><td style="white-space:nowrap">${fmtDate(v.ts)}</td><td><b>${esc((items[v.itemId]||{}).code||'?')}</b> ${esc(v.desc)}${v.status!=='done'?' <span class="badge '+(v.status==='new'?'s-broken':'s-repair')+'" style="font-size:11px;padding:1px 6px">'+ISS[v.status].replace(/^\S+ /,'')+'</span>':''}</td><td class="r">${fmtMoney(v.cost)||'—'}</td></tr>`).join('')}</table></div></div>`
+    ${R.list.length?`<div class="card"><div class="card-body"><h3 style="font-size:15px;margin-bottom:8px">📋 Từng lần hỏng (${R.list.length})</h3><table class="x"><tr><th>Ngày</th><th>Máy · hỏng gì</th><th class="r">Chi phí</th></tr>${R.list.map(v=>`<tr onclick="openDetail('${v.itemId}')" style="cursor:pointer"><td style="white-space:nowrap">${fmtDate(v.ts)}</td><td><b>${esc((items[v.itemId]||{}).code||'?')}</b> ${esc(v.desc)}${v.status!=='done'?' <span class="badge '+(v.status==='new'?'s-broken':'s-repair')+'" style="font-size:11px;padding:1px 6px">'+(ISS[v.status]||v.status||'').replace(/^\S+ /,'')+'</span>':''}</td><td class="r">${fmtMoney(v.cost)||'—'}</td></tr>`).join('')}</table></div></div>`
       :'<div class="card"><div class="empty">Không có sự cố nào trong kỳ này.</div></div>'}
     <div class="row"><button class="btn" onclick="shareReport()">📤 Gửi Zalo / sao chép</button><button class="btn sec" onclick="exportIssues(true)">📊 Excel kỳ này</button></div>`;
 }
@@ -735,7 +736,7 @@ async function downloadTemplate(){
 async function onExcel(ev){
   const f=ev.target.files[0]; ev.target.value=''; if(!f) return;
   try{ const X=await loadXLSX(); const wb=X.read(await f.arrayBuffer()); const rows=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
-    const hdr=rows[0].map(h=>String(h).trim().toLowerCase()); const ci=n=>hdr.findIndex(h=>h.includes(n));
+    const hdr=(rows[0]||[]).map(h=>String(h).trim().toLowerCase()); const ci=n=>hdr.findIndex(h=>h.includes(n));
     const I={code:ci('mã'),name:ci('tên'),type:ci('loại'),plate:ci('biển'),serial:ci('số khung'),year:ci('năm'),site:ci('công trình'),keeper:ci('người'),status:ci('tình trạng'),note:ci('ghi chú')};
     if(I.code<0||I.name<0) throw new Error('File phải có cột "Mã thiết bị" và "Tên thiết bị"');
     const g=(r,k)=>I[k]>=0?String(r[I[k]]??'').trim():'';
@@ -776,7 +777,7 @@ async function exportItems(){
 async function exportIssues(periodOnly){
   try{ const X=await loadXLSX();
     const src=periodOnly===true?reportData().list:Object.values(issues).sort((a,b)=>b.ts-a.ts);
-    const aoa=[['Mã','Thiết bị','Công trình','Ngày hỏng','Hỏng gì','Tình trạng','Ngày sửa xong','Số ngày nằm','Đã sửa gì','Thợ','Chi phí','Người báo']].concat(src.map(v=>{ const it=items[v.itemId]||{}; return [it.code,it.name,v.site||it.site,fmtDate(v.ts),v.desc,ISS[v.status].replace(/^\S+ /,''),fmtDate(v.doneTs),days(v.ts,v.doneTs),v.repairDesc||'',v.repairer||'',v.cost||'',v.by]; }));
+    const aoa=[['Mã','Thiết bị','Công trình','Ngày hỏng','Hỏng gì','Tình trạng','Ngày sửa xong','Số ngày nằm','Đã sửa gì','Thợ','Chi phí','Người báo']].concat(src.map(v=>{ const it=items[v.itemId]||{}; return [it.code,it.name,v.site||it.site,fmtDate(v.ts),v.desc,(ISS[v.status]||v.status||'').replace(/^\S+ /,''),fmtDate(v.doneTs),days(v.ts,v.doneTs),v.repairDesc||'',v.repairer||'',v.cost||'',v.by]; }));
     const ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=[10,26,16,11,30,10,11,8,30,14,12,14].map(w=>({wch:w}));
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'Sua chua'); X.writeFile(wb,'So-sua-chua-'+toISO(Date.now())+'.xlsx');
   }catch(e){ toast('❌ '+e.message); }
