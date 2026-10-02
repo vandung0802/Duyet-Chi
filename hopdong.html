@@ -258,7 +258,8 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261002-v12',
+  PHIEN_BAN: '20261002-v13',
+  VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
   URL_APPS_SCRIPT: '',            // khối 15 (Google Sheets / Drive) — chưa làm
@@ -380,7 +381,7 @@ firebase.auth().onAuthStateChanged(async user=>{
   if(ho.approved!==true && !laGiamDoc()){ $('wait-screen').hidden=false; return; }
   $('app').hidden=false; $('hdr-user').textContent=tenNguoiDung+(laGiamDoc()?' (GD)':'');
   $('more-info').textContent='Đăng nhập: '+tenNguoiDung+' · '+(laGiamDoc()?'Giám đốc':'Nhân viên')+' · Bản '+CAU_HINH.PHIEN_BAN;
-  dangKyNguoiDung(); veThongBao(); ketNoiDuLieu();
+  dangKyNguoiDung(); veThongBao(); ketNoiDuLieu(); dangKyPush();
 });
 
 // ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3, tất cả dưới hopdong/; baoLanh dạng phẳng từ 02/10) =====
@@ -1204,13 +1205,36 @@ async function xuatExcelDashboard(){ try{ const X=await napSheetJs(); const kq=t
     const du=Object.keys(DL.hopDong).map(id=>duLieuHopDong(id)); ['thang','quy'].forEach(ky=>{ const dt=TINH_TOAN.dongTien(du,ky,locCongTy); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet([['Kỳ','Kế hoạch về','Thực tế về','Chênh lệch']].concat(dt.map(x=>[thangVN(x.ky),x.keHoach,x.thucTe,x.thucTe-x.keHoach]))),ky==='thang'?'DongTienThang':'DongTienQuy'); });
     X.writeFile(wb,'Tong-hop-hop-dong-'+homNay()+'.xlsx'); }catch(e){ toast('❌ '+e.message); } }
 
-// ===== 14. THONG_BAO_DAY — TẠM: thông báo trên máy khi mở app (Notification API). Push thật lên màn hình khoá + GitHub Actions 7:00 làm ở bước sau =====
+// ===== 14. THONG_BAO_DAY — đăng ký web push (service worker riêng sw-hopdong.js), lưu đăng ký vào hopdong/pushSubs/{uid}/{khoá}.
+// Kịch bản scripts/nhac-han-hopdong.js chạy trên GitHub Actions 07:00 giờ VN đọc danh sách này để gửi thông báo lên màn hình khoá (quy tắc 18–20).
+// CHỈ gửi khi có mốc đến hạn; không có gì thì im lặng. Máy không hỗ trợ push (trình duyệt cũ) vẫn được nhắc tại chỗ khi mở app (nhacTrenMay). =====
 const coThongBao=()=>'Notification' in window;
+const coPush=()=>!!(navigator.serviceWorker&&'PushManager' in window);
+let _dangKyPush=''; // '' chưa, 'ok' đã lưu lên Firebase, hoặc thông báo lỗi
 function veThongBao(){ const info=$('notify-info'), btn=$('notify-btn'); if(!coThongBao()){ info.textContent='Trình duyệt này không hỗ trợ thông báo. Vẫn xem được ở tab Nhắc hạn.'; btn.hidden=true; return; }
-  const p=Notification.permission; info.textContent=p==='granted'?'✅ Đã bật. Mỗi lần mở app, việc đến hạn sẽ hiện thông báo trên máy này (mỗi việc 1 lần/ngày).':p==='denied'?'⛔ Đã bị chặn trong cài đặt trình duyệt.':'Bấm để cho phép app hiện thông báo nhắc hạn trên máy này.'; btn.hidden=p!=='default'; }
-async function batThongBao(){ try{ const p=await Notification.requestPermission(); veThongBao(); if(p==='granted'){ toast('✅ Đã bật'); hienThongBao('📑 Hợp đồng PVA-379-279','Đã bật nhắc nhở trên máy này.','test'); nhacTrenMay(); } }catch(e){ toast('❌ '+e.message); } }
-async function hienThongBao(t,b,tag){ try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); if(reg&&reg.showNotification) return reg.showNotification(t,{body:b,tag}); new Notification(t,{body:b,tag}); }catch(e){} }
-function nhacTrenMay(){ if(!coThongBao()||Notification.permission!=='granted'||!nguoiHienTai) return; const key='hd_noted_'+homNay(); let done={}; try{ done=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
+  const p=Notification.permission;
+  info.textContent=p==='granted'?(_dangKyPush==='ok'?'✅ Đã bật. Mỗi sáng 7:00 máy này nhận thông báo các việc đến hạn (chỉ khi có việc).':_dangKyPush?'⚠️ Đã cho phép nhưng chưa đăng ký được nhận push: '+_dangKyPush:'✅ Đã bật trên máy này. Đang đăng ký nhận thông báo 7:00 sáng…')
+    :p==='denied'?'⛔ Đã bị chặn trong cài đặt trình duyệt.':'Bấm để nhận thông báo nhắc hạn lúc 7:00 sáng trên máy này (iPhone: cài app ra màn hình chính trước).';
+  btn.hidden=p!=='default'; }
+async function batThongBao(){ try{ const p=await Notification.requestPermission(); veThongBao(); if(p==='granted'){ await dangKyPush(); toast(_dangKyPush==='ok'?'✅ Đã bật nhắc 7:00 sáng':'✅ Đã bật trên máy này'); hienThongBao('📑 Hợp đồng PVA-379-279','Đã bật nhắc nhở trên máy này.','test'); nhacTrenMay(); } }catch(e){ toast('❌ '+e.message); } }
+function _b64url(b){ const p='='.repeat((4-b.length%4)%4); const r=atob((b+p).replace(/-/g,'+').replace(/_/g,'/')); const a=new Uint8Array(r.length); for(let i=0;i<r.length;i++) a[i]=r.charCodeAt(i); return a; }
+function _b64(buf){ return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+async function dangKyServiceWorker(){ if(!coPush()) return null; try{ return await navigator.serviceWorker.register('sw-hopdong.js',{scope:'hopdong'}); }catch(e){ return null; } }
+// Đăng ký nhận push và lưu lên Firebase (uid của chính mình — luật kiểm). Gọi lại mỗi lần mở app để đăng ký không bị cũ.
+async function dangKyPush(){
+  if(!coPush()||!nguoiHienTai||Notification.permission!=='granted') return;
+  try{ const reg=(await dangKyServiceWorker())||await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:_b64url(CAU_HINH.VAPID_PUBLIC)});
+    const khoa=btoa(sub.endpoint).replace(/[^a-zA-Z0-9]/g,'').slice(0,80);
+    await ref('pushSubs/'+nguoiHienTai.uid+'/'+khoa).set({ endpoint:sub.endpoint, keys:{p256dh:_b64(sub.getKey('p256dh')),auth:_b64(sub.getKey('auth'))}, uid:nguoiHienTai.uid, ten:tenNguoiDung, luc:luc() });
+    _dangKyPush='ok';
+  }catch(e){ _dangKyPush=e.message||String(e); }
+  veThongBao();
+}
+async function hienThongBao(t,b,tag){ try{ const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration('hopdong'); if(reg&&reg.showNotification) return reg.showNotification(t,{body:b,tag}); new Notification(t,{body:b,tag}); }catch(e){} }
+// Nhắc tại chỗ khi mở app — chỉ cho máy KHÔNG nhận được push (tránh nhắc 2 lần với máy đã có push 7:00)
+function nhacTrenMay(){ if(!coThongBao()||Notification.permission!=='granted'||!nguoiHienTai||_dangKyPush==='ok') return; const key='hd_noted_'+homNay(); let done={}; try{ done=JSON.parse(localStorage.getItem(key)||'{}'); }catch(e){}
   danhSachDangNhac().forEach(n=>{ if(done[n.id]) return; done[n.id]=1; const m=moTaNhac(n); hienThongBao(m.ten+' — '+m.loai, n.conNgay<0?'QUÁ HẠN '+(-n.conNgay)+' ngày ('+ngayVN(n.ngayMoc)+')':'còn '+n.conNgay+' ngày ('+ngayVN(n.ngayMoc)+')', n.id); });
   try{ localStorage.setItem(key,JSON.stringify(done)); Object.keys(localStorage).forEach(x=>{ if(x.startsWith('hd_noted_')&&x!==key) localStorage.removeItem(x); }); }catch(e){} }
 

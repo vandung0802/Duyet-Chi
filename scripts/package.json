@@ -1,0 +1,8 @@
+{
+  "name": "pva-scripts",
+  "private": true,
+  "description": "Kịch bản chạy trên GitHub Actions cho các app PVA (không phải một phần của app)",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}

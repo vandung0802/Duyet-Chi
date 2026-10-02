@@ -34,7 +34,7 @@ Dữ liệu ban đầu: khoảng **20 hợp đồng đang dở dang** trên cả
 |---|---|---|
 | Kiểu ứng dụng | Web app, cài được lên màn hình chính điện thoại (PWA) | Dùng được trên máy tính và iPhone, không phải cài gì |
 | Mã nguồn | **Một file `index.html`** chứa toàn bộ giao diện và logic | Cùng cách với app Duyệt Chi và app Tiến độ, anh Dũng đã quen sửa |
-| Đưa lên mạng | GitHub Pages, repo `vandung0802/hop-dong-pva-379-279` | Miễn phí, đã dùng cho hai app trước |
+| Đưa lên mạng | GitHub Pages. *(chốt 30/09, giữ 02/10)* Đang ở repo `vandung0802/Duyet-Chi`, file `hopdong.html` | Miễn phí, chung đăng nhập và luật tự deploy với Duyệt Chi |
 | Kho dữ liệu chính | Firebase Realtime Database. *(02/10)* **Dùng chung project với app Công Nợ**: các nhánh `congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu` là chung; app Công Nợ để dữ liệu riêng dưới `congNo/` | Nhiều người nhập cùng lúc; bảo lãnh nhập một nơi cả hai app cùng thấy |
 | Bản sao Google Sheets | Đồng bộ một chiều Firebase → Google Sheets qua Google Apps Script (gọi kiểu JSONP như Duyệt Chi) | Kế toán quen xem bảng; tránh lỗi CORS của GitHub Pages |
 | File đính kèm (scan hợp đồng, phụ lục, bảo lãnh) | Tải lên **Google Drive** của tài khoản vandung0802@gmail.com qua Apps Script; lưu link công khai "ai có link đều tải được" vào Firebase | Ai cũng tải xuống được, không hạn chế |
@@ -174,12 +174,13 @@ Chốt thêm ngày 02/10/2026 (khi lập app Công Nợ):
 
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
-Ghi chú triển khai thực tế (Claude ghi 02/10/2026 — khác spec, chờ anh Dũng chốt, xem `BANGIAO.md`):
+Chốt thêm ngày 02/10/2026 (anh Dũng: "cứ làm" — theo đề nghị của Claude trong `BANGIAO.md`):
 
-- Mã đang ở `Duyet-Chi/hopdong.html` (không phải repo riêng `index.html`); mọi nhánh Firebase của app nằm dưới `hopdong/` (kể cả 6 nhánh dùng chung với app Công Nợ) — app Công Nợ cần trỏ vào `hopdong/...` hoặc chốt chuyển ra gốc.
-- Đăng nhập: email + mật khẩu Firebase Auth (chung tài khoản app Duyệt Chi, chốt 30/09), không dùng tên + PIN; `nguoiDung/{uid}` khoá theo uid Firebase.
-- Bảng `baoLanh` đã phẳng từ bản v12; `nhacNho` dùng khoá `{hopDongId}__{loai}__{thamChieuId}` thay vì `push()`.
-- File Excel kế toán Đại Thành chưa có trong repo (repo public — chỉ để file mẫu rỗng).
+- **Đường dẫn**: mã ở `Duyet-Chi/hopdong.html`; mọi nhánh Firebase của app nằm dưới **`hopdong/`** — kể cả 6 nhánh dùng chung (`hopdong/congTy`, `hopdong/nguoiDung`, `hopdong/baoLanh`, `hopdong/nhacNho`, `hopdong/yeuCauXoa`, `hopdong/lichSu`). **App Công Nợ đọc/ghi các nhánh dùng chung tại `hopdong/...`**, dữ liệu riêng của nó ở `congNo/` (gốc). Không chuyển dữ liệu đang chạy ra gốc.
+- **Đăng nhập**: email + mật khẩu Firebase Auth, chung tài khoản app Duyệt Chi (chốt 30/09, giữ 02/10). Không dùng tên + PIN; `nguoiDung/{uid}` khoá theo uid Firebase, không có `pinHash`. App Công Nợ đăng nhập cùng cách.
+- **File Excel kế toán Đại Thành**: chưa có trong repo (repo public — chỉ để file mẫu rỗng). Khi anh Dũng gửi file thì làm mẫu 3 sheet + bộ đọc file gốc theo mục 1.2.
+- Bảng `baoLanh` phẳng từ bản v12; `nhacNho` dùng khoá `{hopDongId}__{loai}__{thamChieuId}` thay vì `push()`; mỗi mốc có thêm `lanNhacCuoi` (ngày nhắc gần nhất) do kịch bản nhắc hạn ghi.
+- **Nhắc hạn 07:00** (bản v13): GitHub Actions `.github/workflows/nhac-han-hopdong.yml` chạy `scripts/nhac-han-hopdong.js`, dùng lại `FIREBASE_TOKEN` đã có; đăng ký nhận push lưu ở `hopdong/pushSubs/{uid}/{khoá}`, service worker riêng `sw-hopdong.js`, khoá VAPID chung với Duyệt Chi (bí mật ở `fn-secrets/vapid379`, chỉ máy chủ đọc). **Không có mốc đến hạn thì không gửi gì** (anh Dũng chốt 02/10).
 
 ---
 
