@@ -4,10 +4,10 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v6**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v7**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
-- **Đã xong bước 1, 2, 3** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món).
-- Kiểm tra công thức: `node test-congno-tinhtoan.js` (60 phép tính, gồm cả khối 7 SINH_LICH; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
+- **Đã xong bước 1, 2, 3, 4** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
+- Kiểm tra công thức: `node test-congno-tinhtoan.js` (68 phép tính, gồm cả khối 7 SINH_LICH và thấu chi; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
 ## Khác spec — làm theo thực tế app Hợp Đồng (anh Dũng dặn "dùng lại y nguyên, không viết cách mới")
@@ -60,6 +60,16 @@
 - Chi tiết ngân hàng có thêm bảng "Vay trung dài hạn tại đây". Lịch trả ghi `Vay DH <số HĐ>` / `KƯ <số>` (`tenKhoan`).
 - Luật Firebase không đổi (vẫn nhánh `congNo/khoanVay`).
 
+## Đã làm 02/10/2026 (bản v7 — bước 4: thấu chi)
+
+- **Dữ liệu** `congNo/thauChi/{id}` (luật Firebase đã thêm nhánh `thauChi`): `nganHangId, congTyVay, congTyChiu, soHopDong, hanMuc, ngayHieuLuc, ngayHetHan, ngayNopHangThang, theoDoiTu, keToanTheoDoi, ghiChu` + bảng con `giaoDich`, `laiSuat`, `fileDinhKem`.
+- **Giao dịch**: `loai: rut|nop`. Dòng nộp tách `soTien` (nộp GỐC — giảm số đang dùng), `lai`, `phi` (số thật nộp kèm), `kyNop` (gắn kỳ nộp hằng tháng → kỳ tự tắt). Bảng giao dịch có cột "Đang dùng" sau từng giao dịch, lãi thật cạnh lãi ước.
+- **TINH_TOAN**: `thauChiNhuKhoan` (rút = giải ngân, nộp gốc = trả gốc → dùng lại `duNoGoc`, `laiUocTinh`, `cacKyLai`), `thauChiDangDung`, `lichNopThauChi`, `tinhThauChi`.
+- **Giao diện**: nút chọn thứ ba "🔄 Thấu chi" trong tab Khoản vay (`veThauChi`); chi tiết `veCtThauChi` có tab Rút / nộp · Nộp hằng tháng · Lãi suất · File · Lịch sử. Lịch trả 30 ngày có thêm loại "Nộp thấu chi" (lọc được). Chi tiết ngân hàng có bảng "Thấu chi tại đây".
+- Dọn chung: `veBangLaiSuat(duongCha, bảng)` + `formLaiSuat(duongCha, id)` dùng cho cả khoản vay lẫn thấu chi (bước 5 thuê tài chính dùng lại); `tatCaLichTra` mỗi dòng có `ten`, `mo`.
+- **Chờ anh Dũng xác nhận**: "nộp tiền hằng tháng" tôi hiểu là nộp LÃI thấu chi (số phải nộp = lãi ước của kỳ). Nếu thực tế là phải nộp cả gốc về 0 mỗi tháng thì đổi `lichNopThauChi`.
+- **Nhắc trước 5 ngày** (push) làm ở bước 8 — hiện mới hiện trên Lịch trả và tô vàng/đỏ.
+
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
@@ -78,7 +88,8 @@
 ## Việc tiếp theo (mục 1.2)
 
 3. ~~Vay trung dài hạn theo món~~ — xong v5.
-4. Thấu chi → 5. Thuê tài chính → 6. Bảo lãnh, phí, ký quỹ → 7. Tài sản bảo đảm → 8. Nhắc hạn + push → 9. Dashboard, biểu đồ, xuất Excel → 10. Nhập Excel.
+4. ~~Thấu chi~~ — xong v7.
+5. Thuê tài chính → 6. Bảo lãnh, phí, ký quỹ → 7. Tài sản bảo đảm → 8. Nhắc hạn + push → 9. Dashboard, biểu đồ, xuất Excel → 10. Nhập Excel.
 
 ## Chỗ đang lỗi
 

@@ -220,6 +220,13 @@ Ghi thêm khi làm bước 3 (vay trung dài hạn, bản v5) — Claude tự đ
 - **Khoản vay cũ nhập lại**: ô "số kỳ gốc đã trả" → app ghi sẵn mỗi kỳ đã trả một dòng `traNo` gắn đúng kỳ, để dư nợ đúng và không báo quá hạn oan.
 - **Trả trước hạn** (`traNo.traTruocHan`, `phiPhat`): gốc trả trước không gắn kỳ; nút **"Khớp lịch với dư nợ"** trừ dần từ các kỳ cuối (kỳ hết gốc thì bỏ), có hỏi lại và ghi lịch sử. Ngân hàng tính khác thì kế toán sửa tay từng kỳ.
 
+Ghi thêm khi làm bước 4 (thấu chi, bản v7) — Claude tự định, anh Dũng xem sai thì sửa:
+
+- **"Nộp tiền hằng tháng" hiểu là nộp LÃI thấu chi**: đến ngày N mỗi tháng phải nộp, số phải nộp = lãi ước tính của kỳ (số đang dùng từng ngày × lãi suất / 365). Tháng nào không dùng thấu chi thì không nhắc.
+- **Dòng nộp tách gốc và lãi** (giống trả nợ khoản vay): `soTien` = nộp gốc, làm giảm số đang dùng — công thức `thauChiDangDung = Σ rút − Σ nộp` giữ nguyên; `lai`, `phi` = số thật nộp kèm, không làm giảm số đang dùng. Kỳ nộp tự tắt khi có dòng nộp gắn kỳ (`kyNop`).
+- Rút vượt hạn mức: hỏi lại rồi vẫn cho lưu (số liệu thật có thể đã vượt). Nộp gốc nhiều hơn số đang dùng: không cho.
+- Hạn mức thấu chi sắp hết hạn: báo trước 60 ngày như hạn mức tín dụng.
+
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
 ---
@@ -414,9 +421,11 @@ Nhánh **dùng chung** (cấu trúc gốc ở CLAUDE.md app Hợp Đồng; dư�
     │     traNo/{id}: { ngay, goc, lai, phi, traTruocHan (bool), phiPhat, kyTraId, chungTu }
     │
     ├── thauChi/{id}
-    │     nganHangId, congTyVay, congTyChiu, hanMuc, ngayHetHan, ngayNopHangThang
-    │     laiSuat/{id}, keToanTheoDoi
-    │     giaoDich/{id}: { ngay, loai ("rut"|"nop"), soTien, noiDung }
+    │     nganHangId, congTyVay, congTyChiu, soHopDong, hanMuc, ngayHieuLuc, ngayHetHan, ngayNopHangThang
+    │     theoDoiTu                                            ← ngày bắt đầu theo dõi trong app (kỳ nộp trước đó coi như đã nộp)
+    │     laiSuat/{id}, keToanTheoDoi, fileDinhKem/{id}
+    │     giaoDich/{id}: { ngay, loai ("rut"|"nop"), soTien, lai, phi, kyNop, noiDung }
+    │                    ← dòng nộp: soTien = phần nộp GỐC; lai/phi = lãi, phí thật nộp kèm; kyNop = ngày phải nộp hằng tháng mà lần nộp này đáp ứng
     │
     ├── thueTaiChinh/{id}
     │     nganHangId (công ty cho thuê), congTyThue, congTyChiu, soHopDong, ngayKy

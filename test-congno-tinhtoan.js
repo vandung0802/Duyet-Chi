@@ -153,5 +153,26 @@ check('hợp đồng tăng 300tr → cộng vào kỳ cuối', S.khopLich(D4), {
 check('chuaGiaiNgan trong bảng số', T.tinhKhoan(D4, '2026-04-01').chuaGiaiNgan, 300000000);
 check('khế ước (không có soTien) → chuaGiaiNgan = 0', T.tinhKhoan(A, '2026-03-25').chuaGiaiNgan, 0);
 
+console.log('--- THẤU CHI: số đang dùng = Σ rút − Σ nộp gốc; lãi ước theo số dư từng ngày ---');
+// Rút 01/03 200tr; rút 11/03 100tr; nộp gốc 21/03 150tr. Lãi suất 12%/năm. Nộp tiền ngày 25 hằng tháng. Hạn mức 500tr.
+const TC = () => ({ hanMuc: 500000000, ngayNopHangThang: 25, theoDoiTu: '2026-03-01',
+  laiSuat: { l1: { tuNgay: '2026-01-01', phanTramNam: 12 } },
+  giaoDich: { r1: { ngay: '2026-03-01', loai: 'rut', soTien: 200000000 }, r2: { ngay: '2026-03-11', loai: 'rut', soTien: 100000000 },
+              n1: { ngay: '2026-03-21', loai: 'nop', soTien: 150000000 } } });
+check('thauChiDangDung', T.thauChiDangDung(TC()), 150000000);
+check('thauChiDangDung cuối ngày 15/03', T.thauChiDangDung(TC(), '2026-03-15'), 300000000);
+// kỳ 25/03 (TÍNH TAY): 10 ngày × 200tr + 10 ngày × 300tr + 4 ngày × 150tr = 5.600tr·ngày × 12%/365 = 1.841.095,89
+// kỳ 25/04: 31 ngày × 150tr × 12%/365 = 1.528.767,12
+check('lịch nộp hằng tháng đến 30/04', T.lichNopThauChi(TC(), '2026-04-30').map(x => [x.ngay, x.laiUoc]), [['2026-03-25', 1841096], ['2026-04-25', 1528767]]);
+const TC1 = TC(); TC1.giaoDich.n2 = { ngay: '2026-03-25', loai: 'nop', soTien: 0, lai: 1850000, kyNop: '2026-03-25' };   // nộp lãi kỳ 25/03 (số thật)
+check('nộp gắn kỳ 25/03 → kỳ đó tự tắt, số đang dùng không đổi', [T.lichNopThauChi(TC1, '2026-04-30').map(x => x.ngay), T.thauChiDangDung(TC1)], [['2026-04-25'], 150000000]);
+const TC2 = TC(); TC2.theoDoiTu = '2026-04-01';
+check('kỳ trước ngày bắt đầu theo dõi → không nhắc', T.lichNopThauChi(TC2, '2026-04-30').map(x => x.ngay), ['2026-04-25']);
+const TC3 = TC(); TC3.giaoDich.n3 = { ngay: '2026-03-25', loai: 'nop', soTien: 150000000, kyNop: '2026-03-25' };          // nộp hết gốc
+check('nộp hết → tháng sau không còn gì để nhắc', T.lichNopThauChi(TC3, '2026-06-30').length, 0);
+const tt = T.tinhThauChi(TC1, '2026-03-26');
+check('bảng số thấu chi', [tt.tongRut, tt.tongNop, tt.dangDung, tt.conTrong, tt.laiDaTra, tt.laiSuatHienHanh], [300000000, 150000000, 150000000, 350000000, 1850000, 12]);
+check('chưa rút lần nào → không có kỳ nộp', T.lichNopThauChi({ hanMuc: 1, ngayNopHangThang: 25, laiSuat: {} }, '2026-12-31').length, 0);
+
 console.log(sai ? '\n❌ ' + sai + '/' + n + ' phép tính SAI' : '\n✅ ' + n + ' phép tính đều đúng');
 process.exit(sai ? 1 : 0);
