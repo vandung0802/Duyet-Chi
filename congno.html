@@ -124,7 +124,7 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 </head>
 <body>
 
-<!-- ===== 3. DANG_NHAP: màn đăng nhập (email + mật khẩu Firebase, dùng chung tài khoản app Duyệt Chi / Hợp Đồng) ===== -->
+<!-- ===== 3. DANG_NHAP: màn đăng nhập (email + mật khẩu Firebase, dùng tài khoản của app Duyệt Chi) ===== -->
 <div id="login-screen" class="login">
   <h2>🏦 Công nợ ngân hàng PVA-379-279</h2>
   <div class="card"><div class="card-body">
@@ -132,7 +132,7 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
     <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password">
     <div style="margin-top:14px"><button class="btn" id="l-btn" onclick="dangNhap()">Đăng nhập</button></div>
     <div class="err" id="l-err"></div>
-    <p style="font-size:13px;color:var(--text-sub);margin-top:10px">Dùng đúng email + mật khẩu của app <b>Duyệt Chi</b> (cũng là của app Hợp Đồng). Chưa có tài khoản → đăng ký trong app Duyệt Chi trước.</p>
+    <p style="font-size:13px;color:var(--text-sub);margin-top:10px">Dùng đúng email + mật khẩu của app <b>Duyệt Chi</b>. Chưa có tài khoản → đăng ký trong app Duyệt Chi trước.</p>
   </div></div>
 </div>
 
@@ -193,11 +193,11 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
       </div></div>
       <div class="card"><div class="card-body">
         <h3 style="font-size:15px;margin-bottom:8px">🏢 Ba công ty</h3>
-        <div class="hint" style="margin-bottom:6px">Dùng chung với app Hợp Đồng — sửa tên, mã số thuế, người đại diện ở <a href="hopdong.html">app Hợp Đồng</a> (tab Khác). Số tài khoản của từng công ty nhập trong từng ngân hàng.</div>
+        <div class="hint" style="margin-bottom:6px">Số tài khoản của từng công ty nhập trong từng ngân hàng (tab Ngân hàng).</div>
         <div id="qt-congty"></div>
       </div></div>
       <div class="card"><div class="card-body">
-        <h3 style="font-size:15px;margin-bottom:8px">👥 Người dùng (chung app Duyệt Chi, Hợp Đồng)</h3>
+        <h3 style="font-size:15px;margin-bottom:8px">👥 Người dùng (tài khoản của app Duyệt Chi)</h3>
         <div class="hint" style="margin-bottom:6px">Ai đã được duyệt trong Duyệt Chi đều vào được và nhập, sửa được mọi thứ. Chỉ giám đốc (GD) xoá được; người khác bấm "Yêu cầu xoá". Thêm/bớt người làm trong app Duyệt Chi. Ai chưa có tên ở đây: mở app này một lần là có.</div>
         <div id="qt-nguoidung"></div>
       </div></div>
@@ -232,10 +232,9 @@ const CAU_HINH = {
     messagingSenderId: "366275914302",
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
-  APP: 'congNo',                  // dấu nhận biết dòng của app này trong các bảng dùng chung (lichSu, yeuCauXoa…)
-  GOC: 'congNo',                  // dữ liệu RIÊNG của app nằm dưới congNo/ (spec mục 4.3)
-  GOC_CHUNG: 'hopdong',           // bảng DÙNG CHUNG với app Hợp Đồng nằm dưới hopdong/: congTy, nguoiDung, yeuCauXoa, lichSu (sau này: baoLanh, nhacNho)
-  PHIEN_BAN: '20261002-v3',
+  GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
+  BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
+  PHIEN_BAN: '20261002-v4',
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
   NHAC_HAN_MUC_NGAY: 60           // hạn mức sắp hết hạn: báo trước 60 ngày (mục 1.4)
@@ -359,39 +358,37 @@ firebase.auth().onAuthStateChanged(async user=>{
 });
 
 // ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3) =====
-const DL  = { nganHang:{}, hanMuc:{}, khoanVay:{} };                   // bảng RIÊNG: congNo/<bảng>/{id}; bảng con treo trong bản ghi (vd khoanVay/{id}/traNo/{id})
-const DLC = { congTy:{}, nguoiDung:{}, baoLanh:{}, yeuCauXoa:{}, lichSu:{} };   // bảng DÙNG CHUNG với app Hợp Đồng: hopdong/<bảng> (baoLanh: hiện mới ĐỌC để tính hạn mức đã dùng; nhập ở bước 6)
+const DL  = { nganHang:{}, hanMuc:{}, khoanVay:{}, nguoiDung:{}, yeuCauXoa:{}, lichSu:{} };   // mọi bảng của app: congNo/<bảng>/{id}; bảng con treo trong bản ghi (vd khoanVay/{id}/traNo/{id})
+let baoLanhChung={};                                                    // bảng thư bảo lãnh dùng chung với app Hợp Đồng (CAU_HINH.BAO_LANH) — chỗ thông nhau DUY NHẤT của hai app
 let danhSachCongTrinh=[], _daKetNoi=false;
-const dRieng = p => CAU_HINH.GOC+'/'+p, dChung = p => CAU_HINH.GOC_CHUNG+'/'+p;
+const dRieng = p => CAU_HINH.GOC+'/'+p;
 function ketNoiDuLieu(){
   if(_daKetNoi) return; _daKetNoi=true;
   const loi=e=>{ $('ds-hanmuc').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh congNo) có thể chưa được đưa lên máy chủ.</div>'; };
   Object.keys(DL).forEach(bang=>db.ref(dRieng(bang)).on('value',s=>{ DL[bang]=s.val()||{}; veTatCa(); },bang==='hanMuc'?loi:()=>{}));
-  ['congTy','nguoiDung','baoLanh'].forEach(bang=>db.ref(dChung(bang)).on('value',s=>{ DLC[bang]=s.val()||{}; veTatCa(); },()=>{}));
-  // yeuCauXoa, lichSu chung 2 app → chỉ lấy dòng có app = "congNo" (quy tắc 13, 15)
-  // ponytail: chưa có ".indexOn app" trong luật nhánh hopdong (nhánh dùng chung — phải hỏi anh Dũng) nên Firebase tải cả bảng rồi lọc trên máy; bảng lớn thì thêm chỉ mục
-  ['yeuCauXoa','lichSu'].forEach(bang=>db.ref(dChung(bang)).orderByChild('app').equalTo(CAU_HINH.APP).on('value',s=>{ DLC[bang]=s.val()||{}; veTatCa(); },()=>{}));
+  // ponytail: bảng lichSu tải cả về máy mỗi lần mở; khi lên vài nghìn dòng thì đổi sang limitToLast / tải theo từng bản ghi
+  db.ref(CAU_HINH.BAO_LANH).on('value',s=>{ baoLanhChung=s.val()||{}; veTatCa(); },()=>{});
   db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); danhSachCongTrinh=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); },()=>{});  // danh sách công trình chung Duyệt Chi — chỉ để gợi ý ô "Trả cho công trình"
 }
-function dangKyNguoiDung(){ // mỗi lần đăng nhập ghi lại hồ sơ của mình vào hopdong/nguoiDung (bảng dùng chung: chỉ THÊM trường app/congNo, không đổi trường có sẵn — quy tắc 15)
-  try{ db.ref(dChung('nguoiDung/'+nguoiHienTai.uid)).update({ ten:tenNguoiDung, email:nguoiHienTai.email||'', vaiTro:laGiamDoc()?'GD':'NV', dangHoatDong:true, lanCuoi:luc(), 'app/congNo':luc() }); }catch(e){}
+function dangKyNguoiDung(){ // mỗi lần đăng nhập ghi lại hồ sơ của mình vào congNo/nguoiDung (danh sách người dùng của riêng app này — để chọn "kế toán theo dõi")
+  try{ db.ref(dRieng('nguoiDung/'+nguoiHienTai.uid)).update({ ten:tenNguoiDung, email:nguoiHienTai.email||'', vaiTro:laGiamDoc()?'GD':'NV', dangHoatDong:true, lanCuoi:luc() }); }catch(e){}
 }
 const tenBangCua = duongBang => duongBang.split('/').pop();            // 'khoanVay/<id>/traNo' → 'traNo'
 const chaCua = duongBang => duongBang.split('/')[1]||'';               // 'khoanVay/<id>/traNo' → <id> (bản ghi cha); bảng gốc → ''
 const banGhi = (duongBang,id) => layO(DL,(duongBang+'/'+id).replace(/\//g,'.'));
 function danhSachCon(o){ return Object.entries(o||{}).filter(([k,x])=>x&&typeof x==='object').map(([id,x])=>Object.assign({id},x)); }
 const banSao = o => JSON.parse(JSON.stringify(o||{}));
-const tenCongTy = id => (DLC.congTy[id]&&DLC.congTy[id].ten)||(CONG_TY[id]&&CONG_TY[id].ten)||id||'';
+const tenCongTy = id => (CONG_TY[id]&&CONG_TY[id].ten)||id||'';
 const tenNganHang = id => { const n=DL.nganHang[id]; return n?n.ten+(n.chiNhanh?' — '+n.chiNhanh:''):(id?'(ngân hàng đã xoá)':''); };
-const tenNguoi = uid => (DLC.nguoiDung[uid]&&(DLC.nguoiDung[uid].ten||DLC.nguoiDung[uid].email))||'';
+const tenNguoi = uid => (DL.nguoiDung[uid]&&(DL.nguoiDung[uid].ten||DL.nguoiDung[uid].email))||'';
 const dsChonNganHang = () => danhSachCon(DL.nganHang).map(n=>[n.id,tenNganHang(n.id)]).sort((a,b)=>a[1].localeCompare(b[1],'vi'));
-const dsChonNguoi = () => Object.entries(DLC.nguoiDung).filter(([u,n])=>n&&n.dangHoatDong!==false).map(([u,n])=>[u,n.ten||n.email||u]).sort((a,b)=>a[1].localeCompare(b[1],'vi'));
+const dsChonNguoi = () => Object.entries(DL.nguoiDung).filter(([u,n])=>n&&n.dangHoatDong!==false).map(([u,n])=>[u,n.ten||n.email||u]).sort((a,b)=>a[1].localeCompare(b[1],'vi'));
 const kheUocCua = hanMucId => danhSachCon(DL.khoanVay).filter(k=>k.hanMucId===hanMucId);
 const chiuKhac = x => x.congTyChiu&&x.congTyChiu!==x.congTyVay?` (${esc(x.congTyChiu)} chịu)`:'';   // vay chéo: đứng tên một công ty, công ty khác thực trả
 async function ghiNhieu(capNhat){ await db.ref().update(capNhat); }      // ghi nhiều đường dẫn trong MỘT lần (dữ liệu + lịch sử cùng lúc, không bao giờ thiếu vết)
 async function bam(btn, viec){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await viec(); dongModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
 
-// ===== 5. LICH_SU — mọi thao tác ghi đều để lại vết: ai, lúc nào, bảng nào, bản ghi nào, trường nào, cũ → mới; luôn có app = "congNo" (quy tắc 13) =====
+// ===== 5. LICH_SU — mọi thao tác ghi đều để lại vết: ai, lúc nào, bảng nào, bản ghi nào, trường nào, cũ → mới (quy tắc 13). Bảng riêng congNo/lichSu =====
 const TRUONG_BO_QUA = ['taoBoi','taoLuc','suaBoi','suaLuc','id'];
 function phang(o, tienTo){ // {canBo:{ten:'A'}} → {'canBo.ten':'A'}
   const kq={}; Object.entries(o||{}).forEach(([k,v])=>{ const kk=tienTo?tienTo+'.'+k:k; if(TRUONG_BO_QUA.includes(k)) return;
@@ -401,9 +398,9 @@ function soSanh(cu, moi){ const a=phang(cu), b=phang(moi), ks=[...new Set([...Ob
   ks.forEach(k=>{ const x=a[k]==null?'':a[k], y=b[k]==null?'':b[k]; if(String(x)!==String(y)) kq.push({truong:k,giaTriCu:x,giaTriMoi:y}); }); return kq; }
 function sach(o){ // bỏ ô trống trước khi tạo bản ghi (Firebase không cần lưu chuỗi rỗng)
   const kq={}; Object.entries(o||{}).forEach(([k,v])=>{ if(v===''||v==null) return; if(typeof v==='object'){ const c=sach(v); if(Object.keys(c).length) kq[k]=c; } else kq[k]=v; }); return kq; }
-// chaId = id bản ghi cha (ngân hàng / khoản vay) để xem lịch sử của cả khoản — trường THÊM vào bảng lichSu dùng chung
+// chaId = id bản ghi cha (ngân hàng / hạn mức / khoản vay) để xem lịch sử của cả khoản
 function dongLichSu(bang, banGhiId, chaId, hanhDong, truong, giaTriCu, giaTriMoi){
-  return { app:CAU_HINH.APP, nguoi:tenNguoiDung, uid:nguoiHienTai?nguoiHienTai.uid:'', luc:luc(), bang, banGhiId:banGhiId||'', chaId:chaId||'', hanhDong, truong:truong||'', giaTriCu:giaTriCu==null?'':giaTriCu, giaTriMoi:giaTriMoi==null?'':giaTriMoi };
+  return { nguoi:tenNguoiDung, uid:nguoiHienTai?nguoiHienTai.uid:'', luc:luc(), bang, banGhiId:banGhiId||'', chaId:chaId||'', hanhDong, truong:truong||'', giaTriCu:giaTriCu==null?'':giaTriCu, giaTriMoi:giaTriMoi==null?'':giaTriMoi };
 }
 function khoaMoi(){ return db.ref().push().key; }
 // Đưa việc lưu 1 bản ghi (tạo hoặc sửa) + các dòng lịch sử vào gói ghi `up` (CHƯA ghi) → trả về id. Sửa thì chỉ ghi trường thay đổi.
@@ -411,12 +408,12 @@ function soanLuu(up, duongBang, id, moi, tomTat){
   const bang=tenBangCua(duongBang), cha=chaCua(duongBang), now=luc();
   if(!id){ id=khoaMoi();
     up[dRieng(duongBang+'/'+id)]=Object.assign(sach(moi),{taoBoi:tenNguoiDung,taoLuc:now,suaBoi:tenNguoiDung,suaLuc:now});
-    up[dChung('lichSu/'+khoaMoi())]=dongLichSu(bang,id,cha,'tao','','',tomTat||'');
+    up[dRieng('lichSu/'+khoaMoi())]=dongLichSu(bang,id,cha,'tao','','',tomTat||'');
     return id; }
   const cu=banGhi(duongBang,id)||{}, khac=soSanh(cu,Object.assign({},cu,moi));   // trường / bảng con không có trên form giữ nguyên
   if(!khac.length) return id;
   khac.forEach(t=>{ up[dRieng(duongBang+'/'+id+'/'+t.truong.replace(/\./g,'/'))]=t.giaTriMoi===''?null:t.giaTriMoi;
-    up[dChung('lichSu/'+khoaMoi())]=dongLichSu(bang,id,cha,'sua',t.truong,t.giaTriCu,t.giaTriMoi); });
+    up[dRieng('lichSu/'+khoaMoi())]=dongLichSu(bang,id,cha,'sua',t.truong,t.giaTriCu,t.giaTriMoi); });
   up[dRieng(duongBang+'/'+id+'/suaBoi')]=tenNguoiDung; up[dRieng(duongBang+'/'+id+'/suaLuc')]=now;
   return id;
 }
@@ -438,18 +435,18 @@ async function xoaBanGhi(duongBang, id){
   if(bang==='nganHang'&&(danhSachCon(DL.hanMuc).some(h=>h.nganHangId===id)||danhSachCon(DL.khoanVay).some(k=>k.nganHangId===id))) throw new Error('Ngân hàng này còn hạn mức / khoản vay. Xoá các khoản đó trước.');
   if(bang==='hanMuc'&&kheUocCua(id).length) throw new Error('Hạn mức này còn khế ước. Xoá hết khế ước trước.');
   up[dRieng(duongBang+'/'+id)]=null;
-  up[dChung('lichSu/'+khoaMoi())]=dongLichSu(bang,id,cha,'xoa','',tomTatBanGhi(duongBang,id),'');
+  up[dRieng('lichSu/'+khoaMoi())]=dongLichSu(bang,id,cha,'xoa','',tomTatBanGhi(duongBang,id),'');
   if(duongBang.startsWith('khoanVay/')&&BANG_CON_KHOAN_VAY.includes(bang)){ const kv=banSao(DL.khoanVay[cha]); delete (kv[bang]||{})[id]; soanDongBoKhoanVay(up,cha,kv); }
   await ghiNhieu(up);
 }
-// Nhân viên: gửi yêu cầu xoá vào bảng yeuCauXoa dùng chung (app = "congNo"), giám đốc duyệt ở tab Khác
+// Nhân viên: gửi yêu cầu xoá vào bảng congNo/yeuCauXoa, giám đốc duyệt ở tab Khác
 async function yeuCauXoa(duongBang, id){
   const bang=tenBangCua(duongBang), tomTat=tomTatBanGhi(duongBang,id);
   const lyDo=prompt('Lý do xin xoá '+TEN_BANG[bang]+' "'+tomTat+'"? (giám đốc sẽ thấy và duyệt)'); if(lyDo===null) return;
-  try{ await ghiNhieu({ [dChung('yeuCauXoa/'+khoaMoi())]:{ app:CAU_HINH.APP, bang, banGhiId:id, duongBang, tomTat, nguoiYeuCau:tenNguoiDung, uid:nguoiHienTai.uid, luc:luc(), lyDo:lyDo.trim(), trangThai:'cho' } });
+  try{ await ghiNhieu({ [dRieng('yeuCauXoa/'+khoaMoi())]:{ bang, banGhiId:id, duongBang, tomTat, nguoiYeuCau:tenNguoiDung, uid:nguoiHienTai.uid, luc:luc(), lyDo:lyDo.trim(), trangThai:'cho' } });
     toast('✅ Đã gửi yêu cầu xoá, chờ giám đốc duyệt'); dongModal(); }catch(e){ toast('❌ '+e.message); }
 }
-function yeuCauXoaDangCho(id){ return Object.entries(DLC.yeuCauXoa).find(([k,y])=>y.banGhiId===id&&y.trangThai==='cho'); }
+function yeuCauXoaDangCho(id){ return Object.entries(DL.yeuCauXoa).find(([k,y])=>y.banGhiId===id&&y.trangThai==='cho'); }
 // Nút xoá dùng chung cho mọi bảng: giám đốc → xoá thật (hỏi lại), nhân viên → yêu cầu xoá / rút yêu cầu
 function nutXoa(duongBang, id){
   const bang=tenBangCua(duongBang), yc=yeuCauXoaDangCho(id);
@@ -465,16 +462,16 @@ async function xoaNgay(duongBang, id){
   try{ await xoaBanGhi(duongBang,id); toast('🗑 Đã xoá'); dongModal(); }catch(e){ toast('❌ '+e.message); }
 }
 async function duyetXoa(k, dongY){
-  const y=DLC.yeuCauXoa[k]; if(!y) return;
+  const y=DL.yeuCauXoa[k]; if(!y) return;
   try{
     if(dongY){ if(!confirm('Đồng ý xoá '+(TEN_BANG[y.bang]||y.bang)+' "'+(y.tomTat||'')+'"?')) return;
       if(banGhi(y.duongBang,y.banGhiId)) await xoaBanGhi(y.duongBang,y.banGhiId); }
-    const d=dChung('yeuCauXoa/'+k);
+    const d=dRieng('yeuCauXoa/'+k);
     await ghiNhieu({ [d+'/trangThai']:dongY?'dongY':'tuChoi', [d+'/nguoiDuyet']:tenNguoiDung, [d+'/lucDuyet']:luc() });
     toast(dongY?'🗑 Đã xoá':'✖ Đã từ chối'); dongModal();
   }catch(e){ toast('❌ '+e.message); }
 }
-async function rutYeuCauXoa(k){ const d=dChung('yeuCauXoa/'+k); try{ await ghiNhieu({ [d+'/trangThai']:'rut', [d+'/lucDuyet']:luc() }); toast('Đã rút yêu cầu'); dongModal(); }catch(e){ toast('❌ '+e.message); } }
+async function rutYeuCauXoa(k){ const d=dRieng('yeuCauXoa/'+k); try{ await ghiNhieu({ [d+'/trangThai']:'rut', [d+'/lucDuyet']:luc() }); toast('Đã rút yêu cầu'); dongModal(); }catch(e){ toast('❌ '+e.message); } }
 // Một dòng tóm tắt bản ghi (dùng cho lịch sử, hỏi lại khi xoá)
 function tomTatMoi(bang, v){ v=v||{}; return ({
   nganHang:()=>(v.ten||'')+(v.chiNhanh?' — '+v.chiNhanh:''),
@@ -502,7 +499,7 @@ function hienGiaTri(truong, v){ if(v===''||v==null) return '(trống)'; if(typeo
   if(typeof v==='number'&&Math.abs(v)>=1000) return tien(v); if(typeof v==='number') return soVN(v); if(/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return ngayVN(v);
   return ({ ...LOAI_NGAN_HANG, ...LOAI_LAI_SUAT })[v]||String(v); }
 function veLichSu(id){
-  const ds=Object.values(DLC.lichSu).filter(l=>l.banGhiId===id||l.chaId===id).sort((a,b)=>String(b.luc).localeCompare(String(a.luc))).slice(0,100);
+  const ds=Object.values(DL.lichSu).filter(l=>l.banGhiId===id||l.chaId===id).sort((a,b)=>String(b.luc).localeCompare(String(a.luc))).slice(0,100);
   const hd={tao:'🆕 Tạo',sua:'✏️ Sửa',xoa:'🗑 Xoá'};
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🕘 Lịch sử thay đổi</h3></div>
     <div class="tl">${ds.length?ds.map(l=>`<div class="tl-e"><div class="tl-t">${lucVN(l.luc)} · ${esc(l.nguoi)}</div><div class="tl-b">${hd[l.hanhDong]||esc(l.hanhDong)} <b>${esc(TEN_BANG[l.bang]||l.bang)}</b>${l.truong?' · '+esc(TEN_TRUONG[l.truong]||l.truong):''}${l.hanhDong==='sua'?': <span class="neg">'+esc(hienGiaTri(l.truong,l.giaTriCu))+'</span> → <span class="pos">'+esc(hienGiaTri(l.truong,l.giaTriMoi))+'</span>':(l.giaTriMoi||l.giaTriCu?': '+esc(l.giaTriMoi||l.giaTriCu):'')}</div></div>`).join(''):'<div class="empty">Chưa có gì.</div>'}</div></div></div>`;
@@ -642,7 +639,7 @@ const TINH_TOAN = (function () {
 const tinhKV = k => TINH_TOAN.tinhKhoan(k, homNay(), CAU_HINH.SAP_DEN_HAN_NGAY);
 // Hạn mức: đã dùng / còn trống. baoLanh = thư bảo lãnh đang hiệu lực cùng ngân hàng + cùng công ty (đọc bảng hopdong/baoLanh dùng chung;
 // thư nhập từ app Hợp Đồng chưa có nganHangId nên chưa được tính cho tới khi kế toán gắn ngân hàng ở màn Bảo lãnh — bước 6).
-function tinhHanMuc(id){ const h=DL.hanMuc[id]||{}, ku=kheUocCua(id), baoLanh=TINH_TOAN.baoLanhCuaHanMuc(h,DLC.baoLanh,homNay()), daDung=TINH_TOAN.hanMucDaDung(h,ku,baoLanh); return { daDung, conTrong:TINH_TOAN.hanMucConTrong(h,daDung), kheUoc:ku, baoLanh }; }
+function tinhHanMuc(id){ const h=DL.hanMuc[id]||{}, ku=kheUocCua(id), baoLanh=TINH_TOAN.baoLanhCuaHanMuc(h,baoLanhChung,homNay()), daDung=TINH_TOAN.hanMucDaDung(h,ku,baoLanh); return { daDung, conTrong:TINH_TOAN.hanMucConTrong(h,daDung), kheUoc:ku, baoLanh }; }
 
 // ===== ĐIỀU PHỐI MÀN HÌNH =====
 const CAC_TAB = ['hanmuc','lich','nganhang','khac'];
@@ -728,7 +725,7 @@ const SOAN_THEM = {
   hanMuc(up,v,id){ if(!id) return; kheUocCua(id).forEach(k=>['nganHangId','congTyVay','soHopDong'].forEach(f=>{ if(k[f]!==v[f]) up[dRieng('khoanVay/'+k.id+'/'+f)]=v[f]; })); },
   // sửa ngày đến hạn khế ước → kỳ trả gốc duy nhất (chưa trả, chưa sửa tay) đi theo
   khoanVay(up,v,id){ if(!id) return; const cu=DL.khoanVay[id], ky=danhSachCon(cu.kyTra).filter(k=>!k.daTra);
-    if(v.ngayDenHan!==cu.ngayDenHan&&ky.length===1&&!ky[0].suaTay){ up[dRieng('khoanVay/'+id+'/kyTra/'+ky[0].id+'/ngay')]=v.ngayDenHan; up[dChung('lichSu/'+khoaMoi())]=dongLichSu('kyTra',ky[0].id,id,'sua','ngay',ky[0].ngay,v.ngayDenHan); } }
+    if(v.ngayDenHan!==cu.ngayDenHan&&ky.length===1&&!ky[0].suaTay){ up[dRieng('khoanVay/'+id+'/kyTra/'+ky[0].id+'/ngay')]=v.ngayDenHan; up[dRieng('lichSu/'+khoaMoi())]=dongLichSu('kyTra',ky[0].id,id,'sua','ngay',ky[0].ngay,v.ngayDenHan); } }
 };
 
 // ===== 9. MÀN HÌNH: Lịch trả nợ (30 ngày tới + quá hạn; lọc ngân hàng / công ty / loại) =====
@@ -980,13 +977,13 @@ function veCtKhoanVay(id){
 
 // ===== 19. MÀN HÌNH: Quản trị — yêu cầu xoá (giám đốc duyệt), ba công ty (chỉ xem), người dùng =====
 function veQuanTri(){
-  const yc=Object.entries(DLC.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho').sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
+  const yc=Object.entries(DL.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho').sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
   $('khac-badge').hidden=!(laGiamDoc()&&yc.length); $('khac-badge').textContent=yc.length; $('qt-yeucauxoa-n').hidden=!yc.length; $('qt-yeucauxoa-n').textContent=yc.length+' chờ';
   $('qt-yeucauxoa').innerHTML=yc.length?yc.map(([k,y])=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${esc(TEN_BANG[y.bang]||y.bang)}</b>: ${esc(y.tomTat||'')}</div><div class="hint">${esc(y.nguoiYeuCau)} · ${lucVN(y.luc)}${y.lyDo?' · '+esc(y.lyDo):''}</div>
     ${laGiamDoc()?`<div class="row" style="margin-top:6px"><button class="btn sm red" onclick="duyetXoa('${k}',true)">✅ Đồng ý xoá</button><button class="btn sm sec" onclick="duyetXoa('${k}',false)">✖ Từ chối</button></div>`
       :nguoiHienTai&&y.uid===nguoiHienTai.uid?`<button class="btn sm sec" style="margin-top:6px" onclick="rutYeuCauXoa('${k}')">↩️ Rút lại</button>`:''}</div>`).join(''):'<div class="hint">Không có yêu cầu xoá nào đang chờ.</div>';
-  $('qt-congty').innerHTML=MA_CONG_TY.map(m=>{ const c=Object.assign({},CONG_TY[m],DLC.congTy[m]||{}); return `<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${m}</b> — ${esc(c.ten)}</div><div class="hint">MST: ${esc(c.maSoThue||'—')} · Đại diện: ${esc(c.nguoiDaiDien||'—')}${c.diaChi?' · '+esc(c.diaChi):''}</div></div>`; }).join('');
-  const nd=Object.entries(DLC.nguoiDung).sort((a,b)=>String(a[1].ten).localeCompare(String(b[1].ten),'vi'));
+  $('qt-congty').innerHTML=MA_CONG_TY.map(m=>{ const tk=danhSachCon(DL.nganHang).reduce((s,n)=>s+danhSachCon(n.taiKhoan).filter(t=>t.congTyId===m).length,0); return `<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${m}</b> — ${esc(tenCongTy(m))}</div><div class="hint">${tk} số tài khoản · ${danhSachCon(DL.hanMuc).filter(h=>h.congTyVay===m).length} hợp đồng hạn mức đứng tên</div></div>`; }).join('');
+  const nd=Object.entries(DL.nguoiDung).sort((a,b)=>String(a[1].ten).localeCompare(String(b[1].ten),'vi'));
   $('qt-nguoidung').innerHTML=nd.length?nd.map(([u,n])=>`<div class="item-sub" style="padding:4px 0;font-size:14px;color:var(--text)">${n.vaiTro==='GD'?'👑':'👤'} <b>${esc(n.ten)}</b> · ${esc(n.email||'')} · ${n.vaiTro==='GD'?'Giám đốc':'Nhân viên'} · vào lần cuối ${lucVN(n.lanCuoi)}</div>`).join(''):'<div class="hint">Chưa ai đăng nhập.</div>';
 }
 

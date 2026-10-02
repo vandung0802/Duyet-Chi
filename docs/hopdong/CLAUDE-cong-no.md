@@ -1,4 +1,6 @@
-> **Ghi chú 02/10/2026 (anh Dũng chốt, xem `CLAUDE.md` mục 1.6 của app Hợp đồng):** các nhánh dùng chung `congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu` nằm tại **`hopdong/...`** trên Firebase (không ở gốc); dữ liệu riêng của app Công Nợ ở `congNo/` (gốc). Đăng nhập bằng **email + mật khẩu Firebase Auth** như app Duyệt Chi, không dùng tên + PIN; `nguoiDung/{uid}` khoá theo uid Firebase. Bản sao file này để trong repo Duyet-Chi chỉ để tham khảo; bản chính ở repo `cong-no-pva-379-279`.
+> **⚠️ CHỐT MỚI NHẤT 02/10/2026 (tối) — ĐÈ LÊN mọi chỗ nói "dùng chung" trong file này:** anh Dũng yêu cầu **app Công Nợ và app Hợp Đồng ĐỘC LẬP nhau, chỉ thông nhau MỘT chỗ: nhập bảo lãnh tạm ứng và bảo lãnh thực hiện hợp đồng** (bảng `hopdong/baoLanh`, hai loại `tamUng`, `thucHienHopDong` — nhập một nơi, hai app cùng thấy). Mọi thứ khác của app Công Nợ nằm riêng dưới `congNo/`: `nguoiDung`, `yeuCauXoa`, `lichSu` (và `nhacNho` khi làm bước 8); ba công ty là hằng số trong mã. App Công Nợ **không đọc, không ghi** nhánh nào khác của `hopdong/` (kể cả `thanhToan.thuHoiTamUng` — ký quỹ giảm trừ do kế toán nhập tay). Đăng nhập vẫn bằng tài khoản app Duyệt Chi. Chi tiết: mục 1.6 và `docs/congno/BANGIAO.md`.
+>
+> **Ghi chú 02/10/2026 (anh Dũng chốt, xem `CLAUDE.md` mục 1.6 của app Hợp đồng) — phần "nhánh dùng chung" dưới đây ĐÃ BỊ THAY bởi chốt mới phía trên:** các nhánh dùng chung `congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu` nằm tại **`hopdong/...`** trên Firebase (không ở gốc); dữ liệu riêng của app Công Nợ ở `congNo/` (gốc). Đăng nhập bằng **email + mật khẩu Firebase Auth** như app Duyệt Chi, không dùng tên + PIN; `nguoiDung/{uid}` khoá theo uid Firebase. Bản sao file này để trong repo Duyet-Chi chỉ để tham khảo; bản chính ở repo `cong-no-pva-379-279`.
 
 # CLAUDE.md — App "Công Nợ Ngân Hàng PVA-379-279"
 
@@ -42,8 +44,8 @@ Dữ liệu ban đầu: quan hệ với khoảng **7–10 ngân hàng và công 
 | Kiểu ứng dụng | Web app, cài lên màn hình chính điện thoại (PWA) | Dùng trên máy tính và iPhone, không cài gì thêm |
 | Mã nguồn | **Một file `index.html`** | Cùng cách với ba app trước |
 | Đưa lên mạng | GitHub Pages, repo `vandung0802/cong-no-pva-379-279` | Miễn phí, đã quen |
-| Kho dữ liệu | **Cùng Firebase project với app Hợp Đồng.** Dữ liệu riêng của app này nằm dưới nhánh `congNo/`; các nhánh `congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu` dùng chung hai app | Bảo lãnh nhập một nơi, cả hai app cùng thấy; không phải đặt hai bộ mật khẩu |
-| Đăng nhập | Chọn tên + mã PIN, **dùng chung danh sách người dùng và PIN với app Hợp Đồng** (gốc là danh sách của Duyệt Chi) | Một người một mật khẩu cho cả bộ app |
+| Kho dữ liệu | Cùng Firebase project với Duyệt Chi / Hợp Đồng, nhưng *(chốt 02/10 tối)* **toàn bộ dữ liệu của app nằm riêng dưới `congNo/`** (kể cả `nguoiDung`, `yeuCauXoa`, `lichSu`, `nhacNho`). **Chỉ dùng chung với app Hợp Đồng một bảng: `hopdong/baoLanh`** (bảo lãnh tạm ứng + thực hiện hợp đồng) | Hai app độc lập; bảo lãnh nhập một nơi, cả hai app cùng thấy |
+| Đăng nhập | Email + mật khẩu Firebase Auth của app Duyệt Chi (quyền theo `duyetchi/userRoles`); danh sách người dùng của app ghi riêng ở `congNo/nguoiDung` | Một người một mật khẩu cho cả bộ app |
 | Bản sao Google Sheets | Đồng bộ một chiều Firebase → Google Sheets qua Apps Script (JSONP) | Kế toán quen xem bảng |
 | File đính kèm | Google Drive của vandung0802@gmail.com, link ai cũng tải được; OneDrive chỉ dán link | Như app Hợp Đồng |
 | Thông báo đẩy | Web push, hiện trên màn hình khóa điện thoại | Như Duyệt Chi; iPhone phải cài app lên màn hình chính |
@@ -204,6 +206,13 @@ Chốt thêm chiều 02/10/2026 (sau khi xong bước 1 + 2, anh Dũng trả l�
 - **Lãi ước tính**: ngày giải ngân có tính lãi, ngày trả gốc không; 365 ngày/năm. Khế ước cũ nhập vào app thì các kỳ lãi **trước ngày nhập** coi như đã trả (trường `khoanVay.theoDoiLaiTu`), không báo quá hạn oan.
 - **Thực tế triển khai** (theo app Hợp Đồng): mã ở `Duyet-Chi/congno.html`; đăng nhập email + mật khẩu Firebase; bảng dùng chung nằm dưới `hopdong/…`; dữ liệu riêng dưới `congNo/…`. Chi tiết: `docs/congno/BANGIAO.md`.
 
+Chốt tối 02/10/2026 — **hai app độc lập** (anh Dũng: "app công nợ và app hợp đồng là độc lập nhau, chỉ thông nhau mỗi 1 chỗ nhập bảo lãnh tạm ứng và thực hiện hợp đồng"):
+
+- Bảng dùng chung duy nhất: `hopdong/baoLanh`, hai loại `tamUng` và `thucHienHopDong`. Thêm trường được, không đổi tên / xoá trường đang có (app kia đang đọc).
+- `nguoiDung`, `yeuCauXoa`, `lichSu`, `nhacNho` của app Công Nợ nằm ở `congNo/…`; không còn trường `app`. Danh mục ba công ty là hằng số trong mã (không đọc `hopdong/congTy`).
+- Không đọc `thanhToan.thuHoiTamUng` của app Hợp Đồng: ký quỹ bảo lãnh tạm ứng giảm dần do **kế toán nhập tay** từng lần.
+- Bảo lãnh dự thầu, bảo lãnh bảo hành trong app Công Nợ (nếu theo dõi) để riêng ở `congNo/` — chốt chi tiết khi làm bước 6.
+
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 
 ---
@@ -256,7 +265,7 @@ Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào 
 12. Tiền: số nguyên VND. Lãi suất: %/năm. Ngày: `YYYY-MM-DD`. Thời điểm lịch sử: ISO 8601 có múi giờ.
 13. Mọi thao tác ghi kèm bản ghi `lichSu/` có trường `app = "congNo"`. Không ngoại lệ.
 14. Không có nút xóa thật cho người không phải giám đốc. Xóa = `yeuCauXoa/`, giám đốc duyệt.
-15. **Nhánh dùng chung** (`congTy`, `nguoiDung`, `baoLanh`, `nhacNho`, `yeuCauXoa`, `lichSu`): giữ đúng cấu trúc đã ghi trong CLAUDE.md của app Hợp Đồng. Muốn thêm trường thì thêm, **không đổi tên, không xóa trường** đang có, vì app kia đang đọc.
+15. **Nhánh dùng chung** *(chốt 02/10 tối: chỉ còn `hopdong/baoLanh`)*: giữ đúng cấu trúc đã ghi trong CLAUDE.md của app Hợp Đồng. Muốn thêm trường thì thêm, **không đổi tên, không xóa trường** đang có, vì app kia đang đọc. Ngoài bảng này, app Công Nợ **không đọc, không ghi** gì dưới `hopdong/`.
 16. Không sửa Firebase Security Rules, cấu hình Firebase, Apps Script đang chạy mà không nói trước và có bản sao lưu.
 17. Lịch trả gốc sinh tự động **lưu thật** vào `kyTra`, sửa tay được từng dòng; không tính lại khi mở app.
 18. Lịch sử lãi suất: **chỉ thêm dòng**, không sửa dòng cũ (trừ sửa lỗi nhập, và phải ghi lịch sử).

@@ -18,7 +18,7 @@
 - Từ 29/09/2026: sửa `database.rules.json` rồi gộp vào `main` → GitHub Actions (`.github/workflows/deploy-rules.yml`) tự chạy `firebase deploy --only database`. KHÔNG cần bảo D bấm `DUA-LUAT-LEN.bat` nữa (file đó chỉ là dự phòng).
 - Cần secret `FIREBASE_TOKEN` (D lấy 1 lần bằng `LAY-KHOA-TU-DONG.bat`) hoặc `FIREBASE_SERVICE_ACCOUNT` trong GitHub → Settings → Secrets → Actions. Nếu tác vụ Actions đỏ vì thiếu khoá → nhắc D làm bước đó.
 - Các app phụ cùng repo: `thietbi.html` (nhánh RTDB `thietbi`), `hopdong.html` (nhánh `hopdong`, đọc `duyetchi/meta/sites` dùng chung danh sách công trình). Mỗi app có `version-<app>.txt` + `manifest-<app>.json`.
-- **App Công nợ ngân hàng** `congno.html` (từ 02/10/2026): dữ liệu riêng ở nhánh `congNo`, dùng CHUNG với app Hợp đồng các bảng `hopdong/congTy|nguoiDung|yeuCauXoa|lichSu` (ghi kèm `app:"congNo"`). SPEC: `docs/hopdong/CLAUDE-cong-no.md`, nhật ký `docs/congno/BANGIAO.md` — ĐỌC trước khi sửa. Kiểm tra công thức: `node test-congno-tinhtoan.js`.
+- **App Công nợ ngân hàng** `congno.html` (từ 02/10/2026): ĐỘC LẬP với app Hợp đồng (D chốt 02/10) — mọi dữ liệu ở nhánh `congNo`, chỉ thông nhau MỘT chỗ là bảng bảo lãnh `hopdong/baoLanh` (tạm ứng + thực hiện hợp đồng); không thêm đọc/ghi nào khác vào `hopdong/`. SPEC: `docs/hopdong/CLAUDE-cong-no.md`, nhật ký `docs/congno/BANGIAO.md` — ĐỌC trước khi sửa. Kiểm tra công thức: `node test-congno-tinhtoan.js`.
 - **App Hợp đồng có SPEC riêng**: `docs/hopdong/CLAUDE.md` (bản chốt 30/09/2026, công thức mục 1.5, cấu trúc dữ liệu mục 4.3) + nhật ký `docs/hopdong/BANGIAO.md`. Sửa `hopdong.html` thì ĐỌC 2 file đó trước; mã phải theo spec, mâu thuẫn thì hỏi D. Kiểm tra công thức: `node test-hopdong-tinhtoan.js`.
 
 ## Test tối thiểu trước khi push app3.html

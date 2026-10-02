@@ -420,9 +420,9 @@
     },
 
     // ══ APP CÔNG NỢ (congno.html) — dữ liệu RIÊNG dưới congNo/ (mục 4.3 của docs/hopdong/CLAUDE-cong-no.md) ══
-    // Bảng DÙNG CHUNG với app Hợp Đồng (congTy, nguoiDung, yeuCauXoa, lichSu) vẫn nằm ở hopdong/ phía trên — khối này KHÔNG đụng tới.
+    // App này chỉ thông với app Hợp Đồng ở MỘT chỗ: bảng thư bảo lãnh hopdong/baoLanh (luật ở khối hopdong phía trên).
     // Đọc/ghi: ai đã được duyệt (approved) hoặc 3 người nhà. XOÁ cả bản ghi (newData không tồn tại) chỉ tài khoản role 'dung' (giám đốc);
-    // người khác gửi hopdong/yeuCauXoa. Bảng con (tài khoản, giải ngân, lãi suất, kỳ trả, trả nợ) nằm TRONG bản ghi nên luật không chặn xoá từng dòng con — app chặn + ghi lịch sử.
+    // người khác gửi congNo/yeuCauXoa. Bảng con (tài khoản, giải ngân, lãi suất, kỳ trả, trả nợ) nằm TRONG bản ghi nên luật không chặn xoá từng dòng con — app chặn + ghi lịch sử.
     "congNo": {
       ".read":  "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
       "nganHang": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
@@ -431,6 +431,12 @@
                              ".validate": "!newData.exists() || (newData.hasChildren(['nganHangId', 'congTyVay', 'soHopDong', 'soTien']) && newData.child('soTien').isNumber() && newData.child('soHopDong').isString() && newData.child('soHopDong').val().length <= 100)" } },
       "khoanVay": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')",
                              ".validate": "!newData.exists() || newData.hasChildren(['loai', 'nganHangId', 'congTyVay'])" } },
+      // (02/10) App Công Nợ ĐỘC LẬP với app Hợp Đồng: người dùng, yêu cầu xoá, lịch sử nằm riêng ở đây (không còn ghi vào hopdong/). lichSu chỉ THÊM, không sửa/xoá.
+      "nguoiDung": { "$uid": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && (auth.uid === $uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" } },
+      "yeuCauXoa": { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com')",
+                              ".validate": "!newData.exists() || newData.child('trangThai').val() !== 'dongY' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'" } },
+      "lichSu":    { "$id": { ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com' || auth.token.email === 'hiensbgt@gmail.com' || auth.token.email === 'phantrang770@gmail.com') && !data.exists() && newData.exists()",
+                              ".validate": "newData.hasChildren(['nguoi', 'luc', 'bang', 'hanhDong'])" } },
       "$other":   { ".validate": false }
     },
 

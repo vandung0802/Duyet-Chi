@@ -4,7 +4,8 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v3**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v4**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
 - **Đã xong bước 1 và bước 2** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (48 phép tính, có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
@@ -15,7 +16,7 @@
 |---|---|---|
 | Repo riêng `cong-no-pva-379-279`, file `index.html` | `Duyet-Chi/congno.html` | App Hợp Đồng cũng nằm trong repo này; cùng tên miền nên đăng nhập một lần dùng cho cả bộ; luật Firebase tự deploy sẵn. Muốn tách repo sau thì chuyển 1 file. |
 | Đăng nhập tên + PIN | Email + mật khẩu Firebase (chung tài khoản Duyệt Chi), quyền theo `duyetchi/userRoles` (`approved`, role `dung` = giám đốc) | Y nguyên `hopdong.html` (chốt 30/09). |
-| Bảng dùng chung ở gốc Firebase (`congTy`, `nguoiDung`, `yeuCauXoa`, `lichSu`…) | Ở `hopdong/…` (`CAU_HINH.GOC_CHUNG`) | App Hợp Đồng đang để ở đó; không chuyển dữ liệu đang chạy. |
+| Bảng dùng chung (`congTy`, `nguoiDung`, `yeuCauXoa`, `lichSu`, `nhacNho`, `baoLanh`) | Từ v4 **chỉ còn `hopdong/baoLanh`** dùng chung; `nguoiDung`, `yeuCauXoa`, `lichSu` ở `congNo/…`; ba công ty là hằng số `CONG_TY` | Anh Dũng chốt tối 02/10: hai app độc lập. |
 | Dữ liệu riêng `congNo/` | Đúng spec: gốc `congNo/` (`CAU_HINH.GOC`) | Khối luật riêng `congNo` trong `database.rules.json`. |
 | Apps Script, web push | Chưa làm — app Hợp Đồng cũng chưa có (mới có thông báo tạm khi mở app) | Bước 8 (nhắc hạn) và đồng bộ Sheets sẽ làm một lần cho đúng. |
 
@@ -38,6 +39,15 @@
 - **Cách tính lãi ước, `theoDoiLaiTu`** (anh Dũng: không sai) → giữ nguyên.
 - **v3 (02/10)**: bị thoát từ tab khác (Duyệt Chi / Hợp Đồng cùng origin, không qua `dangXuat()`) thì `onAuthStateChanged` tự tải lại trang khi `!user && _daKetNoi` — trước đó `_daKetNoi` còn `true` nên đăng nhập lại không nối lại dữ liệu (giống Hợp Đồng v14).
 
+## Đã làm tối 02/10/2026 (bản v4 — tách độc lập khỏi app Hợp Đồng)
+
+- Anh Dũng: "app công nợ và app hợp đồng là độc lập nhau, chỉ thông nhau mỗi 1 chỗ nhập bảo lãnh tạm ứng và thực hiện hợp đồng". Đã ghi vào đầu spec + mục 1.3, 1.6, quy tắc 15, và `docs/hopdong/CLAUDE.md` mục 1.6.
+- `DL` thêm `nguoiDung`, `yeuCauXoa`, `lichSu` (đọc/ghi ở `congNo/…`); bỏ `DLC`, `dChung`, `GOC_CHUNG`, `CAU_HINH.APP`, trường `app` trong dòng lịch sử / yêu cầu xoá; bỏ đọc `hopdong/congTy` (thẻ "Ba công ty" hiện tên từ hằng số + số tài khoản, số hạn mức). Biến `baoLanhChung` ← `hopdong/baoLanh` (chỉ đọc, để tính hạn mức đã dùng).
+- Luật: thêm `congNo/nguoiDung|yeuCauXoa|lichSu` (chép biểu thức của khối `hopdong`). Không sửa khối `hopdong`.
+- Kiểm tra bằng Firebase giả: stub báo lỗi nếu app ghi bất kỳ gì vào `hopdong/`, và ghi lại mọi đường dẫn đã đọc → chỉ còn `congNo/*`, `duyetchi/userRoles/{uid}`, `duyetchi/meta/sites` (gợi ý tên công trình), `hopdong/baoLanh`.
+- **Rác còn lại từ v1–v3** (nếu anh Dũng đã thử trên mạng thật trước v4): vài dòng trong `hopdong/lichSu`, `hopdong/yeuCauXoa` có `app:"congNo"` và trường `hopdong/nguoiDung/{uid}/app/congNo`. App Hợp Đồng lọc theo `app` nên không hiện; `lichSu` luật không cho xoá. Không chuyển sang `congNo/lichSu` (dữ liệu thử). Muốn dọn thì giám đốc xoá bằng Firebase Console.
+- **Khi làm bước 6 (bảo lãnh)**: chỉ `tamUng` + `thucHienHopDong` ghi vào `hopdong/baoLanh` (giữ nguyên trường app Hợp Đồng đang đọc, thêm `nganHangId`, `phi`, `kyQuy`, `keToanTheoDoi`); dự thầu / bảo hành của app Công Nợ để ở `congNo/baoLanh` (hỏi anh Dũng có theo dõi bảo hành ở đây không); ký quỹ giảm trừ nhập tay, KHÔNG đọc `hopdong/thanhToan`; hạn mức đã dùng cộng cả hai bảng.
+
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
@@ -51,7 +61,7 @@
 
 1. ~~Bảo lãnh dùng chung hạn mức~~ — đã chốt, đã làm (xem trên).
 2. ~~File đính kèm~~ — đã chốt dán link, đã làm.
-3. **Chỉ mục `app` cho `hopdong/lichSu`, `hopdong/yeuCauXoa`** (luật nhánh dùng chung): hiện app tải cả bảng rồi lọc trên máy; bảng lớn thì nên thêm `.indexOn: ["app"]` — đụng nhánh chung nên hỏi trước.
+3. ~~Chỉ mục `app` cho `hopdong/lichSu`~~ — hết cần: từ v4 lịch sử nằm riêng ở `congNo/lichSu`.
 
 ## Việc tiếp theo (mục 1.2)
 
