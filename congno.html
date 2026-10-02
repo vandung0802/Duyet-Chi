@@ -202,6 +202,21 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
       <div class="card" id="ds-thauchi"></div>
     </section>
 
+    <!-- ===== 16. MÀN HÌNH: Tài sản bảo đảm (mục trong trang Khác) ===== -->
+    <section id="tab-taisan" hidden>
+      <button class="btn sec sm" style="margin-bottom:10px" onclick="chuyenTab('khac')">‹ Khác</button>
+      <button class="btn" style="margin-bottom:10px" onclick="formTaiSan()">＋ Thêm tài sản bảo đảm</button>
+      <div class="card"><div class="card-body" style="padding:8px 10px">
+        <input id="ts-q" placeholder="🔍 Tìm mô tả, chủ sở hữu, số hợp đồng thế chấp…" oninput="veTaiSan()">
+        <div class="row" style="margin-top:6px">
+          <select id="ts-loai" onchange="veTaiSan()"></select>
+          <select id="ts-nganhang" onchange="veTaiSan()"></select>
+        </div>
+      </div></div>
+      <div id="ts-tong" class="tiles"></div>
+      <div class="card" id="ds-taisan"></div>
+    </section>
+
     <!-- ===== 10. MÀN HÌNH: Ngân hàng (mục trong trang Khác) ===== -->
     <section id="tab-nganhang" hidden>
       <button class="btn sec sm" style="margin-bottom:10px" onclick="chuyenTab('khac')">‹ Khác</button>
@@ -263,7 +278,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261002-v9',
+  PHIEN_BAN: '20261002-v10',
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
   NHAC_HAN_MUC_NGAY: 60           // hạn mức sắp hết hạn: báo trước 60 ngày (mục 1.4)
@@ -292,7 +307,7 @@ const TRANG_THAI = { dangVay:'Đang vay', sapDenHan:'Sắp đến hạn', quaHan
 const NHOM_NO = { 1:'Nhóm 1 (đủ tiêu chuẩn)', 2:'Nhóm 2 (cần chú ý)', 3:'Nhóm 3 (dưới tiêu chuẩn)', 4:'Nhóm 4 (nghi ngờ)', 5:'Nhóm 5 (có khả năng mất vốn)' };
 const KY_CACH_THANG = { 1:'Hằng tháng', 3:'3 tháng một lần', 6:'6 tháng một lần', 12:'Mỗi năm một lần' };   // vay trung dài hạn: khoảng cách giữa hai kỳ trả GỐC (lãi luôn trả hằng tháng)
 const TEN_BANG = { nganHang:'Ngân hàng', taiKhoan:'Số tài khoản', hanMuc:'Hạn mức', khoanVay:'Khoản vay', giaiNgan:'Giải ngân', laiSuat:'Lãi suất', kyTra:'Kỳ trả gốc', traNo:'Trả nợ', fileDinhKem:'File đính kèm', thauChi:'Thấu chi', giaoDich:'Giao dịch thấu chi',
-  blChung:'Bảo lãnh', baoLanh:'Bảo lãnh', phiBaoLanh:'Phí bảo lãnh', kyQuyGiamTru:'Giảm ký quỹ' };
+  blChung:'Bảo lãnh', baoLanh:'Bảo lãnh', phiBaoLanh:'Phí bảo lãnh', kyQuyGiamTru:'Giảm ký quỹ', taiSanBaoDam:'Tài sản bảo đảm', baoDamCho:'Khoản được bảo đảm' };
 
 // ===== TIỆN ÍCH: định dạng tiền / ngày, đọc ô nhập (chép từ app Hợp Đồng) =====
 const $ = id => document.getElementById(id);
@@ -389,7 +404,7 @@ firebase.auth().onAuthStateChanged(async user=>{
 });
 
 // ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3) =====
-const DL  = { nganHang:{}, hanMuc:{}, khoanVay:{}, thauChi:{}, baoLanh:{}, phiBaoLanh:{}, kyQuyGiamTru:{}, nguoiDung:{}, yeuCauXoa:{}, lichSu:{}, blChung:{} };   // mọi bảng của app: congNo/<bảng>/{id}; bảng con treo trong bản ghi (vd khoanVay/{id}/traNo/{id})
+const DL  = { nganHang:{}, hanMuc:{}, khoanVay:{}, thauChi:{}, baoLanh:{}, phiBaoLanh:{}, kyQuyGiamTru:{}, taiSanBaoDam:{}, nguoiDung:{}, yeuCauXoa:{}, lichSu:{}, blChung:{} };   // mọi bảng của app: congNo/<bảng>/{id}; bảng con treo trong bản ghi (vd khoanVay/{id}/traNo/{id})
 // DL.blChung = bảng thư bảo lãnh dùng chung với app Hợp Đồng (CAU_HINH.BAO_LANH = hopdong/baoLanh) — chỗ thông nhau DUY NHẤT của hai app. Mọi bảng khác nằm dưới congNo/.
 let danhSachCongTrinh=[], _daKetNoi=false;
 const dRieng = p => p==='blChung'||p.startsWith('blChung/') ? CAU_HINH.BAO_LANH+p.slice(7) : CAU_HINH.GOC+'/'+p;   // đường dẫn thật trên Firebase của một bảng / bản ghi
@@ -463,7 +478,7 @@ const BANG_CON_KHOAN_VAY = ['giaiNgan','kyTra','traNo'];
 async function xoaBanGhi(duongBang, id){
   if(!laGiamDoc()) throw new Error('Chỉ giám đốc được xoá. Hãy bấm "Yêu cầu xoá".');
   const bang=tenBangCua(duongBang), cha=chaCua(duongBang), up={};
-  if(bang==='nganHang'&&(['hanMuc','khoanVay','thauChi'].some(b=>danhSachCon(DL[b]).some(x=>x.nganHangId===id))||dsBaoLanh().some(x=>x.nganHangId===id))) throw new Error('Ngân hàng này còn hạn mức / khoản vay / thấu chi / bảo lãnh. Xoá các khoản đó trước.');
+  if(bang==='nganHang'&&(['hanMuc','khoanVay','thauChi'].some(b=>danhSachCon(DL[b]).some(x=>x.nganHangId===id))||dsBaoLanh().some(x=>x.nganHangId===id)||danhSachCon(DL.taiSanBaoDam).some(x=>x.nganHangId===id))) throw new Error('Ngân hàng này còn hạn mức / khoản vay / thấu chi / bảo lãnh / tài sản bảo đảm. Xoá các khoản đó trước.');
   if(bang==='blChung'&&(DL.blChung[id]||{}).app!=='congNo') throw new Error('Thư này nhập từ app Hợp Đồng — muốn xoá thì xoá ở bên đó.');
   if(bang==='blChung'||bang==='baoLanh'){ up[dRieng('phiBaoLanh/'+id)]=null; up[dRieng('kyQuyGiamTru/'+id)]=null; }   // xoá thư thì xoá luôn các lần nộp phí, giảm ký quỹ của nó
   if(bang==='hanMuc'&&kheUocCua(id).length) throw new Error('Hạn mức này còn khế ước. Xoá hết khế ước trước.');
@@ -519,6 +534,8 @@ function tomTatMoi(bang, v){ v=v||{}; return ({
   thauChi:()=>'Thấu chi '+tenNganHang(v.nganHangId)+' · '+(v.congTyVay||'')+(v.soHopDong?' · HĐ '+v.soHopDong:''),
   blChung:()=>tomTatMoi('baoLanh',v),
   baoLanh:()=>'Bảo lãnh '+(LOAI_BAO_LANH[v.loai]||'').toLowerCase()+(v.soThu?' số '+v.soThu:'')+' · '+tien(v.soTien)+' đ',
+  taiSanBaoDam:()=>(LOAI_TAI_SAN[v.loai]||'Tài sản')+' · '+(v.moTa||'')+' · '+tien(v.giaTriDinhGia)+' đ',
+  baoDamCho:()=>'bảo đảm cho '+tenKhoanTheoKhoa(v.khoan),
   phiBaoLanh:()=>'phí '+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
   kyQuyGiamTru:()=>'giảm ký quỹ '+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
   giaoDich:()=>(v.loai==='rut'?'Rút ':'Nộp ')+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ'+(v.lai?' · lãi '+tien(v.lai):'')+(v.phi?' · phí '+tien(v.phi):'')
@@ -538,10 +555,12 @@ const TEN_TRUONG = { ten:'Tên', chiNhanh:'Chi nhánh', loai:'Loại', 'canBo.te
   giaTriThietBi:'Giá trị thiết bị', noiDangO:'Thiết bị đang ở', congTyDangDung:'Công ty đang dùng', tienTraTruoc:'Tiền trả trước', tienKyQuy:'Tiền ký quỹ', kyQuyDaHoan:'Ký quỹ đã hoàn', giaMuaLai:'Giá mua lại',
   'baoHiem.hang':'Hãng bảo hiểm', 'baoHiem.soHopDong':'Số HĐ bảo hiểm', 'baoHiem.ngayHetHan':'Hết hạn bảo hiểm',
   hanMuc:'Hạn mức thấu chi', ngayNopHangThang:'Ngày nộp tiền hằng tháng', nopHangThang:'Hằng tháng phải nộp',
+  moTa:'Mô tả', 'chuSoHuu.congTyId':'Chủ sở hữu (công ty)', 'chuSoHuu.tenCaNhan':'Chủ sở hữu (cá nhân)', 'chuSoHuu.loai':'Kiểu chủ sở hữu', giaTriDinhGia:'Giá trị định giá', ngayDinhGia:'Ngày định giá', ngayDinhGiaLai:'Ngày định giá lại',
+  'hopDongTheChap.so':'Số HĐ thế chấp', 'hopDongTheChap.ngay':'Ngày ký thế chấp', khoan:'Khoản được bảo đảm', mucDichVay:'Mục đích vay', khachHangGiaiNgan:'Khách hàng được giải ngân',
   soThu:'Số thư', ngayPhatHanh:'Ngày phát hành', hopDongId:'Hợp đồng (app Hợp Đồng)', tenGoiThau:'Gói thầu / hợp đồng', daGiaHan:'Đã gia hạn', nganHang:'Tên ngân hàng',
   'phi.hinhThuc':'Cách thu phí', 'phi.kyThuPhiThang':'Kỳ thu phí (tháng)', 'phi.soTienMoiKy':'Phí mỗi kỳ', 'phi.daNopDen':'Phí đã nộp đến', 'kyQuy.banDau':'Ký quỹ ban đầu', 'kyQuy.hoanTra':'Ký quỹ đã hoàn', 'kyQuy.ngayHoanTra':'Ngày hoàn ký quỹ', kyTu:'Kỳ phí từ', kyDen:'Kỳ phí đến', noiDung:'Nội dung', kyNop:'Gắn kỳ nộp hằng tháng' };
 function hienGiaTri(truong, v){ if(v===''||v==null) return '(trống)'; if(typeof v==='boolean') return v?'có':'không';
-  if(truong==='nganHangId') return tenNganHang(v); if(truong==='keToanTheoDoi') return tenNguoi(v)||String(v); if(truong==='kyTraId') return 'kỳ gốc';
+  if(truong==='nganHangId') return tenNganHang(v); if(truong==='keToanTheoDoi') return tenNguoi(v)||String(v); if(truong==='kyTraId') return 'kỳ gốc'; if(truong==='khoan') return tenKhoanTheoKhoa(v); if(truong==='loai'&&LOAI_TAI_SAN[v]) return LOAI_TAI_SAN[v]; if(truong==='loai'&&LOAI_BAO_LANH[v]) return LOAI_BAO_LANH[v];
   if(typeof v==='number'&&Math.abs(v)>=1000) return tien(v); if(typeof v==='number') return soVN(v); if(/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return ngayVN(v);
   return ({ ...LOAI_NGAN_HANG, ...LOAI_LAI_SUAT, rut:'Rút', nop:'Nộp', lai:'Chỉ lãi', gocLai:'Cả gốc và lãi', ...HINH_THUC_PHI, ...LOAI_PHI })[v]||String(v); }
 function veLichSu(id){
@@ -771,17 +790,17 @@ const tinhKV = k => TINH_TOAN.tinhKhoan(k, homNay(), CAU_HINH.SAP_DEN_HAN_NGAY);
 function tinhHanMuc(id){ const h=DL.hanMuc[id]||{}, ku=kheUocCua(id), baoLanh=TINH_TOAN.baoLanhCuaHanMuc(h,dsBaoLanh(),homNay()), daDung=TINH_TOAN.hanMucDaDung(h,ku,baoLanh); return { daDung, conTrong:TINH_TOAN.hanMucConTrong(h,daDung), kheUoc:ku, baoLanh }; }
 
 // ===== ĐIỀU PHỐI MÀN HÌNH =====
-const CAC_TAB = ['hanmuc','lich','baolanh','khac','nganhang','thauchi'];   // 4 tab có nút ở thanh dưới + các mục con mở từ trang Khác
+const CAC_TAB = ['hanmuc','lich','baolanh','khac','nganhang','thauchi','taisan'];   // 4 tab có nút ở thanh dưới + các mục con mở từ trang Khác
 function chuyenTab(t){ CAC_TAB.forEach(x=>$('tab-'+x).hidden=x!==t); const coNut=!!document.querySelector(`.nav-item[data-tab="${t}"]`);
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===(coNut?t:'khac'))); window.scrollTo(0,0); }
-let _veT; function veTatCa(){ clearTimeout(_veT); _veT=setTimeout(()=>{ veVay(); veThauChi(); veLichTra(); veBaoLanh(); veNganHang(); veQuanTri(); if(ct) veChiTiet(); },30); }
+let _veT; function veTatCa(){ clearTimeout(_veT); _veT=setTimeout(()=>{ veVay(); veThauChi(); veLichTra(); veBaoLanh(); veTaiSan(); veNganHang(); veQuanTri(); if(ct) veChiTiet(); },30); }
 // Lớp phủ chi tiết: mở chồng lên nhau được (hạn mức → khế ước), "Quay lại" về đúng màn trước
 let ct=null, tabKV='thongTin'; const _ctTruoc=[];
 function moChiTiet(loai, id, tab){ if(ct&&(ct.loai!==loai||ct.id!==id)) _ctTruoc.push(ct); ct={loai,id}; if(loai==='khoanVay') tabKV=tab||'thongTin'; if(loai==='thauChi') tabTC=tab||'giaoDich'; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; veChiTiet(); }
 function dongChiTiet(){ ct=_ctTruoc.pop()||null; if(ct) return veChiTiet(); $('detail').hidden=true; document.body.style.overflow=''; }
 function veChiTiet(){
   if(!ct) return;
-  const r=({ nganHang:veCtNganHang, hanMuc:veCtHanMuc, khoanVay:veCtKhoanVay, thauChi:veCtThauChi, baoLanh:veCtBaoLanh })[ct.loai](ct.id);
+  const r=({ nganHang:veCtNganHang, hanMuc:veCtHanMuc, khoanVay:veCtKhoanVay, thauChi:veCtThauChi, baoLanh:veCtBaoLanh, taiSan:veCtTaiSan })[ct.loai](ct.id);
   if(!r) return dongChiTiet();   // bản ghi vừa bị xoá → lùi về màn trước
   $('detail').innerHTML=`<header class="app-header"><button class="btn sm sec" onclick="dongChiTiet()">‹ Quay lại</button><h1 style="flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.tieuDe}</h1><button class="btn sm sec" onclick="${r.sua}">✏️ Sửa</button></header><div class="main">${r.html}</div>`;
 }
@@ -1193,6 +1212,7 @@ function veCtHanMuc(id){
         <tfoot><tr><td class="tr" colspan="2">Cộng ${ku.length} khế ước</td><td>${tien(ku.reduce((s,k)=>s+k.t.tongGiaiNgan,0))}</td><td>${tien(ku.reduce((s,k)=>s+k.t.duNoGoc,0))}</td><td colspan="3"></td></tr></tfoot></table></div>`
         :'<div class="hint">Chưa có khế ước nào. Mỗi lần rút vốn theo hạn mức này bấm "＋ Khế ước".</div>'}
     </div></div>
+    ${veTaiSanCua('hanMuc/'+id)}
     ${veFile('hanMuc/'+id,h)}
     ${veLichSu(id)}` };
 }
@@ -1278,6 +1298,7 @@ function veCtKhoanVay(id){
     ${t.duNoGoc>0&&!t.laiSuatHienHanh?'<div class="warn">Khoản vay chưa có lãi suất áp dụng cho hôm nay → không ước được lãi, không nhắc trả lãi. Thêm ở tab Lãi suất.</div>':''}
     ${lech?`<div class="warn soft">Lịch trả gốc còn ${tien(t.gocConTheoLich)} đ nhưng gốc còn phải trả là ${tien(canTra)} đ${t.chuaGiaiNgan?' (dư nợ '+tien(t.duNoGoc)+' + chưa giải ngân '+tien(t.chuaGiaiNgan)+')':''} — lệch ${tien(lech)} đ.
       <div class="row" style="margin-top:6px"><button class="btn sm" style="flex:0 0 auto" onclick="khopLichKhoan('${id}')">Khớp lịch với dư nợ</button><span style="font-weight:400">trừ dần từ các kỳ cuối; hoặc sửa tay từng kỳ ở tab Lịch trả cho đúng bảng của ngân hàng.</span></div></div>`:''}
+    ${tabKV==='thongTin'?veTaiSanCua('khoanVay/'+id):''}
     <div class="tabs">${Object.entries(TAB_KV).map(([x,l])=>`<div class="tab ${tabKV===x?'on':''}" onclick="chonTabKV('${x}')">${l}${dem[x]?' <b>'+dem[x]+'</b>':''}</div>`).join('')}</div>
     ${noiDung}` };
 }
@@ -1400,6 +1421,7 @@ function veCtThauChi(id){
         ${tc.ghiChu?`<div>Ghi chú</div><div>${esc(tc.ghiChu)}</div>`:''}
       </div>
     </div></div>
+    ${veTaiSanCua('thauChi/'+id)}
     <div class="tabs">${Object.entries(TAB_TC).map(([x,l])=>`<div class="tab ${tabTC===x?'on':''}" onclick="chonTabTC('${x}')">${l}${dem[x]?' <b>'+dem[x]+'</b>':''}</div>`).join('')}</div>
     ${noiDung}` };
 }
@@ -1516,10 +1538,92 @@ function veCtBaoLanh(khoa){
     ${veLichSu(id)}` };
 }
 
+// ===== 16. MÀN HÌNH: Tài sản bảo đảm (tài sản ↔ khoản vay) =====
+// congNo/taiSanBaoDam/{id}; các khoản mà tài sản đang bảo đảm nằm ngay trong tài sản: baoDamCho/{id} {khoan:'hanMuc/<id>'|'khoanVay/<id>'|'thauChi/<id>', mucDichVay, khachHangGiaiNgan, ghiChu}
+// (spec vẽ bảng nối riêng taiSanBaoDam_khoanVay — để trong tài sản cho gọn; tra ngược "khoản này có tài sản nào" bằng taiSanCua()).
+const LOAI_TAI_SAN = { dat:'Đất', nha:'Nhà', xe:'Xe', mayMoc:'Máy móc', quyenDoiNo:'Quyền đòi nợ', soTietKiem:'Sổ tiết kiệm', khac:'Khác' };
+const ICON_TAI_SAN = { dat:'🌍', nha:'🏠', xe:'🚚', mayMoc:'🚜', quyenDoiNo:'📃', soTietKiem:'💰', khac:'📦' };
+const NHAC_DINH_GIA_NGAY = 40;   // định giá lại: báo trước 40 ngày (mục 1.4)
+const tenChuSoHuu = ts => { const c=ts.chuSoHuu||{}; return c.congTyId?'Công ty '+c.congTyId:(c.tenCaNhan||'—'); };
+const ngayDinhGiaLai = ts => ts.ngayDinhGiaLai||TINH_TOAN.congThang(ts.ngayDinhGia,12);   // không nhập → ngày định giá + 12 tháng
+// Tên một khoản theo khoá 'hanMuc/<id>' | 'khoanVay/<id>' | 'thauChi/<id>'
+function tenKhoanTheoKhoa(khoa){ const [b,id]=String(khoa||'').split('/'), x=(DL[b]||{})[id]; if(!x) return '(khoản đã xoá)';
+  return b==='hanMuc'?'Hạn mức HĐ '+(x.soHopDong||'')+' · '+x.congTyVay:b==='thauChi'?'Thấu chi '+(x.soHopDong||'')+' · '+x.congTyVay:tenKhoan(x)+' · '+x.congTyVay; }
+function taiSanCua(khoa){ return danhSachCon(DL.taiSanBaoDam).filter(ts=>danhSachCon(ts.baoDamCho).some(l=>l.khoan===khoa)); }
+// Thẻ "Tài sản bảo đảm" hiện trong chi tiết hạn mức / khoản vay / thấu chi
+function veTaiSanCua(khoa){ const ds=taiSanCua(khoa); if(!ds.length) return '';
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🏠 Tài sản bảo đảm cho khoản này</h3></div>${ds.map(ts=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border);cursor:pointer" onclick="moChiTiet('taiSan','${ts.id}')"><div>${ICON_TAI_SAN[ts.loai]||'📦'} <b>${esc(ts.moTa)}</b><div class="item-sub">${esc(LOAI_TAI_SAN[ts.loai]||'')} · ${esc(tenChuSoHuu(ts))} · định giá ${tien(ts.giaTriDinhGia)} đ</div></div><span style="flex:0 0 auto">›</span></div>`).join('')}</div></div>`; }
+function oTaiSan(){ return [
+  {k:'loai',nhan:'Loại tài sản',kieu:'chon',ds:LOAI_TAI_SAN,rong:'— chọn —',batBuoc:true},
+  {k:'moTa',nhan:'Mô tả (thửa đất nào, xe gì, sổ tiết kiệm số…)',batBuoc:true},
+  {k:'chuSoHuu.congTyId',nhan:'Chủ sở hữu là công ty',kieu:'chon',ds:DS_CONG_TY,rong:'(không — là cá nhân)'},
+  {k:'chuSoHuu.tenCaNhan',nhan:'hoặc tên cá nhân',nua:true},
+  {k:'giaTriDinhGia',nhan:'Giá trị định giá (đ)',kieu:'tien',batBuoc:true},
+  {k:'ngayDinhGia',nhan:'Ngày định giá',kieu:'ngay',batBuoc:true,nua:true},
+  {k:'ngayDinhGiaLai',nhan:'Ngày phải định giá lại',kieu:'ngay',hint:'Bỏ trống = ngày định giá + 12 tháng.'},
+  {k:'nganHangId',nhan:'Ngân hàng đang nhận thế chấp',kieu:'chon',ds:dsChonNganHang(),rong:'— chọn —',batBuoc:true},
+  {k:'hopDongTheChap.so',nhan:'Số hợp đồng thế chấp'}, {k:'hopDongTheChap.ngay',nhan:'Ngày ký thế chấp',kieu:'ngay',nua:true},
+  {k:'ghiChu',nhan:'Ghi chú (quyền đòi nợ: ghi số hợp đồng với chủ đầu tư)'},
+  {k:'keToanTheoDoi',nhan:'Kế toán theo dõi',kieu:'chon',ds:dsChonNguoi(),rong:'— chọn —'} ]; }
+function oBaoDamCho(ts){ const nh=ts.nganHangId, ds=[];
+  danhSachCon(DL.hanMuc).filter(h=>h.nganHangId===nh).forEach(h=>ds.push(['hanMuc/'+h.id,tenKhoanTheoKhoa('hanMuc/'+h.id)]));
+  danhSachCon(DL.khoanVay).filter(k=>k.nganHangId===nh).forEach(k=>ds.push(['khoanVay/'+k.id,tenKhoanTheoKhoa('khoanVay/'+k.id)]));
+  danhSachCon(DL.thauChi).filter(x=>x.nganHangId===nh).forEach(x=>ds.push(['thauChi/'+x.id,tenKhoanTheoKhoa('thauChi/'+x.id)]));
+  return [ {k:'khoan',nhan:'Bảo đảm cho khoản nào (cùng ngân hàng)',kieu:'chon',ds,rong:'— chọn —',batBuoc:true,hint:ds.length?'':'Ngân hàng này chưa có hạn mức / khoản vay nào trong app.'},
+    {k:'mucDichVay',nhan:'Mục đích vay'}, {k:'khachHangGiaiNgan',nhan:'Khách hàng được giải ngân',nua:true}, {k:'ghiChu',nhan:'Ghi chú'} ]; }
+function formTaiSan(id){ if(!id&&!danhSachCon(DL.nganHang).length) return toast('Thêm ngân hàng ở mục Ngân hàng trước'); moFormCon(id?'✏️ Sửa tài sản bảo đảm':'＋ Thêm tài sản bảo đảm','taiSanBaoDam',id,oTaiSan(),{ngayDinhGia:homNay()}); }
+function formBaoDamCho(tsId, id){ moFormCon((id?'✏️ Sửa':'＋')+' Khoản được bảo đảm','taiSanBaoDam/'+tsId+'/baoDamCho',id,oBaoDamCho(DL.taiSanBaoDam[tsId])); }
+KIEM_TRA.taiSanBaoDam=function(v){ const c=v.chuSoHuu;
+  if(!c.congTyId&&!c.tenCaNhan) throw new Error('Cần chọn công ty chủ sở hữu hoặc ghi tên cá nhân');
+  if(c.congTyId) c.tenCaNhan=''; c.loai=c.congTyId?'congTy':'caNhan';
+  if(v.ngayDinhGiaLai&&v.ngayDinhGiaLai<=v.ngayDinhGia) throw new Error('Ngày định giá lại phải sau ngày định giá'); };
+KIEM_TRA.baoDamCho=function(v,duongBang,id){ const ts=DL.taiSanBaoDam[chaCua(duongBang)]||{}; if(danhSachCon(ts.baoDamCho).some(l=>l.id!==id&&l.khoan===v.khoan)) throw new Error('Tài sản này đã gắn với khoản đó rồi'); };
+function veTaiSan(){
+  const fl=$('ts-loai'), fn=$('ts-nganhang'), loai=fl.value, nn=fn.value, q=$('ts-q').value.trim().toLowerCase(), hn=homNay(), tat=danhSachCon(DL.taiSanBaoDam);
+  fl.innerHTML=chonOptions(LOAI_TAI_SAN,loai,'— Mọi loại —'); fn.innerHTML=chonOptions(dsChonNganHang(),nn,'— Mọi ngân hàng —');
+  const ds=tat.filter(ts=>(!loai||ts.loai===loai)&&(!nn||ts.nganHangId===nn)&&(!q||[ts.moTa,tenChuSoHuu(ts),(ts.hopDongTheChap||{}).so,ts.ghiChu].join(' ').toLowerCase().includes(q)))
+    .sort((a,b)=>tenNganHang(a.nganHangId).localeCompare(tenNganHang(b.nganHangId),'vi')||String(a.moTa).localeCompare(String(b.moTa),'vi'));
+  const S=TINH_TOAN.soNguyen;
+  $('ts-tong').innerHTML=`<div class="tile acc"><span>Tổng giá trị định giá</span><b>${tienNgan(ds.reduce((s,x)=>s+S(x.giaTriDinhGia),0))}</b><small>${ds.length} tài sản đang thế chấp</small></div><div class="tile"><span>Sổ tiết kiệm thế chấp</span><b>${tienNgan(ds.filter(x=>x.loai==='soTietKiem').reduce((s,x)=>s+S(x.giaTriDinhGia),0))}</b><small>tiền đang bị giam</small></div>`;
+  $('ds-taisan').innerHTML=ds.length?ds.map(ts=>{ const dgl=ngayDinhGiaLai(ts), con=TINH_TOAN.soNgayGiua(hn,dgl), n=danhSachCon(ts.baoDamCho).length;
+    return `<div class="al ${con!=null&&con<0?'over':con!=null&&con<=NHAC_DINH_GIA_NGAY?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('taiSan','${ts.id}')"><span class="ic">${ICON_TAI_SAN[ts.loai]||'📦'}</span><div class="item-main">
+      <div class="item-name">${esc(ts.moTa)}</div>
+      <div class="item-sub">${esc(LOAI_TAI_SAN[ts.loai]||'')} · chủ sở hữu: ${esc(tenChuSoHuu(ts))} · thế chấp tại ${esc(tenNganHang(ts.nganHangId))}</div>
+      <div class="item-sub">Định giá <b>${tien(ts.giaTriDinhGia)} đ</b> (${ngayVN(ts.ngayDinhGia)}) · định giá lại ${ngayVN(dgl)}${con!=null&&con<0?' · <b class="neg">QUÁ HẠN '+(-con)+' ngày</b>':con!=null&&con<=NHAC_DINH_GIA_NGAY?' · <b>còn '+con+' ngày</b>':''} · bảo đảm ${n} khoản</div>
+    </div><span>›</span></div>`; }).join('')
+    :`<div class="empty">${tat.length?'Không tìm thấy.':'Chưa có tài sản bảo đảm nào. Bấm "Thêm tài sản bảo đảm".'}</div>`;
+}
+function veCtTaiSan(id){
+  const ts=DL.taiSanBaoDam[id]; if(!ts) return null;
+  const hn=homNay(), dgl=ngayDinhGiaLai(ts), con=TINH_TOAN.soNgayGiua(hn,dgl), tc=ts.hopDongTheChap||{}, lk=danhSachCon(ts.baoDamCho);
+  return { tieuDe:esc(ts.moTa), sua:`formTaiSan('${id}')`, html:`
+    <div class="card"><div class="card-body">
+      <div style="font-size:18px;font-weight:800">${ICON_TAI_SAN[ts.loai]||'📦'} ${esc(ts.moTa)}</div>
+      <div style="margin:6px 0"><span class="badge tt-xam">${esc(LOAI_TAI_SAN[ts.loai]||'')}</span>${ts.loai==='soTietKiem'?' <span class="badge tt-quaHan">Tiền đang bị giam</span>':''}</div>
+      ${con!=null&&con<=NHAC_DINH_GIA_NGAY?'<div class="warn'+(con<0?'':' soft')+'">'+(con<0?'ĐÃ QUÁ hạn định giá lại '+(-con)+' ngày':'Đến hạn định giá lại sau '+con+' ngày')+' ('+ngayVN(dgl)+') — sau khi ngân hàng định giá lại, bấm Sửa nhập giá trị và ngày định giá mới.</div>':''}
+      <div class="tiles" style="margin:8px 0 0;gap:6px">
+        <div class="tile acc" style="padding:8px"><span>Giá trị định giá</span><b style="font-size:16px">${tien(ts.giaTriDinhGia)}</b><small>ngày ${ngayVN(ts.ngayDinhGia)}</small></div>
+        <div class="tile" style="padding:8px"><span>Định giá lại</span><b style="font-size:16px">${ngayVN(dgl)}</b></div>
+      </div>
+      <div class="kv" style="margin-top:10px">
+        <div>Chủ sở hữu</div><div>${esc(tenChuSoHuu(ts))}</div>
+        <div>Thế chấp tại</div><div style="cursor:pointer" onclick="moChiTiet('nganHang','${esc(ts.nganHangId)}')">${esc(tenNganHang(ts.nganHangId))} ›</div>
+        <div>Hợp đồng thế chấp</div><div>${esc(tc.so||'—')}${tc.ngay?' · ký '+ngayVN(tc.ngay):''}</div>
+        <div>Kế toán theo dõi</div><div>${esc(tenNguoi(ts.keToanTheoDoi)||'—')}</div>
+        ${ts.ghiChu?`<div>Ghi chú</div><div>${esc(ts.ghiChu)}</div>`:''}
+      </div>
+    </div></div>
+    <div class="card"><div class="card-body"><div class="sec-h"><h3>🔗 Đang bảo đảm cho các khoản</h3><button class="btn sm" onclick="formBaoDamCho('${id}')">＋ Gắn khoản</button></div>
+      ${lk.length?lk.map(l=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div style="cursor:pointer" onclick="moChiTiet('${esc(String(l.khoan).split('/')[0])}','${esc(String(l.khoan).split('/')[1])}')"><b>${esc(tenKhoanTheoKhoa(l.khoan))}</b> ›<div class="item-sub">${esc([l.mucDichVay,l.khachHangGiaiNgan&&'giải ngân cho '+l.khachHangGiaiNgan,l.ghiChu].filter(Boolean).join(' · '))}</div></div><button class="btn sm sec" style="flex:0 0 auto" onclick="formBaoDamCho('${id}','${l.id}')">✏️</button></div>`).join('')
+        :'<div class="hint">Chưa gắn khoản nào. Một tài sản có thể bảo đảm cho nhiều khoản vay cùng ngân hàng.</div>'}</div></div>
+    ${veFile('taiSanBaoDam/'+id,ts)}
+    ${veLichSu(id)}` };
+}
+
 // ===== 19. MÀN HÌNH: Quản trị — yêu cầu xoá (giám đốc duyệt), ba công ty (chỉ xem), người dùng =====
 function veQuanTri(){
   // các mục con mở từ trang Khác
-  $('khac-menu').innerHTML=[ ['nganhang','🏦 Ngân hàng',danhSachCon(DL.nganHang).length,'ngân hàng, công ty cho thuê; số tài khoản'], ['thauchi','🔄 Thấu chi',danhSachCon(DL.thauChi).length,'hạn mức thấu chi, rút / nộp'] ]
+  $('khac-menu').innerHTML=[ ['nganhang','🏦 Ngân hàng',danhSachCon(DL.nganHang).length,'ngân hàng, công ty cho thuê; số tài khoản'], ['thauchi','🔄 Thấu chi',danhSachCon(DL.thauChi).length,'hạn mức thấu chi, rút / nộp'], ['taisan','🏠 Tài sản bảo đảm',danhSachCon(DL.taiSanBaoDam).length,'tài sản thế chấp, định giá lại'] ]
     .map(([t,ten,n,moTa])=>`<div class="tile" style="cursor:pointer" onclick="chuyenTab('${t}')"><span>${ten}</span><b>${n}</b><small>${moTa} ›</small></div>`).join('');
   const yc=Object.entries(DL.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho').sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
   $('khac-badge').hidden=!(laGiamDoc()&&yc.length); $('khac-badge').textContent=yc.length; $('qt-yeucauxoa-n').hidden=!yc.length; $('qt-yeucauxoa-n').textContent=yc.length+' chờ';
