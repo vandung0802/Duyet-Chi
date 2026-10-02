@@ -150,8 +150,32 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
   <header class="app-header"><h1>🏦 Công nợ PVA-379-279 <small id="ver-label"></small></h1><span class="hdr-user" id="hdr-user"></span></header>
   <main class="main">
 
+    <!-- ===== 8. MÀN HÌNH: Dashboard (Tổng quan) ===== -->
+    <section id="tab-tongquan">
+      <div class="chips" id="tq-congty"></div>
+      <div class="chips" id="tq-cach"></div>
+      <div id="tq-tiles" class="tiles"></div>
+      <div class="card"><div class="card-body">
+        <div class="sec-h"><h3>📅 Phải trả 30 ngày tới</h3><button class="btn sm sec" onclick="chuyenTab('lich')">Xem hết ›</button></div>
+        <div class="tw" id="tq-lich"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div class="sec-h"><h3>🏦 Theo ngân hàng</h3></div>
+        <div class="tw" id="tq-nganhang"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div class="sec-h"><h3>📈 Dư nợ gốc 12 tháng qua</h3></div>
+        <canvas id="tq-bd1" height="170" hidden></canvas><div class="tw" id="tq-bang1"></div>
+      </div></div>
+      <div class="card"><div class="card-body">
+        <div class="sec-h"><h3>📊 Gốc + lãi ước phải trả 12 tháng tới</h3></div>
+        <canvas id="tq-bd2" height="170" hidden></canvas><div class="tw" id="tq-bang2"></div>
+      </div></div>
+      <button class="btn sec" onclick="xuatTongHop()">📤 Xuất Excel tổng hợp (mọi bảng số liệu)</button>
+    </section>
+
     <!-- ===== 11 + 12. MÀN HÌNH: Khoản vay — Hạn mức & Khế ước (ngắn hạn) / Vay trung dài hạn theo món ===== -->
-    <section id="tab-hanmuc">
+    <section id="tab-hanmuc" hidden>
       <div class="chips" id="vay-loai"></div>
       <button class="btn" id="vay-them" style="margin-bottom:10px" onclick="themVay()"></button>
       <div class="card"><div class="card-body" style="padding:8px 10px">
@@ -266,7 +290,8 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
   </main>
 
   <nav class="bottom-nav">
-    <button class="nav-item active" data-tab="hanmuc" onclick="chuyenTab('hanmuc')"><span class="nav-icon">💳</span>Khoản vay</button>
+    <button class="nav-item active" data-tab="tongquan" onclick="chuyenTab('tongquan')"><span class="nav-icon">📊</span>Tổng quan</button>
+    <button class="nav-item" data-tab="hanmuc" onclick="chuyenTab('hanmuc')"><span class="nav-icon">💳</span>Khoản vay</button>
     <button class="nav-item" data-tab="lich" onclick="chuyenTab('lich')"><span class="nav-icon">📅</span>Lịch trả<span class="nav-badge" id="lich-badge" hidden></span></button>
     <button class="nav-item" data-tab="baolanh" onclick="chuyenTab('baolanh')"><span class="nav-icon">🛡</span>Bảo lãnh<span class="nav-badge" id="bl-badge" hidden></span></button>
     <button class="nav-item" data-tab="khac" onclick="chuyenTab('khac')"><span class="nav-icon">⚙️</span>Khác<span class="nav-badge" id="khac-badge" hidden></span></button>
@@ -291,7 +316,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261002-v11',
+  PHIEN_BAN: '20261002-v12',
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
   NHAC_HAN_MUC_NGAY: 60           // hạn mức sắp hết hạn: báo trước 60 ngày (mục 1.4)
@@ -797,6 +822,58 @@ const SINH_LICH = (function () {
   return { sinhLich, khopLich };
 })();
 // ===== HẾT 7. SINH_LICH =====
+// ===== TONG_HOP — số liệu màn Tổng quan (mục 1.4), cộng theo đúng công thức mục 1.5. Thuần túy, KHÔNG đụng giao diện =====
+// du = { hanMuc, khoanVay, thauChi, taiSanBaoDam, baoLanh (đã gộp), phiBaoLanh, kyQuyGiamTru }
+// cty: '' = CẢ 3 công ty (cộng mọi khoản, không trừ gì); theoChiu: false = theo công ty ĐỨNG TÊN vay, true = theo công ty THỰC CHỊU (vay chéo).
+const TONG_HOP = (function () {
+  const T = TINH_TOAN;
+  const locCty = (cty, theoChiu) => x => !cty || (theoChiu ? (x.congTyChiu || x.congTyVay) : x.congTyVay) === cty;
+  function tinh(du, homNay, cty, theoChiu) {
+    const cua = locCty(cty, theoChiu), den30 = T.congNgay(homNay, 30), nh = {};
+    const o = id => nh[id || ''] = nh[id || ''] || { nganHangId: id || '', hanMuc: 0, hanMucDaDung: 0, duNoVay: 0, thauChi: 0, baoLanh: 0, kyQuy: 0 };
+    const kq = { duNoVay: 0, thauChiDangDung: 0, gocPhaiTra30: 0, laiPhaiTra30: 0, phiPhaiTra30: 0, hanMuc: 0, hanMucDaDung: 0, laiUocThangNay: 0, baoLanh: 0, kyQuyBaoLanh: 0, soTietKiem: 0, kyQuyThue: 0, soKhoan: 0, soQuaHan: 0, soNhomNo2: 0 };
+    T.danhSach(du.khoanVay).filter(cua).forEach(k => { const t = T.tinhKhoan(k, homNay);
+      kq.duNoVay += t.duNoGoc; o(k.nganHangId).duNoVay += t.duNoGoc; kq.laiUocThangNay += t.laiUocThangNay; if (t.duNoGoc > 0) kq.soKhoan++;
+      if (t.trangThai === 'quaHan') kq.soQuaHan++; if (Number(k.nhomNo) >= 2 && t.duNoGoc > 0) kq.soNhomNo2++;
+      T.lichTra(k, den30).forEach(x => { kq.gocPhaiTra30 += x.goc; kq.laiPhaiTra30 += x.laiUoc; });
+      if (k.loai === 'thueTaiChinh' && !k.kyQuyDaHoan) kq.kyQuyThue += T.soNguyen(k.tienKyQuy); });   // ký quỹ thuê tài chính chưa hoàn
+    T.danhSach(du.thauChi).filter(cua).forEach(tc => { const t = T.tinhThauChi(tc, homNay);
+      kq.thauChiDangDung += t.dangDung; o(tc.nganHangId).thauChi += t.dangDung; kq.laiUocThangNay += t.laiUocThangNay;
+      T.lichNopThauChi(tc, den30).forEach(x => { kq.gocPhaiTra30 += x.goc; kq.laiPhaiTra30 += x.laiUoc; }); });
+    T.danhSach(du.baoLanh).filter(b => !cty || b.congTyId === cty).forEach(b => { const q = T.kyQuyDangGiu(b, (du.kyQuyGiamTru || {})[b.id]);
+      kq.kyQuyBaoLanh += q; o(b.nganHangId).kyQuy += q;
+      if (T.baoLanhHieuLuc(b, homNay)) { kq.baoLanh += T.soNguyen(b.soTien); o(b.nganHangId).baoLanh += T.soNguyen(b.soTien);
+        const kp = T.kyPhiToi(b, (du.phiBaoLanh || {})[b.id]); if (kp && kp.ngay <= den30) kq.phiPhaiTra30 += kp.soTien; } });
+    T.danhSach(du.hanMuc).filter(cua).forEach(h => { if (T.laNgay(h.ngayHetHan) && h.ngayHetHan < homNay) return;   // hạn mức đã hết hạn không tính vào hạn mức / còn trống
+      const dd = T.hanMucDaDung(h, T.danhSach(du.khoanVay).filter(k => k.hanMucId === h.id), T.baoLanhCuaHanMuc(h, du.baoLanh, homNay));
+      kq.hanMuc += T.soNguyen(h.soTien); kq.hanMucDaDung += dd; o(h.nganHangId).hanMuc += T.soNguyen(h.soTien); o(h.nganHangId).hanMucDaDung += dd; });
+    T.danhSach(du.taiSanBaoDam).forEach(ts => { if (ts.loai === 'soTietKiem' && (!cty || (ts.chuSoHuu || {}).congTyId === cty)) kq.soTietKiem += T.soNguyen(ts.giaTriDinhGia); });
+    kq.tongDuNo = kq.duNoVay + kq.thauChiDangDung;                             // tổng dư nợ gốc: vay + thuê tài chính + thấu chi đang dùng
+    kq.phaiTra30Ngay = kq.gocPhaiTra30 + kq.laiPhaiTra30 + kq.phiPhaiTra30;    // phaiTra30Ngay = gốc đến hạn + lãi ước + phí bảo lãnh + nộp thấu chi (gồm cả phần đã quá hạn chưa trả)
+    kq.hanMucConTrong = kq.hanMuc - kq.hanMucDaDung;                           // hanMucConTrong = hạn mức − đã dùng
+    kq.tienDangBiGiam = kq.kyQuyBaoLanh + kq.soTietKiem + kq.kyQuyThue;        // tienDangBiGiam = ký quỹ bảo lãnh + sổ tiết kiệm thế chấp + ký quỹ thuê tài chính
+    kq.theoNganHang = Object.values(nh).map(x => Object.assign(x, { conTrong: x.hanMuc - x.hanMucDaDung }));
+    return kq;
+  }
+  // Dư nợ gốc cuối mỗi tháng của n tháng gần đây (tháng hiện tại tính đến hôm nay) → [{thang:'YYYY-MM', duNo}]
+  function duNoTheoThang(du, homNay, cty, theoChiu, n) {
+    const cua = locCty(cty, theoChiu), kv = T.danhSach(du.khoanVay).filter(cua), tc = T.danhSach(du.thauChi).filter(cua), kq = [];
+    for (let i = n - 1; i >= 0; i--) { const d = new Date(Date.UTC(+homNay.slice(0, 4), +homNay.slice(5, 7) - 1 - i, 1)), y = d.getUTCFullYear(), m = d.getUTCMonth() + 1, cuoi = i === 0 ? homNay : T.ngayTrongThang(y, m, 31);
+      kq.push({ thang: y + '-' + String(m).padStart(2, '0'), duNo: kv.reduce((s, k) => s + Math.max(0, T.duNoGoc(k, cuoi)), 0) + tc.reduce((s, x) => s + Math.max(0, T.thauChiDangDung(x, cuoi)), 0) }); }
+    return kq;
+  }
+  // Gốc đến hạn + lãi ước phải trả từng tháng của n tháng tới (tháng đầu gồm cả phần đã quá hạn chưa trả) → [{thang, goc, lai}]
+  function phaiTraTheoThang(du, homNay, cty, theoChiu, n) {
+    const cua = locCty(cty, theoChiu), kq = [], vt = {};
+    for (let i = 0; i < n; i++) { const d = new Date(Date.UTC(+homNay.slice(0, 4), +homNay.slice(5, 7) - 1 + i, 1)), th = d.getUTCFullYear() + '-' + String(d.getUTCMonth() + 1).padStart(2, '0'); vt[th] = kq.length; kq.push({ thang: th, goc: 0, lai: 0 }); }
+    const cuoi = T.ngayTrongThang(+kq[n - 1].thang.slice(0, 4), +kq[n - 1].thang.slice(5, 7), 31), cong = x => { const o = kq[x.ngay < homNay ? 0 : vt[x.ngay.slice(0, 7)]]; if (o) { o.goc += x.goc; o.lai += x.laiUoc; } };
+    T.danhSach(du.khoanVay).filter(cua).forEach(k => T.lichTra(k, cuoi).forEach(cong));
+    T.danhSach(du.thauChi).filter(cua).forEach(tc => T.lichNopThauChi(tc, cuoi).forEach(cong));
+    return kq;
+  }
+  return { tinh, duNoTheoThang, phaiTraTheoThang };
+})();
+// ===== HẾT TONG_HOP =====
 // ===== NHAC_HAN — các mốc phải nhắc, tính THẲNG từ dữ liệu (thuần túy). App và kịch bản 07:00 (scripts/nhac-han-congno.js) dùng CHUNG khối này =====
 // Mốc trả tiền (gốc, lãi, nộp thấu chi, phí bảo lãnh) TỰ TẮT khi kế toán nhập dòng trả / nộp cho kỳ đó (quy tắc 24) — vì chúng lấy từ lịch "chưa trả".
 // Mốc còn lại tắt khi có người bấm "Đã xong" (lưu ở congNo/nhacNho/<khoá mốc>). Quá hạn chưa tắt → nhắc MỖI NGÀY.
@@ -873,11 +950,11 @@ const tinhKV = k => TINH_TOAN.tinhKhoan(k, homNay(), CAU_HINH.SAP_DEN_HAN_NGAY);
 function tinhHanMuc(id){ const h=DL.hanMuc[id]||{}, ku=kheUocCua(id), baoLanh=TINH_TOAN.baoLanhCuaHanMuc(h,dsBaoLanh(),homNay()), daDung=TINH_TOAN.hanMucDaDung(h,ku,baoLanh); return { daDung, conTrong:TINH_TOAN.hanMucConTrong(h,daDung), kheUoc:ku, baoLanh }; }
 
 // ===== ĐIỀU PHỐI MÀN HÌNH =====
-const CAC_TAB = ['hanmuc','lich','baolanh','khac','nganhang','thauchi','taisan','nhac'];   // 4 tab có nút ở thanh dưới + các mục con mở từ trang Khác
+const CAC_TAB = ['tongquan','hanmuc','lich','baolanh','khac','nganhang','thauchi','taisan','nhac'];   // 4 tab có nút ở thanh dưới + các mục con mở từ trang Khác
 function chuyenTab(t){ CAC_TAB.forEach(x=>$('tab-'+x).hidden=x!==t); const coNut=!!document.querySelector(`.nav-item[data-tab="${t}"]`);
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===(coNut?t:'khac'))); window.scrollTo(0,0); }
 let soDangNhac=0;   // số việc đang nhắc (hiện ở ô Nhắc hạn, số đỏ trên nút Khác)
-let _veT; function veTatCa(){ clearTimeout(_veT); _veT=setTimeout(()=>{ veVay(); veThauChi(); veLichTra(); veBaoLanh(); veTaiSan(); veNganHang(); soDangNhac=veNhacHan(); veQuanTri(); if(ct) veChiTiet(); },30); }
+let _veT; function veTatCa(){ clearTimeout(_veT); _veT=setTimeout(()=>{ veVay(); veThauChi(); veLichTra(); veBaoLanh(); veTaiSan(); veNganHang(); soDangNhac=veNhacHan(); veQuanTri(); veTongQuan(); if(ct) veChiTiet(); ganNutXuat(); },30); }
 // Lớp phủ chi tiết: mở chồng lên nhau được (hạn mức → khế ước), "Quay lại" về đúng màn trước
 let ct=null, tabKV='thongTin'; const _ctTruoc=[];
 function moChiTiet(loai, id, tab){ if(ct&&(ct.loai!==loai||ct.id!==id)) _ctTruoc.push(ct); ct={loai,id}; if(loai==='khoanVay') tabKV=tab||'thongTin'; if(loai==='thauChi') tabTC=tab||'giaoDich'; $('detail').hidden=false; $('detail').scrollTop=0; document.body.style.overflow='hidden'; veChiTiet(); }
@@ -887,6 +964,7 @@ function veChiTiet(){
   const r=({ nganHang:veCtNganHang, hanMuc:veCtHanMuc, khoanVay:veCtKhoanVay, thauChi:veCtThauChi, baoLanh:veCtBaoLanh, taiSan:veCtTaiSan })[ct.loai](ct.id);
   if(!r) return dongChiTiet();   // bản ghi vừa bị xoá → lùi về màn trước
   $('detail').innerHTML=`<header class="app-header"><button class="btn sm sec" onclick="dongChiTiet()">‹ Quay lại</button><h1 style="flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.tieuDe}</h1><button class="btn sm sec" onclick="${r.sua}">✏️ Sửa</button></header><div class="main">${r.html}</div>`;
+  ganNutXuat();
 }
 
 // ----- Hộp nhập dùng chung cho MỌI bảng (ngân hàng, tài khoản, hạn mức, khế ước, giải ngân, lãi suất, kỳ trả, trả nợ) -----
@@ -1010,8 +1088,86 @@ const SOAN_THEM = {
     if(cu.loai==='kheUoc'&&v.ngayDenHan!==cu.ngayDenHan&&ky.length===1&&!ky[0].suaTay){ up[dRieng('khoanVay/'+id+'/kyTra/'+ky[0].id+'/ngay')]=v.ngayDenHan; up[dRieng('lichSu/'+khoaMoi())]=dongLichSu('kyTra',ky[0].id,id,'sua','ngay',ky[0].ngay,v.ngayDenHan); } }
 };
 
+// ===== 8. MÀN HÌNH: Dashboard (Tổng quan) — lọc công ty + "đứng tên ↔ thực chịu", 5 ô số to, ô đếm, lịch 30 ngày, bảng theo ngân hàng, 2 biểu đồ (mục 1.4) =====
+let tqCty='', tqChiu=false; const _bd={};
+const URL_CHARTJS='https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+function duLieuTongHop(){ return Object.assign(duLieuNhac(),{ kyQuyGiamTru:DL.kyQuyGiamTru }); }
+function chonTqCty(c){ tqCty=c; veTongQuan(); }
+function chonTqChiu(b){ tqChiu=b; veTongQuan(); }
+const thangVN = t => t.slice(5,7)+'/'+t.slice(0,4);
+function veTongQuan(){
+  const hn=homNay(), du=duLieuTongHop(), t=TONG_HOP.tinh(du,hn,tqCty,tqChiu), cua=x=>!tqCty||(tqChiu?(x.congTyChiu||x.congTyVay):x.congTyVay)===tqCty;
+  $('tq-congty').innerHTML=[['','Cả 3 công ty']].concat(DS_CONG_TY).map(([k,l])=>`<div class="chip ${tqCty===k?'on':''}" onclick="chonTqCty('${k}')">${l}</div>`).join('');
+  $('tq-cach').hidden=!tqCty;   // xem "Cả 3" thì hai cách cho cùng kết quả
+  $('tq-cach').innerHTML=[[false,'Theo công ty ĐỨNG TÊN vay'],[true,'Theo công ty THỰC CHỊU']].map(([b,l])=>`<div class="chip ${tqChiu===b?'on':''}" style="flex:1" onclick="chonTqChiu(${b})">${l}</div>`).join('');
+  $('tq-tiles').innerHTML=`
+    <div class="tile acc" style="cursor:pointer" onclick="chuyenTab('hanmuc')"><span>Tổng dư nợ gốc</span><b>${tienD(t.tongDuNo)}</b><small>${t.soKhoan} khoản vay / thuê còn dư nợ${t.thauChiDangDung?' · thấu chi '+tienNgan(t.thauChiDangDung):''}</small></div>
+    <div class="tile warn" style="cursor:pointer" onclick="chuyenTab('lich')"><span>Phải trả 30 ngày tới</span><b>${tienD(t.phaiTra30Ngay)}</b><small>gốc ${tienNgan(t.gocPhaiTra30)} · lãi ước ~${tienNgan(t.laiPhaiTra30)}${t.phiPhaiTra30?' · phí '+tienNgan(t.phiPhaiTra30):''}</small></div>
+    <div class="tile ${t.hanMucConTrong<0?'warn':'ok'}"><span>Hạn mức còn trống</span><b>${tienD(t.hanMucConTrong)}</b><small>đã dùng ${tienNgan(t.hanMucDaDung)} / hạn mức ${tienNgan(t.hanMuc)}</small></div>
+    <div class="tile"><span>Lãi ước tính tháng này</span><b>~${tienD(t.laiUocThangNay)}</b><small>số thật theo thông báo ngân hàng</small></div>
+    <div class="tile" style="cursor:pointer" onclick="chuyenTab('baolanh')"><span>Tiền đang bị giam</span><b>${tienD(t.tienDangBiGiam)}</b><small>ký quỹ bảo lãnh ${tienNgan(t.kyQuyBaoLanh)} · sổ tiết kiệm ${tienNgan(t.soTietKiem)} · ký quỹ thuê ${tienNgan(t.kyQuyThue)}</small></div>
+    <div class="tile" style="cursor:pointer" onclick="chuyenTab('baolanh')"><span>Bảo lãnh đang hiệu lực</span><b>${tienD(t.baoLanh)}</b></div>
+    <div class="tile ${t.soQuaHan?'warn':''}" style="cursor:pointer" onclick="chuyenTab('lich')"><span>Khoản quá hạn</span><b>${t.soQuaHan}</b></div>
+    <div class="tile ${t.soNhomNo2?'warn':''}"><span>Khoản nợ nhóm ≥ 2</span><b>${t.soNhomNo2}</b></div>
+    <div class="tile" style="cursor:pointer" onclick="chuyenTab('nhac')"><span>Việc đang nhắc</span><b class="${soDangNhac?'neg':''}">${soDangNhac}</b><small>bấm để xem</small></div>`;
+  // lịch 30 ngày (rút gọn 12 dòng gần nhất)
+  const lich=tatCaLichTra().filter(x=>cua(x.kv));
+  $('tq-lich').innerHTML=lich.length?`<table class="p"><thead><tr><th class="tr">Ngày</th><th class="tr">Ngân hàng</th><th class="tr">Khoản</th><th class="tr">Loại</th><th>Số tiền</th><th class="tr">Trạng thái</th><th class="tr">Kế toán</th></tr></thead><tbody>
+    ${lich.slice(0,12).map(x=>`<tr class="${lopHan(x.ngay)}" onclick="${x.mo}"><td class="tr"><b>${ngayVN(x.ngay)}</b></td><td class="tr">${esc((DL.nganHang[x.kv.nganHangId]||{}).ten||'')}</td><td class="tr">${esc(x.ten)}</td><td class="tr">${({goc:'Gốc',lai:'Lãi',thauChi:'Nộp thấu chi',phi:'Phí bảo lãnh'})[x.loai]}</td><td>${x.loai==='lai'||x.loai==='thauChi'?'~':''}${tien(x.goc+x.laiUoc+(x.phi||0))}</td><td class="tr">${chuConNgay(x.ngay)}</td><td class="tr">${esc(tenNguoi(x.kv.keToanTheoDoi))}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td class="tr" colspan="4">Cộng ${lich.length} khoản${lich.length>12?' (đang hiện 12 khoản gần nhất)':''}</td><td>${tien(lich.reduce((s,x)=>s+x.goc+x.laiUoc+(x.phi||0),0))}</td><td colspan="2"></td></tr></tfoot></table>`
+    :'<div class="hint">Không có khoản nào phải trả trong 30 ngày tới.</div>';
+  // bảng theo ngân hàng
+  const nh=t.theoNganHang.sort((a,b)=>tenNganHang(a.nganHangId).localeCompare(tenNganHang(b.nganHangId),'vi')), cong=f=>nh.reduce((s,x)=>s+x[f],0);
+  $('tq-nganhang').innerHTML=nh.length?`<table class="p"><thead><tr><th class="tr">Ngân hàng</th><th>Hạn mức</th><th>Dư nợ vay</th><th>Thấu chi</th><th>Bảo lãnh</th><th>Ký quỹ</th><th>Còn trống</th></tr></thead><tbody>
+    ${nh.map(x=>`<tr ${x.nganHangId?`onclick="moChiTiet('nganHang','${x.nganHangId}')"`:''}><td class="tr"><b>${esc(tenNganHang(x.nganHangId)||'(chưa gắn ngân hàng)')}</b></td><td>${tien(x.hanMuc)}</td><td>${tien(x.duNoVay)}</td><td>${tien(x.thauChi)}</td><td>${tien(x.baoLanh)}</td><td>${tien(x.kyQuy)}</td><td class="${x.conTrong<0?'neg':''}">${tien(x.conTrong)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td class="tr">Cộng</td><td>${tien(cong('hanMuc'))}</td><td>${tien(cong('duNoVay'))}</td><td>${tien(cong('thauChi'))}</td><td>${tien(cong('baoLanh'))}</td><td>${tien(cong('kyQuy'))}</td><td>${tien(cong('conTrong'))}</td></tr></tfoot></table>`
+    :'<div class="hint">Chưa có số liệu. Bắt đầu bằng trang Khác → Ngân hàng, rồi tab Khoản vay.</div>';
+  // biểu đồ + bảng số bên dưới (bảng luôn có, biểu đồ cần mạng để tải thư viện vẽ)
+  const b1=TONG_HOP.duNoTheoThang(du,hn,tqCty,tqChiu,12), b2=TONG_HOP.phaiTraTheoThang(du,hn,tqCty,tqChiu,12);
+  $('tq-bang1').innerHTML=`<table class="p"><thead><tr><th class="tr">Tháng</th>${b1.map(x=>`<th>${thangVN(x.thang)}</th>`).join('')}</tr></thead><tbody><tr><td class="tr">Dư nợ gốc</td>${b1.map(x=>`<td>${tien(x.duNo)}</td>`).join('')}</tr></tbody></table>`;
+  $('tq-bang2').innerHTML=`<table class="p"><thead><tr><th class="tr">Tháng</th>${b2.map(x=>`<th>${thangVN(x.thang)}</th>`).join('')}</tr></thead><tbody><tr><td class="tr">Gốc</td>${b2.map(x=>`<td>${tien(x.goc)}</td>`).join('')}</tr><tr><td class="tr">Lãi ước</td>${b2.map(x=>`<td>${tien(x.lai)}</td>`).join('')}</tr></tbody></table>`;
+  veBieuDo('tq-bd1',{ type:'line', data:{ labels:b1.map(x=>thangVN(x.thang)), datasets:[{ label:'Dư nợ gốc (triệu đ)', data:b1.map(x=>x.duNo/1e6), borderColor:'#8a3a38', backgroundColor:'#E6B8B7', fill:true, tension:.2 }] } });
+  veBieuDo('tq-bd2',{ type:'bar', data:{ labels:b2.map(x=>thangVN(x.thang)), datasets:[{ label:'Gốc (triệu đ)', data:b2.map(x=>x.goc/1e6), backgroundColor:'#8a3a38' },{ label:'Lãi ước (triệu đ)', data:b2.map(x=>x.lai/1e6), backgroundColor:'#E6B8B7' }] }, options:{ scales:{ x:{stacked:true}, y:{stacked:true} } } });
+}
+function napChartJs(){ return new Promise((res,rej)=>{ if(window.Chart) return res(window.Chart); const s=document.createElement('script'); s.src=URL_CHARTJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.Chart); s.onerror=()=>rej(new Error('Không tải được Chart.js')); document.head.appendChild(s); }); }
+async function veBieuDo(id, cauHinh){
+  const cv=$(id);
+  try{ const Chart=await napChartJs(); cv.hidden=false;
+    if(_bd[id]){ _bd[id].data=cauHinh.data; _bd[id].update(); return; }
+    _bd[id]=new Chart(cv,Object.assign({ options:{} },cauHinh,{ options:Object.assign({ responsive:true, plugins:{ legend:{position:'bottom'} } },cauHinh.options||{}) }));
+  }catch(e){ cv.hidden=true; }
+}
+
+// ===== 20. XUAT_EXCEL — nút "Xuất Excel" dưới MỌI bảng + file tổng hợp mọi số liệu (mục 1.3) =====
+const URL_SHEETJS='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', SRI_SHEETJS='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT';   // cùng bản thư viện với app Hợp Đồng
+function napSheetJs(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX); const s=document.createElement('script'); s.src=URL_SHEETJS; s.integrity=SRI_SHEETJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
+// Sau mỗi lần vẽ: bảng nào chưa có nút thì gắn nút "Xuất Excel" ngay dưới bảng đó
+function ganNutXuat(){ document.querySelectorAll('.tw').forEach(w=>{ const co=w.nextElementSibling&&w.nextElementSibling.classList.contains('x-btn'), tb=!!w.querySelector('table');
+  if(tb&&!co) w.insertAdjacentHTML('afterend','<button class="btn sm sec x-btn" style="margin-top:6px" onclick="xuatBang(this)">📤 Xuất Excel</button>'); else if(!tb&&co) w.nextElementSibling.remove(); }); }
+// Bảng trên màn hình → mảng số liệu: ô toàn số kiểu 1.200.000 đổi thành SỐ để Excel cộng được; còn lại giữ chữ
+function bangThanhMang(tb){ return [...tb.rows].map(r=>[...r.cells].map(c=>{ const s=c.innerText.replace(/\s+/g,' ').trim(), m=/^~?(-?\d[\d.]*)$/.exec(s); return m?Number(m[1].replace(/\./g,'')):s; })); }
+async function xuatBang(btn){ try{ const tb=btn.previousElementSibling.querySelector('table'); if(!tb) return toast('Không có bảng để xuất');
+    const X=await napSheetJs(), card=btn.closest('.card'), h=card&&card.querySelector('h3'), ten=((h&&h.innerText)||'Bang').replace(/[^\p{L}\p{N} ]/gu,'').trim().slice(0,28)||'Bang';
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(bangThanhMang(tb)),ten.slice(0,31)); X.writeFile(wb,'Cong-no-'+ten.replace(/\s+/g,'-')+'-'+homNay()+'.xlsx');
+  }catch(e){ toast('❌ '+e.message); } }
+// File tổng hợp: mỗi loại số liệu một sheet (thay cho bản sao Google Sheets khi chưa có Apps Script)
+async function xuatTongHop(){ try{ const X=await napSheetJs(), hn=homNay(), du=duLieuTongHop(), wb=X.utils.book_new(), S=TINH_TOAN.soNguyen, them=(ten,mang)=>X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(mang),ten);
+    them('TongHop',[['Phạm vi','Tổng dư nợ gốc','Dư nợ vay + thuê TC','Thấu chi đang dùng','Phải trả 30 ngày','Gốc 30 ngày','Lãi ước 30 ngày','Phí 30 ngày','Hạn mức','Hạn mức đã dùng','Hạn mức còn trống','Lãi ước tháng này','Bảo lãnh hiệu lực','Ký quỹ bảo lãnh','Sổ tiết kiệm thế chấp','Ký quỹ thuê TC','Tiền đang bị giam','Số khoản quá hạn','Số khoản nhóm nợ ≥ 2']]
+      .concat([['',false,'Cả 3 công ty']].concat(MA_CONG_TY.map(m=>[m,false,m+' (đứng tên)'])).concat(MA_CONG_TY.map(m=>[m,true,m+' (thực chịu)'])).map(([c,ch,ten])=>{ const t=TONG_HOP.tinh(du,hn,c,ch); return [ten,t.tongDuNo,t.duNoVay,t.thauChiDangDung,t.phaiTra30Ngay,t.gocPhaiTra30,t.laiPhaiTra30,t.phiPhaiTra30,t.hanMuc,t.hanMucDaDung,t.hanMucConTrong,t.laiUocThangNay,t.baoLanh,t.kyQuyBaoLanh,t.soTietKiem,t.kyQuyThue,t.tienDangBiGiam,t.soQuaHan,t.soNhomNo2]; })));
+    them('TheoNganHang',[['Ngân hàng','Hạn mức','Hạn mức đã dùng','Còn trống','Dư nợ vay','Thấu chi','Bảo lãnh hiệu lực','Ký quỹ']].concat(TONG_HOP.tinh(du,hn,'',false).theoNganHang.map(x=>[tenNganHang(x.nganHangId),x.hanMuc,x.hanMucDaDung,x.conTrong,x.duNoVay,x.thauChi,x.baoLanh,x.kyQuy])));
+    const LOAI_KV={kheUoc:'Khế ước',daiHan:'Vay trung dài hạn',thueTaiChinh:'Thuê tài chính'};
+    them('KhoanVay',[['Loại','Ngân hàng','Công ty đứng tên','Công ty thực chịu','Số hợp đồng','Số khế ước','Ngày giải ngân','Tổng giải ngân','Gốc đã trả','Dư nợ gốc','Lãi suất %/năm','Kỳ gốc tới','Gốc kỳ tới','Ngày kết thúc','Lãi đã trả','Lãi ước tháng này','Trạng thái','Nhóm nợ','Kế toán','Mục đích / thiết bị']]
+      .concat(danhSachCon(DL.khoanVay).map(k=>{ const t=tinhKV(k), md=k.mucDich||{}; return [LOAI_KV[k.loai]||k.loai,tenNganHang(k.nganHangId),k.congTyVay,k.congTyChiu||k.congTyVay,k.soHopDong||'',k.soKheUoc||'',ngayVN(k.ngayGiaiNganDau),t.tongGiaiNgan,t.gocDaTra,t.duNoGoc,t.laiSuatHienHanh,t.kyGocToi?ngayVN(t.kyGocToi.ngay):'',t.kyGocToi?S(t.kyGocToi.goc):0,ngayVN(TINH_TOAN.ngayKetThuc(k)),t.laiDaTra,t.laiUocThangNay,TRANG_THAI[t.trangThai],k.nhomNo||1,tenNguoi(k.keToanTheoDoi),(k.thietBi||{}).ten||[md.congTrinh,md.khachHang,md.noiDung].filter(Boolean).join(' · ')]; })));
+    them('HanMuc',[['Ngân hàng','Công ty đứng tên','Công ty thực chịu','Số hợp đồng','Hạn mức','Đã dùng','Trong đó bảo lãnh','Còn trống','Hiệu lực','Hết hạn','Kế toán']].concat(danhSachCon(DL.hanMuc).map(h=>{ const t=tinhHanMuc(h.id); return [tenNganHang(h.nganHangId),h.congTyVay,h.congTyChiu||h.congTyVay,h.soHopDong,S(h.soTien),t.daDung,h.hanMucBaoLanhRieng?0:t.baoLanh,t.conTrong,ngayVN(h.ngayHieuLuc),ngayVN(h.ngayHetHan),tenNguoi(h.keToanTheoDoi)]; })));
+    them('ThauChi',[['Ngân hàng','Công ty đứng tên','Công ty thực chịu','Số hợp đồng','Hạn mức','Đang dùng','Còn trống','Lãi suất %/năm','Ngày nộp hằng tháng','Hằng tháng nộp','Hết hạn','Lãi đã trả']].concat(danhSachCon(DL.thauChi).map(x=>{ const t=TINH_TOAN.tinhThauChi(x,hn); return [tenNganHang(x.nganHangId),x.congTyVay,x.congTyChiu||x.congTyVay,x.soHopDong||'',S(x.hanMuc),t.dangDung,t.conTrong,t.laiSuatHienHanh,x.ngayNopHangThang,NOP_HANG_THANG[x.nopHangThang||'lai'],ngayVN(x.ngayHetHan),t.laiDaTra]; })));
+    them('BaoLanh',[['Loại','Số thư','Ngân hàng','Công ty','Gói thầu / hợp đồng','Số tiền','Phát hành','Hết hạn','Còn hiệu lực','Ký quỹ đang giữ','Phí đã nộp','Kỳ phí tới','Kế toán']].concat(dsBaoLanh().map(b=>{ const t=tinhThu(b); return [LOAI_BAO_LANH[b.loai]||b.loai,b.soThu||'',tenNganHang(b.nganHangId)||b.nganHang||'',b.congTyId||'',tenGoiCuaThu(b),S(b.soTien),ngayVN(b.ngayPhatHanh),ngayVN(b.ngayHetHan),t.hieuLuc?'có':'không',t.kyQuy,t.phiDaNop,t.kyPhi?ngayVN(t.kyPhi.ngay):'',tenNguoi(b.keToanTheoDoi)]; })));
+    them('TaiSanBaoDam',[['Loại','Mô tả','Chủ sở hữu','Ngân hàng nhận thế chấp','Giá trị định giá','Ngày định giá','Định giá lại','Số HĐ thế chấp','Đang bảo đảm cho','Ghi chú']].concat(danhSachCon(DL.taiSanBaoDam).map(ts=>[LOAI_TAI_SAN[ts.loai]||ts.loai,ts.moTa,tenChuSoHuu(ts),tenNganHang(ts.nganHangId),S(ts.giaTriDinhGia),ngayVN(ts.ngayDinhGia),ngayVN(ngayDinhGiaLai(ts)),(ts.hopDongTheChap||{}).so||'',danhSachCon(ts.baoDamCho).map(l=>tenKhoanTheoKhoa(l.khoan)).join('; '),ts.ghiChu||''])));
+    them('LichTra90Ngay',[['Ngày','Ngân hàng','Khoản','Công ty','Loại','Gốc','Lãi ước','Phí','Kế toán']].concat(tatCaLichTra(90).map(x=>[ngayVN(x.ngay),tenNganHang(x.kv.nganHangId),x.ten,x.kv.congTyVay||'',({goc:'Gốc',lai:'Lãi',thauChi:'Nộp thấu chi',phi:'Phí bảo lãnh'})[x.loai],x.goc,x.laiUoc,x.phi||0,tenNguoi(x.kv.keToanTheoDoi)])));
+    X.writeFile(wb,'Cong-no-tong-hop-'+hn+'.xlsx'); toast('✅ Đã xuất file tổng hợp');
+  }catch(e){ toast('❌ '+e.message); } }
+
 // ===== 9. MÀN HÌNH: Lịch trả nợ (30 ngày tới + quá hạn; lọc ngân hàng / công ty / loại) =====
-function tatCaLichTra(){ const den=TINH_TOAN.congNgay(homNay(),CAU_HINH.LICH_TRA_NGAY), kq=[];
+function tatCaLichTra(soNgay){ const den=TINH_TOAN.congNgay(homNay(),soNgay||CAU_HINH.LICH_TRA_NGAY), kq=[];
   // mỗi dòng: kv = bản ghi gốc (để lọc ngân hàng / công ty, lấy kế toán), ten = tên khoản, mo = lệnh mở chi tiết khi bấm
   danhSachCon(DL.khoanVay).forEach(k=>TINH_TOAN.lichTra(k,den).forEach(x=>kq.push(Object.assign(x,{kv:k,ten:tenKhoan(k),mo:`moChiTiet('khoanVay','${k.id}','lichTra')`}))));
   danhSachCon(DL.thauChi).forEach(tc=>TINH_TOAN.lichNopThauChi(tc,den).forEach(x=>kq.push(Object.assign(x,{kv:tc,ten:'Thấu chi'+(tc.soHopDong?' '+tc.soHopDong:''),mo:`moChiTiet('thauChi','${tc.id}','nop')`}))));

@@ -7,8 +7,8 @@ const a = L.findIndex(x => x.startsWith('// ===== 6. TINH_TOAN'));
 const b = L.findIndex(x => x.startsWith('// ===== HẾT NHAC_HAN'));   // lấy cả 3 khối nằm liền nhau: 6. TINH_TOAN, 7. SINH_LICH, NHAC_HAN
 if (a < 0 || b < 0) { console.log('Không tìm thấy khối TINH_TOAN / SINH_LICH'); process.exit(1); }
 const ctx = { console }; vm.createContext(ctx);
-vm.runInContext(L.slice(a, b + 1).join('\n') + '\nthis.TINH_TOAN = TINH_TOAN; this.SINH_LICH = SINH_LICH; this.NHAC_HAN = NHAC_HAN;', ctx);
-const T = ctx.TINH_TOAN, S = ctx.SINH_LICH, N = ctx.NHAC_HAN;
+vm.runInContext(L.slice(a, b + 1).join('\n') + '\nthis.TINH_TOAN = TINH_TOAN; this.SINH_LICH = SINH_LICH; this.NHAC_HAN = NHAC_HAN; this.TONG_HOP = TONG_HOP;', ctx);
+const T = ctx.TINH_TOAN, S = ctx.SINH_LICH, N = ctx.NHAC_HAN, H = ctx.TONG_HOP;
 
 let sai = 0, n = 0;
 const tien = x => (typeof x === 'number' ? x.toLocaleString('vi-VN') : JSON.stringify(x));
@@ -230,6 +230,32 @@ check('kịch bản: giám đốc + người được tích nhận tất cả; k
   [viec.theoNguoi.uGD.length, viec.theoNguoi.uH.length, viec.theoNguoi.uKT.map(m => m.loai), viec.theoNguoi.uX], [5, 5, ['traLai', 'hanMucHetHan'], undefined]);
 cn.nhacNho = { [viec.moc.find(m => m.loai === 'hanMucHetHan').khoa]: { daXong: true } };
 check('kịch bản: mốc đã bấm "Đã xong" thì không gửi nữa', K.chonViecNhac(cn, blChungThu, '2026-03-20').moc.some(m => m.loai === 'hanMucHetHan'), false);
+
+console.log('--- TỔNG HỢP (dashboard): cộng theo công ty đứng tên / thực chịu, vay chéo không tính hai lần ---');
+// Hôm nay 20/03/2026. Khế ước A: PVA đứng tên, 379 thực chịu, nợ nhóm 2, thuộc hạn mức h1 (5 tỷ). Thấu chi của 379. Thư bảo lãnh PVA 1 tỷ, ký quỹ 300tr đã giảm 100tr. Sổ tiết kiệm 500tr của 379.
+const duTH = { hanMuc: { h1: { nganHangId: 'nh1', congTyVay: 'PVA', congTyChiu: '379', soTien: 5000000000, ngayHetHan: '2026-12-31' } },
+  khoanVay: { A: Object.assign(khoan(), { loai: 'kheUoc', hanMucId: 'h1', nganHangId: 'nh1', congTyVay: 'PVA', congTyChiu: '379', nhomNo: 2 }) },
+  thauChi: { tc1: Object.assign(TC(), { nganHangId: 'nh1', congTyVay: '379' }) },
+  baoLanh: { b1: Object.assign({}, thu, { nganHangId: 'nh1', congTyId: 'PVA' }) }, phiBaoLanh: {}, kyQuyGiamTru: { b1: { g: { soTien: 100000000 } } },
+  taiSanBaoDam: { s1: { loai: 'soTietKiem', giaTriDinhGia: 500000000, chuSoHuu: { congTyId: '379' } }, s2: { loai: 'dat', giaTriDinhGia: 9000000000, chuSoHuu: { tenCaNhan: 'x' } } } };
+const th = H.tinh(duTH, '2026-03-20', '', false);
+check('tổng dư nợ gốc = vay 1,2 tỷ + thấu chi 150tr', [th.tongDuNo, th.duNoVay, th.thauChiDangDung], [1350000000, 1200000000, 150000000]);
+// lãi 30 ngày: kỳ 25/03 của A 11.013.699 + kỳ nộp thấu chi 25/03 1.841.096; phí bảo lãnh kỳ đầu (chưa nộp) 5tr; không có gốc đến hạn
+check('phải trả 30 ngày = gốc + lãi ước + phí', [th.gocPhaiTra30, th.laiPhaiTra30, th.phiPhaiTra30, th.phaiTra30Ngay], [0, 12854795, 5000000, 17854795]);
+check('hạn mức: đã dùng = dư nợ khế ước + bảo lãnh cùng NH, cùng công ty', [th.hanMuc, th.hanMucDaDung, th.hanMucConTrong], [5000000000, 2200000000, 2800000000]);
+// lãi ước tháng 3: A 11.753.425 + thấu chi (10 ngày 200tr + 10 ngày 300tr + 11 ngày 150tr) × 12%/365 = 2.186.301
+check('lãi ước tháng này', th.laiUocThangNay, 13939726);
+check('tiền đang bị giam = ký quỹ BL (300−100) + sổ tiết kiệm 500', [th.kyQuyBaoLanh, th.soTietKiem, th.tienDangBiGiam], [200000000, 500000000, 700000000]);
+check('đếm: quá hạn, nhóm nợ ≥ 2', [th.soQuaHan, th.soNhomNo2], [0, 1]);
+check('PVA theo ĐỨNG TÊN: có khế ước A, không có thấu chi của 379', H.tinh(duTH, '2026-03-20', 'PVA', false).tongDuNo, 1200000000);
+check('PVA theo THỰC CHỊU: không có gì (379 chịu)', H.tinh(duTH, '2026-03-20', 'PVA', true).tongDuNo, 0);
+check('379 theo THỰC CHỊU: khế ước A + thấu chi', H.tinh(duTH, '2026-03-20', '379', true).tongDuNo, 1350000000);
+check('379 theo ĐỨNG TÊN: chỉ thấu chi', H.tinh(duTH, '2026-03-20', '379', false).tongDuNo, 150000000);
+check('theo ngân hàng', th.theoNganHang.map(x => [x.nganHangId, x.hanMuc, x.duNoVay, x.thauChi, x.baoLanh, x.kyQuy, x.conTrong]), [['nh1', 5000000000, 1200000000, 150000000, 1000000000, 200000000, 2800000000]]);
+const dn = H.duNoTheoThang(duTH, '2026-03-20', '', false, 3);
+check('dư nợ cuối tháng 1, tháng 2, và đến hôm nay 20/03', dn.map(x => [x.thang, x.duNo]), [['2026-01', 1000000000], ['2026-02', 1500000000], ['2026-03', 1500000000]]);   // 20/03: vay 1,2 tỷ + thấu chi 300tr (chưa nộp 150tr ngày 21/03)
+const pt = H.phaiTraTheoThang(duTH, '2026-03-20', '', false, 5);
+check('phải trả theo tháng: gốc 1,2 tỷ rơi vào tháng 7', pt.map(x => [x.thang, x.goc]), [['2026-03', 0], ['2026-04', 0], ['2026-05', 0], ['2026-06', 0], ['2026-07', 1200000000]]);
 
 console.log(sai ? '\n❌ ' + sai + '/' + n + ' phép tính SAI' : '\n✅ ' + n + ' phép tính đều đúng');
 process.exit(sai ? 1 : 0);

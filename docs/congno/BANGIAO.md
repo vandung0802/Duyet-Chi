@@ -4,9 +4,9 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v11**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v12**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
-- **Đã xong bước 1 → 8** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
+- **Đã xong bước 1 → 9** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (68 phép tính, gồm cả khối 7 SINH_LICH và thấu chi; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
@@ -101,6 +101,12 @@
 - **Người nhận**: giám đốc (vaiTro GD) + người được tích **"nhận mọi nhắc hạn"** ở trang Khác → Người dùng (`congNo/nguoiDung/{uid}/nhanTatCa` — anh Dũng tích cho Hiền, Ngọc) + kế toán theo dõi của khoản đó. Mỗi người tối đa 6 thông báo/lần, còn lại gộp.
 - Luật: thêm `congNo/nhacNho`, `congNo/pushSubs` (chỉ ghi dưới uid của mình).
 - **Chưa thử được**: bật thông báo thật trên điện thoại và lần chạy 07:00 đầu tiên (cần máy thật + dữ liệu thật).
+## Đã làm 02/10/2026 (bản v12 — bước 9: Tổng quan, biểu đồ, xuất Excel)
+
+- **Khối `TONG_HOP`** (thuần, có test, nằm giữa `7. SINH_LICH` và `NHAC_HAN`): `tinh(du, homNay, cty, theoChiu)` → tổng dư nợ gốc (vay + thuê + thấu chi đang dùng), phải trả 30 ngày (gốc + lãi ước + phí bảo lãnh, gồm cả phần quá hạn), hạn mức / đã dùng / còn trống (bỏ hạn mức đã hết hạn), lãi ước tháng này, tiền đang bị giam, đếm quá hạn / nhóm nợ ≥ 2, bảng theo ngân hàng; `duNoTheoThang`, `phaiTraTheoThang` cho 2 biểu đồ.
+- **Tab "📊 Tổng quan"** là màn đầu: nút chọn Cả 3 / PVA / 379 / 279; chọn một công ty thì hiện thêm nút "theo công ty ĐỨNG TÊN ↔ THỰC CHỊU". 9 ô số (bấm vào ô để tới màn liên quan), lịch 30 ngày (12 dòng gần nhất), bảng theo ngân hàng, 2 biểu đồ Chart.js kèm bảng số (không có mạng thì vẫn có bảng số).
+- **Xuất Excel ở mọi bảng**: `ganNutXuat()` tự gắn nút "📤 Xuất Excel" dưới mọi bảng (`.tw` có `<table>`) sau mỗi lần vẽ; `xuatBang` đổi ô số kiểu `1.200.000` thành số. Nút **"Xuất Excel tổng hợp"** ở cuối Tổng quan: 8 sheet (TongHop, TheoNganHang, KhoanVay, HanMuc, ThauChi, BaoLanh, TaiSanBaoDam, LichTra90Ngay) — dùng thay bản sao Google Sheets khi chưa có Apps Script.
+- Thanh dưới giờ có 5 nút: Tổng quan · Khoản vay · Lịch trả · Bảo lãnh · Khác.
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
