@@ -90,7 +90,12 @@ function fb(args) {
   const a = args.concat(['--project', DU_AN]); if (process.env.FIREBASE_TOKEN) a.push('--token', process.env.FIREBASE_TOKEN);
   return execFileSync('firebase', a, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, stdio: ['ignore', 'pipe', 'inherit'] });
 }
-function docNhanh(nhanh) { const s = fb(['database:get', '/' + nhanh]).trim(); return s && s !== 'null' ? JSON.parse(s) : null; }
+// Đọc qua FILE tạm (-o): firebase-tools in cảnh báo màu vàng ra stdout trước JSON (vd. cảnh báo --token), đọc stdout sẽ hỏng.
+function docNhanh(nhanh) {
+  const f = path.join(require('os').tmpdir(), 'nhac-han-' + process.pid + '-' + nhanh.replace(/[^a-zA-Z0-9]/g, '_') + '.json');
+  try { fb(['database:get', '/' + nhanh, '-o', f]); const s = fs.readFileSync(f, 'utf8').trim(); return s && s !== 'null' ? JSON.parse(s) : null; }
+  finally { try { fs.unlinkSync(f); } catch (e) {} }
+}
 function ghi(up) { if (!Object.keys(up).length) return; fb(['database:update', '/' + GOC, '--data', JSON.stringify(up), '--force']); }
 
 async function guiPush(dsThongBao, pushSubs, up) {
