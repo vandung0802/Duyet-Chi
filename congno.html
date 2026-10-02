@@ -336,7 +336,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261002-v15',
+  PHIEN_BAN: '20261003-v16',
   URL_APPS_SCRIPT: '',            // địa chỉ .../exec của Apps Script (AppsScript_CongNo.gs): bản sao Google Sheets + tải file lên Drive. Trống = chưa nối.
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
@@ -758,7 +758,7 @@ const TINH_TOAN = (function () {
   //   ngày phải nộp = ngày hết kỳ phí đã nộp gần nhất (dòng phí có kyDen muộn nhất, hoặc phi.daNopDen với thư cũ; chưa nộp lần nào → ngày phát hành).
   //   Đã nộp tới ngày hết hạn thư, hoặc thư thu phí một lần → không còn kỳ nào (null). Thư thu một lần: đến hạn thư thì nhắc phí gia hạn (mốc hết hạn).
   function kyPhiToi(thu, bangPhi) {
-    const p = (thu && thu.phi) || {}; if (p.hinhThuc !== 'dinhKy' || !laNgay(thu.ngayHetHan)) return null;
+    const p = (thu && thu.phi) || {}; if (p.hinhThuc !== 'dinhKy' || !laNgay(thu.ngayHetHan) || !soNguyen(p.soTienMoiKy)) return null; // v16: chưa nhập phí mỗi kỳ thì không nhắc 'nộp phí 0 đ' mãi
     const den = danhSach(bangPhi).map(x => x.kyDen).concat([p.daNopDen]).filter(laNgay).sort().pop() || (laNgay(thu.ngayPhatHanh) ? thu.ngayPhatHanh : '');
     if (!den || den >= thu.ngayHetHan) return null;
     const het = congThang(den, soNguyen(p.kyThuPhiThang) || 1);
@@ -1069,7 +1069,7 @@ function kiemTraDaiHan(v, cu, id, loai){
   if(cu){ if(v.soTien<TINH_TOAN.tong(cu.giaiNgan,'soTien')) throw new Error('Số tiền vay theo hợp đồng không được nhỏ hơn tổng đã giải ngân'); return; }
   // --- tạo khoản vay ---
   if(!(v.laiSuatDau>0&&v.laiSuatDau<=100)) throw new Error('Lãi suất phải lớn hơn 0 và không quá 100 %/năm');
-  const gnDau=v.soTienGiaiNganDau||v.soTien, daTra=v.soKyDaTra||0;
+  const gnDau=v.soTienGiaiNganDau||v.soTien, daTra=Math.max(0,TINH_TOAN.soNguyen(v.soKyDaTra)); if(daTra<0) throw new Error('Số kỳ đã trả không được âm'); // v16: gõ -1 → lich[-2] → TypeError
   if(gnDau>v.soTien) throw new Error('Giải ngân lần đầu lớn hơn số tiền vay theo hợp đồng');
   if(v.soKy<1||v.soKy>600) throw new Error('Số kỳ trả gốc phải từ 1 đến 600');
   if(v.ngayTraDau<=v.ngayGiaiNganDau) throw new Error('Ngày trả gốc kỳ đầu phải sau ngày giải ngân');

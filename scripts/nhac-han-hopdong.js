@@ -126,7 +126,7 @@ async function chay() {
   const up = Object.assign({}, db.up);
   if (!ds.length) { console.log('Không có việc nào đến hạn hôm nay → không gửi gì.'); if (!thu) ghi(up); return; }
   const tb = goiThongBao(ds, dl.hopDong);
-  tb.forEach(x => console.log('  • ' + x.title + ' | ' + x.body));
+  console.log('  → ' + tb.length + ' thông báo (không in nội dung: log GitHub Actions của repo công khai ai cũng đọc được)');
   if (thu) return;
   const kq = await guiPush(tb, docNhanh(GOC + '/pushSubs'), up);
   console.log('Đã gửi ' + kq.sent + ' thông báo tới ' + (kq.mayNhan || 0) + ' máy, lỗi ' + kq.failed);

@@ -799,3 +799,19 @@ Có hệ thống memory ở `…/memory/` (file `MEMORY.md` là index). Các mem
 ## 16. CÂU MỞ ĐẦU GỢI Ý CHO CỬA SỔ MỚI
 
 > "Tôi tiếp tục phát triển **App Duyệt Chi PVA 379**. File chính là **app3.html** (PWA một file, Firebase Realtime DB + Google Sheets qua JSONP), đã có file **BANGIAO_AppDuyetChi.md** mô tả toàn bộ. Hãy **kế thừa** mọi thứ trong đó (nguyên tắc: nguồn chuẩn = lịch sử, tự push repo Duyet-Chi + bump 3 chỗ version, tự test bằng preview, không hỏi lại). Việc cần làm tiếp: **[mô tả]**."
+
+## RÀ LỖI TOÀN APP 03/10/2026 (bản v180 — deploy âm thầm, chưa phát hành)
+
+Anh Dũng yêu cầu rà toàn bộ app bằng subagent, lỗi thì tự sửa. 4 lượt đọc mã độc lập (1427–3350, 3300–5250, 5200–7150, 7100–9005 + sw.js) + bộ bấm thử Chromium với Firebase giả (`test-smoke-generic.js`, ngoài repo). Đã sửa 25 điểm, KHÔNG đổi luật Firebase, KHÔNG đổi cấu trúc dữ liệu:
+
+- **Đồng bộ phiếu (nặng nhất)**: `pushToFirebase()` trước đây ghi đè CẢ node phiếu → máy chưa kịp nhận lần duyệt mới của D (sóng yếu) mà bấm chuyển tiền là ghi đè MẤT lần duyệt đó. Nay chỉ ghi TRƯỜNG đã đổi; mảng lịch sử duyệt/chuyển ghi theo từng phần tử (chỉ khi mảng cục bộ ngắn đi — bỏ duyệt/hoàn tác — mới ghi cả mảng).
+- Phần `duyetchi/meta` (người đề xuất, công trình, Sheet) chỉ còn gộp vào batch khi vai `dung`; 3 thẻ đó trong Cài đặt ẩn với vai khác; xoá người/công trình hỏi lại. (Trước: nhân viên bấm nhầm × → luật từ chối → MỌI lần ghi sau của máy đó rớt im lặng.)
+- Bản sửa lệch `normalizeApprovedAmounts` trên máy D không kéo trường của H vào batch (luật từ chối → lặp vô hạn, D không duyệt được gì).
+- Thao tác tiền (gửi phiếu, duyệt, chuyển, từ chối, sửa, xoá) khi dữ liệu chưa tải xong → báo "chờ vài giây" thay vì "đã lưu" rồi mất.
+- `onAuthStateChanged`: `get()` lỗi mạng không còn màn trắng; `confirmFirstLogin` có try/catch; `nameToRole` chỉ ra vai D/H/T khi đúng email (người trùng tên "Trang" không còn kẹt đăng ký).
+- `savePlans(id)`: chỉ ghi kế hoạch vừa sửa (trước ghi đè cả danh sách → máy mở lâu đè mất sửa đổi người khác); ngày cần có không còn lùi 1 ngày mỗi lần sửa (múi giờ).
+- Ảnh đã chọn ở Thêm mới không mất khi mở/đóng form P.KH hay Ứng lương; `pendingUploadProofId` xoá sau khi dùng (ảnh dán không gắn nhầm phiếu cũ); phiếu ứng lương có `createdBy`.
+- Nhảy tới phiếu P.KH từ Zalo/chat/nhắc không còn văng về Trang chủ (thiếu `else`); chống gắn chồng listener chạm đúp (kế hoạch, báo cáo, lương); `_cardHash` tính cả từ chối của người thứ 2; `serviceWorker.ready` có timeout; hộp chờ push bỏ mục bị từ chối vĩnh viễn; `saveSheet` kiểm tra trước khi ghi; `undoApprove` parseFloat; `persons/sites` chịu được dạng object; nhập Excel lương ưu tiên cột "Số tiền"; toast đơn vị đúng; `markAllSeen` try/catch.
+- Bản ghi rác dưới `duyetchi/proposals`/`khProposals` (chuỗi/null do sửa tay Console) bị bỏ qua — trước đây app tạo phiếu "undefined" rồi lặp vô hạn (bộ bấm thử bắt được).
+- **Chưa đụng, chờ anh Dũng quyết**: đính ảnh chứng từ khi phiếu mới "Đã duyệt" (chưa chuyển đủ) tự chuyển trạng thái "Đã chuyển" (`addProofImages`); báo cáo Tóm tắt/CSV loại phiếu `transferred` khỏi "DT·chờ CK" dù còn tiền phải chuyển. Hai chỗ này là nghiệp vụ, sửa cần anh chốt.
+
