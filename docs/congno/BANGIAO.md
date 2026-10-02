@@ -4,9 +4,9 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v8**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v9**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt tối 02/10)**: mọi dữ liệu ở `congNo/…`; chỗ thông nhau DUY NHẤT là bảng thư bảo lãnh `hopdong/baoLanh` (`CAU_HINH.BAO_LANH`). Đừng thêm bất kỳ lần đọc/ghi nào khác vào `hopdong/…`.
-- **Đã xong bước 1 → 5** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
+- **Đã xong bước 1 → 6** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả; vay trung dài hạn theo món; thấu chi).
 - Kiểm tra công thức: `node test-congno-tinhtoan.js` (68 phép tính, gồm cả khối 7 SINH_LICH và thấu chi; có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
@@ -75,6 +75,15 @@
 - Anh Dũng dặn "làm hết các bước đi, không phải hỏi lại" → các bước 5–10 làm liền, chỗ chưa rõ tự quyết và ghi ở đây.
 - **Thuê tài chính lưu CHUNG bảng `congNo/khoanVay` với `loai:"thueTaiChinh"`** (spec vẽ nhánh `thueTaiChinh` riêng nhưng "cùng cấu trúc khoanVay" → dùng chung để lịch trả, lãi suất, trả nợ, khớp lịch, trạng thái chạy y như vay dài hạn). Khác tên trường so với spec: công ty thuê = `congTyVay`, số tiền tài trợ = `soTien`, kỳ hạn = `soKy`. Thêm: `ngayKy, thietBi{ten,nhanHieu,model,soKhung,soMay,bienSo}, giaTriThietBi, tienTraTruoc, tienKyQuy, kyQuyDaHoan, giaMuaLai, noiDangO, congTyDangDung, baoHiem{hang,soHopDong,ngayHetHan}`. Lãi tính từ ngày ký; gốc + lãi trả cùng ngày hằng tháng (ngày của kỳ đầu). Form `oThueTC`, cảnh báo `canhBaoThueTC` (kết thúc thuê / hết hạn bảo hiểm ≤ 60 ngày). Nút chọn "🚜 Thuê tài chính" trong tab Khoản vay.
 - **Thấu chi (anh Dũng trả lời 02/10)**: nộp hằng tháng là nộp lãi vay; "có khoản phải nộp cả gốc cả lãi, có khoản thì nộp mỗi lãi" → mỗi hạn mức có ô **"Hằng tháng phải nộp: Chỉ lãi / Cả gốc và lãi"** (`nopHangThang: lai|gocLai`). Loại `gocLai`: gốc phải nộp mỗi kỳ = toàn bộ số đang dùng cuối ngày đó. Kỳ không có gì phải nộp (không dùng, không lãi) thì không hiện.
+
+## Đã làm 02/10/2026 (bản v9 — bước 6: bảo lãnh, phí, ký quỹ; thấu chi thành mục riêng)
+
+- **Thanh dưới**: Khoản vay · Lịch trả · **Bảo lãnh** · Khác. Trang **Khác** có ô bấm mở các mục con: Ngân hàng, **Thấu chi** (anh Dũng: "hạn mức thấu chi có rất ít nên có thể để mục riêng" → bỏ khỏi hàng nút chọn của tab Khoản vay). `chuyenTab` sáng nút "Khác" khi đang ở mục con.
+- **Thư bảo lãnh**: loại `tamUng`, `thucHienHopDong` ghi vào bảng CHUNG `hopdong/baoLanh` (trong mã là bảng `blChung`; `dRieng('blChung/…')` trả về đường dẫn thật) với `app:"congNo"`; loại `duThau`, `baoHanh` ghi vào `congNo/baoLanh`. `dsBaoLanh()` gộp hai nguồn (chỉ lấy 2 loại chung từ bảng chung — thư bảo hành của app Hợp Đồng KHÔNG hiện ở đây). Sửa thư chỉ ghi trường thay đổi → không mất trường app Hợp Đồng ghi (`hopDongId`, `tamUngId`…); ghi thêm `nganHangId`, `nganHang` (tên, để app Hợp Đồng hiện), `phi{hinhThuc,kyThuPhiThang,soTienMoiKy,daNopDen}`, `kyQuy{banDau,hoanTra,ngayHoanTra}`, `keToanTheoDoi`, `fileDinhKem`. Thư do app Hợp Đồng tạo: app này không xoá được.
+- **Đọc thêm `hopdong/hopDong` (chỉ đọc, một lần, bằng `get`)** để hiện tên hợp đồng của thư và cho chọn hợp đồng khi nhập thư chung (có `hopDongId` thì thư mới hiện trong hợp đồng bên app Hợp Đồng). Đây là phần của chỗ thông nhau về bảo lãnh; ngoài `hopdong/baoLanh` + lần đọc này, app không đụng gì khác của `hopdong/`.
+- **Phí** `congNo/phiBaoLanh/<id thư>/<id>` `{ngay,soTien,loai,kyTu,kyDen,chungTu}`; **giảm ký quỹ** `congNo/kyQuyGiamTru/<id thư>/<id>` `{ngay,soTien,ghiChu}` — nhập tay (không đọc `thanhToan.thuHoiTamUng`). `TINH_TOAN.kyQuyDangGiu`, `kyPhiToi` (thư thu phí định kỳ: kỳ tới = hết kỳ đã nộp gần nhất), `baoLanhHieuLuc`. Lịch trả có loại "Phí bảo lãnh".
+- **Hạn mức đã dùng** cộng thư đang hiệu lực từ `dsBaoLanh()` (cùng ngân hàng + cùng công ty). Thư của app Hợp Đồng chưa gắn ngân hàng hiện "⚠️ chưa gắn ngân hàng" — bấm Sửa để chọn.
+- Luật: thêm `congNo/baoLanh`, `phiBaoLanh/$baoLanhId/$id`, `kyQuyGiamTru/$baoLanhId/$id` (xoá cả nhóm khi xoá thư: chỉ giám đốc).
 
 ## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 

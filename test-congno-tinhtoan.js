@@ -179,5 +179,22 @@ const TC5 = TC4; TC5.giaoDich.n4 = { ngay: '2026-03-25', loai: 'nop', soTien: 15
 check('nộp đủ gốc + lãi kỳ 25/03 → hết nhắc', T.lichNopThauChi(TC5, '2026-06-30').length, 0);
 check('chưa rút lần nào → không có kỳ nộp', T.lichNopThauChi({ hanMuc: 1, ngayNopHangThang: 25, laiSuat: {} }, '2026-12-31').length, 0);
 
+console.log('--- BẢO LÃNH: hiệu lực, ký quỹ đang giữ, kỳ phí tới ---');
+const thu = { loai: 'tamUng', soTien: 1000000000, ngayPhatHanh: '2026-01-10', ngayHetHan: '2026-12-31',
+  phi: { hinhThuc: 'dinhKy', kyThuPhiThang: 3, soTienMoiKy: 5000000 }, kyQuy: { banDau: 300000000, hoanTra: 0 } };
+check('hiệu lực trong hạn', T.baoLanhHieuLuc(thu, '2026-06-01'), true);
+check('hết hạn đúng hôm nay vẫn còn hiệu lực', T.baoLanhHieuLuc(thu, '2026-12-31'), true);
+check('qua ngày hết hạn → hết hiệu lực', T.baoLanhHieuLuc(thu, '2027-01-01'), false);
+check('chưa đến ngày phát hành → chưa hiệu lực', T.baoLanhHieuLuc(thu, '2026-01-09'), false);
+// kyQuyDangGiu = ban đầu − Σ giảm trừ − hoàn trả
+check('ký quỹ đang giữ: 300tr − 100tr − 50tr', T.kyQuyDangGiu(thu, { a: { soTien: 100000000 }, b: { soTien: 50000000 } }), 150000000);
+check('ký quỹ sau khi hoàn nốt', T.kyQuyDangGiu(Object.assign({}, thu, { kyQuy: { banDau: 300000000, hoanTra: 150000000 } }), { a: { soTien: 100000000 }, b: { soTien: 50000000 } }), 0);
+check('chưa nộp phí lần nào → kỳ đầu vào ngày phát hành, cho 3 tháng', T.kyPhiToi(thu, null), { ngay: '2026-01-10', kyDen: '2026-04-10', soTien: 5000000 });
+check('đã nộp tới 10/04 → kỳ tới 10/04 → 10/07', T.kyPhiToi(thu, { p1: { kyTu: '2026-01-10', kyDen: '2026-04-10', soTien: 5000000 } }), { ngay: '2026-04-10', kyDen: '2026-07-10', soTien: 5000000 });
+check('kỳ cuối không vượt ngày hết hạn thư', T.kyPhiToi(thu, { p1: { kyDen: '2026-10-10' } }), { ngay: '2026-10-10', kyDen: '2026-12-31', soTien: 5000000 });
+check('đã nộp tới ngày hết hạn → hết kỳ', T.kyPhiToi(thu, { p1: { kyDen: '2026-12-31' } }), null);
+check('thư cũ: phí đã nộp đến 10/07 (nhập tay)', T.kyPhiToi(Object.assign({}, thu, { phi: Object.assign({ daNopDen: '2026-07-10' }, thu.phi) }), null).ngay, '2026-07-10');
+check('thư thu phí MỘT LẦN → không có kỳ phí', T.kyPhiToi(Object.assign({}, thu, { phi: { hinhThuc: 'motLan' } }), null), null);
+
 console.log(sai ? '\n❌ ' + sai + '/' + n + ' phép tính SAI' : '\n✅ ' + n + ' phép tính đều đúng');
 process.exit(sai ? 1 : 0);
