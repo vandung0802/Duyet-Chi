@@ -105,6 +105,21 @@ check('laiSuatHienHanh', t.laiSuatHienHanh, 10);
 check('gocConTheoLich (khớp dư nợ)', t.gocConTheoLich, 1200000000);
 check('laiUocThangNay (tháng 3)', t.laiUocThangNay, 11753425);
 
+console.log('--- bảo lãnh tính vào hạn mức: cùng ngân hàng VÀ cùng công ty, đang hiệu lực (chốt 02/10) ---');
+const hmPVA = { nganHangId: 'nh1', congTyVay: 'PVA', soTien: 5000000000 };
+const bangBaoLanh = {
+  b1: { nganHangId: 'nh1', congTyId: 'PVA', soTien: 200000000, ngayPhatHanh: '2026-01-10', ngayHetHan: '2026-12-31' },  // tính
+  b2: { nganHangId: 'nh1', congTyId: '379', soTien: 300000000, ngayPhatHanh: '2026-01-10', ngayHetHan: '2026-12-31' },  // công ty khác → không
+  b3: { nganHangId: 'nh2', congTyId: 'PVA', soTien: 400000000, ngayPhatHanh: '2026-01-10', ngayHetHan: '2026-12-31' },  // ngân hàng khác → không
+  b4: { nganHangId: 'nh1', congTyId: 'PVA', soTien: 500000000, ngayPhatHanh: '2026-01-10', ngayHetHan: '2026-03-01' },  // đã hết hạn → không
+  b5: { nganHangId: 'nh1', congTyId: 'PVA', soTien: 600000000, ngayPhatHanh: '2026-06-01', ngayHetHan: '2026-12-31' },  // chưa phát hành → không
+  b6: { nganHang: 'tên gõ tay từ app Hợp Đồng', congTyId: 'PVA', soTien: 700000000, ngayHetHan: '2026-12-31' },         // chưa gắn nganHangId → không
+  b7: { nganHangId: 'nh1', congTyId: 'PVA', soTien: 50000000, ngayPhatHanh: '2026-01-10', ngayHetHan: '2026-03-25' }    // hết hạn đúng hôm nay → còn tính
+};
+check('bảo lãnh của PVA tại nh1 vào 25/03', T.baoLanhCuaHanMuc(hmPVA, bangBaoLanh, '2026-03-25'), 250000000);
+check('bảo lãnh của 379 tại nh1', T.baoLanhCuaHanMuc({ nganHangId: 'nh1', congTyVay: '379' }, bangBaoLanh, '2026-03-25'), 300000000);
+check('bảng bảo lãnh rỗng', T.baoLanhCuaHanMuc(hmPVA, null, '2026-03-25'), 0);
+
 console.log('--- hạn mức ---');
 check('đã dùng, bảo lãnh DÙNG CHUNG hạn mức (200tr)', T.hanMucDaDung({ soTien: 5000000000, hanMucBaoLanhRieng: false }, [A], 200000000), 1400000000);
 check('đã dùng, bảo lãnh tách RIÊNG', T.hanMucDaDung({ soTien: 5000000000, hanMucBaoLanhRieng: true }, [A], 200000000), 1200000000);

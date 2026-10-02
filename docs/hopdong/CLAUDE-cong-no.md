@@ -155,7 +155,9 @@ Dữ liệu ban đầu: quan hệ với khoảng **7–10 ngân hàng và công 
 duNoGoc(khoan)        = Σ giaiNgan.soTien − Σ traNo.goc
 thauChiDangDung       = Σ thauChiGiaoDich.rut − Σ thauChiGiaoDich.nop
 hanMucDaDung(hanMuc)  = Σ duNoGoc các khế ước thuộc hạn mức
-                        + (bảo lãnh đang hiệu lực của ngân hàng đó, nếu hanMucBaoLanhRieng = false)
+                        + (bảo lãnh đang hiệu lực CÙNG ngân hàng VÀ CÙNG công ty với hạn mức,
+                           nếu hanMucBaoLanhRieng = false)      ← chốt 02/10: bảo lãnh của công ty nào
+                                                                   thì tính vào hạn mức của công ty đó
 hanMucConTrong        = hanMuc.soTien − hanMucDaDung
 kyQuyDangGiu(thu)     = kyQuy.banDau − Σ kyQuyGiamTru.soTien − kyQuy.hoanTra
 tienDangBiGiam        = Σ kyQuyDangGiu + Σ taiSanBaoDam(loai = soTietKiem).giaTri
@@ -166,6 +168,7 @@ laiUocTinh(khoan, tuNgay, denNgay)
         duNoGoc tại đầu giai đoạn × laiSuatNam / 365 × soNgayTrongGiaiDoan
     (dư nợ thay đổi khi có giải ngân hoặc trả gốc trong kỳ thì tách thêm giai đoạn)
     Dùng 365 ngày/năm. Đây là số ƯỚC TÍNH; số thật lấy từ traNo.lai.
+    Đếm ngày (chốt 02/10): ngày giải ngân CÓ tính lãi, ngày trả gốc thì phần đã trả KHÔNG tính lãi nữa.
 
 phaiTra30Ngay         = Σ kyTra.goc (hạn trong 30 ngày, chưa trả)
                         + Σ laiUocTinh đến ngày trả lãi trong 30 ngày
@@ -193,6 +196,13 @@ Tiền: **số nguyên VND**. Lãi suất: số thập phân %/năm (ví dụ `9
 - Thông tin ngân hàng: mức cơ bản, không xếp hạng tín nhiệm.
 - Có file Excel theo dõi vay của kế toán → đưa vào `docs/` khi có, file mẫu nhập liệu thiết kế theo cột của file đó.
 - Làm hết trong một lần theo thứ tự mục 1.2.
+
+Chốt thêm chiều 02/10/2026 (sau khi xong bước 1 + 2, anh Dũng trả lời 3 câu hỏi):
+
+- **Bảo lãnh dùng chung hạn mức**: bảo lãnh của công ty nào thì tính vào hạn mức của công ty đó tại ngân hàng đó (khớp `nganHangId` + `congTyId` của thư với `nganHangId` + `congTyVay` của hạn mức). Không cộng một thư vào hạn mức của công ty khác cùng ngân hàng.
+- **File đính kèm**: giai đoạn đầu **dán link** Google Drive / OneDrive (như app Hợp Đồng); tải lên tự động làm khi có Apps Script.
+- **Lãi ước tính**: ngày giải ngân có tính lãi, ngày trả gốc không; 365 ngày/năm. Khế ước cũ nhập vào app thì các kỳ lãi **trước ngày nhập** coi như đã trả (trường `khoanVay.theoDoiLaiTu`), không báo quá hạn oan.
+- **Thực tế triển khai** (theo app Hợp Đồng): mã ở `Duyet-Chi/congno.html`; đăng nhập email + mật khẩu Firebase; bảng dùng chung nằm dưới `hopdong/…`; dữ liệu riêng dưới `congNo/…`. Chi tiết: `docs/congno/BANGIAO.md`.
 
 Hiện **không còn việc nào chờ chốt**. Phát sinh mới thì ghi vào đây trước, sửa mã sau.
 

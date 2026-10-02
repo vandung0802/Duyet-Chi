@@ -4,9 +4,9 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v1**. Kèm `manifest-congno.json`, `version-congno.txt`.
+- App ở `congno.html` trong repo `Duyet-Chi` (cùng chỗ với `hopdong.html`, `thietbi.html`), chạy tại `https://vandung0802.github.io/Duyet-Chi/congno.html`. **Bản v2**. Kèm `manifest-congno.json`, `version-congno.txt`.
 - **Đã xong bước 1 và bước 2** của mục 1.2 (khung app + danh mục ngân hàng/công ty; hạn mức → khế ước → lãi suất → trả nợ → lịch trả).
-- Kiểm tra công thức: `node test-congno-tinhtoan.js` (45 phép tính, có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
+- Kiểm tra công thức: `node test-congno-tinhtoan.js` (48 phép tính, có khoản thử 2 lần giải ngân, 2 giai đoạn lãi suất, 1 lần trả trước hạn — khớp số tính tay).
 - Chạy thử giao diện không cần đăng nhập thật: máy chủ thử + Firebase giả (`serve-congno.js`, `fb-stub.js`) nằm ngoài repo, trong thư mục làm việc của Claude; mất thì viết lại theo nhật ký phiên (stub mô phỏng `ref().on/get/update/push`, `orderByChild().equalTo()`, auth, luật "xoá chỉ giám đốc").
 
 ## Khác spec — làm theo thực tế app Hợp Đồng (anh Dũng dặn "dùng lại y nguyên, không viết cách mới")
@@ -31,7 +31,13 @@
 - **TINH_TOAN** (khối 6): `duNoGoc`, `laiSuatTai`, `laiUocTinh`, `cacKyLai`, `coKyTra`, `lichTra`, `trangThai`, `tinhKhoan`, `hanMucDaDung`, `hanMucConTrong` — đúng mục 1.5.
 - **Luật Firebase**: thêm khối `congNo` (nganHang, hanMuc, khoanVay); không sửa khối `hopdong`.
 
-## Chỗ tôi tự định (spec không nói) — anh Dũng xem, sai thì sửa
+## Đã làm chiều 02/10/2026 (bản v2 — sau khi anh Dũng trả lời 3 câu hỏi; đã ghi vào spec mục 1.5 + 1.6)
+
+- **Bảo lãnh dùng chung hạn mức** (anh Dũng: "bảo lãnh của công ty nào thì tính vào hạn mức của ngân hàng đó"): `TINH_TOAN.baoLanhCuaHanMuc` cộng thư đang hiệu lực **cùng `nganHangId` + cùng `congTyId` = `congTyVay`**. App đã ĐỌC `hopdong/baoLanh` (chưa ghi). Thư nhập từ app Hợp Đồng chỉ có tên ngân hàng gõ tay (`nganHang`), chưa có `nganHangId` → chưa được tính cho tới khi bước 6 cho kế toán gắn ngân hàng. Lưu ý bước 6: một ngân hàng + một công ty có 2 hạn mức (cũ hết hạn + mới) thì thư bị cộng vào cả hai — xử lý khi làm màn Bảo lãnh.
+- **File đính kèm = dán link** (anh Dũng: ok): bảng con `fileDinhKem/{id}` `{ten, link, nguon, nguoiTai, luc}` dưới `hanMuc/{id}` và `khoanVay/{id}` (thẻ "File đính kèm" ở chi tiết hạn mức, tab "File" ở khế ước). Chỉ nhận link `http(s)://`. Xoá theo quy tắc chung (giám đốc / yêu cầu xoá).
+- **Cách tính lãi ước, `theoDoiLaiTu`** (anh Dũng: không sai) → giữ nguyên.
+
+## Chỗ tôi tự định (spec không nói) — mục 1, 3 anh Dũng đã xác nhận 02/10; còn lại sai thì sửa
 
 1. **Cách đếm ngày tính lãi**: ngày giải ngân có tính lãi, ngày trả gốc thì phần đã trả thôi tính lãi (kỳ 25/01→25/02 = các ngày 25/01 … 24/02). 365 ngày/năm.
 2. **Kỳ trả lãi**: ngày N hằng tháng (tháng không có ngày N → ngày cuối tháng), kỳ cuối = ngày đến hạn khế ước.
@@ -42,8 +48,8 @@
 
 ## Câu hỏi chờ anh Dũng chốt (gom một lượt)
 
-1. **Bảo lãnh dùng chung hạn mức** (`hanMucBaoLanhRieng = false`): spec ghi cộng "bảo lãnh đang hiệu lực của ngân hàng đó". Nếu một ngân hàng có 2 hạn mức (PVA và 379) thì một thư bảo lãnh bị cộng vào cả hai. Đề nghị: chỉ cộng thư **cùng ngân hàng VÀ cùng công ty đứng tên**. Hiện đang cộng 0 (nối ở bước 6).
-2. **File đính kèm** (hợp đồng hạn mức, khế ước, chứng từ): chưa làm. Đề nghị giai đoạn đầu **dán link** Drive/OneDrive như app Hợp Đồng; tải lên tự động khi có Apps Script.
+1. ~~Bảo lãnh dùng chung hạn mức~~ — đã chốt, đã làm (xem trên).
+2. ~~File đính kèm~~ — đã chốt dán link, đã làm.
 3. **Chỉ mục `app` cho `hopdong/lichSu`, `hopdong/yeuCauXoa`** (luật nhánh dùng chung): hiện app tải cả bảng rồi lọc trên máy; bảng lớn thì nên thêm `.indexOn: ["app"]` — đụng nhánh chung nên hỏi trước.
 
 ## Việc tiếp theo (mục 1.2)
