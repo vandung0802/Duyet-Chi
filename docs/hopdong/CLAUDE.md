@@ -340,6 +340,7 @@ Mỗi nhánh dưới đây là một "bảng". Khóa `{id}` do Firebase sinh (`p
 │     congTyId, soHopDong, ngayKy, chuDauTu, tenGoiThau, tenDuAn
 │     loaiHopDong ("tronGoi" | "donGiaCoDinh" | "donGiaDieuChinh")
 │     giaTriTruocThue, thue, giaTriGoc          ← giaTriGoc = sau thuế, phần của mình
+│     giaTriDuPhong                               ← (03/10) khoản dự phòng NẰM TRONG giaTriGoc; app hiện thêm "không kể dự phòng" để tham khảo
 │     lienDanh: { co (bool), tyLe, tongGiaTriLienDanh, thanhVienKhac }
 │     noiBo: { co (bool), hopDongGocId }        ← giao khoán nội bộ
 │     thoiGianThucHien, ngayKhoiCong, ngayHoanThanhHopDong
