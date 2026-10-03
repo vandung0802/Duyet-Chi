@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v16**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v17**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,12 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 03/10/2026 (bản v17 — đính ảnh/PDF cho từng bản ghi)
+
+- Anh Dũng: "không thấy chỗ nhập ảnh để nhập cả phụ lục + hồ sơ thanh toán + giấy tờ bảo lãnh". Thêm khối **9c DINH_KEM**: trong form của phụ lục / tạm ứng / thanh toán / bảo lãnh / hoàn trả / hợp đồng (sửa) và tab File có nút "📎 Chụp / chọn ảnh, PDF" (nhiều file; iPhone mở camera hoặc thư viện). Ảnh nén ≤1000px JPEG, PDF ≤15MB, tải lên **Firebase Storage** `duyetchi/hopdong/{hdId}/{bảng}/{id}/…` (luật Storage đang mở thư mục `duyetchi/`, cùng cách app Thiết bị), ghi `fileDinhKem/{fid} = {ten, link, nguon:'storage', loai:'anh'|'pdf', duongDan, nguoiTai, uid, luc}` + lịch sử. Form thêm mới: file tải lên được gắn sau khi bấm Lưu. Xoá: giám đốc hoặc người tải (xoá cả trên Storage). Bảng con hiện 📎N. Tab File hợp đồng vẫn cho dán link OneDrive/Drive như cũ.
+- Khác spec 1.3 (Google Drive qua Apps Script): dùng Firebase Storage vì đã có sẵn, không cần Apps Script; ghi vào spec 4.3 ghi chú.
+- Test: `test-hopdong-v8.js` thêm bước 3b (Storage giả, tải ảnh PNG vào PL01 → fileDinhKem + 📎1 + lịch sử) ✅.
 
 ## Đã làm 03/10/2026 (bản v16 — ô dự phòng)
 

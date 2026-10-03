@@ -349,7 +349,8 @@ Mỗi nhánh dưới đây là một "bảng". Khóa `{id}` do Firebase sinh (`p
 │                ngayNghiemThuBanGiao, soThang (12|24), ngayHetBaoHanh }
 │     quyetToan: { ngayNop, ngayDuyet, giaTriDuyet, daNhanDu (bool), conNo }
 │     keHoachTienVe/{YYYY-MM}: soTien           ← kế hoạch theo tháng, dashboard cộng thành quý
-│     fileDinhKem/{id}: { ten, link, nguon ("drive"|"onedrive"), nguoiTai, luc }
+│     fileDinhKem/{id}: { ten, link, nguon ("drive"|"onedrive"|"storage"), loai ("anh"|"pdf"), duongDan, uid, nguoiTai, luc }
+│                                                ← (03/10) "storage" = ảnh/PDF tải thẳng lên Firebase Storage duyetchi/hopdong/…; mọi bảng con (phuLuc, tamUng, thanhToan, baoLanh, hoanTra) đều có fileDinhKem/{id} cùng cấu trúc
 │     taoBoi, taoLuc, suaBoi, suaLuc
 │
 ├── phuLuc/{hopDongId}/{id}
