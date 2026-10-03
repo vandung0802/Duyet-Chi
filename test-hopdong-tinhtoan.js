@@ -101,6 +101,11 @@ check('quý: Q2 = kế hoạch 2 tỷ / thực tế 1,85 + 1 tỷ', theoQuy.find
 check('quý: Q3 = kế hoạch 2,5 tỷ / thực tế 2,45 tỷ', theoQuy.find(x => x.ky === '2026-Q3'), { ky: '2026-Q3', keHoach: 2500000000, thucTe: 2450000000 });
 check('đợt chưa có ngày tiền về → không rơi vào kỳ nào', T.dongTien([{ hopDong: {}, thanhToan: { x: { soTienThucNhan: 1, ngayTienVe: '' } } }], 'thang', '').length, 0);
 
+console.log('== 5b. Dự phòng (03/10) — tham khảo, không đổi công thức ==');
+check('giaTriDuPhong + hiện hành không kể dự phòng', (r => [r.giaTriDuPhong, r.giaTriHienHanhKhongDuPhong, r.giaTriHienHanh])(T.tinhHopDong({ hopDong: Object.assign({}, hopDong, { giaTriDuPhong: 500000000 }), phuLuc })), [500000000, 9800000000, 10300000000]);
+check('không nhập dự phòng → 0, không kể DP = hiện hành', (r => [r.giaTriDuPhong, r.giaTriHienHanhKhongDuPhong])(T.tinhHopDong({ hopDong, phuLuc })), [0, 10300000000]);
+check('tổng hợp cộng dự phòng', T.tinhTongHop([T.tinhHopDong({ hopDong: Object.assign({}, hopDong, { giaTriDuPhong: 500000000 }) }), T.tinhHopDong({ hopDong: Object.assign({}, hopDong, { giaTriDuPhong: 300000000 }) })], 'all').giaTriDuPhong, 800000000);
+
 console.log('== 6. Các mốc cần nhắc ==');
 check('mốc: hết bảo lãnh, hết BH, hoàn thành HĐ (xếp theo ngày)', T.cacMoc({ hopDong, phuLuc, tamUng, thanhToan, hoanTra, baoLanh }).map(m => m.loai + ' ' + m.ngayMoc),
   ['hetBaoLanh 2027-01-15', 'hoanThanhHopDong 2027-03-31', 'hetBaoHanh 2027-08-31']);
