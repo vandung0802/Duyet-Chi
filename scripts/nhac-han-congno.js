@@ -33,14 +33,17 @@ function homNayVN() { return new Date(Date.now() + 7 * 3600 * 1000).toISOString(
 
 // ---------- chọn việc phải gửi hôm nay, chia theo người nhận ----------
 // congNo = toàn bộ nhánh congNo; blChung = hopdong/baoLanh. Trả về { moc: [mốc gửi hôm nay], theoNguoi: {uid: [mốc]} }
-function chonViecNhac(congNo, blChung, homNay) {
-  const c = congNo || {};
+// roles = duyetchi/userRoles (ai còn được duyệt; giám đốc = role 'dung') — người bị bỏ duyệt / đã nghỉ KHÔNG nhận nữa, dù máy còn đăng ký push
+function chonViecNhac(congNo, blChung, homNay, roles) {
+  const c = congNo || {}, r = roles || {};
+  // không truyền roles (chạy thử ngoại tuyến) thì giữ cách cũ: không lọc, giám đốc theo vaiTro trong congNo/nguoiDung
+  const conDuyet = uid => !roles || !!(r[uid] && (r[uid].approved === true || r[uid].role === 'dung')), laGD = (uid, n) => roles ? !!(r[uid] && r[uid].role === 'dung') : n.vaiTro === 'GD';
   const du = { nganHang: c.nganHang, hanMuc: c.hanMuc, khoanVay: c.khoanVay, thauChi: c.thauChi, taiSanBaoDam: c.taiSanBaoDam, phiBaoLanh: c.phiBaoLanh, baoLanh: NHAC_HAN.gopBaoLanh(blChung, c.baoLanh) };
   const daXong = c.nhacNho || {};
   const moc = NHAC_HAN.cacMoc(du, homNay).filter(m => !(daXong[m.khoa] && daXong[m.khoa].daXong) && NHAC_HAN.guiHomNay(m));
-  const nhanTatCa = Object.entries(c.nguoiDung || {}).filter(([uid, n]) => n && n.dangHoatDong !== false && (n.vaiTro === 'GD' || n.nhanTatCa === true)).map(([uid]) => uid);
+  const nhanTatCa = Object.entries(c.nguoiDung || {}).filter(([uid, n]) => n && n.dangHoatDong !== false && (laGD(uid, n) || n.nhanTatCa === true) && conDuyet(uid)).map(([uid]) => uid);
   const theoNguoi = {};
-  moc.forEach(m => new Set(nhanTatCa.concat(m.nguoi ? [m.nguoi] : [])).forEach(uid => (theoNguoi[uid] = theoNguoi[uid] || []).push(m)));
+  moc.forEach(m => new Set(nhanTatCa.concat(m.nguoi && conDuyet(m.nguoi) ? [m.nguoi] : [])).forEach(uid => (theoNguoi[uid] = theoNguoi[uid] || []).push(m)));
   return { moc, theoNguoi };
 }
 // Gom nếu quá nhiều: tối đa TOI_DA_THONG_BAO − 1 thông báo riêng + 1 dòng gộp
@@ -89,8 +92,8 @@ async function guiPush(theoNguoi, pushSubs) {
 async function chay() {
   const thu = process.argv.includes('--thu'), homNay = homNayVN();
   console.log('Nhắc hạn Công nợ — ' + homNay + (thu ? ' (CHẠY THỬ: không ghi, không gửi)' : ''));
-  const congNo = docNhanh(GOC) || {}, blChung = docNhanh(BAO_LANH_CHUNG) || {};
-  const kq = chonViecNhac(congNo, blChung, homNay);
+  const congNo = docNhanh(GOC) || {}, blChung = docNhanh(BAO_LANH_CHUNG) || {}, roles = docNhanh('duyetchi/userRoles') || {};
+  const kq = chonViecNhac(congNo, blChung, homNay, roles);
   console.log('Khoản vay: ' + Object.keys(congNo.khoanVay || {}).length + ' · việc gửi hôm nay: ' + kq.moc.length + ' · người nhận: ' + Object.keys(kq.theoNguoi).length);
   if (!kq.moc.length) { console.log('Không có việc nào đến hạn hôm nay → không gửi gì.'); return; }
   console.log('  → ' + kq.moc.length + ' mốc đến hạn (không in nội dung: log GitHub Actions của repo công khai ai cũng đọc được)'); // v16

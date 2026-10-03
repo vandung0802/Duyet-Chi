@@ -34,7 +34,7 @@ body{font-family:'Roboto',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif
 #update-banner{display:none;background:#f59e0b;color:#111;font-weight:700;text-align:center;padding:10px;cursor:pointer;font-size:15px}
 .main{padding:10px 10px calc(80px + env(safe-area-inset-bottom));max-width:1100px;margin:0 auto}
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--gray-border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);transform:translateZ(0)}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 4px 7px;font-size:11px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative;min-height:44px}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:9px 2px 7px;font-size:12px;color:var(--text-sub);cursor:pointer;border:none;background:none;gap:3px;position:relative;min-height:44px}
 .nav-item.active{color:var(--blue-dark);font-weight:700}
 .nav-icon{font-size:20px;line-height:1;width:44px;height:32px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;background:#f8ecec}
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px var(--blue-dark)}
@@ -59,7 +59,7 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:16px;margin-top:10px;
 .tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
 .tile{background:#fff;border-radius:var(--radius-lg);box-shadow:var(--shadow);padding:12px 14px}
 .tile span{display:block;font-size:12px;color:var(--text-sub);font-weight:600;text-transform:uppercase;letter-spacing:.02em}
-.tile b{display:block;font-size:20px;margin-top:4px;word-break:break-all}
+.tile b{display:block;font-size:20px;margin-top:4px;white-space:nowrap;overflow:hidden}
 .tile small{display:block;font-size:12px;color:var(--text-sub);margin-top:2px}
 .tile.acc b{color:var(--blue-dark)}.tile.ok b{color:var(--green)}.tile.warn b{color:var(--red)}
 @media(min-width:700px){.tiles{grid-template-columns:repeat(3,1fr)}.tile b{font-size:22px}}
@@ -90,8 +90,8 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .sec-h h3{font-size:15px}
 .neg{color:var(--red)}.pos{color:var(--green)}
 .empty{text-align:center;color:var(--text-sub);padding:30px 10px;font-size:15px}
-.overlay{position:fixed;inset:0;background:#fbf6f6;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
+.overlay{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:#fbf6f6;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:#fff;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .modal h3{font-size:17px;margin-bottom:6px}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px}
@@ -129,8 +129,8 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 <div id="login-screen" class="login">
   <h2>🏦 Công nợ ngân hàng PVA-379-279</h2>
   <div class="card"><div class="card-body">
-    <label class="f">Email</label><input id="l-email" type="email" autocomplete="username">
-    <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password">
+    <label class="f">Email</label><input id="l-email" type="email" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()">
+    <label class="f">Mật khẩu</label><input id="l-pass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter')dangNhap()">
     <div style="margin-top:14px"><button class="btn" id="l-btn" onclick="dangNhap()">Đăng nhập</button></div>
     <div class="err" id="l-err"></div>
     <p style="font-size:13px;color:var(--text-sub);margin-top:10px">Dùng đúng email + mật khẩu của app <b>Duyệt Chi</b>. Chưa có tài khoản → đăng ký trong app Duyệt Chi trước.</p>
@@ -147,6 +147,7 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 
 <div id="app" hidden>
   <div id="update-banner" onclick="capNhatNgay()">⬆️ Có bản mới — bấm để cập nhật</div>
+  <div id="loi-banner" hidden style="background:#fee2e2;color:#b91c1c;font-weight:700;text-align:center;padding:10px;font-size:14px;cursor:pointer"></div>
   <header class="app-header"><h1>🏦 Công nợ PVA-379-279 <small id="ver-label"></small></h1><span class="hdr-user" id="hdr-user"></span></header>
   <main class="main">
 
@@ -336,7 +337,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261003-v16',
+  PHIEN_BAN: '20261003-v17',
   URL_APPS_SCRIPT: '',            // địa chỉ .../exec của Apps Script (AppsScript_CongNo.gs): bản sao Google Sheets + tải file lên Drive. Trống = chưa nối.
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
@@ -371,6 +372,7 @@ const TEN_BANG = { nganHang:'Ngân hàng', taiKhoan:'Số tài khoản', hanMuc:
 // ===== TIỆN ÍCH: định dạng tiền / ngày, đọc ô nhập (chép từ app Hợp Đồng) =====
 const $ = id => document.getElementById(id);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const j = s => esc(JSON.stringify(String(s==null?'':s)));   // chuỗi → hằng chuỗi JS an toàn để đặt trong thuộc tính onclick="…": khoá / mã có dấu nháy không thoát ra thành mã lệnh được
 const pad = n => String(n).padStart(2,'0');
 function tien(n){ n=Math.round(Number(n)||0); return n.toLocaleString('vi-VN'); }                       // 15.900.000.000
 function tienD(n){ return tien(n)+' đ'; }                                                          // chữ "đ" không rớt dòng riêng
@@ -384,6 +386,7 @@ function luc(){ return new Date().toISOString(); }                              
 function lucVN(iso){ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear()+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
 const layO=(o,p)=>String(p).split('.').reduce((x,k)=>x==null?undefined:x[k],o);
 const datO=(o,p,v)=>{ const ks=String(p).split('.'); let x=o; ks.slice(0,-1).forEach(k=>{ if(x[k]==null||typeof x[k]!=='object') x[k]={}; x=x[k]; }); x[ks[ks.length-1]]=v; return o; };
+const xoaO=(o,p)=>{ const ks=String(p).split('.'); let x=o; for(const k of ks.slice(0,-1)){ x=x==null?x:x[k]; if(x==null||typeof x!=='object') return; } delete x[ks[ks.length-1]]; };
 const khop=(a,b)=>String(a||'').trim().toLowerCase()===String(b||'').trim().toLowerCase();
 let _toastT; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=m; t.hidden=false; clearTimeout(_toastT); _toastT=setTimeout(()=>t.hidden=true,3500); }
 // ds: object {giá trị: nhãn} hoặc mảng [[giá trị, nhãn]…] (mảng để giữ đúng thứ tự)
@@ -426,8 +429,8 @@ function docForm(cacO, vao){
   const kq=vao||{};
   cacO.forEach(o=>{ if(!o.k) return; const el=$('f-'+o.k.replace(/\./g,'_')); if(!el) return; let v;
     if(o.kieu==='tien') v=docTien(el.value);
-    else if(o.kieu==='so') v=Math.round(Number(String(el.value).replace(/[^\d-]/g,''))||0);
-    else if(o.kieu==='thapPhan') v=Number(String(el.value).trim().replace(',','.'))||0;                    // gõ 9,5 hay 9.5 đều hiểu là chín phẩy năm
+    else if(o.kieu==='so'){ if(!/^\s*-?\d*\s*$/.test(el.value)) throw new Error(o.nhan+': phải là số nguyên (không có dấu phẩy, dấu chấm)'); v=Math.round(Number(String(el.value).trim())||0); }   // trước đây gõ 6,5 bị hiểu thành 65
+    else if(o.kieu==='thapPhan') v=Number(String(el.value).replace(/[%\s]/g,'').replace(',','.'))||0;                    // gõ 9,5 hay 9.5 đều hiểu là chín phẩy năm
     else if(o.kieu==='check') v=!!el.checked;
     else v=String(el.value||'').trim();
     datO(kq,o.k,v); });
@@ -465,12 +468,12 @@ firebase.auth().onAuthStateChanged(async user=>{
 // ===== 4. KET_NOI_FIREBASE — đọc/ghi, lắng nghe thay đổi (cấu trúc dữ liệu mục 4.3) =====
 const DL  = { nganHang:{}, hanMuc:{}, khoanVay:{}, thauChi:{}, baoLanh:{}, phiBaoLanh:{}, kyQuyGiamTru:{}, taiSanBaoDam:{}, nhacNho:{}, meta:{}, nguoiDung:{}, yeuCauXoa:{}, lichSu:{}, blChung:{} };   // mọi bảng của app: congNo/<bảng>/{id}; bảng con treo trong bản ghi (vd khoanVay/{id}/traNo/{id})
 // DL.blChung = bảng thư bảo lãnh dùng chung với app Hợp Đồng (CAU_HINH.BAO_LANH = hopdong/baoLanh) — chỗ thông nhau DUY NHẤT của hai app. Mọi bảng khác nằm dưới congNo/.
-let danhSachCongTrinh=[], _daKetNoi=false;
+let danhSachCongTrinh=[], _daKetNoi=false; const _daTai={};   // _daTai[bảng] = đã nhận dữ liệu lần đầu
 const dRieng = p => p==='blChung'||p.startsWith('blChung/') ? CAU_HINH.BAO_LANH+p.slice(7) : CAU_HINH.GOC+'/'+p;   // đường dẫn thật trên Firebase của một bảng / bản ghi
 function ketNoiDuLieu(){
   if(_daKetNoi) return; _daKetNoi=true;
-  const loi=e=>{ $('ds-hanmuc').innerHTML='<div class="empty" style="color:var(--red)">⛔ Không đọc được dữ liệu: '+esc(e.message)+'.<br>Luật Firebase (nhánh congNo) có thể chưa được đưa lên máy chủ.</div>'; };
-  Object.keys(DL).forEach(bang=>db.ref(dRieng(bang)).on('value',s=>{ DL[bang]=s.val()||{}; veTatCa(); },bang==='hanMuc'?loi:()=>{}));
+  const loi=e=>{ const b=$('loi-banner'); b.textContent='⛔ Không đọc được dữ liệu ('+(e&&e.message||e)+'). Tài khoản có thể vừa bị bỏ duyệt, hoặc mất mạng — bấm vào đây để tải lại.'; b.hidden=false; b.onclick=()=>location.reload(); };   // báo CỐ ĐỊNH ở đầu trang, cho MỌI bảng (trước đây chỉ hiện trong danh sách hạn mức rồi bị vẽ đè)
+  Object.keys(DL).forEach(bang=>db.ref(dRieng(bang)).on('value',s=>{ DL[bang]=s.val()||{}; _daTai[bang]=true; veTatCa(); },loi));
   // ponytail: bảng lichSu tải cả về máy mỗi lần mở; khi lên vài nghìn dòng thì đổi sang limitToLast / tải theo từng bản ghi
 
   db.ref('duyetchi/meta/sites').on('value',s=>{ const v=s.val(); danhSachCongTrinh=Array.isArray(v)?v.filter(Boolean):Object.values(v||{}).filter(Boolean); },()=>{});  // danh sách công trình chung Duyệt Chi — chỉ để gợi ý ô "Trả cho công trình"
@@ -491,7 +494,7 @@ const dsChonNguoi = () => Object.entries(DL.nguoiDung).filter(([u,n])=>n&&n.dang
 const kheUocCua = hanMucId => danhSachCon(DL.khoanVay).filter(k=>k.hanMucId===hanMucId);
 const chiuKhac = x => x.congTyChiu&&x.congTyChiu!==x.congTyVay?` (${esc(x.congTyChiu)} chịu)`:'';   // vay chéo: đứng tên một công ty, công ty khác thực trả
 async function ghiNhieu(capNhat){ await db.ref().update(capNhat); henDongBo(); }      // ghi nhiều đường dẫn trong MỘT lần (dữ liệu + lịch sử cùng lúc, không bao giờ thiếu vết)
-async function bam(btn, viec){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await viec(); dongModal(); }catch(e){ toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
+async function bam(btn, viec){ btn.disabled=true; const t=btn.textContent; btn.textContent='⏳ Đang lưu...'; try{ await viec(); dongModal(); }catch(e){ if((e&&e.message)!=='Đã huỷ') toast('❌ '+(e.message||e)); } btn.disabled=false; btn.textContent=t; }
 
 // ===== 5. LICH_SU — mọi thao tác ghi đều để lại vết: ai, lúc nào, bảng nào, bản ghi nào, trường nào, cũ → mới (quy tắc 13). Bảng riêng congNo/lichSu =====
 const TRUONG_BO_QUA = ['taoBoi','taoLuc','suaBoi','suaLuc','id'];
@@ -500,7 +503,8 @@ function phang(o, tienTo){ // {canBo:{ten:'A'}} → {'canBo.ten':'A'}
     if(v&&typeof v==='object'&&!Array.isArray(v)) Object.assign(kq,phang(v,kk)); else kq[kk]=v; }); return kq;
 }
 function soSanh(cu, moi){ const a=phang(cu), b=phang(moi), ks=[...new Set([...Object.keys(a),...Object.keys(b)])], kq=[];
-  ks.forEach(k=>{ const x=a[k]==null?'':a[k], y=b[k]==null?'':b[k]; if(String(x)!==String(y)) kq.push({truong:k,giaTriCu:x,giaTriMoi:y}); }); return kq; }
+  ks.forEach(k=>{ const x=a[k]==null?'':a[k], y=b[k]==null?'':b[k]; if(String(x)!==String(y)&&!(x===''&&(y===false||y===0))) kq.push({truong:k,giaTriCu:x,giaTriMoi:y});   // bản ghi cũ chưa có trường, form trả về "không" / 0 → không phải thay đổi (khỏi sinh dòng lịch sử rác)
+    }); return kq; }
 function sach(o){ // bỏ ô trống trước khi tạo bản ghi (Firebase không cần lưu chuỗi rỗng)
   const kq={}; Object.entries(o||{}).forEach(([k,v])=>{ if(v===''||v==null) return; if(typeof v==='object'){ const c=sach(v); if(Object.keys(c).length) kq[k]=c; } else kq[k]=v; }); return kq; }
 // chaId = id bản ghi cha (ngân hàng / hạn mức / khoản vay) để xem lịch sử của cả khoản
@@ -530,13 +534,18 @@ function soanDongBoKhoanVay(up, kvId, kvSau){
   Object.entries(TINH_TOAN.coKyTra(kvSau)).forEach(([k,c])=>{ const cu=(kvSau.kyTra||{})[k]||{};
     if(!!cu.daTra!==c.daTra) up[goc+'/kyTra/'+k+'/daTra']=c.daTra;
     if((cu.traNoId||'')!==c.traNoId) up[goc+'/kyTra/'+k+'/traNoId']=c.traNoId||null; });
-  const dau=TINH_TOAN.ngayBatDau(Object.assign({},kvSau,{ngayGiaiNganDau:''})); if(dau&&dau!==kvSau.ngayGiaiNganDau) up[goc+'/ngayGiaiNganDau']=dau;
+  const dau=TINH_TOAN.ngayBatDau(Object.assign({},kvSau,{ngayGiaiNganDau:''}));
+  if(dau&&dau!==kvSau.ngayGiaiNganDau){ up[goc+'/ngayGiaiNganDau']=dau;
+    // ngày giải ngân đầu bị sửa SỚM hơn mà dòng lãi suất đầu vẫn bám ngày cũ → dời theo, kẻo đoạn đầu tính lãi 0%
+    const ls=danhSachCon(kvSau.laiSuat).sort((a,b)=>String(a.tuNgay).localeCompare(String(b.tuNgay)))[0];
+    if(ls&&ls.tuNgay===kvSau.ngayGiaiNganDau&&dau<ls.tuNgay){ up[goc+'/laiSuat/'+ls.id+'/tuNgay']=dau; up[dRieng('lichSu/'+khoaMoi())]=dongLichSu('laiSuat',ls.id,kvId,'sua','tuNgay',ls.tuNgay,dau); } }
 }
 const BANG_CON_KHOAN_VAY = ['giaiNgan','kyTra','traNo'];
 // Xoá thật — CHỈ giám đốc (quy tắc 14). Ghi lịch sử 'xoa'.
 async function xoaBanGhi(duongBang, id){
   if(!laGiamDoc()) throw new Error('Chỉ giám đốc được xoá. Hãy bấm "Yêu cầu xoá".');
   const bang=tenBangCua(duongBang), cha=chaCua(duongBang), up={};
+  if(bang==='giaiNgan'){ const k=DL.khoanVay[cha]||{}; if(TINH_TOAN.tong(k.giaiNgan,'soTien')-TINH_TOAN.soNguyen(((k.giaiNgan||{})[id]||{}).soTien)<TINH_TOAN.tong(k.traNo,'goc')) throw new Error('Không xoá được lần giải ngân này: tổng giải ngân còn lại sẽ nhỏ hơn gốc đã trả. Sửa / xoá dòng trả nợ trước.'); }
   if(bang==='nganHang'&&(['hanMuc','khoanVay','thauChi'].some(b=>danhSachCon(DL[b]).some(x=>x.nganHangId===id))||dsBaoLanh().some(x=>x.nganHangId===id)||danhSachCon(DL.taiSanBaoDam).some(x=>x.nganHangId===id))) throw new Error('Ngân hàng này còn hạn mức / khoản vay / thấu chi / bảo lãnh / tài sản bảo đảm. Xoá các khoản đó trước.');
   if(bang==='blChung'&&(DL.blChung[id]||{}).app!=='congNo') throw new Error('Thư này nhập từ app Hợp Đồng — muốn xoá thì xoá ở bên đó.');
   if(bang==='blChung'||bang==='baoLanh'){ up[dRieng('phiBaoLanh/'+id)]=null; up[dRieng('kyQuyGiamTru/'+id)]=null; }   // xoá thư thì xoá luôn các lần nộp phí, giảm ký quỹ của nó
@@ -544,6 +553,8 @@ async function xoaBanGhi(duongBang, id){
   up[dRieng(duongBang+'/'+id)]=null;
   up[dRieng('lichSu/'+khoaMoi())]=dongLichSu(bang,id,cha,'xoa','',tomTatBanGhi(duongBang,id),'');
   if(duongBang.startsWith('khoanVay/')&&BANG_CON_KHOAN_VAY.includes(bang)){ const kv=banSao(DL.khoanVay[cha]); delete (kv[bang]||{})[id]; soanDongBoKhoanVay(up,cha,kv); }
+  // bản ghi đã xoá thì các yêu cầu xoá còn chờ của nó cũng xong luôn (khỏi nằm mãi ở thẻ "Yêu cầu xoá")
+  Object.entries(DL.yeuCauXoa).forEach(([k,y])=>{ if(y&&y.banGhiId===id&&y.trangThai==='cho'){ const d=dRieng('yeuCauXoa/'+k); up[d+'/trangThai']='dongY'; up[d+'/nguoiDuyet']=tenNguoiDung; up[d+'/lucDuyet']=luc(); } });
   await ghiNhieu(up);
 }
 // Nhân viên: gửi yêu cầu xoá vào bảng congNo/yeuCauXoa, giám đốc duyệt ở tab Khác
@@ -558,10 +569,10 @@ function yeuCauXoaDangCho(id){ return Object.entries(DL.yeuCauXoa).find(([k,y])=
 function nutXoa(duongBang, id){
   const bang=tenBangCua(duongBang), yc=yeuCauXoaDangCho(id);
   if(yc) return `<div class="warn">🗑 ${esc(yc[1].nguoiYeuCau)} xin xoá (${lucVN(yc[1].luc)})${yc[1].lyDo?': '+esc(yc[1].lyDo):''}</div>`+
-    (laGiamDoc()?`<div class="row"><button class="btn red" onclick="duyetXoa('${yc[0]}',true)">✅ Đồng ý xoá</button><button class="btn sec" onclick="duyetXoa('${yc[0]}',false)">✖ Không xoá</button></div>`
-      :`<button class="btn sec" onclick="rutYeuCauXoa('${yc[0]}')">↩️ Rút lại yêu cầu xoá</button>`);
-  return laGiamDoc()?`<button class="btn sec" style="color:var(--red)" onclick="xoaNgay('${duongBang}','${id}')">🗑 Xoá ${esc(TEN_BANG[bang].toLowerCase())}</button>`
-    :`<button class="btn sec" style="color:var(--red)" onclick="yeuCauXoa('${duongBang}','${id}')">🗑 Yêu cầu xoá (giám đốc duyệt)</button>`;
+    (laGiamDoc()?`<div class="row"><button class="btn red" onclick="duyetXoa(${j(yc[0])},true)">✅ Đồng ý xoá</button><button class="btn sec" onclick="duyetXoa(${j(yc[0])},false)">✖ Không xoá</button></div>`
+      :`<button class="btn sec" onclick="rutYeuCauXoa(${j(yc[0])})">↩️ Rút lại yêu cầu xoá</button>`);
+  return laGiamDoc()?`<button class="btn sec" style="color:var(--red)" onclick="xoaNgay(${j(duongBang)},${j(id)})">🗑 Xoá ${esc(TEN_BANG[bang].toLowerCase())}</button>`
+    :`<button class="btn sec" style="color:var(--red)" onclick="yeuCauXoa(${j(duongBang)},${j(id)})">🗑 Yêu cầu xoá (giám đốc duyệt)</button>`;
 }
 async function xoaNgay(duongBang, id){
   const bang=tenBangCua(duongBang);
@@ -571,7 +582,8 @@ async function xoaNgay(duongBang, id){
 async function duyetXoa(k, dongY){
   const y=DL.yeuCauXoa[k]; if(!y) return;
   try{
-    if(dongY){ if(!confirm('Đồng ý xoá '+(TEN_BANG[y.bang]||y.bang)+' "'+(y.tomTat||'')+'"?')) return;
+    if(dongY){ const con=!!banGhi(y.duongBang,y.banGhiId), that=con?tomTatBanGhi(y.duongBang,y.banGhiId):(y.tomTat||'')+' (bản ghi đã không còn)';   // hỏi lại bằng bản ghi THẬT sẽ bị xoá, không tin chữ tóm tắt ghi trong yêu cầu
+      if(!confirm('Đồng ý xoá '+(TEN_BANG[tenBangCua(y.duongBang||'')]||TEN_BANG[y.bang]||y.bang)+' "'+that+'"?')) return;
       if(banGhi(y.duongBang,y.banGhiId)) await xoaBanGhi(y.duongBang,y.banGhiId); }
     const d=dRieng('yeuCauXoa/'+k);
     await ghiNhieu({ [d+'/trangThai']:dongY?'dongY':'tuChoi', [d+'/nguoiDuyet']:tenNguoiDung, [d+'/lucDuyet']:luc() });
@@ -583,21 +595,21 @@ async function rutYeuCauXoa(k){ const d=dRieng('yeuCauXoa/'+k); try{ await ghiNh
 function tomTatMoi(bang, v){ v=v||{}; return ({
   nganHang:()=>(v.ten||'')+(v.chiNhanh?' — '+v.chiNhanh:''),
   taiKhoan:()=>(v.congTyId||'')+' · '+(v.soTaiKhoan||''),
-  hanMuc:()=>'HĐ '+(v.soHopDong||'')+' · '+tenNganHang(v.nganHangId)+' · '+tien(v.soTien)+' đ',
+  hanMuc:()=>'HĐ '+(v.soHopDong||'')+' · '+tenNganHang(v.nganHangId)+' · '+tien(v.soTien)+' đ',
   khoanVay:()=>v.loai==='daiHan'?'Vay dài hạn HĐ '+(v.soHopDong||''):v.loai==='thueTaiChinh'?'Thuê tài chính HĐ '+(v.soHopDong||'')+((v.thietBi||{}).ten?' · '+v.thietBi.ten:''):'KƯ '+(v.soKheUoc||'')+(v.soHopDong?' (HĐ '+v.soHopDong+')':''),
-  giaiNgan:()=>ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
+  giaiNgan:()=>ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
   laiSuat:()=>soVN(v.phanTramNam)+'%/năm từ '+ngayVN(v.tuNgay),
-  kyTra:()=>'kỳ '+(v.ky||'')+' · '+ngayVN(v.ngay)+' · '+tien(v.goc)+' đ',
+  kyTra:()=>'kỳ '+(v.ky||'')+' · '+ngayVN(v.ngay)+' · '+tien(v.goc)+' đ',
   traNo:()=>ngayVN(v.ngay)+' · gốc '+tien(v.goc)+(v.traTruocHan?' (trước hạn)':'')+' · lãi '+tien(v.lai)+(v.phi?' · phí '+tien(v.phi):'')+(v.phiPhat?' · phạt '+tien(v.phiPhat):''),
   fileDinhKem:()=>'file "'+(v.ten||'')+'"',
   thauChi:()=>'Thấu chi '+tenNganHang(v.nganHangId)+' · '+(v.congTyVay||'')+(v.soHopDong?' · HĐ '+v.soHopDong:''),
   blChung:()=>tomTatMoi('baoLanh',v),
-  baoLanh:()=>'Bảo lãnh '+(LOAI_BAO_LANH[v.loai]||'').toLowerCase()+(v.soThu?' số '+v.soThu:'')+' · '+tien(v.soTien)+' đ',
-  taiSanBaoDam:()=>(LOAI_TAI_SAN[v.loai]||'Tài sản')+' · '+(v.moTa||'')+' · '+tien(v.giaTriDinhGia)+' đ',
+  baoLanh:()=>'Bảo lãnh '+(LOAI_BAO_LANH[v.loai]||'').toLowerCase()+(v.soThu?' số '+v.soThu:'')+' · '+tien(v.soTien)+' đ',
+  taiSanBaoDam:()=>(LOAI_TAI_SAN[v.loai]||'Tài sản')+' · '+(v.moTa||'')+' · '+tien(v.giaTriDinhGia)+' đ',
   baoDamCho:()=>'bảo đảm cho '+tenKhoanTheoKhoa(v.khoan),
-  phiBaoLanh:()=>'phí '+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
-  kyQuyGiamTru:()=>'giảm ký quỹ '+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
-  giaoDich:()=>(v.loai==='rut'?'Rút ':'Nộp ')+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ'+(v.lai?' · lãi '+tien(v.lai):'')+(v.phi?' · phí '+tien(v.phi):'')
+  phiBaoLanh:()=>'phí '+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
+  kyQuyGiamTru:()=>'giảm ký quỹ '+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ',
+  giaoDich:()=>(v.loai==='rut'?'Rút ':'Nộp ')+ngayVN(v.ngay)+' · '+tien(v.soTien)+' đ'+(v.lai?' · lãi '+tien(v.lai):'')+(v.phi?' · phí '+tien(v.phi):'')
 }[bang]||(()=>''))(); }
 // bản ghi con thì kèm tên bản ghi cha (khế ước / ngân hàng nào) để giám đốc đọc yêu cầu xoá là hiểu
 function tomTatBanGhi(duongBang, id){ const p=duongBang.split('/'), cha=p.length===2?tomTatMoi('baoLanh',timThu(p[1]))+' · ':p.length>1?tomTatMoi(p[0],DL[p[0]][p[1]])+' · ':''; return cha+tomTatMoi(tenBangCua(duongBang),banGhi(duongBang,id)); }
@@ -697,9 +709,9 @@ const TINH_TOAN = (function () {
   function daTraLai(khoan, ngay) { return danhSach(khoan.traNo).some(t => t.kyLai === ngay && soNguyen(t.lai) > 0); }
   // Gốc đã trả cho từng kỳ: kỳ "đã trả" khi tổng gốc các dòng trả nợ gắn với kỳ (traNo.kyTraId) ≥ gốc của kỳ → {idKỳ: {daTra, traNoId, daTraGoc}}
   function coKyTra(khoan) {
-    const kq = {};
+    const kq = {}, tn = danhSach(khoan.traNo);   // đọc bảng trả nợ MỘT lần (trước đây đọc lại cho từng kỳ → chậm khi nhiều kỳ)
     danhSach(khoan.kyTra).forEach(k => {
-      const tr = danhSach(khoan.traNo).filter(t => t.kyTraId === k.id && soNguyen(t.goc) > 0).sort((a, b) => String(a.ngay).localeCompare(String(b.ngay)));
+      const tr = tn.filter(t => t.kyTraId === k.id && soNguyen(t.goc) > 0).sort((a, b) => String(a.ngay).localeCompare(String(b.ngay)));
       const da = tr.reduce((s, t) => s + soNguyen(t.goc), 0), xong = soNguyen(k.goc) > 0 && da >= soNguyen(k.goc);
       kq[k.id] = { daTra: xong, traNoId: xong ? tr[tr.length - 1].id : '', daTraGoc: da };
     });
@@ -746,8 +758,16 @@ const TINH_TOAN = (function () {
   }
   // Bảo lãnh đang hiệu lực tính vào một hạn mức (chốt 02/10: bảo lãnh của công ty nào thì tính vào hạn mức của công ty đó):
   //   thư CÙNG ngân hàng (nganHangId) VÀ CÙNG công ty (congTyId = công ty đứng tên hạn mức), đã phát hành và chưa hết hạn vào hôm nay.
-  function baoLanhCuaHanMuc(hanMuc, bangBaoLanh, homNay) {
+  //   (03/10) Một ngân hàng + một công ty có HAI hạn mức gối nhau (cũ sắp hết + mới ký): thư chỉ tính vào MỘT hạn mức — cái còn hiệu lực có ngày hết hạn muộn nhất
+  //   (không còn cái nào hiệu lực thì cái hết hạn muộn nhất) — kẻo cộng đôi vào "đã dùng". Truyền bangHanMuc (mọi hạn mức) thì mới áp quy tắc này.
+  function hanMucNhanBaoLanh(hanMuc, bangHanMuc, homNay) {
+    const ds = danhSach(bangHanMuc).filter(h => h.nganHangId === hanMuc.nganHangId && h.congTyVay === hanMuc.congTyVay); if (ds.length < 2) return true;
+    const con = ds.filter(h => !laNgay(h.ngayHetHan) || h.ngayHetHan >= homNay), xet = con.length ? con : ds;
+    return xet.sort((a, b) => String(b.ngayHetHan || '9').localeCompare(String(a.ngayHetHan || '9')) || String(b.id).localeCompare(String(a.id)))[0].id === hanMuc.id;
+  }
+  function baoLanhCuaHanMuc(hanMuc, bangBaoLanh, homNay, bangHanMuc) {
     if (!hanMuc || !hanMuc.nganHangId) return 0;
+    if (bangHanMuc && hanMuc.id && !hanMucNhanBaoLanh(hanMuc, bangHanMuc, homNay)) return 0;
     return danhSach(bangBaoLanh).filter(b => b.nganHangId === hanMuc.nganHangId && b.congTyId === hanMuc.congTyVay && baoLanhHieuLuc(b, homNay)).reduce((s, b) => s + soNguyen(b.soTien), 0);
   }
   // Thư bảo lãnh đang hiệu lực vào một ngày: đã phát hành và chưa hết hạn
@@ -758,10 +778,11 @@ const TINH_TOAN = (function () {
   //   ngày phải nộp = ngày hết kỳ phí đã nộp gần nhất (dòng phí có kyDen muộn nhất, hoặc phi.daNopDen với thư cũ; chưa nộp lần nào → ngày phát hành).
   //   Đã nộp tới ngày hết hạn thư, hoặc thư thu phí một lần → không còn kỳ nào (null). Thư thu một lần: đến hạn thư thì nhắc phí gia hạn (mốc hết hạn).
   function kyPhiToi(thu, bangPhi) {
-    const p = (thu && thu.phi) || {}; if (p.hinhThuc !== 'dinhKy' || !laNgay(thu.ngayHetHan) || !soNguyen(p.soTienMoiKy)) return null; // v16: chưa nhập phí mỗi kỳ thì không nhắc 'nộp phí 0 đ' mãi
-    const den = danhSach(bangPhi).map(x => x.kyDen).concat([p.daNopDen]).filter(laNgay).sort().pop() || (laNgay(thu.ngayPhatHanh) ? thu.ngayPhatHanh : '');
+    const p = (thu && thu.phi) || {}, thang = soNguyen(p.kyThuPhiThang) || 1;
+    if (p.hinhThuc !== 'dinhKy' || !laNgay(thu.ngayHetHan) || !soNguyen(p.soTienMoiKy)) return null;   // chưa khai số phí mỗi kỳ → chưa đủ để nhắc (thư nhập từ app Hợp Đồng không bị nhắc "phí 0 đ quá hạn")
+    const den = danhSach(bangPhi).map(x => laNgay(x.kyDen) ? x.kyDen : (x.loai === 'dinhKy' && laNgay(x.kyTu) ? congThang(x.kyTu, thang) : '')).concat([p.daNopDen]).filter(laNgay).sort().pop() || (laNgay(thu.ngayPhatHanh) ? thu.ngayPhatHanh : '');
     if (!den || den >= thu.ngayHetHan) return null;
-    const het = congThang(den, soNguyen(p.kyThuPhiThang) || 1);
+    const het = congThang(den, thang);
     return { ngay: den, kyDen: het > thu.ngayHetHan ? thu.ngayHetHan : het, soTien: soNguyen(p.soTienMoiKy) };
   }
   // hanMucDaDung = Σ duNoGoc các khế ước thuộc hạn mức + (bảo lãnh đang hiệu lực cùng ngân hàng, cùng công ty — nếu hanMucBaoLanhRieng = false)
@@ -866,7 +887,7 @@ const TONG_HOP = (function () {
       if (T.baoLanhHieuLuc(b, homNay)) { kq.baoLanh += T.soNguyen(b.soTien); o(b.nganHangId).baoLanh += T.soNguyen(b.soTien);
         const kp = T.kyPhiToi(b, (du.phiBaoLanh || {})[b.id]); if (kp && kp.ngay <= den30) kq.phiPhaiTra30 += kp.soTien; } });
     T.danhSach(du.hanMuc).filter(cua).forEach(h => { if (T.laNgay(h.ngayHetHan) && h.ngayHetHan < homNay) return;   // hạn mức đã hết hạn không tính vào hạn mức / còn trống
-      const dd = T.hanMucDaDung(h, T.danhSach(du.khoanVay).filter(k => k.hanMucId === h.id), T.baoLanhCuaHanMuc(h, du.baoLanh, homNay));
+      const dd = T.hanMucDaDung(h, T.danhSach(du.khoanVay).filter(k => k.hanMucId === h.id), T.baoLanhCuaHanMuc(h, du.baoLanh, homNay, du.hanMuc));
       kq.hanMuc += T.soNguyen(h.soTien); kq.hanMucDaDung += dd; o(h.nganHangId).hanMuc += T.soNguyen(h.soTien); o(h.nganHangId).hanMucDaDung += dd; });
     T.danhSach(du.taiSanBaoDam).forEach(ts => { if (ts.loai === 'soTietKiem' && (!cty || (ts.chuSoHuu || {}).congTyId === cty)) kq.soTietKiem += T.soNguyen(ts.giaTriDinhGia); });
     kq.tongDuNo = kq.duNoVay + kq.thauChiDangDung;                             // tổng dư nợ gốc: vay + thuê tài chính + thấu chi đang dùng
@@ -930,10 +951,11 @@ const NHAC_HAN = (function () {
       kq.push({ khoa: khoa.replace(/[.#$\[\]\/]/g, '_'), loai, ngay, conNgay: con, tuTat: !!c.tuTat, nganHangId: nganHangId || '', soTien: T.soNguyen(soTien), nguoi: nguoi || '', mo, tieuDe: tenNH(nganHangId) + ' — ' + ten + ' ' + TEN_MOC[loai] });
     }
     T.danhSach(du.khoanVay).forEach(k => {
+      const xong = T.trangThai(k, homNay) === 'daTatToan';   // đã tất toán: kỳ lãi còn sót (lãi trả lúc tất toán mà quên gắn kỳ) không nhắc "quá hạn" mỗi ngày nữa — vẫn hiện ở Lịch trả để nhập bù
       T.lichTra(k, T.congNgay(homNay, BANG_NHAC.traGoc.truoc)).forEach(x => x.loai === 'goc'
         ? them('traGoc', 'kv_' + k.id + '_goc_' + x.kyTraId, x.ngay, k.nganHangId, tenKhoan(k), x.goc, k.keToanTheoDoi, ['khoanVay', k.id, 'lichTra'])
-        : them('traLai', 'kv_' + k.id + '_lai_' + x.ngay, x.ngay, k.nganHangId, tenKhoan(k), x.laiUoc, k.keToanTheoDoi, ['khoanVay', k.id, 'lichTra']));
-      if (k.loai === 'thueTaiChinh' && T.duNoGoc(k) > 0) {
+        : (xong || them('traLai', 'kv_' + k.id + '_lai_' + x.ngay, x.ngay, k.nganHangId, tenKhoan(k), x.laiUoc, k.keToanTheoDoi, ['khoanVay', k.id, 'lichTra'])));
+      if (k.loai === 'thueTaiChinh') {   // trả hết gốc rồi vẫn nhắc kết thúc thuê / bảo hiểm (còn thủ tục mua lại, sang tên) — xong thì bấm "Đã xong"
         const kt = T.ngayKetThuc(k), bh = (k.baoHiem || {}).ngayHetHan;
         them('ketThucThue', 'kv_' + k.id + '_kt_' + kt, kt, k.nganHangId, tenKhoan(k), 0, k.keToanTheoDoi, ['khoanVay', k.id]);
         them('baoHiemHetHan', 'kv_' + k.id + '_bh_' + bh, bh, k.nganHangId, tenKhoan(k), 0, k.keToanTheoDoi, ['khoanVay', k.id]);
@@ -968,12 +990,12 @@ const NHAC_HAN = (function () {
 const tinhKV = k => TINH_TOAN.tinhKhoan(k, homNay(), CAU_HINH.SAP_DEN_HAN_NGAY);
 // Hạn mức: đã dùng / còn trống. baoLanh = thư bảo lãnh đang hiệu lực cùng ngân hàng + cùng công ty (đọc bảng hopdong/baoLanh dùng chung;
 // thư nhập từ app Hợp Đồng chưa có nganHangId nên chưa được tính cho tới khi kế toán gắn ngân hàng ở màn Bảo lãnh — bước 6).
-function tinhHanMuc(id){ const h=DL.hanMuc[id]||{}, ku=kheUocCua(id), baoLanh=TINH_TOAN.baoLanhCuaHanMuc(h,dsBaoLanh(),homNay()), daDung=TINH_TOAN.hanMucDaDung(h,ku,baoLanh); return { daDung, conTrong:TINH_TOAN.hanMucConTrong(h,daDung), kheUoc:ku, baoLanh }; }
+function tinhHanMuc(id){ const h=DL.hanMuc[id]||{}, ku=kheUocCua(id), baoLanh=TINH_TOAN.baoLanhCuaHanMuc(Object.assign({id},h),dsBaoLanh(),homNay(),DL.hanMuc), daDung=TINH_TOAN.hanMucDaDung(h,ku,baoLanh); return { daDung, conTrong:TINH_TOAN.hanMucConTrong(h,daDung), kheUoc:ku, baoLanh }; }
 
 // ===== ĐIỀU PHỐI MÀN HÌNH =====
 const CAC_TAB = ['tongquan','hanmuc','lich','baolanh','khac','nganhang','thauchi','taisan','nhac','excel'];   // 4 tab có nút ở thanh dưới + các mục con mở từ trang Khác
 function chuyenTab(t){ CAC_TAB.forEach(x=>$('tab-'+x).hidden=x!==t); const coNut=!!document.querySelector(`.nav-item[data-tab="${t}"]`);
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===(coNut?t:'khac'))); window.scrollTo(0,0); }
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.tab===(coNut?t:'khac'))); window.scrollTo(0,0); vuaO(); }
 let soDangNhac=0;   // số việc đang nhắc (hiện ở ô Nhắc hạn, số đỏ trên nút Khác)
 let _veT; function veTatCa(){ clearTimeout(_veT); _veT=setTimeout(()=>{ veVay(); veThauChi(); veLichTra(); veBaoLanh(); veTaiSan(); veNganHang(); soDangNhac=veNhacHan(); veQuanTri(); veTongQuan(); if(ct) veChiTiet(); ganNutXuat(); },30); }
 // Lớp phủ chi tiết: mở chồng lên nhau được (hạn mức → khế ước), "Quay lại" về đúng màn trước
@@ -992,12 +1014,21 @@ function veChiTiet(){
 // duongBang: 'nganHang' | 'hanMuc' | 'khoanVay' | 'nganHang/<id>/taiKhoan' | 'khoanVay/<id>/giaiNgan' …; them: dữ liệu kèm cho lúc tạo (vd hanMucId)
 let _cacO=[], _form={duongBang:'',id:'',them:{}};
 function moFormCon(tieuDe, duongBang, id, cacO, macDinh, them){
+  const cuBG=id?banGhi(duongBang,id):null;
+  // SỬA: ô chọn mà bản ghi chưa có giá trị thì để "— chưa chọn —", KHÔNG hiện giá trị mặc định của lúc tạo (kẻo tưởng đã lưu, hoặc bị ghi kèm khi chỉ sửa việc khác — vd thư bảo lãnh nhập từ app Hợp Đồng)
+  if(cuBG) cacO=cacO.map(o=>o.kieu==='chon'&&o.macDinh!=null&&layO(cuBG,o.k)==null?Object.assign({},o,{macDinh:null,rong:o.rong!=null?o.rong:'— chưa chọn —'}):o);
   _cacO=cacO; _form={duongBang,id:id||'',them:them||{}};
-  moForm(tieuDe,cacO,id?banGhi(duongBang,id):(macDinh||{}),`<button class="btn" onclick="luuCon(this)">💾 Lưu</button>`+(id?`<div style="margin-top:8px">${nutXoa(duongBang,id)}</div>`:''));
+  const fM=_form; setTimeout(()=>{ try{ fM.dau=id?docForm(cacO):null; }catch(e){ fM.dau=null; } },0);   // trạng thái các ô lúc MỞ form sửa → lúc lưu biết ô nào người dùng thật sự đổi
+  moForm(tieuDe,cacO,cuBG||(macDinh||{}),`<button class="btn" onclick="luuCon(this)">💾 Lưu</button>`+(id?`<div style="margin-top:8px">${nutXoa(duongBang,id)}</div>`:''));
 }
 async function luuCon(btn){ await bam(btn,async()=>{
-  const {duongBang,id}=_form, bang=tenBangCua(duongBang), cha=chaCua(duongBang), v=docForm(_cacO); batBuoc(_cacO,v);
-  if(KIEM_TRA[bang]) KIEM_TRA[bang](v,duongBang,id);                    // số liệu sai → báo lỗi, không ghi; có thể bổ sung trường tự tính
+  const {duongBang,id,dau}=_form, bang=tenBangCua(duongBang), cha=chaCua(duongBang), v=docForm(_cacO); batBuoc(_cacO,v);
+  // SỬA bản ghi: (1) bản ghi vừa bị xoá ở máy khác → dừng, không tạo lại bản ghi "ma"; (2) ô người dùng KHÔNG đụng thì giữ giá trị đang có trên máy chủ
+  //   (người khác vừa sửa ô đó sẽ không bị ghi đè ngược); (3) ô không đụng mà bản ghi chưa có giá trị thì không ghi giá trị mặc định của form.
+  const ht=id?banGhi(duongBang,id):null; if(id&&!ht) throw new Error('Bản ghi này vừa bị xoá ở máy khác — đóng ô này lại.');
+  const khongDung=id&&dau?_cacO.filter(o=>o.k&&String(layO(v,o.k))===String(layO(dau,o.k))):[];
+  khongDung.forEach(o=>{ const g=layO(ht,o.k); if(g!=null&&typeof g!=='object') datO(v,o.k,g); });
+  if(KIEM_TRA[bang]) KIEM_TRA[bang](v,duongBang,id); khongDung.forEach(o=>{ if(layO(ht,o.k)==null) xoaO(v,o.k); });                    // số liệu sai → báo lỗi, không ghi; có thể bổ sung trường tự tính
   const up={}, idMoi=soanLuu(up,duongBang,id,v,tomTatMoi(bang,v));
   if(SOAN_THEM[bang]) SOAN_THEM[bang](up,v,id);                         // việc phải làm kèm trong cùng lần ghi
   if(duongBang.startsWith('khoanVay/')&&BANG_CON_KHOAN_VAY.includes(bang)){ const kv=banSao(DL.khoanVay[cha]); kv[bang]=kv[bang]||{}; kv[bang][idMoi]=Object.assign({},kv[bang][idMoi],v); soanDongBoKhoanVay(up,cha,kv); }
@@ -1030,7 +1061,7 @@ const KIEM_TRA = {
     if(id) return;
     // --- tạo khế ước: lần giải ngân đầu, dòng lãi suất đầu và kỳ trả gốc (một kỳ vào ngày đến hạn) được tạo luôn trong cùng lần ghi ---
     if(!(v.laiSuatDau>0&&v.laiSuatDau<=100)) throw new Error('Lãi suất phải lớn hơn 0 và không quá 100 %/năm');
-    const t=tinhHanMuc(hmId); if(v.soTien>t.conTrong&&!confirm('Số tiền giải ngân '+tien(v.soTien)+' đ VƯỢT hạn mức còn trống '+tien(t.conTrong)+' đ. Vẫn lưu?')) throw new Error('Đã huỷ');
+    const t=tinhHanMuc(hmId); if(v.soTien>t.conTrong&&!confirm('Số tiền giải ngân '+tien(v.soTien)+' đ VƯỢT hạn mức còn trống '+tien(t.conTrong)+' đ. Vẫn lưu?')) throw new Error('Đã huỷ');
     Object.assign(v,{ loai:'kheUoc', hanMucId:hmId, nganHangId:hm.nganHangId, congTyVay:hm.congTyVay, soHopDong:hm.soHopDong,
       theoDoiLaiTu:v.ngayGiaiNganDau>homNay()?v.ngayGiaiNganDau:homNay(),   // khế ước cũ nhập vào hôm nay: các kỳ lãi trước hôm nay coi như đã trả, không báo quá hạn oan
       giaiNgan:{ [khoaMoi()]:{ ngay:v.ngayGiaiNganDau, soTien:v.soTien } },
@@ -1040,11 +1071,13 @@ const KIEM_TRA = {
   },
   giaiNgan(v,duongBang,id){ const k=DL.khoanVay[chaCua(duongBang)], cu=id?(k.giaiNgan||{})[id]:null, tong=TINH_TOAN.tong(k.giaiNgan,'soTien')-(cu?TINH_TOAN.soNguyen(cu.soTien):0)+v.soTien;
     if(tong<TINH_TOAN.tong(k.traNo,'goc')) throw new Error('Tổng giải ngân không được nhỏ hơn gốc đã trả');
-    if(k.loai==='daiHan'&&k.soTien>0&&tong>k.soTien) throw new Error('Tổng giải ngân ('+tien(tong)+' đ) vượt số tiền vay theo hợp đồng ('+tien(k.soTien)+' đ). Nếu hợp đồng tăng thì sửa số tiền vay trước.'); },
+    if(k.loai==='kheUoc'&&k.hanMucId){ const them=v.soTien-(cu?TINH_TOAN.soNguyen(cu.soTien):0), t=tinhHanMuc(k.hanMucId);   // giải ngân THÊM cho khế ước cũng phải soát hạn mức còn trống như lúc tạo
+      if(them>t.conTrong&&!confirm('Giải ngân thêm '+tien(them)+' đ VƯỢT hạn mức còn trống '+tien(t.conTrong)+' đ. Vẫn lưu?')) throw new Error('Đã huỷ'); }
+    if(k.loai!=='kheUoc'&&k.soTien>0&&tong>k.soTien) throw new Error('Tổng giải ngân ('+tien(tong)+' đ) vượt số tiền vay theo hợp đồng ('+tien(k.soTien)+' đ). Nếu hợp đồng tăng thì sửa số tiền vay trước.'); },
   laiSuat(v,duongBang,id){ const k=DL[duongBang.split('/')[0]][chaCua(duongBang)];   // lãi suất của khoản vay hoặc của thấu chi
     if(!(v.phanTramNam>0&&v.phanTramNam<=100)) throw new Error('Lãi suất phải lớn hơn 0 và không quá 100 %/năm');
     if(danhSachCon(k.laiSuat).some(l=>l.id!==id&&l.tuNgay===v.tuNgay)) throw new Error('Đã có dòng lãi suất áp dụng từ '+ngayVN(v.tuNgay)+' — bấm vào dòng đó để sửa'); },
-  kyTra(v){ v.suaTay=true; },                                           // kỳ do kế toán thêm / sửa tay (quy tắc 17)
+  kyTra(v,duongBang,id){ const cu=id?banGhi(duongBang,id):null; if(!cu||['ky','ngay','goc'].some(f=>String(cu[f])!==String(v[f]))) v.suaTay=true; },   // chỉ đánh dấu ✍️ khi thật sự đổi kỳ / ngày / gốc                                           // kỳ do kế toán thêm / sửa tay (quy tắc 17)
   fileDinhKem(v,duongBang,id){ if(!/^https?:\/\//i.test(v.link)) throw new Error('Link phải bắt đầu bằng http');
     v.nguon=/1drv\.ms|onedrive|sharepoint/i.test(v.link)?'onedrive':/google\.com/i.test(v.link)?'drive':'khac';
     if(!id){ v.nguoiTai=tenNguoiDung; v.luc=luc(); } },
@@ -1053,7 +1086,7 @@ const KIEM_TRA = {
     if(v.traTruocHan){ if(!v.goc) throw new Error('Trả trước hạn thì phải nhập số gốc trả'); v.kyTraId=''; }   // gốc trả trước hạn không gắn kỳ nào — sau đó bấm "Khớp lịch" để trừ vào các kỳ cuối
     else if('phiPhat' in v) v.phiPhat=0;
     const duNo=TINH_TOAN.duNoGoc(k)+(cu?TINH_TOAN.soNguyen(cu.goc):0);
-    if(v.goc>duNo) throw new Error('Gốc trả ('+tien(v.goc)+' đ) lớn hơn dư nợ gốc ('+tien(duNo)+' đ)');
+    if(v.goc>duNo) throw new Error('Gốc trả ('+tien(v.goc)+' đ) lớn hơn dư nợ gốc ('+tien(duNo)+' đ)');
     if(v.ngay<TINH_TOAN.ngayBatDau(k)) throw new Error('Ngày trả không thể trước ngày giải ngân');
     if(!v.goc) v.kyTraId=''; if(!v.lai) v.kyLai='';
   }
@@ -1080,7 +1113,7 @@ function kiemTraDaiHan(v, cu, id, loai){
   if(daTra&&lich[daTra-1].ngay>homNay()) throw new Error('Kỳ '+daTra+' ('+ngayVN(lich[daTra-1].ngay)+') chưa đến ngày trả — xem lại số kỳ đã trả. Trả sớm thì nhập sau ở tab Trả nợ (tích "trả trước hạn").');
   // khoản vay cũ: mỗi kỳ đã trả được ghi sẵn một dòng trả nợ gắn đúng kỳ → dư nợ đúng, các kỳ đó không báo quá hạn
   lich.forEach((x,i)=>{ const kid=khoaMoi(); kyTra[kid]=x; if(i<daTra){ const tid=khoaMoi(); traNo[tid]={ ngay:x.ngay, goc:x.goc, kyTraId:kid, chungTu:'Đã trả trước khi nhập vào app' }; x.daTra=true; x.traNoId=tid; gocDaTra+=x.goc; } });
-  if(gocDaTra>gnDau) throw new Error('Gốc của '+daTra+' kỳ đã trả ('+tien(gocDaTra)+' đ) lớn hơn số đã giải ngân ('+tien(gnDau)+' đ) — nhập đủ số tiền giải ngân');
+  if(gocDaTra>gnDau) throw new Error('Gốc của '+daTra+' kỳ đã trả ('+tien(gocDaTra)+' đ) lớn hơn số đã giải ngân ('+tien(gnDau)+' đ) — nhập đủ số tiền giải ngân');
   Object.assign(v,{ loai, ngayTraGocTrongThang:Number(v.ngayTraDau.slice(8,10)),
     theoDoiLaiTu:v.ngayGiaiNganDau>homNay()?v.ngayGiaiNganDau:homNay(),   // khoản vay cũ nhập vào hôm nay: các kỳ lãi trước hôm nay coi như đã trả
     giaiNgan:{ [khoaMoi()]:{ ngay:v.ngayGiaiNganDau, soTien:gnDau } },
@@ -1091,7 +1124,7 @@ function kiemTraDaiHan(v, cu, id, loai){
 // Khớp lịch trả gốc với dư nợ (sau trả trước hạn / giải ngân thêm): trừ dần từ các kỳ cuối — xem SINH_LICH.khopLich. Có hỏi lại, có ghi lịch sử từng kỳ.
 async function khopLichKhoan(kvId){
   const k=DL.khoanVay[kvId], r=SINH_LICH.khopLich(k), nSua=Object.keys(r.sua).length;
-  if(r.thua>0) return toast('Còn '+tien(r.thua)+' đ gốc chưa có kỳ nào để gắn — bấm "＋ Kỳ" để thêm kỳ');
+  if(r.thua>0) return toast('Còn '+tien(r.thua)+' đ gốc chưa có kỳ nào để gắn — bấm "＋ Kỳ" để thêm kỳ');
   if(!nSua&&!r.xoa.length) return toast('Lịch đã khớp với dư nợ');
   if(!confirm('Khớp lịch trả gốc với dư nợ: giữ các kỳ gần, TRỪ DẦN TỪ CÁC KỲ CUỐI (sửa '+nSua+' kỳ, bỏ '+r.xoa.length+' kỳ không còn gốc phải trả).\n\nNgân hàng tính cách khác thì bấm Huỷ rồi sửa tay từng kỳ.')) return;
   const up={}, kv=banSao(k), goc=dRieng('khoanVay/'+kvId+'/kyTra/');
@@ -1103,10 +1136,21 @@ async function khopLichKhoan(kvId){
 // Việc ghi kèm trong CÙNG lần ghi (id rỗng = đang tạo)
 const SOAN_THEM = {
   // sửa hạn mức → khế ước bên dưới mang theo ngân hàng / công ty đứng tên / số hợp đồng mới
-  hanMuc(up,v,id){ if(!id) return; kheUocCua(id).forEach(k=>['nganHangId','congTyVay','soHopDong'].forEach(f=>{ if(k[f]!==v[f]) up[dRieng('khoanVay/'+k.id+'/'+f)]=v[f]; })); },
+  hanMuc(up,v,id){ if(!id) return; const cu=DL.hanMuc[id]||{};
+    kheUocCua(id).forEach(k=>{ const doi=(f,moi)=>{ if(k[f]!==moi){ up[dRieng('khoanVay/'+k.id+'/'+f)]=moi; up[dRieng('lichSu/'+khoaMoi())]=dongLichSu('khoanVay',k.id,'','sua',f,k[f],moi); } };
+      ['nganHangId','congTyVay','soHopDong'].forEach(f=>doi(f,v[f]));
+      if(v.congTyVay!==cu.congTyVay&&k.congTyChiu===cu.congTyVay) doi('congTyChiu',v.congTyVay); }); },   // khế ước vốn "thực chịu = đứng tên" thì đi theo công ty mới, không thành vay chéo oan
   // sửa ngày đến hạn khế ước → kỳ trả gốc duy nhất (chưa trả, chưa sửa tay) đi theo
   khoanVay(up,v,id){ if(!id) return; const cu=DL.khoanVay[id], ky=danhSachCon(cu.kyTra).filter(k=>!k.daTra);
-    if(cu.loai==='kheUoc'&&v.ngayDenHan!==cu.ngayDenHan&&ky.length===1&&!ky[0].suaTay){ up[dRieng('khoanVay/'+id+'/kyTra/'+ky[0].id+'/ngay')]=v.ngayDenHan; up[dRieng('lichSu/'+khoaMoi())]=dongLichSu('kyTra',ky[0].id,id,'sua','ngay',ky[0].ngay,v.ngayDenHan); } }
+    if(cu.loai==='kheUoc'&&v.ngayDenHan!==cu.ngayDenHan&&ky.length===1&&!ky[0].suaTay){ up[dRieng('khoanVay/'+id+'/kyTra/'+ky[0].id+'/ngay')]=v.ngayDenHan; up[dRieng('lichSu/'+khoaMoi())]=dongLichSu('kyTra',ky[0].id,id,'sua','ngay',ky[0].ngay,v.ngayDenHan); }
+    else if(cu.loai==='kheUoc'&&v.ngayDenHan!==cu.ngayDenHan&&ky.length===1&&ky[0].suaTay) setTimeout(()=>toast('Kỳ gốc đã sửa tay nên vẫn giữ ngày '+ngayVN(ky[0].ngay)+' — cần đổi thì sửa ở tab Lịch trả'),700);
+    // Đổi "ngày trả lãi hằng tháng" / ngày đến hạn → ngày các kỳ lãi đổi theo; các dòng trả lãi ĐÃ nhập phải bám sang kỳ tương ứng, kẻo kỳ đã trả hiện lại thành chưa trả / quá hạn
+    if(('ngayTraLaiTrongThang' in v&&Number(v.ngayTraLaiTrongThang)!==Number(cu.ngayTraLaiTrongThang))||('ngayDenHan' in v&&v.ngayDenHan!==cu.ngayDenHan)){
+      const sau=banSao(Object.assign({},cu,v)), goc=dRieng('khoanVay/'+id+'/kyTra/');
+      Object.keys(up).forEach(p=>{ if(p.startsWith(goc)&&p.endsWith('/ngay')){ const kid=p.slice(goc.length,-5); if(sau.kyTra&&sau.kyTra[kid]) sau.kyTra[kid].ngay=up[p]; } });
+      const xa=[TINH_TOAN.ngayKetThuc(cu),TINH_TOAN.ngayKetThuc(sau),homNay()].sort().pop(), kyCu=TINH_TOAN.cacKyLai(cu,xa), kyMoi=TINH_TOAN.cacKyLai(sau,xa);
+      danhSachCon(cu.traNo).forEach(t=>{ if(!t.kyLai||kyMoi.some(x=>x.ngay===t.kyLai)) return; const i=kyCu.findIndex(x=>x.ngay===t.kyLai), moi=i>=0&&kyMoi[i]?kyMoi[i].ngay:'';
+        if(moi){ up[dRieng('khoanVay/'+id+'/traNo/'+t.id+'/kyLai')]=moi; up[dRieng('lichSu/'+khoaMoi())]=dongLichSu('traNo',t.id,id,'sua','kyLai',t.kyLai,moi); } }); } }
 };
 
 // ===== 8. MÀN HÌNH: Dashboard (Tổng quan) — lọc công ty + "đứng tên ↔ thực chịu", 5 ô số to, ô đếm, lịch 30 ngày, bảng theo ngân hàng, 2 biểu đồ (mục 1.4) =====
@@ -1118,7 +1162,7 @@ function chonTqChiu(b){ tqChiu=b; veTongQuan(); }
 const thangVN = t => t.slice(5,7)+'/'+t.slice(0,4);
 function veTongQuan(){
   const hn=homNay(), du=duLieuTongHop(), t=TONG_HOP.tinh(du,hn,tqCty,tqChiu), cua=x=>!tqCty||(tqChiu?(x.congTyChiu||x.congTyVay):x.congTyVay)===tqCty;
-  $('tq-congty').innerHTML=[['','Cả 3 công ty']].concat(DS_CONG_TY).map(([k,l])=>`<div class="chip ${tqCty===k?'on':''}" onclick="chonTqCty('${k}')">${l}</div>`).join('');
+  $('tq-congty').innerHTML=[['','Cả 3 công ty']].concat(DS_CONG_TY).map(([k,l])=>`<div class="chip ${tqCty===k?'on':''}" onclick="chonTqCty(${j(k)})">${l}</div>`).join('');
   $('tq-cach').hidden=!tqCty;   // xem "Cả 3" thì hai cách cho cùng kết quả
   $('tq-cach').innerHTML=[[false,'Theo công ty ĐỨNG TÊN vay'],[true,'Theo công ty THỰC CHỊU']].map(([b,l])=>`<div class="chip ${tqChiu===b?'on':''}" style="flex:1" onclick="chonTqChiu(${b})">${l}</div>`).join('');
   $('tq-tiles').innerHTML=`
@@ -1140,17 +1184,19 @@ function veTongQuan(){
   // bảng theo ngân hàng
   const nh=t.theoNganHang.sort((a,b)=>tenNganHang(a.nganHangId).localeCompare(tenNganHang(b.nganHangId),'vi')), cong=f=>nh.reduce((s,x)=>s+x[f],0);
   $('tq-nganhang').innerHTML=nh.length?`<table class="p"><thead><tr><th class="tr">Ngân hàng</th><th>Hạn mức</th><th>Dư nợ vay</th><th>Thấu chi</th><th>Bảo lãnh</th><th>Ký quỹ</th><th>Còn trống</th></tr></thead><tbody>
-    ${nh.map(x=>`<tr ${x.nganHangId?`onclick="moChiTiet('nganHang','${x.nganHangId}')"`:''}><td class="tr"><b>${esc(tenNganHang(x.nganHangId)||'(chưa gắn ngân hàng)')}</b></td><td>${tien(x.hanMuc)}</td><td>${tien(x.duNoVay)}</td><td>${tien(x.thauChi)}</td><td>${tien(x.baoLanh)}</td><td>${tien(x.kyQuy)}</td><td class="${x.conTrong<0?'neg':''}">${tien(x.conTrong)}</td></tr>`).join('')}</tbody>
+    ${nh.map(x=>`<tr ${x.nganHangId?`onclick="moChiTiet('nganHang',${j(x.nganHangId)})"`:''}><td class="tr"><b>${esc(tenNganHang(x.nganHangId)||'(chưa gắn ngân hàng)')}</b></td><td>${tien(x.hanMuc)}</td><td>${tien(x.duNoVay)}</td><td>${tien(x.thauChi)}</td><td>${tien(x.baoLanh)}</td><td>${tien(x.kyQuy)}</td><td class="${x.conTrong<0?'neg':''}">${tien(x.conTrong)}</td></tr>`).join('')}</tbody>
     <tfoot><tr><td class="tr">Cộng</td><td>${tien(cong('hanMuc'))}</td><td>${tien(cong('duNoVay'))}</td><td>${tien(cong('thauChi'))}</td><td>${tien(cong('baoLanh'))}</td><td>${tien(cong('kyQuy'))}</td><td>${tien(cong('conTrong'))}</td></tr></tfoot></table>`
     :'<div class="hint" style="font-size:15px;line-height:1.7">Chưa có số liệu. Làm theo thứ tự:<br>1. <a href="#" onclick="chuyenTab(\'nganhang\');formNganHang();return false"><b>🏦 Thêm ngân hàng</b></a> (nút ⚙️ Khác ở góc dưới bên phải → ô 🏦 Ngân hàng)<br>2. <a href="#" onclick="chuyenTab(\'hanmuc\');return false"><b>💳 Thêm hạn mức / khoản vay</b></a> (nút 💳 Khoản vay ở thanh dưới)<br>3. Hoặc nhập cả loạt: <a href="#" onclick="chuyenTab(\'excel\');return false"><b>📥 Nhập từ Excel</b></a> (nút ⚙️ Khác → ô 📥 Nhập từ Excel)</div>';
   // biểu đồ + bảng số bên dưới (bảng luôn có, biểu đồ cần mạng để tải thư viện vẽ)
   const b1=TONG_HOP.duNoTheoThang(du,hn,tqCty,tqChiu,12), b2=TONG_HOP.phaiTraTheoThang(du,hn,tqCty,tqChiu,12);
   $('tq-bang1').innerHTML=`<table class="p"><thead><tr><th class="tr">Tháng</th>${b1.map(x=>`<th>${thangVN(x.thang)}</th>`).join('')}</tr></thead><tbody><tr><td class="tr">Dư nợ gốc</td>${b1.map(x=>`<td>${tien(x.duNo)}</td>`).join('')}</tr></tbody></table>`;
   $('tq-bang2').innerHTML=`<table class="p"><thead><tr><th class="tr">Tháng</th>${b2.map(x=>`<th>${thangVN(x.thang)}</th>`).join('')}</tr></thead><tbody><tr><td class="tr">Gốc</td>${b2.map(x=>`<td>${tien(x.goc)}</td>`).join('')}</tr><tr><td class="tr">Lãi ước</td>${b2.map(x=>`<td>${tien(x.lai)}</td>`).join('')}</tr></tbody></table>`;
-  veBieuDo('tq-bd1',{ type:'line', data:{ labels:b1.map(x=>thangVN(x.thang)), datasets:[{ label:'Dư nợ gốc (triệu đ)', data:b1.map(x=>x.duNo/1e6), borderColor:'#8a3a38', backgroundColor:'#E6B8B7', fill:true, tension:.2 }] } });
-  veBieuDo('tq-bd2',{ type:'bar', data:{ labels:b2.map(x=>thangVN(x.thang)), datasets:[{ label:'Gốc (triệu đ)', data:b2.map(x=>x.goc/1e6), backgroundColor:'#8a3a38' },{ label:'Lãi ước (triệu đ)', data:b2.map(x=>x.lai/1e6), backgroundColor:'#E6B8B7' }] }, options:{ scales:{ x:{stacked:true}, y:{stacked:true} } } });
+  veBieuDo('tq-bd1',{ type:'line', data:{ labels:b1.map(x=>thangVN(x.thang)), datasets:[{ label:'Dư nợ gốc (triệu đ)', data:b1.map(x=>x.duNo/1e6), borderColor:'#8a3a38', backgroundColor:'#E6B8B7', fill:true, tension:.2 }] } });
+  veBieuDo('tq-bd2',{ type:'bar', data:{ labels:b2.map(x=>thangVN(x.thang)), datasets:[{ label:'Gốc (triệu đ)', data:b2.map(x=>x.goc/1e6), backgroundColor:'#8a3a38' },{ label:'Lãi ước (triệu đ)', data:b2.map(x=>x.lai/1e6), backgroundColor:'#E6B8B7' }] }, options:{ scales:{ x:{stacked:true}, y:{stacked:true} } } });
 }
-function napChartJs(){ return new Promise((res,rej)=>{ if(window.Chart) return res(window.Chart); const s=document.createElement('script'); s.src=URL_CHARTJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.Chart); s.onerror=()=>rej(new Error('Không tải được Chart.js')); document.head.appendChild(s); }); }
+let _chartP=null, _chartLoi=0;   // chỉ chèn thẻ <script> MỘT lần; tải lỗi (mất mạng) thì 1 phút sau mới thử lại — trước đây mỗi lần vẽ lại chèn thêm 2 thẻ
+function napChartJs(){ if(window.Chart) return Promise.resolve(window.Chart); if(_chartP) return _chartP; if(Date.now()-_chartLoi<60000) return Promise.reject(new Error('Không tải được Chart.js'));
+  return _chartP=new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=URL_CHARTJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.Chart); s.onerror=()=>{ s.remove(); _chartP=null; _chartLoi=Date.now(); rej(new Error('Không tải được Chart.js')); }; document.head.appendChild(s); }); }
 async function veBieuDo(id, cauHinh){
   const cv=$(id);
   try{ const Chart=await napChartJs(); cv.hidden=false;
@@ -1163,7 +1209,9 @@ async function veBieuDo(id, cauHinh){
 const URL_SHEETJS='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', SRI_SHEETJS='sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT';   // cùng bản thư viện với app Hợp Đồng
 function napSheetJs(){ return new Promise((res,rej)=>{ if(window.XLSX) return res(window.XLSX); const s=document.createElement('script'); s.src=URL_SHEETJS; s.integrity=SRI_SHEETJS; s.crossOrigin='anonymous'; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('Không tải được thư viện Excel (cần mạng)')); document.head.appendChild(s); }); }
 // Sau mỗi lần vẽ: bảng nào chưa có nút thì gắn nút "Xuất Excel" ngay dưới bảng đó
-function ganNutXuat(){ document.querySelectorAll('.tw').forEach(w=>{ const co=w.nextElementSibling&&w.nextElementSibling.classList.contains('x-btn'), tb=!!w.querySelector('table');
+// Ô số to: số dài (hàng chục tỷ) trên điện thoại hẹp thì THU NHỎ CHỮ cho vừa một dòng — không bẻ giữa số, chữ "đ" không rớt dòng
+function vuaO(){ document.querySelectorAll('.tile b').forEach(b=>{ if(b.dataset.fs==null) b.dataset.fs=b.style.fontSize||''; b.style.fontSize=b.dataset.fs; let s=parseFloat(getComputedStyle(b).fontSize)||20; while(b.scrollWidth>b.clientWidth+1&&s>11){ s-=1; b.style.fontSize=s+'px'; } }); }
+function ganNutXuat(){ vuaO(); document.querySelectorAll('main .tw, #detail .tw').forEach(w=>{ const co=w.nextElementSibling&&w.nextElementSibling.classList.contains('x-btn'), tb=!!w.querySelector('table');
   if(tb&&!co) w.insertAdjacentHTML('afterend','<button class="btn sm sec x-btn" style="margin-top:6px" onclick="xuatBang(this)">📤 Xuất Excel</button>'); else if(!tb&&co) w.nextElementSibling.remove(); }); }
 // Bảng trên màn hình → mảng số liệu: ô toàn số kiểu 1.200.000 đổi thành SỐ để Excel cộng được; còn lại giữ chữ
 function bangThanhMang(tb){ return [...tb.rows].map(r=>[...r.cells].map(c=>{ const s=c.innerText.replace(/\s+/g,' ').trim(), m=/^~?(-?\d[\d.]*)$/.exec(s); return m?Number(m[1].replace(/\./g,'')):s; })); }
@@ -1221,8 +1269,11 @@ function thieuNganHang(){ if(danhSachCon(DL.nganHang).length) return false;
 async function goiAppsScript(duLieu){
   if(!coAppsScript()) throw new Error('App chưa được nối với Apps Script (CAU_HINH.URL_APPS_SCRIPT trống)');
   const idToken=await nguoiHienTai.getIdToken();
-  const r=await fetch(urlAppsScript(),{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({idToken},duLieu)) });   // text/plain để trình duyệt không hỏi trước (CORS)
-  const kq=await r.json(); if(!kq.ok) throw new Error(kq.loi||'Apps Script báo lỗi'); return kq;
+  let r, kq; try{ r=await fetch(urlAppsScript(),{ method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(Object.assign({idToken},duLieu)),
+      signal:window.AbortSignal&&AbortSignal.timeout?AbortSignal.timeout(duLieu.action==='taiFile'?300000:90000):undefined }); }   // có giới hạn thời gian — trước đây Apps Script treo là nút "Đang đồng bộ…" treo theo
+  catch(e){ throw new Error(e&&e.name==='TimeoutError'?'Google phản hồi quá lâu — thử lại sau ít phút':'Không gọi được Apps Script (mất mạng, hoặc chưa triển khai cho "Bất kỳ ai")'); }   // text/plain để trình duyệt không hỏi trước (CORS)
+  try{ kq=await r.json(); }catch(e){ throw new Error('Apps Script trả về không đúng — xem lại bước Triển khai (Ứng dụng web, quyền truy cập "Bất kỳ ai")'); }
+  if(!kq.ok) throw new Error(kq.loi||'Apps Script báo lỗi'); return kq;
 }
 let _dongBo={ dang:false, luc:'', sheetUrl:'', thuMucUrl:'', loi:'' }, _henDongBo=null;
 async function dongBoSheets(thuCong){
@@ -1263,10 +1314,10 @@ async function taiFileLenDrive(duongCha, f){
 // ===== 9. MÀN HÌNH: Lịch trả nợ (30 ngày tới + quá hạn; lọc ngân hàng / công ty / loại) =====
 function tatCaLichTra(soNgay){ const den=TINH_TOAN.congNgay(homNay(),soNgay||CAU_HINH.LICH_TRA_NGAY), kq=[];
   // mỗi dòng: kv = bản ghi gốc (để lọc ngân hàng / công ty, lấy kế toán), ten = tên khoản, mo = lệnh mở chi tiết khi bấm
-  danhSachCon(DL.khoanVay).forEach(k=>TINH_TOAN.lichTra(k,den).forEach(x=>kq.push(Object.assign(x,{kv:k,ten:tenKhoan(k),mo:`moChiTiet('khoanVay','${k.id}','lichTra')`}))));
-  danhSachCon(DL.thauChi).forEach(tc=>TINH_TOAN.lichNopThauChi(tc,den).forEach(x=>kq.push(Object.assign(x,{kv:tc,ten:'Thấu chi'+(tc.soHopDong?' '+tc.soHopDong:''),mo:`moChiTiet('thauChi','${tc.id}','nop')`}))));
+  danhSachCon(DL.khoanVay).forEach(k=>TINH_TOAN.lichTra(k,den).forEach(x=>kq.push(Object.assign(x,{kv:k,ten:tenKhoan(k),mo:`moChiTiet('khoanVay',${j(k.id)},'lichTra')`}))));
+  danhSachCon(DL.thauChi).forEach(tc=>TINH_TOAN.lichNopThauChi(tc,den).forEach(x=>kq.push(Object.assign(x,{kv:tc,ten:'Thấu chi'+(tc.soHopDong?' '+tc.soHopDong:''),mo:`moChiTiet('thauChi',${j(tc.id)},'nop')`}))));
   // phí bảo lãnh định kỳ kỳ tới (thư còn hiệu lực)
-  dsBaoLanh().forEach(b=>{ const kp=tinhThu(b).kyPhi; if(kp&&kp.ngay<=den) kq.push({ loai:'phi', ngay:kp.ngay, goc:0, laiUoc:0, phi:kp.soTien, kv:{ nganHangId:b.nganHangId, congTyVay:b.congTyId, keToanTheoDoi:b.keToanTheoDoi }, ten:'Phí BL '+(b.soThu||LOAI_BAO_LANH[b.loai]||''), mo:`moChiTiet('baoLanh','${b.bang}/${b.id}')` }); });
+  dsBaoLanh().forEach(b=>{ const kp=tinhThu(b).kyPhi; if(kp&&kp.ngay<=den) kq.push({ loai:'phi', ngay:kp.ngay, goc:0, laiUoc:0, phi:kp.soTien, kv:{ nganHangId:b.nganHangId, congTyVay:b.congTyId, keToanTheoDoi:b.keToanTheoDoi }, ten:'Phí BL '+(b.soThu||LOAI_BAO_LANH[b.loai]||''), mo:`moChiTiet('baoLanh',${j(b.bang+'/'+b.id)})` }); });
   return kq.sort((a,b)=>a.ngay.localeCompare(b.ngay)||a.loai.localeCompare(b.loai)); }
 function chuConNgayTho(ngay){ const con=TINH_TOAN.soNgayGiua(homNay(),ngay); return con<0?'QUÁ HẠN '+(-con)+' ngày':con===0?'hôm nay':'còn '+con+' ngày'; }
 function chuConNgay(ngay){ const con=TINH_TOAN.soNgayGiua(homNay(),ngay), s=chuConNgayTho(ngay); return con<0?`<b class="neg">${s}</b>`:con===0?`<b>${s}</b>`:s; }
@@ -1294,7 +1345,7 @@ function veNganHang(){
   const ds=danhSachCon(DL.nganHang).filter(n=>(!loai||n.loai===loai)&&(!q||[n.ten,n.chiNhanh,(n.canBo||{}).ten,(n.canBo||{}).dienThoai,...danhSachCon(n.taiKhoan).map(t=>t.soTaiKhoan)].join(' ').toLowerCase().includes(q)))
     .sort((a,b)=>tenNganHang(a.id).localeCompare(tenNganHang(b.id),'vi'));
   $('ds-nganhang').innerHTML=ds.length?ds.map(n=>{ const cb=n.canBo||{}, soTK=danhSachCon(n.taiKhoan).length, soHM=danhSachCon(DL.hanMuc).filter(h=>h.nganHangId===n.id).length;
-    return `<div class="al" style="cursor:pointer" onclick="moChiTiet('nganHang','${n.id}')"><span class="ic">${n.loai==='choThueTaiChinh'?'🚜':'🏦'}</span><div class="item-main"><div class="item-name">${esc(tenNganHang(n.id))}</div><div class="item-sub">${esc(LOAI_NGAN_HANG[n.loai]||'')} · ${soTK} tài khoản · ${soHM} hạn mức${cb.ten?' · CB: '+esc(cb.ten):''}</div></div><span>›</span></div>`; }).join('')
+    return `<div class="al" style="cursor:pointer" onclick="moChiTiet('nganHang',${j(n.id)})"><span class="ic">${n.loai==='choThueTaiChinh'?'🚜':'🏦'}</span><div class="item-main"><div class="item-name">${esc(tenNganHang(n.id))}</div><div class="item-sub">${esc(LOAI_NGAN_HANG[n.loai]||'')} · ${soTK} tài khoản · ${soHM} hạn mức${cb.ten?' · CB: '+esc(cb.ten):''}</div></div><span>›</span></div>`; }).join('')
     :`<div class="empty">${danhSachCon(DL.nganHang).length?'Không tìm thấy.':'Chưa có ngân hàng nào. Bấm "Thêm ngân hàng" để bắt đầu.'}</div>`;
 }
 function veCtNganHang(id){
@@ -1302,35 +1353,35 @@ function veCtNganHang(id){
   const cb=n.canBo||{}, tk=danhSachCon(n.taiKhoan), hm=danhSachCon(DL.hanMuc).filter(h=>h.nganHangId===id);
   const dh=danhSachCon(DL.khoanVay).filter(k=>k.loai!=='kheUoc'&&k.nganHangId===id).map(k=>Object.assign({t:tinhKV(k)},k));
   const tcs=danhSachCon(DL.thauChi).filter(x=>x.nganHangId===id).map(x=>Object.assign({t:TINH_TOAN.tinhThauChi(x,homNay())},x));
-  return { tieuDe:esc(n.ten), sua:`formNganHang('${id}')`, html:`
+  return { tieuDe:esc(n.ten), sua:`formNganHang(${j(id)})`, html:`
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">${n.loai==='choThueTaiChinh'?'🚜':'🏦'} ${esc(tenNganHang(id))}</div>
       <div style="margin:6px 0 10px"><span class="badge tt-xam">${esc(LOAI_NGAN_HANG[n.loai]||'')}</span></div>
       <div class="kv"><div>Cán bộ tín dụng</div><div>${esc(cb.ten||'—')}</div><div>Điện thoại</div><div>${cb.dienThoai?`<a href="tel:${esc(String(cb.dienThoai).replace(/[^\d+]/g,''))}">${esc(cb.dienThoai)}</a>`:'—'}</div></div>
     </div></div>
     <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>💳 Số tài khoản tại đây</h3><button class="btn sm" onclick="formTaiKhoan('${id}')">＋ Thêm</button></div>
-      ${tk.length?MA_CONG_TY.filter(m=>tk.some(t=>t.congTyId===m)).map(m=>`<div style="margin-top:8px"><b>${m}</b> <span class="hint">${esc(tenCongTy(m))}</span>${tk.filter(t=>t.congTyId===m).map(t=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border);cursor:pointer" onclick="formTaiKhoan('${id}','${t.id}')"><div><div style="font-size:17px;font-weight:700;letter-spacing:.03em">${esc(t.soTaiKhoan)}</div>${t.ghiChu?`<div class="item-sub">${esc(t.ghiChu)}</div>`:''}</div><span style="flex:0 0 auto">✏️</span></div>`).join('')}</div>`).join('')
+      <div class="sec-h"><h3>💳 Số tài khoản tại đây</h3><button class="btn sm" onclick="formTaiKhoan(${j(id)})">＋ Thêm</button></div>
+      ${tk.length?MA_CONG_TY.filter(m=>tk.some(t=>t.congTyId===m)).map(m=>`<div style="margin-top:8px"><b>${m}</b> <span class="hint">${esc(tenCongTy(m))}</span>${tk.filter(t=>t.congTyId===m).map(t=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border);cursor:pointer" onclick="formTaiKhoan(${j(id)},${j(t.id)})"><div><div style="font-size:17px;font-weight:700;letter-spacing:.03em">${esc(t.soTaiKhoan)}</div>${t.ghiChu?`<div class="item-sub">${esc(t.ghiChu)}</div>`:''}</div><span style="flex:0 0 auto">✏️</span></div>`).join('')}</div>`).join('')
         :'<div class="hint">Chưa có số tài khoản nào. Mỗi công ty có thể có nhiều tài khoản (mỗi công trình một tài khoản riêng nếu ngân hàng yêu cầu).</div>'}
     </div></div>
     <div class="card"><div class="card-body">
       <div class="sec-h"><h3>📄 Hạn mức tại đây</h3></div>
       ${hm.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Hợp đồng</th><th class="tr">Công ty</th><th>Hạn mức</th><th>Đã dùng</th><th>Còn trống</th><th>Hết hạn</th></tr></thead><tbody>
-        ${hm.map(h=>{ const t=tinhHanMuc(h.id); return `<tr onclick="moChiTiet('hanMuc','${h.id}')"><td class="tr"><b>${esc(h.soHopDong)}</b></td><td class="tr">${esc(h.congTyVay)}${chiuKhac(h)}</td><td>${tien(h.soTien)}</td><td>${tien(t.daDung)}</td><td class="${t.conTrong<0?'neg':''}">${tien(t.conTrong)}</td><td>${ngayVN(h.ngayHetHan)}</td></tr>`; }).join('')}</tbody>
+        ${hm.map(h=>{ const t=tinhHanMuc(h.id); return `<tr onclick="moChiTiet('hanMuc',${j(h.id)})"><td class="tr"><b>${esc(h.soHopDong)}</b></td><td class="tr">${esc(h.congTyVay)}${chiuKhac(h)}</td><td>${tien(h.soTien)}</td><td>${tien(t.daDung)}</td><td class="${t.conTrong<0?'neg':''}">${tien(t.conTrong)}</td><td>${ngayVN(h.ngayHetHan)}</td></tr>`; }).join('')}</tbody>
         <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(hm.reduce((s,h)=>s+TINH_TOAN.soNguyen(h.soTien),0))}</td><td>${tien(hm.reduce((s,h)=>s+tinhHanMuc(h.id).daDung,0))}</td><td>${tien(hm.reduce((s,h)=>s+tinhHanMuc(h.id).conTrong,0))}</td><td></td></tr></tfoot></table></div>`
         :'<div class="hint">Chưa có hợp đồng hạn mức nào ở ngân hàng này. Thêm ở: nút 💳 Khoản vay (thanh dưới) → nút chọn 💳 Hạn mức → ＋ Thêm hợp đồng hạn mức.</div>'}
     </div></div>
     <div class="card"><div class="card-body">
       <div class="sec-h"><h3>🏗 Vay trung dài hạn / thuê tài chính tại đây</h3></div>
       ${dh.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Hợp đồng</th><th class="tr">Công ty</th><th>Số tiền vay</th><th>Dư nợ gốc</th><th>Kỳ gốc tới</th><th class="tr">Trạng thái</th></tr></thead><tbody>
-        ${dh.map(k=>`<tr class="${k.t.trangThai==='quaHan'||Number(k.nhomNo)>=2?'over':k.t.trangThai==='sapDenHan'?'due':''}" onclick="moChiTiet('khoanVay','${k.id}')"><td class="tr">${k.loai==='thueTaiChinh'?'🚜 ':''}<b>${esc(k.soHopDong)}</b></td><td class="tr">${esc(k.congTyVay)}${chiuKhac(k)}</td><td>${tien(k.soTien)}</td><td><b>${tien(k.t.duNoGoc)}</b></td><td>${k.t.kyGocToi?ngayVN(k.t.kyGocToi.ngay):'—'}</td><td class="tr">${badgeTrangThai(k.t.trangThai)}${badgeNhomNo(k.nhomNo)}</td></tr>`).join('')}</tbody>
+        ${dh.map(k=>`<tr class="${k.t.trangThai==='quaHan'||Number(k.nhomNo)>=2?'over':k.t.trangThai==='sapDenHan'?'due':''}" onclick="moChiTiet('khoanVay',${j(k.id)})"><td class="tr">${k.loai==='thueTaiChinh'?'🚜 ':''}<b>${esc(k.soHopDong)}</b></td><td class="tr">${esc(k.congTyVay)}${chiuKhac(k)}</td><td>${tien(k.soTien)}</td><td><b>${tien(k.t.duNoGoc)}</b></td><td>${k.t.kyGocToi?ngayVN(k.t.kyGocToi.ngay):'—'}</td><td class="tr">${badgeTrangThai(k.t.trangThai)}${badgeNhomNo(k.nhomNo)}</td></tr>`).join('')}</tbody>
         <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(dh.reduce((s,k)=>s+TINH_TOAN.soNguyen(k.soTien),0))}</td><td>${tien(dh.reduce((s,k)=>s+k.t.duNoGoc,0))}</td><td colspan="2"></td></tr></tfoot></table></div>`
         :'<div class="hint">Chưa có khoản vay trung dài hạn nào ở ngân hàng này.</div>'}
     </div></div>
     <div class="card"><div class="card-body">
       <div class="sec-h"><h3>🔄 Thấu chi tại đây</h3></div>
       ${tcs.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Công ty</th><th class="tr">Hợp đồng</th><th>Hạn mức</th><th>Đang dùng</th><th>Còn trống</th><th>Hết hạn</th></tr></thead><tbody>
-        ${tcs.map(x=>`<tr onclick="moChiTiet('thauChi','${x.id}')"><td class="tr"><b>${esc(x.congTyVay)}</b>${chiuKhac(x)}</td><td class="tr">${esc(x.soHopDong||'')}</td><td>${tien(x.hanMuc)}</td><td><b>${tien(x.t.dangDung)}</b></td><td class="${x.t.conTrong<0?'neg':''}">${tien(x.t.conTrong)}</td><td>${ngayVN(x.ngayHetHan)}</td></tr>`).join('')}</tbody></table></div>`
+        ${tcs.map(x=>`<tr onclick="moChiTiet('thauChi',${j(x.id)})"><td class="tr"><b>${esc(x.congTyVay)}</b>${chiuKhac(x)}</td><td class="tr">${esc(x.soHopDong||'')}</td><td>${tien(x.hanMuc)}</td><td><b>${tien(x.t.dangDung)}</b></td><td class="${x.t.conTrong<0?'neg':''}">${tien(x.t.conTrong)}</td><td>${ngayVN(x.ngayHetHan)}</td></tr>`).join('')}</tbody></table></div>`
         :'<div class="hint">Chưa có hạn mức thấu chi nào ở ngân hàng này.</div>'}
     </div></div>
     ${veLichSu(id)}` };
@@ -1452,8 +1503,8 @@ const O_FILE = [ {k:'ten',nhan:'Tên file / tài liệu',batBuoc:true,placeholde
 function formFile(duongCha, id){ moFormCon(id?'✏️ Sửa file đính kèm':'📎 Thêm file đính kèm',duongCha+'/fileDinhKem',id,O_FILE); }
 function veFile(duongCha, banGhiCha){
   const fs=danhSachCon(banGhiCha.fileDinhKem).sort((a,b)=>String(a.luc).localeCompare(String(b.luc)));
-  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📁 File đính kèm</h3><div class="row" style="flex:0 0 auto;gap:6px">${coAppsScript()?`<button class="btn sm" onclick="chonFileTaiLen('${duongCha}')">📤 Tải file lên</button>`:''}<button class="btn sm sec" onclick="formFile('${duongCha}')">＋ Dán link</button></div></div>
-    ${fs.length?fs.map(f=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><a href="${esc(/^https?:\/\//i.test(f.link)?f.link:'#')}" target="_blank" rel="noopener" style="font-weight:700;color:var(--blue-dark);word-break:break-word">📎 ${esc(f.ten||f.link)}</a><div class="hint">${esc(f.nguoiTai||'')} · ${lucVN(f.luc)}</div></div><button class="btn sm sec" style="flex:0 0 auto" onclick="formFile('${duongCha}','${f.id}')">✏️</button></div>`).join('')
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📁 File đính kèm</h3><div class="row" style="flex:0 0 auto;gap:6px">${coAppsScript()?`<button class="btn sm" onclick="chonFileTaiLen(${j(duongCha)})">📤 Tải file lên</button>`:''}<button class="btn sm sec" onclick="formFile(${j(duongCha)})">＋ Dán link</button></div></div>
+    ${fs.length?fs.map(f=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><a href="${esc(/^https?:\/\//i.test(f.link)?f.link:'#')}" target="_blank" rel="noopener" style="font-weight:700;color:var(--blue-dark);word-break:break-word">📎 ${esc(f.ten||f.link)}</a><div class="hint">${esc(f.nguoiTai||'')} · ${lucVN(f.luc)}</div></div><button class="btn sm sec" style="flex:0 0 auto" onclick="formFile(${j(duongCha)},${j(f.id)})">✏️</button></div>`).join('')
       :'<div class="hint">Chưa có file nào. Dán link Google Drive hoặc OneDrive của bản scan hợp đồng, khế ước, chứng từ…</div>'}</div></div>`;
 }
 function formHanMuc(id){ if(!id&&thieuNganHang()) return; moFormCon(id?'✏️ Sửa hợp đồng hạn mức':'＋ Thêm hợp đồng hạn mức','hanMuc',id,oHanMuc()); }
@@ -1462,9 +1513,9 @@ function formGiaiNgan(kvId, id){ moFormCon((id?'✏️ Sửa':'＋')+' Giải ng
 // duongCha: 'khoanVay/<id>' hoặc 'thauChi/<id>' — lịch sử lãi suất dùng chung cho mọi loại (mục 1.4)
 function veBangLaiSuat(duongCha, bangLaiSuat){
   const hn=homNay(), ls=danhSachCon(bangLaiSuat).sort((a,b)=>String(b.tuNgay).localeCompare(String(a.tuNgay))), dang=(ls.find(y=>y.tuNgay<=hn)||{}).id;
-  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📈 Lịch sử lãi suất</h3><button class="btn sm" onclick="formLaiSuat('${duongCha}')">＋ Lãi suất mới</button></div>
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📈 Lịch sử lãi suất</h3><button class="btn sm" onclick="formLaiSuat(${j(duongCha)})">＋ Lãi suất mới</button></div>
       <div class="hint" style="margin-bottom:6px">Ngân hàng báo đổi lãi suất thì THÊM một dòng mới từ ngày đổi; dòng cũ giữ nguyên để tính lãi các tháng trước.</div>
-      ${ls.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Từ ngày</th><th>%/năm</th><th class="tr">Loại</th><th class="tr">Ghi chú</th></tr></thead><tbody>${ls.map(x=>`<tr class="${x.id===dang?'on':''}" onclick="formLaiSuat('${duongCha}','${x.id}')"><td class="tr">${ngayVN(x.tuNgay)}</td><td><b>${soVN(x.phanTramNam)}</b></td><td class="tr">${esc(LOAI_LAI_SUAT[x.loai]||'')}</td><td class="tr">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Chưa có lãi suất.</div>'}</div></div>`;
+      ${ls.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Từ ngày</th><th>%/năm</th><th class="tr">Loại</th><th class="tr">Ghi chú</th></tr></thead><tbody>${ls.map(x=>`<tr class="${x.id===dang?'on':''}" onclick="formLaiSuat(${j(duongCha)},${j(x.id)})"><td class="tr">${ngayVN(x.tuNgay)}</td><td><b>${soVN(x.phanTramNam)}</b></td><td class="tr">${esc(LOAI_LAI_SUAT[x.loai]||'')}</td><td class="tr">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Chưa có lãi suất.</div>'}</div></div>`;
 }
 function formLaiSuat(duongCha, id){ moFormCon(id?'✏️ Sửa LỖI NHẬP lãi suất':'＋ Lãi suất mới',duongCha+'/laiSuat',id,
   [{loiDan:id?'⚠️ Chỉ sửa khi nhập nhầm. Ngân hàng báo ĐỔI lãi suất thì đóng lại và bấm "＋ Lãi suất mới" (quy tắc: chỉ thêm dòng, không sửa dòng cũ).':'Ngân hàng báo đổi lãi suất từ ngày nào thì thêm một dòng từ ngày đó. Dòng cũ giữ nguyên.'}].concat(O_LAI_SUAT),{tuNgay:homNay()}); }
@@ -1482,7 +1533,7 @@ function themVay(){ ({ hanMuc:formHanMuc, daiHan:formDaiHan, thueTaiChinh:formTh
 function veVay(){
   const fc=$('hm-congty'), fn=$('hm-nganhang'), cc=fc.value, nn=fn.value, dh=danhSachCon(DL.khoanVay).filter(k=>k.loai==='daiHan'), ttc=danhSachCon(DL.khoanVay).filter(k=>k.loai==='thueTaiChinh');
   fc.innerHTML=chonOptions(DS_CONG_TY,cc,'— Mọi công ty —'); fn.innerHTML=chonOptions(dsChonNganHang(),nn,'— Mọi ngân hàng —');
-  $('vay-loai').innerHTML=[['hanMuc','💳 Hạn mức',danhSachCon(DL.hanMuc).length],['daiHan','🏗 Trung dài hạn',dh.length],['thueTaiChinh','🚜 Thuê tài chính',ttc.length]].map(([l,t,n])=>`<div class="chip ${loaiVay===l?'on':''}" style="flex:1;white-space:nowrap" onclick="chonLoaiVay('${l}')">${t} (${n})</div>`).join('');
+  $('vay-loai').innerHTML=[['hanMuc','💳 Hạn mức',danhSachCon(DL.hanMuc).length],['daiHan','🏗 Trung dài hạn',dh.length],['thueTaiChinh','🚜 Thuê tài chính',ttc.length]].map(([l,t,n])=>`<div class="chip ${loaiVay===l?'on':''}" style="flex:1;white-space:nowrap" onclick="chonLoaiVay(${j(l)})">${t} (${n})</div>`).join('');
   $('vay-them').textContent=({ hanMuc:'＋ Thêm hợp đồng hạn mức (vay ngắn hạn)', daiHan:'＋ Thêm khoản vay trung dài hạn', thueTaiChinh:'＋ Thêm hợp đồng thuê tài chính' })[loaiVay];
   $('ds-hanmuc').hidden=loaiVay!=='hanMuc'; $('ds-daihan').hidden=loaiVay!=='daiHan'; $('ds-thuetc').hidden=loaiVay!=='thueTaiChinh';
   veHanMuc(); veDaiHan(dh,'ds-daihan','🏗','Chưa có khoản vay trung dài hạn nào (vay mua máy, xe, đầu tư). Bấm "Thêm khoản vay trung dài hạn".'); veDaiHan(ttc,'ds-thuetc','🚜','Chưa có hợp đồng thuê tài chính nào. Bấm "Thêm hợp đồng thuê tài chính".');
@@ -1493,13 +1544,13 @@ function veDaiHan(tat, elId, icon, chuRong){
   const ds=tat.filter(k=>(!cc||k.congTyVay===cc||k.congTyChiu===cc)&&(!nn||k.nganHangId===nn)&&(!q||[k.soHopDong,tenNganHang(k.nganHangId),(k.mucDich||{}).noiDung,(k.mucDich||{}).khachHang,(k.thietBi||{}).ten,(k.thietBi||{}).bienSo].join(' ').toLowerCase().includes(q)))
     .map(k=>Object.assign({t:tinhKV(k)},k)).sort((a,b)=>tenNganHang(a.nganHangId).localeCompare(tenNganHang(b.nganHangId),'vi')||String(a.soHopDong).localeCompare(String(b.soHopDong),'vi',{numeric:true}));
   $(elId).innerHTML=ds.length?ds.map(k=>{ const t=k.t, pt=k.soTien>0?Math.min(100,Math.max(0,t.gocDaTra/k.soTien*100)):0, md=k.mucDich||{}, tb=k.thietBi||{}, moTa=k.loai==='thueTaiChinh'?[tb.ten,tb.bienSo].filter(Boolean).join(' · '):md.noiDung;
-    return `<div class="al ${t.trangThai==='quaHan'||Number(k.nhomNo)>=2?'over':t.trangThai==='sapDenHan'?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('khoanVay','${k.id}')"><span class="ic">${icon}</span><div class="item-main">
+    return `<div class="al ${t.trangThai==='quaHan'||Number(k.nhomNo)>=2?'over':t.trangThai==='sapDenHan'?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('khoanVay',${j(k.id)})"><span class="ic">${icon}</span><div class="item-main">
       <div class="item-name">${esc(tenNganHang(k.nganHangId))} · ${esc(k.congTyVay)}${chiuKhac(k)}</div>
       <div class="item-sub">HĐ ${esc(k.soHopDong)}${moTa?' · '+esc(moTa):''}</div>
       <div style="margin:4px 0 0">${badgeTrangThai(t.trangThai)}${badgeNhomNo(k.nhomNo)}</div>
       <div class="thanh"><i style="width:${pt}%"></i></div>
       <div class="item-sub">Vay <b>${tienNgan(k.soTien)}</b> · dư nợ <b>${tienNgan(t.duNoGoc)}</b>${t.chuaGiaiNgan?' · chưa giải ngân <b>'+tienNgan(t.chuaGiaiNgan)+'</b>':''} · ${t.kyGocToi?'kỳ tới <b>'+ngayVN(t.kyGocToi.ngay)+'</b> ('+tienNgan(t.kyGocToi.goc)+') · còn '+t.soKyConLai+' kỳ':'hết kỳ trả gốc'}</div>
-    </div><span>›</span></div>`; }).join('')+`<div class="al"><div class="item-main" style="text-align:right;font-weight:800">Cộng dư nợ ${ds.length} khoản: ${tien(ds.reduce((s,k)=>s+k.t.duNoGoc,0))} đ</div></div>`
+    </div><span>›</span></div>`; }).join('')+`<div class="al"><div class="item-main" style="text-align:right;font-weight:800">Cộng dư nợ ${ds.length} khoản: ${tien(ds.reduce((s,k)=>s+k.t.duNoGoc,0))} đ</div></div>`
     :`<div class="empty">${tat.length?'Không tìm thấy.':chuRong}</div>`;
 }
 function veHanMuc(){
@@ -1508,7 +1559,7 @@ function veHanMuc(){
     .sort((a,b)=>tenNganHang(a.nganHangId).localeCompare(tenNganHang(b.nganHangId),'vi')||String(a.soHopDong).localeCompare(String(b.soHopDong),'vi',{numeric:true}));
   $('ds-hanmuc').innerHTML=ds.length?ds.map(h=>{ const t=tinhHanMuc(h.id), tt=t.kheUoc.map(k=>tinhKV(k)), conNo=tt.filter(x=>x.duNoGoc>0).length, qua=tt.filter(x=>x.trangThai==='quaHan').length;
     const con=TINH_TOAN.soNgayGiua(hn,h.ngayHetHan), pt=h.soTien>0?Math.min(100,Math.max(0,t.daDung/h.soTien*100)):0;
-    return `<div class="al ${qua||con<0?'over':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('hanMuc','${h.id}')"><span class="ic">💳</span><div class="item-main">
+    return `<div class="al ${qua||con<0?'over':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('hanMuc',${j(h.id)})"><span class="ic">💳</span><div class="item-main">
       <div class="item-name">${esc(tenNganHang(h.nganHangId))} · ${esc(h.congTyVay)}${chiuKhac(h)}</div>
       <div class="item-sub">HĐ ${esc(h.soHopDong)} · hết hạn ${ngayVN(h.ngayHetHan)}${con<0?' · <b class="neg">ĐÃ HẾT HẠN</b>':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?' · <b>còn '+con+' ngày — chuẩn bị ký lại</b>':''}</div>
       <div class="thanh"><i class="${t.conTrong<0?'day':''}" style="width:${pt}%"></i></div>
@@ -1520,10 +1571,10 @@ function veCtHanMuc(id){
   const h=DL.hanMuc[id]; if(!h) return null;
   const t=tinhHanMuc(id), con=TINH_TOAN.soNgayGiua(homNay(),h.ngayHetHan);
   const ku=t.kheUoc.map(k=>Object.assign({t:tinhKV(k)},k)).sort((a,b)=>String(b.ngayGiaiNganDau).localeCompare(String(a.ngayGiaiNganDau)));
-  return { tieuDe:'HĐ '+esc(h.soHopDong), sua:`formHanMuc('${id}')`, html:`
+  return { tieuDe:'HĐ '+esc(h.soHopDong), sua:`formHanMuc(${j(id)})`, html:`
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">Hạn mức ${esc(h.congTyVay)}${chiuKhac(h)}</div>
-      <div class="item-sub" style="margin-top:2px;cursor:pointer" onclick="moChiTiet('nganHang','${esc(h.nganHangId)}')">🏦 ${esc(tenNganHang(h.nganHangId))} ›</div>
+      <div class="item-sub" style="margin-top:2px;cursor:pointer" onclick="moChiTiet('nganHang',${j(h.nganHangId)})">🏦 ${esc(tenNganHang(h.nganHangId))} ›</div>
       ${con<0?'<div class="warn" style="margin-top:8px">Hạn mức ĐÃ HẾT HẠN '+(-con)+' ngày — cần ký lại.</div>':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?'<div class="warn soft" style="margin-top:8px">Hạn mức hết hạn sau '+con+' ngày ('+ngayVN(h.ngayHetHan)+') — chuẩn bị hồ sơ ký lại.</div>':''}
       <div class="tiles" style="margin:8px 0 0;gap:6px">
         <div class="tile" style="padding:8px"><span>Hạn mức</span><b style="font-size:16px">${tien(h.soTien)}</b></div>
@@ -1534,15 +1585,15 @@ function veCtHanMuc(id){
         <div>Công ty đứng tên</div><div>${esc(h.congTyVay)} — ${esc(tenCongTy(h.congTyVay))}</div>
         <div>Thực dùng, thực trả</div><div>${esc(h.congTyChiu||h.congTyVay)}</div>
         <div>Hiệu lực</div><div>${ngayVN(h.ngayHieuLuc)||'—'} → ${ngayVN(h.ngayHetHan)}</div>
-        <div>Hạn mức bảo lãnh</div><div>${h.hanMucBaoLanhRieng?'tách riêng: '+tien(h.soTienHanMucBaoLanh)+' đ · đang bảo lãnh '+tien(t.baoLanh)+' đ':'dùng chung hạn mức vay · đang bảo lãnh '+tien(t.baoLanh)+' đ (đã cộng vào "đã dùng")'}</div>
+        <div>Hạn mức bảo lãnh</div><div>${h.hanMucBaoLanhRieng?'tách riêng: '+tien(h.soTienHanMucBaoLanh)+' đ · đang bảo lãnh '+tien(t.baoLanh)+' đ':'dùng chung hạn mức vay · đang bảo lãnh '+tien(t.baoLanh)+' đ (đã cộng vào "đã dùng")'}</div>
         <div>Kế toán theo dõi</div><div>${esc(tenNguoi(h.keToanTheoDoi)||'—')}</div>
         ${h.ghiChu?`<div>Ghi chú</div><div>${esc(h.ghiChu)}</div>`:''}
       </div>
     </div></div>
     <div class="card"><div class="card-body">
-      <div class="sec-h"><h3>📑 Khế ước nhận nợ</h3><button class="btn sm" onclick="formKheUoc('${id}')">＋ Khế ước</button></div>
+      <div class="sec-h"><h3>📑 Khế ước nhận nợ</h3><button class="btn sm" onclick="formKheUoc(${j(id)})">＋ Khế ước</button></div>
       ${ku.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Số KƯ</th><th>Giải ngân</th><th>Số tiền</th><th>Dư nợ gốc</th><th>Đến hạn</th><th>Lãi suất</th><th class="tr">Trạng thái</th></tr></thead><tbody>
-        ${ku.map(k=>`<tr class="${k.t.trangThai==='quaHan'||Number(k.nhomNo)>=2?'over':k.t.trangThai==='sapDenHan'?'due':''}" onclick="moChiTiet('khoanVay','${k.id}')"><td class="tr"><b>${esc(k.soKheUoc)}</b></td><td>${ngayVN(k.ngayGiaiNganDau)}</td><td>${tien(k.t.tongGiaiNgan)}</td><td><b>${tien(k.t.duNoGoc)}</b></td><td>${ngayVN(k.ngayDenHan)}</td><td>${soVN(k.t.laiSuatHienHanh)}%</td><td class="tr">${badgeTrangThai(k.t.trangThai)}${badgeNhomNo(k.nhomNo)}</td></tr>`).join('')}</tbody>
+        ${ku.map(k=>`<tr class="${k.t.trangThai==='quaHan'||Number(k.nhomNo)>=2?'over':k.t.trangThai==='sapDenHan'?'due':''}" onclick="moChiTiet('khoanVay',${j(k.id)})"><td class="tr"><b>${esc(k.soKheUoc)}</b></td><td>${ngayVN(k.ngayGiaiNganDau)}</td><td>${tien(k.t.tongGiaiNgan)}</td><td><b>${tien(k.t.duNoGoc)}</b></td><td>${ngayVN(k.ngayDenHan)}</td><td>${soVN(k.t.laiSuatHienHanh)}%</td><td class="tr">${badgeTrangThai(k.t.trangThai)}${badgeNhomNo(k.nhomNo)}</td></tr>`).join('')}</tbody>
         <tfoot><tr><td class="tr" colspan="2">Cộng ${ku.length} khế ước</td><td>${tien(ku.reduce((s,k)=>s+k.t.tongGiaiNgan,0))}</td><td>${tien(ku.reduce((s,k)=>s+k.t.duNoGoc,0))}</td><td colspan="3"></td></tr></tfoot></table></div>`
         :'<div class="hint">Chưa có khế ước nào. Mỗi lần rút vốn theo hạn mức này bấm "＋ Khế ước".</div>'}
     </div></div>
@@ -1565,20 +1616,20 @@ function veCtKhoanVay(id){
   const noiDung={
     thongTin:()=>`<div class="card"><div class="card-body"><div class="kv">
         ${dh?`<div>${tt?'Hợp đồng thuê':'Hợp đồng tín dụng'}</div><div><b>${esc(k.soHopDong||'—')}</b>${tt&&k.ngayKy?' · ký '+ngayVN(k.ngayKy):''}</div>`
-            :`<div>Hợp đồng hạn mức</div><div style="cursor:pointer" onclick="moChiTiet('hanMuc','${esc(k.hanMucId)}')"><b>${esc(k.soHopDong||hm.soHopDong||'—')}</b> ›</div>`}
-        <div>${tt?'Công ty cho thuê':'Ngân hàng'}</div><div style="cursor:pointer" onclick="moChiTiet('nganHang','${esc(k.nganHangId)}')">${esc(tenNganHang(k.nganHangId))} ›</div>
+            :`<div>Hợp đồng hạn mức</div><div style="cursor:pointer" onclick="moChiTiet('hanMuc',${j(k.hanMucId)})"><b>${esc(k.soHopDong||hm.soHopDong||'—')}</b> ›</div>`}
+        <div>${tt?'Công ty cho thuê':'Ngân hàng'}</div><div style="cursor:pointer" onclick="moChiTiet('nganHang',${j(k.nganHangId)})">${esc(tenNganHang(k.nganHangId))} ›</div>
         <div>Công ty đứng tên</div><div>${esc(k.congTyVay)} — ${esc(tenCongTy(k.congTyVay))}</div>
         <div>Thực dùng, thực trả</div><div>${esc(k.congTyChiu||k.congTyVay)}</div>
-        ${dh?`<div>${tt?'Số tiền tài trợ':'Số tiền vay'}</div><div>${tien(k.soTien)} đ${t.chuaGiaiNgan?' · chưa giải ngân '+tien(t.chuaGiaiNgan)+' đ':''}</div>`:''}
-        <div>Giải ngân</div><div>${dh?'lần đầu ':''}${ngayVN(k.ngayGiaiNganDau)} · ${dh?'đã rút ':''}${tien(t.tongGiaiNgan)} đ</div>
+        ${dh?`<div>${tt?'Số tiền tài trợ':'Số tiền vay'}</div><div>${tien(k.soTien)} đ${t.chuaGiaiNgan?' · chưa giải ngân '+tien(t.chuaGiaiNgan)+' đ':''}</div>`:''}
+        <div>Giải ngân</div><div>${dh?'lần đầu ':''}${ngayVN(k.ngayGiaiNganDau)} · ${dh?'đã rút ':''}${tien(t.tongGiaiNgan)} đ</div>
         ${dh?`<div>Trả gốc</div><div>${ky.length} kỳ${k.soKy&&k.soKy!==ky.length?' (lúc vay '+esc(k.soKy)+' kỳ)':''} · ${esc((KY_CACH_THANG[k.kyCachThang||1]||'').toLowerCase())} · kỳ đầu ${ngayVN(k.ngayTraDau)} · kỳ cuối <b>${ngayVN(TINH_TOAN.ngayKetThuc(k))}</b></div>`
             :`<div>Thời hạn</div><div>${k.thoiHanThang?esc(k.thoiHanThang)+' tháng · ':''}đến hạn <b>${ngayVN(k.ngayDenHan)}</b></div>`}
         <div>Trả lãi</div><div>ngày ${esc(k.ngayTraLaiTrongThang||'—')} hằng tháng</div>
         ${tt?`<div>Thiết bị</div><div><b>${esc(tb.ten||'—')}</b>${[tb.nhanHieu,tb.model].filter(Boolean).length?' · '+esc([tb.nhanHieu,tb.model].filter(Boolean).join(' ')):''}</div>
         <div>Khung / máy / biển</div><div>${esc([tb.soKhung&&'khung '+tb.soKhung,tb.soMay&&'máy '+tb.soMay,tb.bienSo&&'biển '+tb.bienSo].filter(Boolean).join(' · ')||'—')}</div>
-        <div>Giá trị thiết bị</div><div>${tien(k.giaTriThietBi)} đ · trả trước ${tien(k.tienTraTruoc)} đ</div>
-        <div>Ký quỹ</div><div>${tien(k.tienKyQuy)} đ${TINH_TOAN.soNguyen(k.tienKyQuy)?(k.kyQuyDaHoan?' · đã hoàn':' · <b>đang bị giữ</b>'):''}</div>
-        <div>Giá mua lại cuối kỳ</div><div>${tien(k.giaMuaLai)} đ</div>
+        <div>Giá trị thiết bị</div><div>${tien(k.giaTriThietBi)} đ · trả trước ${tien(k.tienTraTruoc)} đ</div>
+        <div>Ký quỹ</div><div>${tien(k.tienKyQuy)} đ${TINH_TOAN.soNguyen(k.tienKyQuy)?(k.kyQuyDaHoan?' · đã hoàn':' · <b>đang bị giữ</b>'):''}</div>
+        <div>Giá mua lại cuối kỳ</div><div>${tien(k.giaMuaLai)} đ</div>
         <div>Thiết bị đang ở</div><div>${esc(k.noiDangO||'—')}${k.congTyDangDung?' · công ty '+esc(k.congTyDangDung)+' đang dùng':''}</div>
         <div>Bảo hiểm</div><div>${esc([bh.hang,bh.soHopDong].filter(Boolean).join(' · ')||'—')}${bh.ngayHetHan?' · hết hạn <b>'+ngayVN(bh.ngayHetHan)+'</b>':''}</div>`
         :dh?`<div>Mục đích vay</div><div>${esc(md.noiDung||'—')}</div><div>Bên bán / NCC</div><div>${esc(md.khachHang||'—')}</div>`
@@ -1598,25 +1649,25 @@ function veCtKhoanVay(id){
         ${dh?`<tr><td>Phí phạt trả trước hạn</td><td>${tien(t.phiPhatDaTra)}</td></tr>`:''}
         <tr><td>Lãi ước tính tháng này</td><td>~${tien(t.laiUocThangNay)}</td></tr>
       </table></div></div>`,
-    giaiNgan:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>💵 Giải ngân</h3><button class="btn sm" onclick="formGiaiNgan('${id}')">＋ Giải ngân</button></div>
-      ${gn.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Ngày</th><th>Số tiền</th><th class="tr">Ghi chú</th></tr></thead><tbody>${gn.map(x=>`<tr onclick="formGiaiNgan('${id}','${x.id}')"><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody><tfoot><tr><td class="tr">Cộng</td><td>${tien(t.tongGiaiNgan)}</td><td></td></tr></tfoot></table></div>`:'<div class="hint">Chưa có lần giải ngân nào.</div>'}</div></div>`,
+    giaiNgan:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>💵 Giải ngân</h3><button class="btn sm" onclick="formGiaiNgan(${j(id)})">＋ Giải ngân</button></div>
+      ${gn.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Ngày</th><th>Số tiền</th><th class="tr">Ghi chú</th></tr></thead><tbody>${gn.map(x=>`<tr onclick="formGiaiNgan(${j(id)},${j(x.id)})"><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody><tfoot><tr><td class="tr">Cộng</td><td>${tien(t.tongGiaiNgan)}</td><td></td></tr></tfoot></table></div>`:'<div class="hint">Chưa có lần giải ngân nào.</div>'}</div></div>`,
     laiSuat:()=>veBangLaiSuat('khoanVay/'+id,k.laiSuat),
-    lichTra:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>📅 Lịch trả gốc</h3><button class="btn sm sec" onclick="formKyTra('${id}')">＋ Kỳ</button></div>
-      ${ky.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Kỳ</th><th class="tr">Ngày</th><th>Gốc</th><th class="tr">Trạng thái</th><th></th></tr></thead><tbody>${ky.map(x=>`<tr class="${x.daTra?'':lopHan(x.ngay)}" onclick="formKyTra('${id}','${x.id}')"><td class="tr">${esc(x.ky)}${x.suaTay?' ✍️':''}</td><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.goc)}</td><td class="tr">${x.daTra?'✅ đã trả':chuConNgay(x.ngay)}</td><td>${x.daTra?'':`<button class="btn sm" onclick="event.stopPropagation();formTraNo('${id}','',{kyTraId:'${x.id}'})">Trả</button>`}</td></tr>`).join('')}</tbody><tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(ky.reduce((s,x)=>s+TINH_TOAN.soNguyen(x.goc),0))}</td><td colspan="2"></td></tr></tfoot></table></div>`:'<div class="hint">Chưa có kỳ trả gốc.</div>'}
+    lichTra:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>📅 Lịch trả gốc</h3><button class="btn sm sec" onclick="formKyTra(${j(id)})">＋ Kỳ</button></div>
+      ${ky.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Kỳ</th><th class="tr">Ngày</th><th>Gốc</th><th class="tr">Trạng thái</th><th></th></tr></thead><tbody>${ky.map(x=>`<tr class="${x.daTra?'':lopHan(x.ngay)}" onclick="formKyTra(${j(id)},${j(x.id)})"><td class="tr">${esc(x.ky)}${x.suaTay?' ✍️':''}</td><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.goc)}</td><td class="tr">${x.daTra?'✅ đã trả':chuConNgay(x.ngay)}</td><td>${x.daTra?'':`<button class="btn sm" onclick="event.stopPropagation();formTraNo(${j(id)},'',{kyTraId:${j(x.id)}})">Trả</button>`}</td></tr>`).join('')}</tbody><tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(ky.reduce((s,x)=>s+TINH_TOAN.soNguyen(x.goc),0))}</td><td colspan="2"></td></tr></tfoot></table></div>`:'<div class="hint">Chưa có kỳ trả gốc.</div>'}
       <div class="hint">Bấm vào dòng để sửa tay kỳ đó (✍️ = đã sửa tay). Bấm "Trả" để nhập trả nợ cho kỳ — kỳ tự chuyển sang đã trả.</div></div></div>
       <div class="card"><div class="card-body"><div class="sec-h"><h3>💧 Lãi phải trả (35 ngày tới + quá hạn)</h3></div>
-      ${lichLai.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đến hạn</th><th class="tr">Tính từ</th><th>Lãi ước</th><th class="tr">Trạng thái</th><th></th></tr></thead><tbody>${lichLai.map(x=>`<tr class="${lopHan(x.ngay)}" onclick="formTraNo('${id}','',{kyLai:'${x.kyLai}'})"><td class="tr">${ngayVN(x.ngay)}</td><td class="tr">${ngayVN(x.tuNgay)}</td><td>~${tien(x.laiUoc)}</td><td class="tr">${chuConNgay(x.ngay)}</td><td><button class="btn sm">Trả</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Không có kỳ lãi nào đến hạn trong 35 ngày tới.</div>'}
+      ${lichLai.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đến hạn</th><th class="tr">Tính từ</th><th>Lãi ước</th><th class="tr">Trạng thái</th><th></th></tr></thead><tbody>${lichLai.map(x=>`<tr class="${lopHan(x.ngay)}" onclick="formTraNo(${j(id)},'',{kyLai:${j(x.kyLai)}})"><td class="tr">${ngayVN(x.ngay)}</td><td class="tr">${ngayVN(x.tuNgay)}</td><td>~${tien(x.laiUoc)}</td><td class="tr">${chuConNgay(x.ngay)}</td><td><button class="btn sm">Trả</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Không có kỳ lãi nào đến hạn trong 35 ngày tới.</div>'}
       <div class="hint">Lãi ước = dư nợ gốc × lãi suất năm / 365 × số ngày, tính theo từng giai đoạn lãi suất và từng lần giải ngân, trả gốc. Số thật nhập khi trả.</div></div></div>`,
-    traNo:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>💸 Trả nợ thực tế</h3><button class="btn sm" onclick="formTraNo('${id}')">＋ Trả nợ</button></div>
+    traNo:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>💸 Trả nợ thực tế</h3><button class="btn sm" onclick="formTraNo(${j(id)})">＋ Trả nợ</button></div>
       ${tn.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Ngày</th><th>Gốc</th><th>Lãi thật</th><th>Lãi ước</th><th>Chênh</th><th>Phí</th><th class="tr">Chứng từ</th></tr></thead><tbody>${tn.map(x=>{ const kl=x.kyLai&&TINH_TOAN.cacKyLai(k,x.kyLai).find(y=>y.ngay===x.kyLai), uoc=kl?TINH_TOAN.laiUocTinh(k,kl.tuNgay,kl.ngay):null, lai=TINH_TOAN.soNguyen(x.lai);
         const phi=TINH_TOAN.soNguyen(x.phi)+TINH_TOAN.soNguyen(x.phiPhat);
-        return `<tr onclick="formTraNo('${id}','${x.id}')"><td class="tr">${ngayVN(x.ngay)}${x.traTruocHan?' ⏩':''}</td><td>${x.goc?tien(x.goc):''}</td><td>${lai?tien(lai):''}</td><td>${uoc!=null?'~'+tien(uoc):''}</td><td class="${uoc!=null&&lai-uoc>0?'neg':''}">${uoc!=null?tien(lai-uoc):''}</td><td>${phi?tien(phi):''}</td><td class="tr">${esc(x.chungTu||'')}</td></tr>`; }).join('')}</tbody>
+        return `<tr onclick="formTraNo(${j(id)},${j(x.id)})"><td class="tr">${ngayVN(x.ngay)}${x.traTruocHan?' ⏩':''}</td><td>${x.goc?tien(x.goc):''}</td><td>${lai?tien(lai):''}</td><td>${uoc!=null?'~'+tien(uoc):''}</td><td class="${uoc!=null&&lai-uoc>0?'neg':''}">${uoc!=null?tien(lai-uoc):''}</td><td>${phi?tien(phi):''}</td><td class="tr">${esc(x.chungTu||'')}</td></tr>`; }).join('')}</tbody>
         <tfoot><tr><td class="tr">Cộng</td><td>${tien(t.gocDaTra)}</td><td>${tien(t.laiDaTra)}</td><td></td><td></td><td>${tien(t.phiDaTra+t.phiPhatDaTra)}</td><td></td></tr></tfoot></table></div>`:'<div class="hint">Chưa có lần trả nợ nào.</div>'}
       <div class="hint">"Chênh" = lãi thật − lãi ước của kỳ đó (dương = ngân hàng thu nhiều hơn app ước).${dh?' ⏩ = trả gốc trước hạn; cột Phí gồm cả phí phạt trả trước.':''}</div></div></div>`,
     file:()=>veFile('khoanVay/'+id,k),
     lichSu:()=>veLichSu(id)
   }[tabKV]();
-  return { tieuDe:esc(tenKhoan(k)), sua:tt?`formThueTC('${id}')`:dh?`formDaiHan('${id}')`:`formKheUoc('${esc(k.hanMucId)}','${id}')`, html:`
+  return { tieuDe:esc(tenKhoan(k)), sua:tt?`formThueTC(${j(id)})`:dh?`formDaiHan(${j(id)})`:`formKheUoc(${j(k.hanMucId)},${j(id)})`, html:`
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">${tt?'🚜 Thuê tài chính — HĐ '+esc(k.soHopDong):dh?'🏗 Vay trung dài hạn — HĐ '+esc(k.soHopDong):'Khế ước '+esc(k.soKheUoc)}</div>
       <div class="item-sub" style="margin-top:2px">🏦 ${esc(tenNganHang(k.nganHangId))} · <b>${esc(k.congTyVay)}</b>${chiuKhac(k)}${tt?(tb.ten?' · '+esc(tb.ten):'')+(tb.bienSo?' · '+esc(tb.bienSo):''):dh&&md.noiDung?' · '+esc(md.noiDung):''}</div>
@@ -1630,10 +1681,10 @@ function veCtKhoanVay(id){
     </div></div>
     ${tt?canhBaoThueTC(k):''}
     ${t.duNoGoc>0&&!t.laiSuatHienHanh?'<div class="warn">Khoản vay chưa có lãi suất áp dụng cho hôm nay → không ước được lãi, không nhắc trả lãi. Thêm ở tab Lãi suất.</div>':''}
-    ${lech?`<div class="warn soft">Lịch trả gốc còn ${tien(t.gocConTheoLich)} đ nhưng gốc còn phải trả là ${tien(canTra)} đ${t.chuaGiaiNgan?' (dư nợ '+tien(t.duNoGoc)+' + chưa giải ngân '+tien(t.chuaGiaiNgan)+')':''} — lệch ${tien(lech)} đ.
-      <div class="row" style="margin-top:6px"><button class="btn sm" style="flex:0 0 auto" onclick="khopLichKhoan('${id}')">Khớp lịch với dư nợ</button><span style="font-weight:400">trừ dần từ các kỳ cuối; hoặc sửa tay từng kỳ ở tab Lịch trả cho đúng bảng của ngân hàng.</span></div></div>`:''}
+    ${lech?`<div class="warn soft">Lịch trả gốc còn ${tien(t.gocConTheoLich)} đ nhưng gốc còn phải trả là ${tien(canTra)} đ${t.chuaGiaiNgan?' (dư nợ '+tien(t.duNoGoc)+' + chưa giải ngân '+tien(t.chuaGiaiNgan)+')':''} — lệch ${tien(lech)} đ.
+      <div class="row" style="margin-top:6px"><button class="btn sm" style="flex:0 0 auto" onclick="khopLichKhoan(${j(id)})">Khớp lịch với dư nợ</button><span style="font-weight:400">trừ dần từ các kỳ cuối; hoặc sửa tay từng kỳ ở tab Lịch trả cho đúng bảng của ngân hàng.</span></div></div>`:''}
     ${tabKV==='thongTin'?veTaiSanCua('khoanVay/'+id):''}
-    <div class="tabs">${Object.entries(TAB_KV).map(([x,l])=>`<div class="tab ${tabKV===x?'on':''}" onclick="chonTabKV('${x}')">${l}${dem[x]?' <b>'+dem[x]+'</b>':''}</div>`).join('')}</div>
+    <div class="tabs">${Object.entries(TAB_KV).map(([x,l])=>`<div class="tab ${tabKV===x?'on':''}" onclick="chonTabKV(${j(x)})">${l}${dem[x]?' <b>'+dem[x]+'</b>':''}</div>`).join('')}</div>
     ${noiDung}` };
 }
 
@@ -1688,22 +1739,24 @@ KIEM_TRA.giaoDich=function(v,duongBang,id){
   if(v.loai==='rut'){
     if(t.tongRut-cuTien+v.soTien<t.tongNop) throw new Error('Tổng rút không được nhỏ hơn tổng đã nộp gốc');
     const sau=t.dangDung-cuTien+v.soTien;
-    if(sau>S(tc.hanMuc)&&!confirm('Sau lần rút này số đang dùng là '+tien(sau)+' đ, VƯỢT hạn mức thấu chi '+tien(tc.hanMuc)+' đ. Vẫn lưu?')) throw new Error('Đã huỷ');
+    if(sau>S(tc.hanMuc)&&!confirm('Sau lần rút này số đang dùng là '+tien(sau)+' đ, VƯỢT hạn mức thấu chi '+tien(tc.hanMuc)+' đ. Vẫn lưu?')) throw new Error('Đã huỷ');
   } else {
     if(!(v.soTien+v.lai+v.phi>0)) throw new Error('Nhập ít nhất một khoản: nộp gốc, lãi hoặc phí');
-    if(v.soTien>t.dangDung+cuTien) throw new Error('Nộp gốc ('+tien(v.soTien)+' đ) lớn hơn số đang dùng ('+tien(t.dangDung+cuTien)+' đ)');
+    const toiNgay=TINH_TOAN.thauChiDangDung(tc,v.ngay)+(cu&&cu.ngay<=v.ngay?cuTien:0);   // nộp gốc không được nhiều hơn số đang dùng TỚI NGÀY NỘP (nhập ngày nộp trước ngày rút là sai)
+    if(v.soTien>toiNgay) throw new Error('Nộp gốc '+tien(v.soTien)+' đ ngày '+ngayVN(v.ngay)+' nhiều hơn số đang dùng tới ngày đó ('+tien(Math.max(0,toiNgay))+' đ) — xem lại ngày nộp');
+    if(v.soTien>t.dangDung+cuTien) throw new Error('Nộp gốc ('+tien(v.soTien)+' đ) lớn hơn số đang dùng ('+tien(t.dangDung+cuTien)+' đ)');
   }
 };
 function veThauChi(){
   const hn=homNay(), tat=danhSachCon(DL.thauChi);   // thấu chi rất ít (anh Dũng 02/10) → mục riêng trong trang Khác, không cần ô tìm / lọc
   const ds=tat.map(x=>Object.assign({t:TINH_TOAN.tinhThauChi(x,hn)},x)).sort((a,b)=>tenNganHang(a.nganHangId).localeCompare(tenNganHang(b.nganHangId),'vi')||String(a.congTyVay).localeCompare(String(b.congTyVay)));
   $('ds-thauchi').innerHTML=ds.length?ds.map(x=>{ const t=x.t, con=TINH_TOAN.soNgayGiua(hn,x.ngayHetHan), pt=x.hanMuc>0?Math.min(100,Math.max(0,t.dangDung/x.hanMuc*100)):0, qua=TINH_TOAN.lichNopThauChi(x,hn).some(y=>y.ngay<hn);
-    return `<div class="al ${qua||con<0||t.conTrong<0?'over':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('thauChi','${x.id}')"><span class="ic">🔄</span><div class="item-main">
+    return `<div class="al ${qua||con<0||t.conTrong<0?'over':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('thauChi',${j(x.id)})"><span class="ic">🔄</span><div class="item-main">
       <div class="item-name">${esc(tenNganHang(x.nganHangId))} · ${esc(x.congTyVay)}${chiuKhac(x)}</div>
       <div class="item-sub">${x.soHopDong?'HĐ '+esc(x.soHopDong)+' · ':''}nộp ngày ${esc(x.ngayNopHangThang)} hằng tháng · hết hạn ${ngayVN(x.ngayHetHan)}${con<0?' · <b class="neg">ĐÃ HẾT HẠN</b>':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?' · <b>còn '+con+' ngày</b>':''}</div>
       <div class="thanh"><i class="${t.conTrong<0?'day':''}" style="width:${pt}%"></i></div>
       <div class="item-sub">Hạn mức <b>${tienNgan(x.hanMuc)}</b> · đang dùng <b>${tienNgan(t.dangDung)}</b> · còn trống <b class="${t.conTrong<0?'neg':'pos'}">${tienNgan(t.conTrong)}</b>${qua?' · <b class="neg">QUÁ HẠN nộp tiền</b>':''}</div>
-    </div><span>›</span></div>`; }).join('')+`<div class="al"><div class="item-main" style="text-align:right;font-weight:800">Cộng đang dùng ${ds.length} hạn mức: ${tien(ds.reduce((s,x)=>s+x.t.dangDung,0))} đ</div></div>`
+    </div><span>›</span></div>`; }).join('')+`<div class="al"><div class="item-main" style="text-align:right;font-weight:800">Cộng đang dùng ${ds.length} hạn mức: ${tien(ds.reduce((s,x)=>s+x.t.dangDung,0))} đ</div></div>`
     :`<div class="empty">${tat.length?'Không tìm thấy.':'Chưa có hạn mức thấu chi nào. Bấm "Thêm hạn mức thấu chi".'}</div>`;
 }
 const TAB_TC = { giaoDich:'Rút / nộp', nop:'Nộp hằng tháng', laiSuat:'Lãi suất', file:'File', lichSu:'Lịch sử' };
@@ -1718,25 +1771,25 @@ function veCtThauChi(id){
     .map(g=>{ luyKe+=(g.loai==='rut'?1:-1)*S(g.soTien); return Object.assign({sau:luyKe},g); }).reverse();
   const dem={ giaoDich:gd.length, nop:lich.length, laiSuat:danhSachCon(tc.laiSuat).length, file:danhSachCon(tc.fileDinhKem).length };
   const noiDung={
-    giaoDich:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>🔄 Rút và nộp</h3><div class="row" style="flex:0 0 auto;gap:6px"><button class="btn sm" onclick="formGiaoDich('${id}','','rut')">＋ Rút</button><button class="btn sm green" onclick="formGiaoDich('${id}','','nop')">＋ Nộp</button></div></div>
+    giaoDich:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>🔄 Rút và nộp</h3><div class="row" style="flex:0 0 auto;gap:6px"><button class="btn sm" onclick="formGiaoDich(${j(id)},'','rut')">＋ Rút</button><button class="btn sm green" onclick="formGiaoDich(${j(id)},'','nop')">＋ Nộp</button></div></div>
       ${gd.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Ngày</th><th>Rút</th><th>Nộp gốc</th><th>Lãi thật</th><th>Lãi ước</th><th>Phí</th><th>Đang dùng</th><th class="tr">Nội dung</th></tr></thead><tbody>${gd.map(g=>{ const kl=g.kyNop&&TINH_TOAN.cacKyLai(k,g.kyNop).find(y=>y.ngay===g.kyNop), uoc=kl?TINH_TOAN.laiUocTinh(k,kl.tuNgay,kl.ngay):null, rut=g.loai==='rut';
-        return `<tr onclick="formGiaoDich('${id}','${g.id}')"><td class="tr">${ngayVN(g.ngay)}</td><td>${rut?tien(g.soTien):''}</td><td class="pos">${!rut&&S(g.soTien)?tien(g.soTien):''}</td><td>${S(g.lai)?tien(g.lai):''}</td><td>${uoc!=null?'~'+tien(uoc):''}</td><td>${S(g.phi)?tien(g.phi):''}</td><td><b>${tien(g.sau)}</b></td><td class="tr">${esc(g.noiDung||'')}</td></tr>`; }).join('')}</tbody>
+        return `<tr onclick="formGiaoDich(${j(id)},${j(g.id)})"><td class="tr">${ngayVN(g.ngay)}</td><td>${rut?tien(g.soTien):''}</td><td class="pos">${!rut&&S(g.soTien)?tien(g.soTien):''}</td><td>${S(g.lai)?tien(g.lai):''}</td><td>${uoc!=null?'~'+tien(uoc):''}</td><td>${S(g.phi)?tien(g.phi):''}</td><td><b>${tien(g.sau)}</b></td><td class="tr">${esc(g.noiDung||'')}</td></tr>`; }).join('')}</tbody>
         <tfoot><tr><td class="tr">Cộng</td><td>${tien(t.tongRut)}</td><td>${tien(t.tongNop)}</td><td>${tien(t.laiDaTra)}</td><td></td><td>${tien(t.phiDaTra)}</td><td>${tien(t.dangDung)}</td><td></td></tr></tfoot></table></div>`
         :'<div class="hint">Chưa có giao dịch nào. Hạn mức đang dùng dở từ trước: bấm "＋ Rút" nhập MỘT dòng bằng số đang dùng hiện tại (nội dung: số dư khi bắt đầu nhập app).</div>'}
       <div class="hint">Số đang dùng = tổng rút − tổng nộp gốc. Lãi nộp kèm ghi ở ô "Trả lãi" — không làm giảm số đang dùng.</div></div></div>`,
     nop:()=>`<div class="card"><div class="card-body"><div class="sec-h"><h3>📅 Nộp tiền hằng tháng (35 ngày tới + quá hạn)</h3></div>
-      ${lich.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Phải nộp ngày</th><th class="tr">Tính từ</th><th>Gốc</th><th>Lãi ước</th><th class="tr">Trạng thái</th><th></th></tr></thead><tbody>${lich.map(x=>`<tr class="${lopHan(x.ngay)}" onclick="formGiaoDich('${id}','','nop',{kyNop:'${x.kyNop}'})"><td class="tr">${ngayVN(x.ngay)}</td><td class="tr">${ngayVN(x.tuNgay)}</td><td>${x.goc?tien(x.goc):''}</td><td>~${tien(x.laiUoc)}</td><td class="tr">${chuConNgay(x.ngay)}</td><td><button class="btn sm green">Nộp</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Không có kỳ nộp nào trong 35 ngày tới (không dùng thấu chi thì không phải nộp).</div>'}
+      ${lich.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Phải nộp ngày</th><th class="tr">Tính từ</th><th>Gốc</th><th>Lãi ước</th><th class="tr">Trạng thái</th><th></th></tr></thead><tbody>${lich.map(x=>`<tr class="${lopHan(x.ngay)}" onclick="formGiaoDich(${j(id)},'','nop',{kyNop:${j(x.kyNop)}})"><td class="tr">${ngayVN(x.ngay)}</td><td class="tr">${ngayVN(x.tuNgay)}</td><td>${x.goc?tien(x.goc):''}</td><td>~${tien(x.laiUoc)}</td><td class="tr">${chuConNgay(x.ngay)}</td><td><button class="btn sm green">Nộp</button></td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Không có kỳ nộp nào trong 35 ngày tới (không dùng thấu chi thì không phải nộp).</div>'}
       <div class="hint">Mỗi tháng đến ngày ${esc(tc.ngayNopHangThang)} phải nộp ${tc.nopHangThang==='gocLai'?'CẢ GỐC (toàn bộ số đang dùng) VÀ LÃI':'tiền LÃI'} thấu chi. Lãi ước = số đang dùng từng ngày × lãi suất năm / 365. Bấm "Nộp" nhập số thật — kỳ đó tự tắt.</div></div></div>`,
     laiSuat:()=>veBangLaiSuat('thauChi/'+id,tc.laiSuat),
     file:()=>veFile('thauChi/'+id,tc),
     lichSu:()=>veLichSu(id)
   }[tabTC]();
-  return { tieuDe:'Thấu chi '+esc(tc.congTyVay), sua:`formThauChi('${id}')`, html:`
+  return { tieuDe:'Thấu chi '+esc(tc.congTyVay), sua:`formThauChi(${j(id)})`, html:`
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">🔄 Thấu chi ${esc(tc.congTyVay)}${chiuKhac(tc)}</div>
-      <div class="item-sub" style="margin-top:2px;cursor:pointer" onclick="moChiTiet('nganHang','${esc(tc.nganHangId)}')">🏦 ${esc(tenNganHang(tc.nganHangId))}${tc.soHopDong?' · HĐ '+esc(tc.soHopDong):''} ›</div>
+      <div class="item-sub" style="margin-top:2px;cursor:pointer" onclick="moChiTiet('nganHang',${j(tc.nganHangId)})">🏦 ${esc(tenNganHang(tc.nganHangId))}${tc.soHopDong?' · HĐ '+esc(tc.soHopDong):''} ›</div>
       ${con<0?'<div class="warn" style="margin-top:8px">Hạn mức thấu chi ĐÃ HẾT HẠN '+(-con)+' ngày — cần ký lại hoặc nộp hết.</div>':con<=CAU_HINH.NHAC_HAN_MUC_NGAY?'<div class="warn soft" style="margin-top:8px">Hạn mức thấu chi hết hạn sau '+con+' ngày ('+ngayVN(tc.ngayHetHan)+').</div>':''}
-      ${t.conTrong<0?'<div class="warn" style="margin-top:8px">Đang dùng VƯỢT hạn mức '+tien(-t.conTrong)+' đ.</div>':''}
+      ${t.conTrong<0?'<div class="warn" style="margin-top:8px">Đang dùng VƯỢT hạn mức '+tien(-t.conTrong)+' đ.</div>':''}
       ${qua?'<div class="warn" style="margin-top:8px">Có '+qua+' kỳ nộp tiền hằng tháng ĐÃ QUÁ HẠN chưa nộp — xem tab "Nộp hằng tháng".</div>':''}
       ${t.dangDung>0&&!t.laiSuatHienHanh?'<div class="warn" style="margin-top:8px">Chưa có lãi suất áp dụng cho hôm nay → không ước được lãi, không nhắc nộp. Thêm ở tab Lãi suất.</div>':''}
       <div class="tiles" style="margin:8px 0 0;gap:6px">
@@ -1750,13 +1803,13 @@ function veCtThauChi(id){
         <div>Thực dùng, thực trả</div><div>${esc(tc.congTyChiu||tc.congTyVay)}</div>
         <div>Hiệu lực</div><div>${ngayVN(tc.ngayHieuLuc)||'—'} → ${ngayVN(tc.ngayHetHan)}</div>
         <div>Nộp tiền</div><div>ngày ${esc(tc.ngayNopHangThang)} hằng tháng · <b>${esc((NOP_HANG_THANG[tc.nopHangThang||'lai']).toLowerCase())}</b></div>
-        <div>Lãi đã trả (số thật)</div><div>${tien(t.laiDaTra)} đ</div>
+        <div>Lãi đã trả (số thật)</div><div>${tien(t.laiDaTra)} đ</div>
         <div>Kế toán theo dõi</div><div>${esc(tenNguoi(tc.keToanTheoDoi)||'—')}</div>
         ${tc.ghiChu?`<div>Ghi chú</div><div>${esc(tc.ghiChu)}</div>`:''}
       </div>
     </div></div>
     ${veTaiSanCua('thauChi/'+id)}
-    <div class="tabs">${Object.entries(TAB_TC).map(([x,l])=>`<div class="tab ${tabTC===x?'on':''}" onclick="chonTabTC('${x}')">${l}${dem[x]?' <b>'+dem[x]+'</b>':''}</div>`).join('')}</div>
+    <div class="tabs">${Object.entries(TAB_TC).map(([x,l])=>`<div class="tab ${tabTC===x?'on':''}" onclick="chonTabTC(${j(x)})">${l}${dem[x]?' <b>'+dem[x]+'</b>':''}</div>`).join('')}</div>
     ${noiDung}` };
 }
 
@@ -1774,9 +1827,9 @@ function timThu(id){ const bang=DL.blChung[id]?'blChung':DL.baoLanh[id]?'baoLanh
 function tinhThu(b){ const hn=homNay(), hieuLuc=TINH_TOAN.baoLanhHieuLuc(b,hn);
   return { hieuLuc, con:TINH_TOAN.soNgayGiua(hn,b.ngayHetHan), kyQuy:TINH_TOAN.kyQuyDangGiu(b,DL.kyQuyGiamTru[b.id]), phiDaNop:TINH_TOAN.tong(DL.phiBaoLanh[b.id],'soTien'), kyPhi:hieuLuc?TINH_TOAN.kyPhiToi(b,DL.phiBaoLanh[b.id]):null }; }
 // Tên hợp đồng bên app Hợp Đồng — đọc MỘT lần, chỉ đọc, chỉ để hiện tên / cho chọn hợp đồng của thư bảo lãnh (thuộc chỗ thông nhau về bảo lãnh)
-let tenHopDongHD=null;
-async function napHopDongHD(){ if(tenHopDongHD) return; tenHopDongHD={};
-  try{ const v=(await db.ref('hopdong/hopDong').get()).val()||{}; Object.entries(v).forEach(([id,h])=>{ if(h&&typeof h==='object') tenHopDongHD[id]=[h.congTyId,h.soHopDong,h.tenGoiThau].filter(Boolean).join(' · '); }); veTatCa(); }catch(e){} }
+let tenHopDongHD=null, _dangNapHD=false;
+async function napHopDongHD(){ if(tenHopDongHD||_dangNapHD) return; _dangNapHD=true;   // tải lỗi (mất mạng) thì lần sau thử lại — trước đây hỏng một lần là cả phiên không chọn được hợp đồng
+  try{ const v=(await db.ref('hopdong/hopDong').get()).val()||{}, o={}; Object.entries(v).forEach(([id,h])=>{ if(h&&typeof h==='object') o[id]=[h.congTyId,h.soHopDong,h.tenGoiThau].filter(Boolean).join(' · '); }); tenHopDongHD=o; veTatCa(); }catch(e){} _dangNapHD=false; }
 const tenGoiCuaThu = b => (b.hopDongId&&tenHopDongHD&&tenHopDongHD[b.hopDongId])||b.tenGoiThau||'';
 function oBaoLanh(loai){ const chung=BL_CHUNG.includes(loai); return [
   {loiDan:chung?'Bảo lãnh '+LOAI_BAO_LANH[loai].toLowerCase()+' dùng CHUNG với app Hợp Đồng: nhập ở đây, bên đó thấy ngay (và ngược lại).':'Bảo lãnh '+LOAI_BAO_LANH[loai].toLowerCase()+' chỉ theo dõi trong app Công nợ.'},
@@ -1790,7 +1843,7 @@ function oBaoLanh(loai){ const chung=BL_CHUNG.includes(loai); return [
   {tieuDe:'Phí bảo lãnh'},
   {k:'phi.hinhThuc',nhan:'Cách thu phí',kieu:'chon',ds:HINH_THUC_PHI,macDinh:loai==='tamUng'?'dinhKy':'motLan'},
   {k:'phi.kyThuPhiThang',nhan:'Nếu định kỳ: thu mỗi',kieu:'chon',ds:{1:'1 tháng',3:'3 tháng'},macDinh:'3',nua:true},
-  {k:'phi.soTienMoiKy',nhan:'Phí mỗi kỳ / phí một lần (đ)',kieu:'tien'},
+  {k:'phi.soTienMoiKy',nhan:'Phí mỗi kỳ / phí một lần (đ)',kieu:'tien',hint:'Thu định kỳ mà để trống số tiền thì app chưa nhắc nộp phí.'},
   {k:'phi.daNopDen',nhan:'Phí đã nộp đến ngày',kieu:'ngay',nua:true,hint:'Thư cũ: đã nộp phí tới ngày nào trước khi dùng app.'},
   {tieuDe:'Ký quỹ'},
   {k:'kyQuy.banDau',nhan:'Ký quỹ ban đầu (đ)',kieu:'tien'}, {k:'kyQuy.hoanTra',nhan:'Đã được hoàn trả (đ)',kieu:'tien',nua:true},
@@ -1801,7 +1854,7 @@ const O_PHI = [ {k:'ngay',nhan:'Ngày nộp',kieu:'ngay',batBuoc:true}, {k:'soTi
 const O_GIAM_KY_QUY = [ {k:'ngay',nhan:'Ngày ngân hàng giảm ký quỹ',kieu:'ngay',batBuoc:true}, {k:'soTien',nhan:'Số tiền được giảm (đ)',kieu:'tien',batBuoc:true,nua:true}, {k:'ghiChu',nhan:'Ghi chú (vd: thu hồi tạm ứng đợt mấy)'} ];
 function themBaoLanh(){ if(thieuNganHang()) return;
   if(locBL) return formBaoLanh(locBL);
-  moModal('<h3>＋ Thêm thư bảo lãnh — chọn loại</h3>'+Object.entries(LOAI_BAO_LANH).map(([l,t])=>`<button class="btn sec" style="margin-top:8px" onclick="formBaoLanh('${l}')">🛡 ${t}${BL_CHUNG.includes(l)?' <span class="hint">(chung với app Hợp Đồng)</span>':''}</button>`).join('')); }
+  moModal('<h3>＋ Thêm thư bảo lãnh — chọn loại</h3>'+Object.entries(LOAI_BAO_LANH).map(([l,t])=>`<button class="btn sec" style="margin-top:8px" onclick="formBaoLanh(${j(l)})">🛡 ${t}${BL_CHUNG.includes(l)?' <span class="hint">(chung với app Hợp Đồng)</span>':''}</button>`).join('')); }
 async function formBaoLanh(loai, bang, id){ bang=bang||(BL_CHUNG.includes(loai)?'blChung':'baoLanh'); if(bang==='blChung') await napHopDongHD();
   moFormCon((id?'✏️ Sửa':'＋')+' Bảo lãnh '+LOAI_BAO_LANH[loai].toLowerCase(),bang,id,oBaoLanh(loai),{ngayPhatHanh:homNay()},{loai}); }
 function formPhi(blId, id){ const b=timThu(blId), kp=tinhThu(b).kyPhi;
@@ -1809,7 +1862,8 @@ function formPhi(blId, id){ const b=timThu(blId), kp=tinhThu(b).kyPhi;
 function formGiamKyQuy(blId, id){ moFormCon((id?'✏️ Sửa':'＋')+' Giảm ký quỹ','kyQuyGiamTru/'+blId,id,O_GIAM_KY_QUY,{ngay:homNay()}); }
 KIEM_TRA.blChung=KIEM_TRA.baoLanh=function(v,duongBang,id){
   if(v.ngayHetHan<=v.ngayPhatHanh) throw new Error('Ngày hết hạn phải sau ngày phát hành');
-  if(v.kyQuy.hoanTra>v.kyQuy.banDau) throw new Error('Ký quỹ hoàn trả lớn hơn ký quỹ ban đầu');
+  const daGiam=id?TINH_TOAN.tong(DL.kyQuyGiamTru[id],'soTien'):0;   // hoàn trả chỉ là PHẦN CÒN LẠI sau các lần ngân hàng đã giảm ký quỹ — gõ lại số ban đầu sẽ ra ký quỹ âm
+  if(v.kyQuy.hoanTra>v.kyQuy.banDau-daGiam) throw new Error('Ký quỹ hoàn trả ('+tien(v.kyQuy.hoanTra)+' đ) nhiều hơn phần còn giữ: ban đầu '+tien(v.kyQuy.banDau)+' − đã giảm '+tien(daGiam)+' = '+tien(v.kyQuy.banDau-daGiam)+' đ');
   v.phi.kyThuPhiThang=Number(v.phi.kyThuPhiThang)||3;
   v.nganHang=tenNganHang(v.nganHangId);   // app Hợp Đồng hiện tên ngân hàng theo trường này
   if(id&&duongBang==='blChung'&&!v.hopDongId&&!Object.keys(tenHopDongHD||{}).length) delete v.hopDongId;   // không tải được danh sách hợp đồng → giữ nguyên hợp đồng đang gắn, không xoá nhầm
@@ -1817,24 +1871,24 @@ KIEM_TRA.blChung=KIEM_TRA.baoLanh=function(v,duongBang,id){
 };
 KIEM_TRA.phiBaoLanh=function(v){ if(v.kyTu&&v.kyDen&&v.kyDen<=v.kyTu) throw new Error('Kỳ phí: ngày "đến" phải sau ngày "từ"'); };
 KIEM_TRA.kyQuyGiamTru=function(v,duongBang,id){ const blId=chaCua(duongBang), b=timThu(blId)||{}, cu=id?(DL.kyQuyGiamTru[blId]||{})[id]:null, con=TINH_TOAN.kyQuyDangGiu(b,DL.kyQuyGiamTru[blId])+(cu?TINH_TOAN.soNguyen(cu.soTien):0);
-  if(v.soTien>con) throw new Error('Giảm ('+tien(v.soTien)+' đ) nhiều hơn ký quỹ đang giữ ('+tien(con)+' đ)'); };
+  if(v.soTien>con) throw new Error('Giảm ('+tien(v.soTien)+' đ) nhiều hơn ký quỹ đang giữ ('+tien(con)+' đ)'); };
 let locBL='';
 function chonLocBL(l){ locBL=l; veBaoLanh(); }
 function veBaoLanh(){
   const fc=$('bl-congty'), fn=$('bl-nganhang'), cc=fc.value, nn=fn.value, q=$('bl-q').value.trim().toLowerCase(), caHet=$('bl-het').checked, hn=homNay();
   fc.innerHTML=chonOptions(DS_CONG_TY,cc,'— Mọi công ty —'); fn.innerHTML=chonOptions(dsChonNganHang(),nn,'— Mọi ngân hàng —');
   const tat=dsBaoLanh().map(b=>Object.assign({t:tinhThu(b)},b)); if(!tenHopDongHD&&tat.some(b=>b.hopDongId)) napHopDongHD();
-  $('bl-loai').innerHTML=[['','Tất cả']].concat(Object.entries(LOAI_BAO_LANH)).map(([l,t])=>`<div class="chip ${locBL===l?'on':''}" style="white-space:nowrap" onclick="chonLocBL('${l}')">${t} (${tat.filter(b=>b.t.hieuLuc&&(!l||b.loai===l)).length})</div>`).join('');
+  $('bl-loai').innerHTML=[['','Tất cả']].concat(Object.entries(LOAI_BAO_LANH)).map(([l,t])=>`<div class="chip ${locBL===l?'on':''}" style="white-space:nowrap" onclick="chonLocBL(${j(l)})">${t} (${tat.filter(b=>b.t.hieuLuc&&(!l||b.loai===l)).length})</div>`).join('');
   const canLam=tat.filter(b=>(b.t.hieuLuc&&b.t.con<=NHAC_BAO_LANH_NGAY)||(b.t.kyPhi&&b.t.kyPhi.ngay<hn)).length; $('bl-badge').hidden=!canLam; $('bl-badge').textContent=canLam;
   const ds=tat.filter(b=>(caHet||b.t.hieuLuc||b.t.kyQuy>0)&&(!locBL||b.loai===locBL)&&(!cc||b.congTyId===cc)&&(!nn||b.nganHangId===nn)&&(!q||[b.soThu,tenGoiCuaThu(b),tenNganHang(b.nganHangId),b.nganHang].join(' ').toLowerCase().includes(q)))
     .sort((a,b)=>String(a.ngayHetHan).localeCompare(String(b.ngayHetHan)));
   const hl=ds.filter(b=>b.t.hieuLuc);
   $('bl-tong').innerHTML=`<div class="tile acc"><span>Đang bảo lãnh</span><b>${tienNgan(hl.reduce((s,b)=>s+TINH_TOAN.soNguyen(b.soTien),0))}</b><small>${hl.length} thư còn hiệu lực</small></div><div class="tile"><span>Ký quỹ đang bị giữ</span><b>${tienNgan(ds.reduce((s,b)=>s+b.t.kyQuy,0))}</b><small>tiền nằm ở ngân hàng</small></div>`;
   $('ds-baolanh').innerHTML=ds.length?ds.map(b=>{ const t=b.t, goi=tenGoiCuaThu(b);
-    return `<div class="al ${!t.hieuLuc?'':t.con<=NHAC_BAO_LANH_NGAY||(t.kyPhi&&t.kyPhi.ngay<hn)?'due':''}" style="cursor:pointer;align-items:flex-start${t.hieuLuc?'':';opacity:.6'}" onclick="moChiTiet('baoLanh','${b.bang}/${b.id}')"><span class="ic">🛡</span><div class="item-main">
+    return `<div class="al ${!t.hieuLuc?'':t.con<=NHAC_BAO_LANH_NGAY||(t.kyPhi&&t.kyPhi.ngay<hn)?'due':''}" style="cursor:pointer;align-items:flex-start${t.hieuLuc?'':';opacity:.6'}" onclick="moChiTiet('baoLanh',${j(b.bang+'/'+b.id)})"><span class="ic">🛡</span><div class="item-main">
       <div class="item-name">${esc(LOAI_BAO_LANH[b.loai]||b.loai)}${b.soThu?' · số '+esc(b.soThu):''} · ${esc(b.congTyId||'')}</div>
       <div class="item-sub">${b.nganHangId?esc(tenNganHang(b.nganHangId)):'<b class="neg">⚠️ chưa gắn ngân hàng</b>'+(b.nganHang?' ('+esc(b.nganHang)+')':'')}${goi?' · '+esc(goi):''}</div>
-      <div class="item-sub"><b>${tien(b.soTien)} đ</b> · hết hạn <b>${ngayVN(b.ngayHetHan)}</b>${!t.hieuLuc?(t.con<0?' · đã hết hiệu lực':' · chưa phát hành'):t.con<=NHAC_BAO_LANH_NGAY?' · <b class="neg">còn '+t.con+' ngày — gia hạn / nộp phí gia hạn</b>':' · còn '+t.con+' ngày'}${t.kyQuy?' · ký quỹ <b>'+tienNgan(t.kyQuy)+'</b>':''}${t.kyPhi?' · phí kỳ tới '+ngayVN(t.kyPhi.ngay)+(t.kyPhi.ngay<hn?' <b class="neg">(quá hạn)</b>':''):''}</div>
+      <div class="item-sub"><b>${tien(b.soTien)} đ</b> · hết hạn <b>${ngayVN(b.ngayHetHan)}</b>${!t.hieuLuc?(t.con<0?' · đã hết hiệu lực':' · chưa phát hành'):t.con<=NHAC_BAO_LANH_NGAY?' · <b class="neg">còn '+t.con+' ngày — gia hạn / nộp phí gia hạn</b>':' · còn '+t.con+' ngày'}${t.kyQuy?' · ký quỹ <b>'+tienNgan(t.kyQuy)+'</b>':''}${t.kyPhi?' · phí kỳ tới '+ngayVN(t.kyPhi.ngay)+(t.kyPhi.ngay<hn?' <b class="neg">(quá hạn)</b>':''):''}</div>
     </div><span>›</span></div>`; }).join('')
     :`<div class="empty">${tat.length?'Không có thư nào khớp bộ lọc (thư hết hiệu lực đang ẩn).':'Chưa có thư bảo lãnh nào. Bấm "Thêm thư bảo lãnh".'}</div>`;
 }
@@ -1842,7 +1896,7 @@ function veCtBaoLanh(khoa){
   const [bang,id]=khoa.split('/'), b0=(DL[bang]||{})[id]; if(!b0) return null;
   const b=Object.assign({id,bang},b0), t=tinhThu(b), hn=homNay(), q=b.kyQuy||{}, p=b.phi||{}, goi=tenGoiCuaThu(b);
   const phi=danhSachCon(DL.phiBaoLanh[id]).sort((x,y)=>String(y.ngay).localeCompare(String(x.ngay))), gt=danhSachCon(DL.kyQuyGiamTru[id]).sort((x,y)=>String(y.ngay).localeCompare(String(x.ngay)));
-  return { tieuDe:'BL '+esc(b.soThu||LOAI_BAO_LANH[b.loai]||''), sua:`formBaoLanh('${b.loai}','${bang}','${id}')`, html:`
+  return { tieuDe:'BL '+esc(b.soThu||LOAI_BAO_LANH[b.loai]||''), sua:`formBaoLanh(${j(b.loai)},${j(bang)},${j(id)})`, html:`
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">🛡 Bảo lãnh ${esc((LOAI_BAO_LANH[b.loai]||'').toLowerCase())}${b.soThu?' — số '+esc(b.soThu):''}</div>
       <div class="item-sub" style="margin-top:2px">${b.nganHangId?'🏦 '+esc(tenNganHang(b.nganHangId)):'<b class="neg">⚠️ chưa gắn ngân hàng — bấm Sửa để chọn</b>'+(b.nganHang?' ('+esc(b.nganHang)+')':'')} · <b>${esc(b.congTyId||'')}</b>${goi?' · '+esc(goi):''}</div>
@@ -1856,17 +1910,17 @@ function veCtBaoLanh(khoa){
         <div class="tile" style="padding:8px"><span>Phí đã nộp</span><b style="font-size:16px">${tien(t.phiDaNop)}</b></div>
       </div>
       <div class="kv" style="margin-top:10px">
-        <div>Thu phí</div><div>${esc(HINH_THUC_PHI[p.hinhThuc]||'—')}${p.hinhThuc==='dinhKy'?' · mỗi '+esc(p.kyThuPhiThang||'')+' tháng':''}${p.soTienMoiKy?' · '+tien(p.soTienMoiKy)+' đ':''}</div>
+        <div>Thu phí</div><div>${esc(HINH_THUC_PHI[p.hinhThuc]||'—')}${p.hinhThuc==='dinhKy'?' · mỗi '+esc(p.kyThuPhiThang||'')+' tháng':''}${p.soTienMoiKy?' · '+tien(p.soTienMoiKy)+' đ':''}</div>
         <div>Kế toán theo dõi</div><div>${esc(tenNguoi(b.keToanTheoDoi)||'—')}</div>
         ${b.ghiChu?`<div>Ghi chú</div><div>${esc(b.ghiChu)}</div>`:''}
       </div>
     </div></div>
-    <div class="card"><div class="card-body"><div class="sec-h"><h3>💵 Phí bảo lãnh</h3><button class="btn sm" onclick="formPhi('${id}')">＋ Nộp phí</button></div>
-      ${t.kyPhi?`<div class="warn soft">Kỳ phí tới: <b>${ngayVN(t.kyPhi.ngay)}</b> (${chuConNgayTho(t.kyPhi.ngay)}) · ${tien(t.kyPhi.soTien)} đ — cho kỳ ${ngayVN(t.kyPhi.ngay)} → ${ngayVN(t.kyPhi.kyDen)}.</div>`:''}
-      ${phi.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Ngày nộp</th><th>Số tiền</th><th class="tr">Loại</th><th class="tr">Kỳ</th><th class="tr">Chứng từ</th></tr></thead><tbody>${phi.map(x=>`<tr onclick="formPhi('${id}','${x.id}')"><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(LOAI_PHI[x.loai]||'')}</td><td class="tr">${x.kyTu?ngayVN(x.kyTu)+' → '+ngayVN(x.kyDen):''}</td><td class="tr">${esc(x.chungTu||'')}</td></tr>`).join('')}</tbody><tfoot><tr><td class="tr">Cộng</td><td>${tien(t.phiDaNop)}</td><td colspan="3"></td></tr></tfoot></table></div>`:'<div class="hint">Chưa ghi lần nộp phí nào.</div>'}</div></div>
-    <div class="card"><div class="card-body"><div class="sec-h"><h3>🔒 Ký quỹ</h3><button class="btn sm" onclick="formGiamKyQuy('${id}')">＋ Giảm ký quỹ</button></div>
+    <div class="card"><div class="card-body"><div class="sec-h"><h3>💵 Phí bảo lãnh</h3><button class="btn sm" onclick="formPhi(${j(id)})">＋ Nộp phí</button></div>
+      ${t.kyPhi?`<div class="warn soft">Kỳ phí tới: <b>${ngayVN(t.kyPhi.ngay)}</b> (${chuConNgayTho(t.kyPhi.ngay)}) · ${tien(t.kyPhi.soTien)} đ — cho kỳ ${ngayVN(t.kyPhi.ngay)} → ${ngayVN(t.kyPhi.kyDen)}.</div>`:''}
+      ${phi.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Ngày nộp</th><th>Số tiền</th><th class="tr">Loại</th><th class="tr">Kỳ</th><th class="tr">Chứng từ</th></tr></thead><tbody>${phi.map(x=>`<tr onclick="formPhi(${j(id)},${j(x.id)})"><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(LOAI_PHI[x.loai]||'')}</td><td class="tr">${x.kyTu?ngayVN(x.kyTu)+' → '+ngayVN(x.kyDen):''}</td><td class="tr">${esc(x.chungTu||'')}</td></tr>`).join('')}</tbody><tfoot><tr><td class="tr">Cộng</td><td>${tien(t.phiDaNop)}</td><td colspan="3"></td></tr></tfoot></table></div>`:'<div class="hint">Chưa ghi lần nộp phí nào.</div>'}</div></div>
+    <div class="card"><div class="card-body"><div class="sec-h"><h3>🔒 Ký quỹ</h3><button class="btn sm" onclick="formGiamKyQuy(${j(id)})">＋ Giảm ký quỹ</button></div>
       <table class="fin"><tr><td>Ký quỹ ban đầu</td><td>${tien(q.banDau)}</td></tr><tr><td>Đã giảm (${gt.length} lần)</td><td>${tien(TINH_TOAN.tong(DL.kyQuyGiamTru[id],'soTien'))}</td></tr><tr><td>Đã hoàn trả${q.ngayHoanTra?' ('+ngayVN(q.ngayHoanTra)+')':''}</td><td>${tien(q.hoanTra)}</td></tr><tr><td><b>Đang bị giữ</b></td><td><b>${tien(t.kyQuy)}</b></td></tr></table>
-      ${gt.length?`<div class="tw" style="margin-top:8px"><table class="p"><thead><tr><th class="tr">Ngày giảm</th><th>Số tiền</th><th class="tr">Ghi chú</th></tr></thead><tbody>${gt.map(x=>`<tr onclick="formGiamKyQuy('${id}','${x.id}')"><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody></table></div>`:''}
+      ${gt.length?`<div class="tw" style="margin-top:8px"><table class="p"><thead><tr><th class="tr">Ngày giảm</th><th>Số tiền</th><th class="tr">Ghi chú</th></tr></thead><tbody>${gt.map(x=>`<tr onclick="formGiamKyQuy(${j(id)},${j(x.id)})"><td class="tr">${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody></table></div>`:''}
       <div class="hint">Bảo lãnh tạm ứng: mỗi lần chủ đầu tư thu hồi tạm ứng, ngân hàng giảm ký quỹ tương ứng — bấm "＋ Giảm ký quỹ" nhập số thật theo ngân hàng. Khi thư hết hiệu lực, phần còn lại được hoàn: bấm Sửa, nhập "Đã được hoàn trả".</div></div></div>
     ${veFile(khoa,b)}
     ${veLichSu(id)}` };
@@ -1886,7 +1940,7 @@ function tenKhoanTheoKhoa(khoa){ const [b,id]=String(khoa||'').split('/'), x=(DL
 function taiSanCua(khoa){ return danhSachCon(DL.taiSanBaoDam).filter(ts=>danhSachCon(ts.baoDamCho).some(l=>l.khoan===khoa)); }
 // Thẻ "Tài sản bảo đảm" hiện trong chi tiết hạn mức / khoản vay / thấu chi
 function veTaiSanCua(khoa){ const ds=taiSanCua(khoa); if(!ds.length) return '';
-  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🏠 Tài sản bảo đảm cho khoản này</h3></div>${ds.map(ts=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border);cursor:pointer" onclick="moChiTiet('taiSan','${ts.id}')"><div>${ICON_TAI_SAN[ts.loai]||'📦'} <b>${esc(ts.moTa)}</b><div class="item-sub">${esc(LOAI_TAI_SAN[ts.loai]||'')} · ${esc(tenChuSoHuu(ts))} · định giá ${tien(ts.giaTriDinhGia)} đ</div></div><span style="flex:0 0 auto">›</span></div>`).join('')}</div></div>`; }
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🏠 Tài sản bảo đảm cho khoản này</h3></div>${ds.map(ts=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border);cursor:pointer" onclick="moChiTiet('taiSan',${j(ts.id)})"><div>${ICON_TAI_SAN[ts.loai]||'📦'} <b>${esc(ts.moTa)}</b><div class="item-sub">${esc(LOAI_TAI_SAN[ts.loai]||'')} · ${esc(tenChuSoHuu(ts))} · định giá ${tien(ts.giaTriDinhGia)} đ</div></div><span style="flex:0 0 auto">›</span></div>`).join('')}</div></div>`; }
 function oTaiSan(){ return [
   {k:'loai',nhan:'Loại tài sản',kieu:'chon',ds:LOAI_TAI_SAN,rong:'— chọn —',batBuoc:true},
   {k:'moTa',nhan:'Mô tả (thửa đất nào, xe gì, sổ tiết kiệm số…)',batBuoc:true},
@@ -1907,7 +1961,8 @@ function oBaoDamCho(ts){ const nh=ts.nganHangId, ds=[];
     {k:'mucDichVay',nhan:'Mục đích vay'}, {k:'khachHangGiaiNgan',nhan:'Khách hàng được giải ngân',nua:true}, {k:'ghiChu',nhan:'Ghi chú'} ]; }
 function formTaiSan(id){ if(!id&&thieuNganHang()) return; moFormCon(id?'✏️ Sửa tài sản bảo đảm':'＋ Thêm tài sản bảo đảm','taiSanBaoDam',id,oTaiSan(),{ngayDinhGia:homNay()}); }
 function formBaoDamCho(tsId, id){ moFormCon((id?'✏️ Sửa':'＋')+' Khoản được bảo đảm','taiSanBaoDam/'+tsId+'/baoDamCho',id,oBaoDamCho(DL.taiSanBaoDam[tsId])); }
-KIEM_TRA.taiSanBaoDam=function(v){ const c=v.chuSoHuu;
+KIEM_TRA.taiSanBaoDam=function(v,duongBang,id){ const c=v.chuSoHuu, cuTS=id?DL.taiSanBaoDam[id]:null, soGan=cuTS?danhSachCon(cuTS.baoDamCho).length:0;
+  if(cuTS&&soGan&&cuTS.nganHangId!==v.nganHangId) throw new Error('Tài sản đang gắn với '+soGan+' khoản của ngân hàng cũ. Gỡ các khoản đó trước (thẻ "Đang bảo đảm cho các khoản" → ✏️), rồi mới đổi ngân hàng.');
   if(!c.congTyId&&!c.tenCaNhan) throw new Error('Cần chọn công ty chủ sở hữu hoặc ghi tên cá nhân');
   if(c.congTyId) c.tenCaNhan=''; c.loai=c.congTyId?'congTy':'caNhan';
   if(v.ngayDinhGiaLai&&v.ngayDinhGiaLai<=v.ngayDinhGia) throw new Error('Ngày định giá lại phải sau ngày định giá'); };
@@ -1920,17 +1975,17 @@ function veTaiSan(){
   const S=TINH_TOAN.soNguyen;
   $('ts-tong').innerHTML=`<div class="tile acc"><span>Tổng giá trị định giá</span><b>${tienNgan(ds.reduce((s,x)=>s+S(x.giaTriDinhGia),0))}</b><small>${ds.length} tài sản đang thế chấp</small></div><div class="tile"><span>Sổ tiết kiệm thế chấp</span><b>${tienNgan(ds.filter(x=>x.loai==='soTietKiem').reduce((s,x)=>s+S(x.giaTriDinhGia),0))}</b><small>tiền đang bị giam</small></div>`;
   $('ds-taisan').innerHTML=ds.length?ds.map(ts=>{ const dgl=ngayDinhGiaLai(ts), con=TINH_TOAN.soNgayGiua(hn,dgl), n=danhSachCon(ts.baoDamCho).length;
-    return `<div class="al ${con!=null&&con<0?'over':con!=null&&con<=NHAC_DINH_GIA_NGAY?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('taiSan','${ts.id}')"><span class="ic">${ICON_TAI_SAN[ts.loai]||'📦'}</span><div class="item-main">
+    return `<div class="al ${con!=null&&con<0?'over':con!=null&&con<=NHAC_DINH_GIA_NGAY?'due':''}" style="cursor:pointer;align-items:flex-start" onclick="moChiTiet('taiSan',${j(ts.id)})"><span class="ic">${ICON_TAI_SAN[ts.loai]||'📦'}</span><div class="item-main">
       <div class="item-name">${esc(ts.moTa)}</div>
       <div class="item-sub">${esc(LOAI_TAI_SAN[ts.loai]||'')} · chủ sở hữu: ${esc(tenChuSoHuu(ts))} · thế chấp tại ${esc(tenNganHang(ts.nganHangId))}</div>
-      <div class="item-sub">Định giá <b>${tien(ts.giaTriDinhGia)} đ</b> (${ngayVN(ts.ngayDinhGia)}) · định giá lại ${ngayVN(dgl)}${con!=null&&con<0?' · <b class="neg">QUÁ HẠN '+(-con)+' ngày</b>':con!=null&&con<=NHAC_DINH_GIA_NGAY?' · <b>còn '+con+' ngày</b>':''} · bảo đảm ${n} khoản</div>
+      <div class="item-sub">Định giá <b>${tien(ts.giaTriDinhGia)} đ</b> (${ngayVN(ts.ngayDinhGia)}) · định giá lại ${ngayVN(dgl)}${con!=null&&con<0?' · <b class="neg">QUÁ HẠN '+(-con)+' ngày</b>':con!=null&&con<=NHAC_DINH_GIA_NGAY?' · <b>còn '+con+' ngày</b>':''} · bảo đảm ${n} khoản</div>
     </div><span>›</span></div>`; }).join('')
     :`<div class="empty">${tat.length?'Không tìm thấy.':'Chưa có tài sản bảo đảm nào. Bấm "Thêm tài sản bảo đảm".'}</div>`;
 }
 function veCtTaiSan(id){
   const ts=DL.taiSanBaoDam[id]; if(!ts) return null;
   const hn=homNay(), dgl=ngayDinhGiaLai(ts), con=TINH_TOAN.soNgayGiua(hn,dgl), tc=ts.hopDongTheChap||{}, lk=danhSachCon(ts.baoDamCho);
-  return { tieuDe:esc(ts.moTa), sua:`formTaiSan('${id}')`, html:`
+  return { tieuDe:esc(ts.moTa), sua:`formTaiSan(${j(id)})`, html:`
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">${ICON_TAI_SAN[ts.loai]||'📦'} ${esc(ts.moTa)}</div>
       <div style="margin:6px 0"><span class="badge tt-xam">${esc(LOAI_TAI_SAN[ts.loai]||'')}</span>${ts.loai==='soTietKiem'?' <span class="badge tt-quaHan">Tiền đang bị giam</span>':''}</div>
@@ -1941,14 +1996,14 @@ function veCtTaiSan(id){
       </div>
       <div class="kv" style="margin-top:10px">
         <div>Chủ sở hữu</div><div>${esc(tenChuSoHuu(ts))}</div>
-        <div>Thế chấp tại</div><div style="cursor:pointer" onclick="moChiTiet('nganHang','${esc(ts.nganHangId)}')">${esc(tenNganHang(ts.nganHangId))} ›</div>
+        <div>Thế chấp tại</div><div style="cursor:pointer" onclick="moChiTiet('nganHang',${j(ts.nganHangId)})">${esc(tenNganHang(ts.nganHangId))} ›</div>
         <div>Hợp đồng thế chấp</div><div>${esc(tc.so||'—')}${tc.ngay?' · ký '+ngayVN(tc.ngay):''}</div>
         <div>Kế toán theo dõi</div><div>${esc(tenNguoi(ts.keToanTheoDoi)||'—')}</div>
         ${ts.ghiChu?`<div>Ghi chú</div><div>${esc(ts.ghiChu)}</div>`:''}
       </div>
     </div></div>
-    <div class="card"><div class="card-body"><div class="sec-h"><h3>🔗 Đang bảo đảm cho các khoản</h3><button class="btn sm" onclick="formBaoDamCho('${id}')">＋ Gắn khoản</button></div>
-      ${lk.length?lk.map(l=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div style="cursor:pointer" onclick="moChiTiet('${esc(String(l.khoan).split('/')[0])}','${esc(String(l.khoan).split('/')[1])}')"><b>${esc(tenKhoanTheoKhoa(l.khoan))}</b> ›<div class="item-sub">${esc([l.mucDichVay,l.khachHangGiaiNgan&&'giải ngân cho '+l.khachHangGiaiNgan,l.ghiChu].filter(Boolean).join(' · '))}</div></div><button class="btn sm sec" style="flex:0 0 auto" onclick="formBaoDamCho('${id}','${l.id}')">✏️</button></div>`).join('')
+    <div class="card"><div class="card-body"><div class="sec-h"><h3>🔗 Đang bảo đảm cho các khoản</h3><button class="btn sm" onclick="formBaoDamCho(${j(id)})">＋ Gắn khoản</button></div>
+      ${lk.length?lk.map(l=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div style="cursor:pointer" onclick="moChiTiet(${j(String(l.khoan).split('/')[0])},${j(String(l.khoan).split('/')[1])})"><b>${esc(tenKhoanTheoKhoa(l.khoan))}</b> ›<div class="item-sub">${esc([l.mucDichVay,l.khachHangGiaiNgan&&'giải ngân cho '+l.khachHangGiaiNgan,l.ghiChu].filter(Boolean).join(' · '))}</div></div><button class="btn sm sec" style="flex:0 0 auto" onclick="formBaoDamCho(${j(id)},${j(l.id)})">✏️</button></div>`).join('')
         :'<div class="hint">Chưa gắn khoản nào. Một tài sản có thể bảo đảm cho nhiều khoản vay cùng ngân hàng.</div>'}</div></div>
     ${veFile('taiSanBaoDam/'+id,ts)}
     ${veLichSu(id)}` };
@@ -1964,13 +2019,13 @@ async function xongMoc(khoa){ const m=NHAC_HAN.cacMoc(duLieuNhac(),homNay()).fin
 async function moLaiMoc(khoa){ try{ await ghiNhieu({ [dRieng('nhacNho/'+khoa)]:null }); toast('Đã mở lại'); }catch(e){ toast('❌ '+e.message); } }
 function veNhacHan(){
   const ds=dsDangNhac(), B=NHAC_HAN.BANG_NHAC, T2=NHAC_HAN.TEN_MOC;
-  $('ds-nhac').innerHTML=ds.length?ds.map(m=>`<div class="al ${m.conNgay<0?'over':m.conNgay<=1?'due':''}" style="cursor:pointer" onclick="moMoc('${m.khoa}')"><span class="ic">${ICON_MOC[m.loai]||'🔔'}</span><div class="item-main">
-      <div class="item-name" style="font-size:15px">${esc(m.tieuDe)}${m.soTien?' · '+(m.loai==='traLai'||m.loai==='nopThauChi'?'~':'')+tien(m.soTien)+' đ':''}</div>
+  $('ds-nhac').innerHTML=ds.length?ds.map(m=>`<div class="al ${m.conNgay<0?'over':m.conNgay<=1?'due':''}" style="cursor:pointer" onclick="moMoc(${j(m.khoa)})"><span class="ic">${ICON_MOC[m.loai]||'🔔'}</span><div class="item-main">
+      <div class="item-name" style="font-size:15px">${esc(m.tieuDe)}${m.soTien?' · '+(m.loai==='traLai'||m.loai==='nopThauChi'?'~':'')+tien(m.soTien)+' đ':''}</div>
       <div class="item-sub">${m.conNgay<0?'<b class="neg">'+NHAC_HAN.chuKhi(m)+'</b>':'<b>'+NHAC_HAN.chuKhi(m)+'</b>'} · ${ngayVN(m.ngay)}${m.nguoi&&tenNguoi(m.nguoi)?' · KT: '+esc(tenNguoi(m.nguoi)):''}${m.tuTat?' · tự tắt khi nhập trả / nộp':''}</div>
-    </div>${m.tuTat?'<span>›</span>':`<button class="btn sm green" style="flex:0 0 auto" onclick="event.stopPropagation();xongMoc('${m.khoa}')">Đã xong</button>`}</div>`).join('')
+    </div>${m.tuTat?'<span>›</span>':`<button class="btn sm green" style="flex:0 0 auto" onclick="event.stopPropagation();xongMoc(${j(m.khoa)})">Đã xong</button>`}</div>`).join('')
     :'<div class="empty">🎉 Không có việc nào đang nhắc.</div>';
   const xong=Object.entries(DL.nhacNho).filter(([k,n])=>n&&n.daXong).sort((a,b)=>String(b[1].lucXong).localeCompare(String(a[1].lucXong))).slice(0,15);
-  $('ds-nhac-xong').innerHTML=xong.length?xong.map(([k,n])=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border)"><div><div style="font-size:15px">${esc(n.tieuDe||k)}${n.ngay?' ('+ngayVN(n.ngay)+')':''}</div><div class="hint">${esc(n.nguoiXong||'')} · ${lucVN(n.lucXong)}</div></div><button class="btn sm sec" style="flex:0 0 auto" onclick="moLaiMoc('${k}')">Mở lại</button></div>`).join(''):'<div class="hint">Chưa có.</div>';
+  $('ds-nhac-xong').innerHTML=xong.length?xong.map(([k,n])=>`<div class="row" style="padding:7px 0;border-bottom:1px solid var(--gray-border)"><div><div style="font-size:15px">${esc(n.tieuDe||k)}${n.ngay?' ('+ngayVN(n.ngay)+')':''}</div><div class="hint">${esc(n.nguoiXong||'')} · ${lucVN(n.lucXong)}</div></div><button class="btn sm sec" style="flex:0 0 auto" onclick="moLaiMoc(${j(k)})">Mở lại</button></div>`).join(''):'<div class="hint">Chưa có.</div>';
   $('nhac-bang').innerHTML='<b>Nhắc trước bao lâu:</b> '+Object.entries(B).map(([l,c])=>T2[l]+' — '+c.truoc+' ngày'+(c.lap?' (lặp mỗi '+c.lap+' ngày)':'')).join(' · ')+'. Quá hạn chưa xử lý thì nhắc mỗi ngày. Thông báo đẩy gửi lúc 7:00 sáng tới: người được tích "nhận mọi nhắc hạn" (trang Khác → Người dùng) và kế toán theo dõi của khoản đó.';
   return ds.length;
 }
@@ -2027,11 +2082,12 @@ async function taiFileMau(){ try{ const X=await napSheetJs(), wb=X.utils.book_ne
     X.writeFile(wb,'mau-nhap-cong-no.xlsx'); }catch(e){ toast('❌ '+e.message); } }
 // Đọc một ô Excel theo kiểu của cột
 function docOExcel(x, kieu){ if(x==null) x='';
-  if(kieu==='tien') return typeof x==='number'?Math.round(x):docTien(x);
+  if(kieu==='tien') return typeof x==='number'?Math.round(x):docTien(String(x).trim().replace(/[.,]\d{1,2}$/,''));   // ô chữ "1.500.000,00" (xuất từ phần mềm kế toán): bỏ phần lẻ trước, kẻo thành ×100
   if(kieu==='so') return Math.round(Number(String(x).replace(/[^\d-]/g,''))||0);
   if(kieu==='thapPhan'){ const n=typeof x==='number'?x:Number(String(x).replace('%','').trim().replace(',','.'))||0; return typeof x==='number'&&n>0&&n<1?Math.round(n*1e6)/1e4:n; }   // ô định dạng phần trăm (0,095) → 9,5
-  if(kieu==='ngay'){ if(typeof x==='number') return new Date(Date.UTC(1899,11,30)+Math.round(x)*86400000).toISOString().slice(0,10);   // ô kiểu ngày của Excel = số ngày từ 30/12/1899
-    const s=String(x).trim(), m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); return m?m[3]+'-'+pad(m[2])+'-'+pad(m[1]):/^\d{4}-\d{2}-\d{2}$/.test(s)?s:''; }
+  if(kieu==='ngay'){ if(typeof x==='number') return new Date(Date.UTC(1899,11,30)+Math.floor(x)*86400000).toISOString().slice(0,10);   // ô kiểu ngày của Excel = số ngày từ 30/12/1899
+    const s=String(x).trim(), m=/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/.exec(s); const iso=m?m[3]+'-'+pad(m[2])+'-'+pad(m[1]):/^\d{4}-\d{2}-\d{2}$/.test(s)?s:'', t=iso?new Date(iso+'T00:00:00Z'):null;
+    return t&&!isNaN(t)&&t.toISOString().slice(0,10)===iso&&+iso.slice(0,4)>=1990&&+iso.slice(0,4)<=2100?iso:''; }   // ngày kiểu Mỹ 1/15/2026, ngày vô lý 31/02/2026 → coi như chưa nhập (dòng báo thiếu), không cho sinh lịch sai
   return String(x).trim(); }
 const docCongTy = s => { s=String(s||'').trim().toUpperCase(); return MA_CONG_TY.includes(s)?s:''; };
 // Dựng gói ghi từ file Excel trong một "bản nháp" của dữ liệu: dùng ĐÚNG các hàm kiểm tra của form nhập tay (KIEM_TRA), không ghi gì cho tới khi người dùng xác nhận.
@@ -2058,11 +2114,12 @@ function xuLyNhap(X, wb){
           else { _form.them={loai:tenSheet==='VayDaiHan'?'daiHan':'thueTaiChinh'}; v.kyCachThang=v.kyCachThang||1; } }
         if(bang==='hanMuc') Object.assign(v,{ hanMucBaoLanhRieng:false, soTienHanMucBaoLanh:0 });
         if(bang==='thauChi'){ v.loaiLaiSuat='thaNoi'; v.nopHangThang=/gốc/i.test(v.nopHangThang)?'gocLai':'lai'; }
-        r.tomTat=tomTatMoi(bang,Object.assign({loai:_form.them.loai},v))+(bang!=='hanMuc'&&(v.soTien||v.hanMuc)?' · '+tien(v.soTien||v.hanMuc)+' đ':'');
+        r.tomTat=tomTatMoi(bang,Object.assign({loai:_form.them.loai},v))+(bang!=='hanMuc'&&(v.soTien||v.hanMuc)?' · '+tien(v.soTien||v.hanMuc)+' đ':'');
         KIEM_TRA[bang](v,bang,'');
+        if(bang==='thauChi'&&tim._dangDung>v.hanMuc) canhBao.push('Số đang dùng vượt hạn mức thấu chi');
         if(bang==='thauChi'&&tim._dangDung>0) v.giaoDich={ [khoaMoi()]:{ ngay:homNay(), loai:'rut', soTien:tim._dangDung, noiDung:'Số đang dùng khi bắt đầu nhập app' } };
         const id=soanLuu(kq.up,bang,'',v,r.tomTat+' (nhập từ Excel)'); DL[bang][id]=kq.up[dRieng(bang+'/'+id)];
-        r.loai='moi'; r.kq='sẽ thêm'+(canhBao.length?' — ⚠️ vượt hạn mức còn trống':''); kq.soMoi++;
+        r.loai='moi'; r.kq='sẽ thêm'+(canhBao.length?' — ⚠️ vượt hạn mức':''); kq.soMoi++;
       }catch(e){ const trung=/đã có/i.test(e.message); r.loai=trung?'boQua':'loi'; r.kq=e.message; if(!trung) kq.soLoi++; }
     });
     kq.sheet.push({ ten:tenSheet, dong:ds });
@@ -2079,20 +2136,24 @@ async function chonFileExcel(ev){ const f=ev.target.files[0]; ev.target.value=''
   }catch(e){ toast('❌ Không đọc được file: '+e.message); } }
 async function ghiNhapExcel(btn){ await bam(btn,async()=>{ if(!_goiNhap||!_goiNhap.soMoi) return; await ghiNhieu(_goiNhap.up); toast('✅ Đã nhập '+_goiNhap.soMoi+' dòng từ Excel'); _goiNhap=null; }); }
 
+// Thư bảo lãnh dùng chung bị xoá / đổi loại bên app Hợp Đồng mà ở đây còn ghi phí, ký quỹ → báo ở trang Khác để giám đốc biết (số "tiền đang bị giam" đã đổi theo)
+function moCoiBaoLanh(){ if(!['blChung','baoLanh','phiBaoLanh','kyQuyGiamTru'].every(b=>_daTai[b])) return '';
+  const co=new Set(dsBaoLanh().map(b=>b.id)), n=[...new Set(Object.keys(DL.phiBaoLanh).concat(Object.keys(DL.kyQuyGiamTru)))].filter(id=>!co.has(id)).length;
+  return n?`<div class="warn" style="grid-column:1/-1">⚠️ Có ${n} thư bảo lãnh không còn trong danh sách (đã bị xoá hoặc đổi loại ở app Hợp Đồng) nhưng còn ghi phí / ký quỹ ở đây — báo giám đốc kiểm tra.</div>`:''; }
 // ===== 19. MÀN HÌNH: Quản trị — yêu cầu xoá (giám đốc duyệt), ba công ty (chỉ xem), người dùng =====
 function veQuanTri(){
   veDongBo();
   // các mục con mở từ trang Khác
   $('khac-menu').innerHTML=[ ['nhac','🔔 Nhắc hạn',soDangNhac,'việc đến hạn, bật thông báo 7:00 sáng'], ['nganhang','🏦 Ngân hàng',danhSachCon(DL.nganHang).length,'ngân hàng, công ty cho thuê; số tài khoản'], ['thauchi','🔄 Thấu chi',danhSachCon(DL.thauChi).length,'hạn mức thấu chi, rút / nộp'], ['taisan','🏠 Tài sản bảo đảm',danhSachCon(DL.taiSanBaoDam).length,'tài sản thế chấp, định giá lại'], ['excel','📥 Nhập từ Excel','','file mẫu, nhập dữ liệu ban đầu'] ]
-    .map(([t,ten,n,moTa])=>`<div class="tile" style="cursor:pointer" onclick="chuyenTab('${t}')"><span>${ten}</span><b>${n}</b><small>${moTa} ›</small></div>`).join('');
+    .map(([t,ten,n,moTa])=>`<div class="tile" style="cursor:pointer" onclick="chuyenTab(${j(t)})"><span>${ten}</span><b>${n}</b><small>${moTa} ›</small></div>`).join('')+moCoiBaoLanh();
   const yc=Object.entries(DL.yeuCauXoa).filter(([k,y])=>y.trangThai==='cho').sort((a,b)=>String(a[1].luc).localeCompare(String(b[1].luc)));
   { const n=soDangNhac+(laGiamDoc()?yc.length:0); $('khac-badge').hidden=!n; $('khac-badge').textContent=n; } $('qt-yeucauxoa-n').hidden=!yc.length; $('qt-yeucauxoa-n').textContent=yc.length+' chờ';
   $('qt-yeucauxoa').innerHTML=yc.length?yc.map(([k,y])=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${esc(TEN_BANG[y.bang]||y.bang)}</b>: ${esc(y.tomTat||'')}</div><div class="hint">${esc(y.nguoiYeuCau)} · ${lucVN(y.luc)}${y.lyDo?' · '+esc(y.lyDo):''}</div>
-    ${laGiamDoc()?`<div class="row" style="margin-top:6px"><button class="btn sm red" onclick="duyetXoa('${k}',true)">✅ Đồng ý xoá</button><button class="btn sm sec" onclick="duyetXoa('${k}',false)">✖ Từ chối</button></div>`
-      :nguoiHienTai&&y.uid===nguoiHienTai.uid?`<button class="btn sm sec" style="margin-top:6px" onclick="rutYeuCauXoa('${k}')">↩️ Rút lại</button>`:''}</div>`).join(''):'<div class="hint">Không có yêu cầu xoá nào đang chờ.</div>';
+    ${laGiamDoc()?`<div class="row" style="margin-top:6px"><button class="btn sm red" onclick="duyetXoa(${j(k)},true)">✅ Đồng ý xoá</button><button class="btn sm sec" onclick="duyetXoa(${j(k)},false)">✖ Từ chối</button></div>`
+      :nguoiHienTai&&y.uid===nguoiHienTai.uid?`<button class="btn sm sec" style="margin-top:6px" onclick="rutYeuCauXoa(${j(k)})">↩️ Rút lại</button>`:''}</div>`).join(''):'<div class="hint">Không có yêu cầu xoá nào đang chờ.</div>';
   $('qt-congty').innerHTML=MA_CONG_TY.map(m=>{ const tk=danhSachCon(DL.nganHang).reduce((s,n)=>s+danhSachCon(n.taiKhoan).filter(t=>t.congTyId===m).length,0); return `<div style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><b>${m}</b> — ${esc(tenCongTy(m))}</div><div class="hint">${tk} số tài khoản · ${danhSachCon(DL.hanMuc).filter(h=>h.congTyVay===m).length} hợp đồng hạn mức đứng tên</div></div>`; }).join('');
   const nd=Object.entries(DL.nguoiDung).sort((a,b)=>String(a[1].ten).localeCompare(String(b[1].ten),'vi'));
-  $('qt-nguoidung').innerHTML=nd.length?nd.map(([u,n])=>`<div class="item-sub" style="padding:4px 0;font-size:14px;color:var(--text)">${n.vaiTro==='GD'?'👑':'👤'} <b>${esc(n.ten)}</b> · ${esc(n.email||'')} · ${n.vaiTro==='GD'?'Giám đốc':'Nhân viên'} · vào lần cuối ${lucVN(n.lanCuoi)}${n.vaiTro==='GD'?' · 🔔 nhận mọi nhắc hạn':laGiamDoc()?`<label style="display:inline-flex;gap:4px;align-items:center;margin-left:6px"><input type="checkbox" style="width:18px;height:18px" ${n.nhanTatCa?'checked':''} onchange="datNhanTatCa('${u}',this.checked)"> nhận mọi nhắc hạn</label>`:(n.nhanTatCa?' · 🔔 nhận mọi nhắc hạn':'')}</div>`).join(''):'<div class="hint">Chưa ai đăng nhập.</div>';
+  $('qt-nguoidung').innerHTML=nd.length?nd.map(([u,n])=>`<div class="item-sub" style="padding:4px 0;font-size:14px;color:var(--text)">${n.vaiTro==='GD'?'👑':'👤'} <b>${esc(n.ten)}</b> · ${esc(n.email||'')} · ${n.vaiTro==='GD'?'Giám đốc':'Nhân viên'} · vào lần cuối ${lucVN(n.lanCuoi)}${n.vaiTro==='GD'?' · 🔔 nhận mọi nhắc hạn':laGiamDoc()?`<label style="display:inline-flex;gap:4px;align-items:center;margin-left:6px"><input type="checkbox" style="width:18px;height:18px" ${n.nhanTatCa?'checked':''} onchange="datNhanTatCa(${j(u)},this.checked)"> nhận mọi nhắc hạn</label>`:(n.nhanTatCa?' · 🔔 nhận mọi nhắc hạn':'')}</div>`).join(''):'<div class="hint">Chưa ai đăng nhập.</div>';
 }
 
 // ===== 23. KHOI_DONG =====

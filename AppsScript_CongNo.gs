@@ -31,7 +31,7 @@ function khoiTao() {
 // ---------- kiểm tra người gọi ----------
 // Hỏi Firebase mã đăng nhập (idToken) này của ai, rồi đọc hồ sơ của chính người đó trong app Duyệt Chi xem đã được duyệt chưa.
 function xacThuc_(idToken) {
-  if (!idToken) return null;
+  if (!idToken || !/^[\w-]{10,}\.[\w-]{10,}\.[\w-]{10,}$/.test(String(idToken))) return null;   // phải có dạng JWT — kẻ gọi bừa không làm tốn lượt UrlFetch
   const r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=' + API_KEY,
     { method: 'post', contentType: 'application/json', payload: JSON.stringify({ idToken: idToken }), muteHttpExceptions: true });
   if (r.getResponseCode() !== 200) return null;
@@ -67,6 +67,7 @@ function doPost(e) {
 }
 function thongTin_() {
   const p = PropertiesService.getScriptProperties();
+  if (!p.getProperty('SHEET_ID') || !p.getProperty('FOLDER_ID')) return { ok: false, loi: 'Chưa chạy khoiTao trong Apps Script (chưa có file Sheets / thư mục Drive)' };
   return { ok: true, sheetUrl: 'https://docs.google.com/spreadsheets/d/' + p.getProperty('SHEET_ID'), thuMucUrl: 'https://drive.google.com/drive/folders/' + p.getProperty('FOLDER_ID'),
     lucDongBo: p.getProperty('LUC_DONG_BO') || '', nguoiDongBo: p.getProperty('NGUOI_DONG_BO') || '' };
 }
@@ -83,7 +84,7 @@ function dongBo_(d, nguoi) {
       const ten = String(b.ten || '').slice(0, 90); if (!ten) return;
       const mang = (b.mang || []).filter(r => Array.isArray(r)); if (!mang.length) mang.push(['(chưa có dữ liệu)']);
       const soCot = Math.max.apply(null, mang.map(r => r.length).concat([1]));
-      const o = mang.map(r => { const x = r.map(v => v == null ? '' : v); while (x.length < soCot) x.push(''); return x; });
+      const o = mang.map(r => { const x = r.map(v => v == null ? '' : (typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v)); while (x.length < soCot) x.push(''); return x; });   // chuỗi bắt đầu = + - @ → thêm dấu ' để Sheets không coi là công thức
       const sh = ss.getSheetByName(ten) || ss.insertSheet(ten);
       sh.clearContents();
       sh.getRange(1, 1, o.length, soCot).setValues(o);
