@@ -38,7 +38,7 @@ Thanh dưới có 5 nút:
 Quy ước chung trong mọi màn:
 
 - Bấm vào một dòng trong danh sách → mở **chi tiết**. Trong chi tiết, nút **✏️ Sửa** ở góc trên bên phải; nút **‹ Quay lại** ở góc trên bên trái.
-- Nút **＋** là thêm mới. Ô có dấu **\*** là bắt buộc.
+- Nút **＋** là thêm mới. Ô có dấu **\*** là bắt buộc. Ô số tháng, số kỳ, ngày trong tháng chỉ nhận **số nguyên** (gõ `6,5` app sẽ báo lỗi).
 - Dòng **vàng** = sắp đến hạn. Dòng **đỏ** (có vạch đỏ bên trái) = đã quá hạn hoặc có vấn đề.
 - Số tiền có dấu **~** là **số ước tính** (lãi app tự tính). Số thật luôn theo thông báo của ngân hàng và do kế toán nhập.
 - Dưới mọi bảng có nút **📤 Xuất Excel** để tải riêng bảng đó.
@@ -97,7 +97,7 @@ Lưu xong, app **tự tạo**: lần giải ngân đầu, dòng lãi suất đ�
 Nút **⚙️ Khác** → ô **📥 Nhập từ Excel**:
 
 1. Bấm **⬇️ File mẫu** → được file `mau-nhap-cong-no.xlsx` có 6 sheet: `NganHang`, `HanMuc`, `KheUoc`, `VayDaiHan`, `ThueTaiChinh`, `ThauChi` và sheet `HuongDan`. **Không đổi tên sheet, không đổi dòng tiêu đề.**
-2. Điền số liệu: mỗi dòng một khoản; ngày ghi `dd/mm/yyyy`; tiền ghi số đồng (có dấu chấm cũng được); lãi suất ghi `9,5`. Cột có dấu `*` là bắt buộc. Cột "Ngân hàng" + "Chi nhánh" phải trùng tên đã có trong app hoặc trong sheet `NganHang` của chính file.
+2. Điền số liệu: mỗi dòng một khoản; ngày ghi `dd/mm/yyyy` (ghi kiểu tháng/ngày/năm hoặc ngày không có thật thì dòng đó bị báo thiếu ngày); tiền ghi số đồng (có dấu chấm cũng được); lãi suất ghi `9,5`. Cột có dấu `*` là bắt buộc. Cột "Ngân hàng" + "Chi nhánh" phải trùng tên đã có trong app hoặc trong sheet `NganHang` của chính file.
 3. Bấm **📂 Chọn file** → app hiện bảng **xem trước**: ✅ sẽ thêm · ⏭ bỏ qua (đã có) · ❌ lỗi kèm lý do. **Chưa ghi gì** cho tới khi bấm **"✅ Ghi N dòng hợp lệ"**.
 4. Dòng lỗi thì sửa trong Excel rồi nhập lại; dòng đã ghi sẽ tự bỏ qua, không tạo trùng.
 
@@ -123,7 +123,7 @@ Lưu xong: kỳ lãi đó **tự biến mất** khỏi Lịch trả và Nhắc h
 
 Vào khế ước (hoặc khoản vay) → tab **Lịch trả** → bảng **📅 Lịch trả gốc** → bấm **Trả** ở kỳ đó. App điền sẵn số gốc còn lại của kỳ; sửa nếu trả một phần. Kỳ **tự chuyển sang ✅ đã trả** khi tổng gốc trả cho kỳ ≥ gốc của kỳ.
 
-Trả gốc + lãi cùng lúc: nhập cả hai ô trong một lần, chọn đúng kỳ gốc và kỳ lãi.
+Trả gốc + lãi cùng lúc: nhập cả hai ô trong một lần, chọn đúng kỳ gốc và kỳ lãi. Trả **hai kỳ gốc** cùng lúc thì nhập **hai dòng**, mỗi dòng gắn một kỳ (gộp vào một dòng thì kỳ thứ hai vẫn bị báo chưa trả).
 
 ### 4.3 Ngân hàng đổi lãi suất
 
@@ -196,12 +196,12 @@ Nút **🛡 Bảo lãnh** → **＋ Thêm thư bảo lãnh** → chọn loại:
 - **Tạm ứng**, **Thực hiện hợp đồng**: **dùng CHUNG với app Hợp Đồng** — nhập ở đây thì bên đó thấy ngay và ngược lại. Có ô **"Hợp đồng (trong app Hợp Đồng)"**: chọn đúng hợp đồng thì thư hiện trong hợp đồng đó bên app Hợp Đồng.
 - **Dự thầu**, **Bảo hành**: chỉ theo dõi trong app này.
 
-Các ô chính: ngân hàng phát hành, công ty, số thư, số tiền, ngày phát hành, ngày hết hạn, gói thầu; **Phí bảo lãnh** (thu một lần khi phát hành / thu định kỳ mỗi 1 hoặc 3 tháng, số tiền mỗi kỳ, **"Phí đã nộp đến ngày"** cho thư cũ); **Ký quỹ** (ban đầu, đã hoàn trả, ngày hoàn trả); kế toán theo dõi.
+Các ô chính: ngân hàng phát hành, công ty, số thư, số tiền, ngày phát hành, ngày hết hạn, gói thầu; **Phí bảo lãnh** (thu một lần khi phát hành / thu định kỳ mỗi 1 hoặc 3 tháng, số tiền mỗi kỳ, **"Phí đã nộp đến ngày"** cho thư cũ; thu định kỳ thì phải nhập **số phí mỗi kỳ** app mới nhắc nộp phí); **Ký quỹ** (ban đầu, đã hoàn trả, ngày hoàn trả); kế toán theo dõi.
 
 Trong chi tiết thư:
 
 - **💵 Phí bảo lãnh → ＋ Nộp phí**: app điền sẵn kỳ phí tới. Thư thu phí định kỳ sẽ có mốc nhắc **trước 10 ngày** và hiện trong Lịch trả (loại "Phí bảo lãnh").
-- **🔒 Ký quỹ → ＋ Giảm ký quỹ**: bảo lãnh tạm ứng, mỗi lần chủ đầu tư thu hồi tạm ứng thì ngân hàng giảm ký quỹ tương ứng — nhập số thật theo ngân hàng. Thư hết hiệu lực, phần còn lại được hoàn: bấm **✏️ Sửa**, nhập **"Đã được hoàn trả"** và ngày.
+- **🔒 Ký quỹ → ＋ Giảm ký quỹ**: bảo lãnh tạm ứng, mỗi lần chủ đầu tư thu hồi tạm ứng thì ngân hàng giảm ký quỹ tương ứng — nhập số thật theo ngân hàng. Thư hết hiệu lực, phần còn lại được hoàn: bấm **✏️ Sửa**, nhập **"Đã được hoàn trả"** và ngày — chỉ nhập **phần còn lại** sau các lần đã giảm (không gõ lại số ký quỹ ban đầu).
 - Thư còn hiệu lực sắp hết hạn: báo **trước 15 ngày** (gia hạn hoặc nộp phí gia hạn nếu công trình chưa xong). Thư đã gia hạn thì tích **"Thư đã được gia hạn"** và sửa ngày hết hạn.
 
 Thư còn hiệu lực được **cộng vào phần "đã dùng" của hạn mức vay** cùng ngân hàng, cùng công ty (trừ khi hạn mức tích "tách hạn mức bảo lãnh riêng"). Thư nhập từ app Hợp Đồng chỉ có tên ngân hàng gõ tay nên hiện **"⚠️ chưa gắn ngân hàng"** — bấm **✏️ Sửa** → chọn ngân hàng là xong. Ô tích **"Hiện cả thư đã hết hiệu lực"** để xem lại thư cũ.
@@ -245,7 +245,7 @@ Quá hạn chưa xử lý thì nhắc **mỗi ngày**. Bấm nhầm "Đã xong" 
 
 ## 11. Sửa, xoá, lịch sử
 
-- **Sửa**: mở chi tiết → **✏️ Sửa** (góc trên bên phải). Với dòng con (giải ngân, lãi suất, kỳ trả, trả nợ, giao dịch, phí, số tài khoản…): bấm vào dòng đó trong bảng. Sửa hạn mức (ngân hàng, công ty, số hợp đồng) thì các khế ước bên dưới tự mang theo.
+- **Sửa**: mở chi tiết → **✏️ Sửa** (góc trên bên phải). App chỉ ghi những ô mình thật sự đổi, nên hai người sửa hai ô khác nhau của cùng một bản ghi không đè lên nhau. Với dòng con (giải ngân, lãi suất, kỳ trả, trả nợ, giao dịch, phí, số tài khoản…): bấm vào dòng đó trong bảng. Sửa hạn mức (ngân hàng, công ty, số hợp đồng) thì các khế ước bên dưới tự mang theo.
 - **Xoá**: cuối ô Sửa có nút đỏ. Giám đốc bấm là xoá luôn (có hỏi lại, **không hoàn tác được**; xoá khoản vay là mất cả giải ngân, lãi suất, lịch trả, trả nợ của nó). Người khác bấm **"🗑 Yêu cầu xoá (giám đốc duyệt)"** → gõ **lý do** → yêu cầu nằm ở nút **⚙️ Khác** → thẻ **🗑 Yêu cầu xoá** để giám đốc **✅ Đồng ý xoá** hoặc **✖ Từ chối**. Đổi ý thì mở lại bản ghi bấm **↩️ Rút lại yêu cầu xoá**.
 - **Lịch sử**: cuối mỗi chi tiết (hoặc tab **Lịch sử** của khoản vay / thấu chi) ghi ai, lúc nào, sửa trường gì, giá trị cũ → mới. Không xoá được lịch sử.
 
@@ -278,7 +278,7 @@ Trong chi tiết hạn mức, khoản vay (tab **File**), thấu chi, thư bảo
 - **Dư nợ gốc** = tổng giải ngân − tổng gốc đã trả.
 - **Lãi ước** = dư nợ gốc × lãi suất năm ÷ 365 × số ngày, tính theo từng giai đoạn lãi suất và từng lần giải ngân / trả gốc. Ngày giải ngân có tính lãi; ngày trả gốc thì phần đã trả thôi tính. Kỳ lãi 25/01 → 25/02 gồm các ngày 25/01 … 24/02.
 - **Kỳ trả lãi**: ngày N hằng tháng (tháng không có ngày N thì lấy cuối tháng); kỳ cuối = ngày đến hạn khế ước. Khế ước quá hạn thì lịch lãi dừng ở ngày đến hạn — ngân hàng gia hạn / cơ cấu thì sửa ngày đến hạn.
-- **Hạn mức đã dùng** = dư nợ các khế ước + thư bảo lãnh đang hiệu lực cùng ngân hàng, cùng công ty (nếu không tách hạn mức bảo lãnh riêng).
+- **Hạn mức đã dùng** = dư nợ các khế ước + thư bảo lãnh đang hiệu lực cùng ngân hàng, cùng công ty (nếu không tách hạn mức bảo lãnh riêng). Một ngân hàng + một công ty có hai hạn mức gối nhau (cũ sắp hết, mới vừa ký) thì thư bảo lãnh chỉ tính vào hạn mức còn hiệu lực hết hạn muộn nhất.
 - **Trạng thái** app tự đặt: **Đang vay** · **Sắp đến hạn** (có kỳ gốc trong 7 ngày tới) · **QUÁ HẠN** (có kỳ **gốc** chưa trả đã qua ngày; lãi quá hạn chỉ tô đỏ ở Lịch trả) · **Đã tất toán** (dư nợ 0 và không còn kỳ gốc chưa trả). **Cơ cấu lại** là do kế toán tích tay.
 - Lãi thật luôn do kế toán nhập khi trả; app chỉ ước để nhắc và để so **Chênh**.
 
@@ -295,6 +295,8 @@ Trong chi tiết hạn mức, khoản vay (tab **File**), thấu chi, thư bảo
 **Khoản vay báo "Lịch trả gốc còn X nhưng gốc còn phải trả là Y — lệch"?** — Thường do vừa trả trước hạn hoặc giải ngân thêm. Bấm **Khớp lịch với dư nợ** (trừ dần từ các kỳ cuối) hoặc sửa tay từng kỳ ở tab **Lịch trả** cho đúng bảng của ngân hàng.
 
 **Khế ước cũ vừa nhập mà báo quá hạn lãi?** — Không xảy ra: kỳ lãi trước hôm nay app coi như đã trả. Nếu báo đỏ là do **kỳ gốc** (ngày đến hạn) đã qua — kiểm tra lại ngày đến hạn hoặc nhập trả gốc nếu đã trả.
+
+**Khoản đã tất toán mà Lịch trả vẫn còn dòng lãi đỏ?** — Lãi trả lúc tất toán chưa được gắn kỳ. Vào khoản đó → tab **Trả nợ** → bấm dòng trả lãi → ô **"Lãi này trả cho kỳ đến hạn"** chọn đúng kỳ → Lưu. (Khoản đã tất toán thì app không gửi thông báo nhắc lãi nữa, dòng đỏ chỉ để nhập bù.)
 
 **Lãi app ước khác số ngân hàng thu?** — Bình thường vài nghìn đồng do cách làm tròn / đếm ngày. Lệch lớn thì kiểm tra: lãi suất hiện hành (tab Lãi suất, có đúng dòng từ ngày đổi không), ngày giải ngân, các lần trả gốc. Số thật vẫn nhập theo ngân hàng.
 
