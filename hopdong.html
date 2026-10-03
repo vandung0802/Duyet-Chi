@@ -13,6 +13,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.14.0/firebase-storage-compat.js"></script>
 <style>
 /* ===== CSS toàn bộ app (spec mục 4.2). Chữ tối thiểu 16px, nút tối thiểu 44px trên điện thoại (quy tắc 10) ===== */
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -93,6 +94,7 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:#fff;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .modal h3{font-size:17px;margin-bottom:6px}
+.dk-list{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.dk-item{width:108px;font-size:12px}.dk-item img{width:108px;height:108px;object-fit:cover;border-radius:8px;border:1px solid var(--gray-border);display:block}.dk-pdf{display:block;padding:10px 6px;border:1px solid var(--gray-border);border-radius:8px;word-break:break-all;font-size:13px;min-height:60px}.dk-nut{display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px}
 .kv div:nth-child(odd){color:var(--text-sub)}
 .tabs{display:flex;gap:4px;overflow-x:auto;padding:6px 0 8px;position:sticky;top:50px;background:#f0f2f5;z-index:5}
@@ -258,7 +260,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261003-v16',
+  PHIEN_BAN: '20261003-v17',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -361,6 +363,7 @@ function batBuoc(cacO, kq){ const thieu=cacO.filter(o=>o.batBuoc&&!o.tieuDe).fil
 // ===== 3. DANG_NHAP — email + mật khẩu Firebase Auth, chung tài khoản app Duyệt Chi (chốt 30/09: KHÔNG dùng tên + PIN) =====
 firebase.initializeApp(CAU_HINH.firebase);
 const db = firebase.database();
+const kho = (typeof firebase.storage==='function') ? firebase.storage() : null; // Firebase Storage: ảnh/PDF đính kèm (khối 9c)
 let nguoiHienTai=null, tenNguoiDung='', vaiTroDuyetChi='';
 const laGiamDoc = () => vaiTroDuyetChi==='dung';   // "GD" trong spec = tài khoản role 'dung' của Duyệt Chi
 async function dangNhap(){
@@ -802,7 +805,7 @@ function veTabPhuLuc(id,h,k){
   const ds=danhSachBanGhi('phuLuc',id).sort((a,b)=>String(a.ngayKy||'').localeCompare(String(b.ngayKy||'')));
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📎 Phụ lục hợp đồng</h3><button class="btn sm" onclick="formPhuLuc('${id}')">＋ Thêm</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Số PL</th><th>Ngày ký</th><th class="tr">Loại</th><th>Điều chỉnh giá trị</th><th>Hoàn thành mới</th><th class="tr">Nội dung</th></tr></thead><tbody>
-      ${ds.map(x=>`<tr onclick="formPhuLuc('${id}','${x.id}')"><td class="tr"><b>${esc(x.soPhuLuc)}</b></td><td>${ngayVN(x.ngayKy)}</td><td class="tr">${esc(LOAI_PHU_LUC[x.loai]||'')}</td><td class="${x.giaTriDieuChinh<0?'neg':'pos'}">${x.giaTriDieuChinh>=0?'+':''}${tien(x.giaTriDieuChinh)}</td><td>${ngayVN(x.ngayHoanThanhMoi)||'—'}</td><td class="tr" style="white-space:normal">${esc(x.noiDung||'')}</td></tr>`).join('')}</tbody>
+      ${ds.map(x=>`<tr onclick="formPhuLuc('${id}','${x.id}')"><td class="tr"><b>${esc(x.soPhuLuc)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngayKy)}</td><td class="tr">${esc(LOAI_PHU_LUC[x.loai]||'')}</td><td class="${x.giaTriDieuChinh<0?'neg':'pos'}">${x.giaTriDieuChinh>=0?'+':''}${tien(x.giaTriDieuChinh)}</td><td>${ngayVN(x.ngayHoanThanhMoi)||'—'}</td><td class="tr" style="white-space:normal">${esc(x.noiDung||'')}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td class="tr" colspan="3">Giá trị hiện hành</td><td>${tien(k.giaTriHienHanh)}</td><td>${ngayVN(k.ngayHoanThanhHienHanh)||'—'}</td><td></td></tr></tfoot></table></div><div class="hint">Bấm vào dòng để sửa. Phụ lục có thể cộng hoặc trừ giá trị, gia hạn thời gian, hoặc cả hai.</div>`:'<div class="hint">Chưa có phụ lục.</div>'}</div></div>`;
 }
 // --- Tab Tạm ứng ---
@@ -810,7 +813,7 @@ function veTabTamUng(id,h,k){
   const ds=danhSachBanGhi('tamUng',id).sort((a,b)=>(a.dot||0)-(b.dot||0)); const bl=DL.baoLanh;
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>💵 Tạm ứng</h3><button class="btn sm" onclick="formTamUng('${id}')">＋ Thêm đợt</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đợt</th><th>Ngày</th><th>Số tiền</th><th class="tr">Bảo lãnh tạm ứng</th><th class="tr">Ghi chú</th></tr></thead><tbody>
-      ${ds.map(x=>{ const b=x.baoLanhId&&bl[x.baoLanhId]; return `<tr onclick="formTamUng('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b></td><td>${ngayVN(x.ngay)}</td><td><b>${tien(x.soTien)}</b></td><td class="tr">${b?esc(b.nganHang||'')+' · '+tienNgan(b.soTien)+' · hết hạn '+ngayVN(b.ngayHetHan):'—'}</td><td class="tr" style="white-space:normal">${esc(x.ghiChu||'')}</td></tr>`; }).join('')}</tbody>
+      ${ds.map(x=>{ const b=x.baoLanhId&&bl[x.baoLanhId]; return `<tr onclick="formTamUng('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngay)}</td><td><b>${tien(x.soTien)}</b></td><td class="tr">${b?esc(b.nganHang||'')+' · '+tienNgan(b.soTien)+' · hết hạn '+ngayVN(b.ngayHetHan):'—'}</td><td class="tr" style="white-space:normal">${esc(x.ghiChu||'')}</td></tr>`; }).join('')}</tbody>
       <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(k.tamUngLuyKe)}</td><td class="tr" colspan="2">đã thu hồi ${tien(k.thuHoiTamUngLuyKe)} · chưa thu hồi <b>${tien(k.tamUngChuaThuHoi)}</b></td></tr></tfoot></table></div>`:'<div class="hint">Chưa có đợt tạm ứng nào.</div>'}</div></div>`;
 }
 // --- Tab Thanh toán ---
@@ -818,7 +821,7 @@ function veTabThanhToan(id,h,k){
   const ds=danhSachBanGhi('thanhToan',id).sort((a,b)=>(a.dot||0)-(b.dot||0));
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🧾 Thanh toán từng đợt</h3><button class="btn sm" onclick="formThanhToan('${id}')">＋ Thêm đợt</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đợt</th><th>Ngày NT</th><th>Giá trị nghiệm thu</th><th>Đề nghị TT</th><th>Thu hồi TƯ</th><th>Giữ BH</th><th>Giữ QT</th><th>Thực nhận</th><th>Tiền về</th></tr></thead><tbody>
-      ${ds.map(x=>`<tr onclick="formThanhToan('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b></td><td>${ngayVN(x.ngayNghiemThu)}</td><td>${tien(x.giaTriNghiemThu)}</td><td>${tien(x.soTienDeNghi)}</td><td>${x.thuHoiTamUng?tien(x.thuHoiTamUng):'—'}</td><td>${x.giuBaoHanh?tien(x.giuBaoHanh):'—'}</td><td>${x.giuQuyetToan?tien(x.giuQuyetToan):'—'}</td><td><b>${tien(x.soTienThucNhan)}</b></td><td>${ngayVN(x.ngayTienVe)||'<span class="neg">chưa</span>'}</td></tr>`).join('')}</tbody>
+      ${ds.map(x=>`<tr onclick="formThanhToan('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngayNghiemThu)}</td><td>${tien(x.giaTriNghiemThu)}</td><td>${tien(x.soTienDeNghi)}</td><td>${x.thuHoiTamUng?tien(x.thuHoiTamUng):'—'}</td><td>${x.giuBaoHanh?tien(x.giuBaoHanh):'—'}</td><td>${x.giuQuyetToan?tien(x.giuQuyetToan):'—'}</td><td><b>${tien(x.soTienThucNhan)}</b></td><td>${ngayVN(x.ngayTienVe)||'<span class="neg">chưa</span>'}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(k.nghiemThuLuyKe)}</td><td>${tien(k.deNghiLuyKe)}</td><td>${tien(k.thuHoiTamUngLuyKe)}</td><td>${tien(k.giuBaoHanhLuyKe)}</td><td>${tien(k.giuQuyetToanLuyKe)}</td><td>${tien(k.thucNhanLuyKe)}</td><td></td></tr></tfoot></table></div><div class="hint">Số tiền thực nhận và thu hồi tạm ứng do kế toán nhập tay theo chứng từ. Bấm vào dòng để sửa.</div>`:'<div class="hint">Chưa có đợt thanh toán nào.</div>'}</div></div>`;
 }
 // --- Tab Bảo lãnh ---
@@ -826,7 +829,7 @@ function veTabBaoLanh(id,h,k){
   const ds=danhSachBanGhi('baoLanh',id).sort((a,b)=>String(a.ngayHetHan||'').localeCompare(String(b.ngayHetHan||'')));
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🏦 Bảo lãnh ngân hàng</h3><button class="btn sm" onclick="formBaoLanh('${id}')">＋ Thêm</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Loại</th><th class="tr">Ngân hàng</th><th>Số tiền</th><th>Phát hành</th><th>Hết hạn</th><th>Còn</th></tr></thead><tbody>
-      ${ds.map(x=>{ const d=TINH_TOAN.soNgayGiua(homNay(),x.ngayHetHan); return `<tr onclick="formBaoLanh('${id}','${x.id}')"><td class="tr"><b>${esc(TEN_BAO_LANH[x.loai]||x.loai)}</b>${x.soThu?' <span class="hint">số '+esc(x.soThu)+'</span>':''}${x.daGiaHan?' <span class="hint">(đã gia hạn)</span>':''}${x.app==='congNo'?' <span class="hint">· từ app Công Nợ</span>':''}</td><td class="tr">${esc(x.nganHang||(x.nganHangId?'NH #'+x.nganHangId:''))}</td><td>${tien(x.soTien)}</td><td>${ngayVN(x.ngayPhatHanh)}</td><td>${ngayVN(x.ngayHetHan)}</td><td class="${d!=null&&d<=CAU_HINH.NHAC_TRUOC_NGAY?'neg':''}">${d==null?'—':d<0?'quá '+(-d)+' ngày':d+' ngày'}</td></tr>`; }).join('')}</tbody></table></div><div class="hint">App nhắc gia hạn trước ${CAU_HINH.NHAC_TRUOC_NGAY} ngày. Bảng bảo lãnh dùng chung với app Công Nợ: nhập ở app nào bên kia cũng thấy; phí và ký quỹ xem ở app Công Nợ.</div>`:'<div class="hint">Chưa có bảo lãnh nào. Ba loại: thực hiện hợp đồng, tạm ứng, bảo hành. (Bảo lãnh dự thầu nhập ở app Công Nợ.)</div>'}</div></div>`;
+      ${ds.map(x=>{ const d=TINH_TOAN.soNgayGiua(homNay(),x.ngayHetHan); return `<tr onclick="formBaoLanh('${id}','${x.id}')"><td class="tr"><b>${esc(TEN_BAO_LANH[x.loai]||x.loai)}</b>${dinhKemNho(x)}${x.soThu?' <span class="hint">số '+esc(x.soThu)+'</span>':''}${x.daGiaHan?' <span class="hint">(đã gia hạn)</span>':''}${x.app==='congNo'?' <span class="hint">· từ app Công Nợ</span>':''}</td><td class="tr">${esc(x.nganHang||(x.nganHangId?'NH #'+x.nganHangId:''))}</td><td>${tien(x.soTien)}</td><td>${ngayVN(x.ngayPhatHanh)}</td><td>${ngayVN(x.ngayHetHan)}</td><td class="${d!=null&&d<=CAU_HINH.NHAC_TRUOC_NGAY?'neg':''}">${d==null?'—':d<0?'quá '+(-d)+' ngày':d+' ngày'}</td></tr>`; }).join('')}</tbody></table></div><div class="hint">App nhắc gia hạn trước ${CAU_HINH.NHAC_TRUOC_NGAY} ngày. Bảng bảo lãnh dùng chung với app Công Nợ: nhập ở app nào bên kia cũng thấy; phí và ký quỹ xem ở app Công Nợ.</div>`:'<div class="hint">Chưa có bảo lãnh nào. Ba loại: thực hiện hợp đồng, tạm ứng, bảo hành. (Bảo lãnh dự thầu nhập ở app Công Nợ.)</div>'}</div></div>`;
 }
 // --- Tab Bảo hành & Quyết toán (+ hoàn trả tiền giữ) ---
 function veTabBaoHanh(id,h,k){
@@ -848,7 +851,7 @@ function veTabBaoHanh(id,h,k){
   </div></div>
   <div class="card"><div class="card-body"><div class="sec-h"><h3>↩️ Hoàn trả tiền giữ</h3><button class="btn sm" onclick="formHoanTra('${id}')">＋ Thêm</button></div>
     ${ht.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Loại</th><th>Ngày</th><th>Số tiền</th><th class="tr">Lý do</th><th class="tr">Ghi chú</th></tr></thead><tbody>
-      ${ht.map(x=>`<tr onclick="formHoanTra('${id}','${x.id}')"><td class="tr"><b>${esc(LOAI_HOAN_TRA[x.loai]||x.loai)}</b></td><td>${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(LY_DO_HOAN_TRA[x.lyDo]||'')}</td><td class="tr" style="white-space:normal">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Chưa nhận lại khoản giữ nào. Khi bên A trả lại tiền giữ bảo hành / giữ chờ quyết toán thì ghi ở đây.</div>'}</div></div>`;
+      ${ht.map(x=>`<tr onclick="formHoanTra('${id}','${x.id}')"><td class="tr"><b>${esc(LOAI_HOAN_TRA[x.loai]||x.loai)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngay)}</td><td>${tien(x.soTien)}</td><td class="tr">${esc(LY_DO_HOAN_TRA[x.lyDo]||'')}</td><td class="tr" style="white-space:normal">${esc(x.ghiChu||'')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="hint">Chưa nhận lại khoản giữ nào. Khi bên A trả lại tiền giữ bảo hành / giữ chờ quyết toán thì ghi ở đây.</div>'}</div></div>`;
 }
 // --- Tab Kế hoạch tiền về: bảng 12 tháng của 1 năm, nhập số dự kiến ---
 let namKeHoach=new Date().getFullYear();
@@ -875,7 +878,8 @@ async function luuKeHoach(id,btn){
 function veTabFile(id,h,k){
   const fs=Object.entries(h.fileDinhKem||{});
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📁 File đính kèm</h3><button class="btn sm" onclick="formFile('${id}')">＋ Thêm link</button></div>
-    <div class="hint" style="margin-bottom:8px">Scan hợp đồng, phụ lục, bảo lãnh… Dán link OneDrive hoặc Google Drive (đặt quyền "ai có link đều xem được").</div>
+    ${htmlDinhKem('hopDong',id,id)}
+    <div class="hint" style="margin:10px 0 8px">Ngoài ảnh/PDF tải lên ở trên, có thể dán link OneDrive hoặc Google Drive (đặt quyền "ai có link đều xem được"). Ảnh của từng phụ lục / đợt thanh toán / thư bảo lãnh thì đính ngay trong bản ghi đó (bấm vào dòng).</div>
     ${fs.length?fs.map(([fid,f])=>`<div class="row" style="padding:8px 0;border-bottom:1px solid var(--gray-border)"><div><a href="${esc(f.link)}" target="_blank" rel="noopener" style="font-weight:700;color:var(--blue-dark)">📎 ${esc(f.ten||f.link)}</a><div class="hint">${esc(f.nguon||'')} · ${esc(f.nguoiTai||'')} · ${lucVN(f.luc)}</div></div>${laGiamDoc()?`<button class="btn sm sec" style="flex:0 0 auto;color:var(--red)" onclick="xoaFile('${id}','${fid}')">✕</button>`:''}</div>`).join(''):'<div class="hint">Chưa có file nào.</div>'}</div></div>`;
 }
 function formFile(id){
@@ -936,7 +940,7 @@ function formHopDong(id){
     {k:'noiBo.hopDongGocId',nhan:'Hợp đồng gốc',kieu:'chon',ds:Object.fromEntries(khac),rong:'— chọn hợp đồng gốc —',hienKhi:'noiBo.co'},
     {k:'ghiChu',nhan:'Ghi chú',kieu:'vanBan'},
   ];
-  moForm(id?'✏️ Sửa hợp đồng':'＋ Thêm hợp đồng',_cacO,h,`<button class="btn" onclick="luuHopDong('${id||''}',this)">💾 Lưu</button>`);
+  moForm(id?'✏️ Sửa hợp đồng':'＋ Thêm hợp đồng',_cacO,h,`${id?htmlDinhKem('hopDong',id,id):''}<div style="margin-top:12px"><button class="btn" onclick="luuHopDong('${id||''}',this)">💾 Lưu</button></div>`);
 }
 function tinhSauThue(){ const a=docTien($('f-giaTriTruocThue').value), t=docTien($('f-thue').value); if(a) $('f-giaTriGoc').value=tien(a+t); }
 async function luuHopDong(id,btn){
@@ -966,11 +970,12 @@ function formQuyetToan(id){ const h=DL.hopDong[id], k=ketQua(id);
   moForm('📋 Quyết toán',_cacO,h,`<button class="btn" onclick="luuPhan('${id}',this)">💾 Lưu</button>`); }
 
 // --- Bảng con dùng chung: phụ lục / tạm ứng / thanh toán / bảo lãnh / hoàn trả ---
-function moFormCon(bang,hopDongId,id,tieuDe,cacO,macDinh){ _formBang=bang; _formHopDongId=hopDongId; _formId=id||''; _cacO=cacO; const x=id?gan1BanGhi(bang,hopDongId,id):macDinh;
-  moForm((id?'✏️ Sửa ':'＋ Thêm ')+tieuDe,cacO,x,`<div class="row"><button class="btn" onclick="luuCon(this)">💾 Lưu</button></div>${id?'<div style="margin-top:10px">'+nutXoa(bang,hopDongId,id,tomTatBanGhi(bang,hopDongId,id))+'</div>':''}`); }
+function moFormCon(bang,hopDongId,id,tieuDe,cacO,macDinh){ _formBang=bang; _formHopDongId=hopDongId; _formId=id||''; _cacO=cacO; _dinhKemCho=[]; const x=id?gan1BanGhi(bang,hopDongId,id):macDinh;
+  moForm((id?'✏️ Sửa ':'＋ Thêm ')+tieuDe,cacO,x,`${htmlDinhKem(bang,hopDongId,id)}<div class="row" style="margin-top:12px"><button class="btn" onclick="luuCon(this)">💾 Lưu</button></div>${id?'<div style="margin-top:10px">'+nutXoa(bang,hopDongId,id,tomTatBanGhi(bang,hopDongId,id))+'</div>':''}`); }
 async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); if(window._kiemTraCon) window._kiemTraCon(v);
   const phu=v._baoLanh; delete v._baoLanh; // phần phụ (bảo lãnh tạm ứng) tách ra trước khi ghi, không nằm trong bản ghi chính
   const id=await luuBanGhi(_formBang,_formHopDongId,_formId,v,tomTatMoi(_formBang,v)); _formId=id; // đã ghi xong bản chính: bấm Lưu lại (nếu bước phụ lỗi) là SỬA, không tạo trùng
+  if(_dinhKemCho.length){ const ds=_dinhKemCho; _dinhKemCho=[]; await ghiDinhKem(_formBang,_formHopDongId,id,ds); } // file tải lên lúc thêm mới → gắn vào bản ghi vừa tạo
   if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v,phu); toast('✅ Đã lưu'); }); }
 function tomTatMoi(bang,v){ return (DL.hopDong[_formHopDongId]||{}).soHopDong+' · '+TEN_BANG[bang]+' '+(v.dot||v.soPhuLuc||LOAI_BAO_LANH[v.loai]||LOAI_HOAN_TRA[v.loai]||'')+' '+tienD(v.soTien||v.giaTriDieuChinh||v.giaTriNghiemThu||0); }
 function dotTiep(bang,hopDongId){ return danhSachBanGhi(bang,hopDongId).reduce((m,x)=>Math.max(m,Number(x.dot)||0),0)+1; }
@@ -1008,6 +1013,41 @@ function formBaoLanh(hopDongId,id){ const k=ketQua(hopDongId); const cuBL=id?DL.
 function formHoanTra(hopDongId,id){ const k=ketQua(hopDongId);
   window._kiemTraCon=null; window._sauKhiLuuCon=null;
   moFormCon('hoanTra',hopDongId,id,'hoàn trả tiền giữ',[{k:'loai',nhan:'Khoản được trả lại',kieu:'chon',ds:LOAI_HOAN_TRA,batBuoc:true,hint:'Đang bị giữ: bảo hành '+tienD(k.giuBaoHanhDangGiu)+' · chờ quyết toán '+tienD(k.giuQuyetToanDangGiu)},{k:'ngay',nhan:'Ngày tiền về',kieu:'ngay',batBuoc:true},{k:'soTien',nhan:'Số tiền (đ)',kieu:'tien',batBuoc:true,nua:true},{k:'lyDo',nhan:'Lý do',kieu:'chon',ds:LY_DO_HOAN_TRA},{k:'ghiChu',nhan:'Ghi chú'}],{loai:'baoHanh',ngay:homNay(),lyDo:'hetBaoHanh'}); }
+// ===== 9c. DINH_KEM — chụp/chọn ảnh, PDF cho hợp đồng và từng bản ghi con (phụ lục, tạm ứng, thanh toán, bảo lãnh, hoàn trả).
+// File lên Firebase Storage thư mục duyetchi/hopdong/… (luật Storage đang mở thư mục duyetchi/ — như app Thiết bị), link ghi vào <bản ghi>/fileDinhKem/{id}.
+// Ảnh được nén còn ≤1000px trước khi tải (nhanh, nhẹ); PDF giữ nguyên, tối đa 15MB. Xoá: giám đốc hoặc người tải lên. =====
+let _dinhKemCho=[]; // file tải lên trong form "Thêm mới" (chưa có id bản ghi) → ghi vào bản ghi ngay sau khi Lưu
+function duongBanGhi(bang,hopDongId,id){ return bang==='hopDong'?'hopDong/'+id:bang==='baoLanh'?'baoLanh/'+id:bang+'/'+hopDongId+'/'+id; }
+function nenAnh(file){ return new Promise((resolve,reject)=>{ const r=new FileReader(); r.onerror=()=>reject(new Error('Không đọc được ảnh'));
+  r.onload=e=>{ const img=new Image(); img.onerror=()=>reject(new Error('Ảnh hỏng')); img.onload=()=>{ const MAX=1000; let w=img.naturalWidth,h=img.naturalHeight; if(w>MAX||h>MAX){ if(w>h){h=Math.round(h*MAX/w);w=MAX;} else {w=Math.round(w*MAX/h);h=MAX;} }
+    const c=document.createElement('canvas'); c.width=w; c.height=h; c.getContext('2d').drawImage(img,0,0,w,h);
+    c.toBlob(b=>b?resolve(b):reject(new Error('Không nén được ảnh')),'image/jpeg',0.72); }; img.src=e.target.result; }; r.readAsDataURL(file); }); }
+async function taiLenKho(blob,duongDan,mime){ if(!kho) throw new Error('Máy này chưa nạp được Firebase Storage — tải lại trang rồi thử lại'); const r=kho.ref(duongDan); await r.put(blob,{contentType:mime}); return await r.getDownloadURL(); }
+async function chonDinhKem(ev,bang,hopDongId,id){ const files=Array.from(ev.target.files||[]); ev.target.value=''; if(!files.length) return; const tt=$('dk-tt');
+  for(const f of files){ try{ if(tt) tt.textContent='⏳ Đang tải '+f.name+'…';
+      const laAnh=/^image\//.test(f.type), laPdf=f.type==='application/pdf'||/\.pdf$/i.test(f.name);
+      if(!laAnh&&!laPdf) throw new Error('Chỉ nhận ảnh hoặc PDF: '+f.name); if(laPdf&&f.size>15*1024*1024) throw new Error('PDF quá 15MB: '+f.name);
+      const blob=laAnh?await nenAnh(f):f; const mime=laAnh?'image/jpeg':'application/pdf'; const ten=laAnh?((f.name||'anh').replace(/\.[^.]+$/,'')||'anh')+'.jpg':f.name;
+      const duongDan='duyetchi/hopdong/'+(hopDongId||'chung')+'/'+bang+'/'+(id||'moi')+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,6)+'-'+ten.replace(/[^\w.\-]+/g,'_');
+      const link=await taiLenKho(blob,duongDan,mime);
+      const f2={ten,link,nguon:'storage',loai:laAnh?'anh':'pdf',duongDan,nguoiTai:tenNguoiDung,uid:nguoiHienTai?nguoiHienTai.uid:'',luc:luc()};
+      if(id) await ghiDinhKem(bang,hopDongId,id,[f2]); else _dinhKemCho.push(f2);
+    }catch(e){ toast('❌ '+(e.message||e)); } }
+  if(tt) tt.textContent=''; veKhuDinhKem(bang,hopDongId,id); }
+async function ghiDinhKem(bang,hopDongId,id,ds){ const up={}; ds.forEach(f=>{ const fid=khoaMoi(); up[duongBanGhi(bang,hopDongId,id)+'/fileDinhKem/'+fid]=f; up['lichSu/'+khoaMoi()]=dongLichSu(bang,id,bang==='hopDong'?id:hopDongId,'sua','fileDinhKem','',f.ten); }); await ghiNhieu(up); }
+async function xoaDinhKem(bang,hopDongId,id,fid){ const x=gan1BanGhi(bang,hopDongId,id)||{}; const f=(x.fileDinhKem||{})[fid]; if(!f) return;
+  if(!(laGiamDoc()||(nguoiHienTai&&f.uid===nguoiHienTai.uid))) return toast('Chỉ giám đốc hoặc người tải lên được xoá'); if(!confirm('Xoá "'+(f.ten||'')+'"?')) return;
+  const up={}; up[duongBanGhi(bang,hopDongId,id)+'/fileDinhKem/'+fid]=null; up['lichSu/'+khoaMoi()]=dongLichSu(bang,id,bang==='hopDong'?id:hopDongId,'sua','fileDinhKem',f.ten||'',''); await ghiNhieu(up);
+  if(f.duongDan&&kho){ try{ await kho.ref(f.duongDan).delete(); }catch(e){} } veKhuDinhKem(bang,hopDongId,id); }
+function htmlDinhKem(bang,hopDongId,id){ const x=id?(gan1BanGhi(bang,hopDongId,id)||{}):{}; const uid=nguoiHienTai?nguoiHienTai.uid:'';
+  const ds=Object.entries(x.fileDinhKem||{}).map(([fid,f])=>Object.assign({fid},f)).filter(f=>bang!=='hopDong'||f.nguon==='storage').concat(id?[]:_dinhKemCho.map(f=>Object.assign({fid:''},f)));
+  return `<div id="khu-dk" style="margin-top:12px"><h4 style="font-size:14px;margin:0 0 4px;color:var(--blue-dark)">📎 Ảnh / file đính kèm (${ds.length})</h4>
+    <div class="dk-list">${ds.map(f=>`<div class="dk-item">${f.loai==='anh'?`<a href="${esc(f.link)}" target="_blank" rel="noopener"><img src="${esc(f.link)}" loading="lazy" alt="${esc(f.ten||'')}"></a>`:`<a href="${esc(f.link)}" target="_blank" rel="noopener" class="dk-pdf">📄 ${esc(f.ten||f.link)}</a>`}<div class="hint">${esc(f.nguoiTai||'')} ${lucVN(f.luc)}</div>${f.fid&&(laGiamDoc()||f.uid===uid)?`<button class="btn sm sec" onclick="xoaDinhKem('${bang}','${hopDongId}','${id}','${f.fid}')">🗑 Xoá</button>`:''}</div>`).join('')}</div>
+    <label class="btn sec dk-nut"><input type="file" accept="image/*,application/pdf" multiple hidden onchange="chonDinhKem(event,'${bang}','${hopDongId||''}','${id||''}')">📎 Chụp / chọn ảnh, PDF</label> <span id="dk-tt" class="hint"></span>
+    ${id?'':'<div class="hint">File tải lên lúc này sẽ gắn vào bản ghi khi bấm Lưu.</div>'}</div>`; }
+function veKhuDinhKem(bang,hopDongId,id){ const el=$('khu-dk'); if(el) el.outerHTML=htmlDinhKem(bang,hopDongId,id); }
+const dinhKemNho = x => { const n=Object.keys((x&&x.fileDinhKem)||{}).length; return n?' <span class="hint">📎'+n+'</span>':''; };
+
 // ===== 10. MÀN HÌNH: Nhắc hạn — mốc từ TINH_TOAN.cacMoc + mốc tự thêm; nhắc trước 30 ngày, lặp 5 ngày, tới khi "Đã xong" (quy tắc 18) =====
 function khoaNhac(hopDongId,loai,thamChieuId){ return (hopDongId+'__'+loai+'__'+(thamChieuId||'x')).replace(/[.#$\[\]\/]/g,'_'); }
 // Đồng bộ bảng nhacNho với dữ liệu: mốc mới → tạo; ngày mốc đổi → cập nhật và mở lại; mốc không còn → xoá (mốc tự thêm giữ nguyên)
