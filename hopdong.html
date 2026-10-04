@@ -94,6 +94,10 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:#fff;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
 .modal h3{font-size:17px;margin-bottom:6px}
+/* Dòng phụ dưới tên gói thầu (màn chi tiết): dự án xanh ngọc, công ty chip tím, chủ đầu tư nâu cam */
+.ct-phu{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-top:6px;font-size:15px;line-height:1.4}
+.ct-duan{color:#0f766e;font-weight:600}.ct-cty{background:var(--blue-light);color:var(--blue-dark);font-weight:800;padding:2px 10px;border-radius:999px;font-size:13px}
+.ct-cdt{color:var(--yellow);font-weight:600}
 .dk-list{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}.dk-item{width:108px;font-size:12px}.dk-item img{width:108px;height:108px;object-fit:cover;border-radius:8px;border:1px solid var(--gray-border);display:block}.dk-pdf{display:block;padding:10px 6px;border:1px solid var(--gray-border);border-radius:8px;word-break:break-all;font-size:13px;min-height:60px}.dk-nut{display:inline-flex;align-items:center;gap:6px;min-height:44px;cursor:pointer}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px}
 .kv div:nth-child(odd){color:var(--text-sub)}
@@ -260,7 +264,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261004-v18',
+  PHIEN_BAN: '20261004-v19',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -742,7 +746,7 @@ function veChiTiet(){
   <div class="main">
     <div class="card"><div class="card-body">
       <div style="font-size:18px;font-weight:800">${esc(h.tenGoiThau)}</div>
-      <div class="item-sub" style="margin-top:2px">${esc(h.tenDuAn||'')}${h.tenDuAn?' · ':''}<b>${esc(h.congTyId)}</b>${h.noiBo&&h.noiBo.co?' (nội bộ)':''} · 🏢 ${esc(h.chuDauTu||'—')}</div>
+      <div class="ct-phu">${h.tenDuAn?'<span class="ct-duan">📍 '+esc(h.tenDuAn)+'</span>':''}<span class="ct-cty">${esc(h.congTyId)}${h.noiBo&&h.noiBo.co?' · nội bộ':''}</span><span class="ct-cdt">🏢 ${esc(h.chuDauTu||'—')}</span></div>
       <div style="margin:6px 0">${badgeTrangThai(h.trangThai)} ${h.lienDanh&&h.lienDanh.co?'<span class="badge tt-choNghiemThuHoanThanh">Liên danh '+esc(h.lienDanh.tyLe||'')+'</span>':'<span class="badge tt-daXong">Độc lập</span>'}</div>
       <div class="tiles" style="margin:8px 0 0;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
         <div class="tile" style="padding:8px"><span>Hiện hành</span><b style="font-size:14px">${tienNgan(k.giaTriHienHanh)}</b></div>
