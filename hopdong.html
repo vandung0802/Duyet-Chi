@@ -260,7 +260,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261003-v17',
+  PHIEN_BAN: '20261004-v18',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -460,7 +460,9 @@ async function luuBanGhi(bang, hopDongId, id, moi, tomTat){
 async function xoaBanGhi(bang, hopDongId, id, tomTat){
   if(!laGiamDoc()) throw new Error('Chỉ giám đốc được xoá. Hãy bấm "Yêu cầu xoá".');
   const up={};
-  if(bang==='hopDong'){ up['hopDong/'+id]=null; BANG_CON.forEach(b=>up[b+'/'+id]=null);
+  if(bang==='hopDong'){ up['hopDong/'+id]=null;
+    // v18: xoá TỪNG bản ghi con (phuLuc/{hdId}/{id}…). Trước đây ghi null cả nhánh phuLuc/{hdId} → luật chỉ cho xoá từng bản ghi → Firebase từ chối CẢ lần xoá (PERMISSION_DENIED)
+    BANG_CON.forEach(b=>Object.keys((DL[b]||{})[id]||{}).forEach(k=>{ up[b+'/'+id+'/'+k]=null; }));
     Object.entries(baoLanhCuaHD(id)).forEach(([k,b])=>{ if(!b.app||b.app==='hopDong') up['baoLanh/'+k]=null; }); // thư do app Công Nợ tạo giữ nguyên (họ còn theo dõi phí, ký quỹ)
     Object.entries(DL.nhacNho).forEach(([k,n])=>{ if(n.hopDongId===id) up['nhacNho/'+k]=null; }); }
   else if(bang==='baoLanh') up['baoLanh/'+id]=null;
