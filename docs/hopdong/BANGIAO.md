@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v17**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v18**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,12 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 04/10/2026 (bản v18 — sửa lỗi xoá hợp đồng bị PERMISSION_DENIED)
+
+- Anh Dũng gửi ảnh lỗi "❌ PERMISSION_DENIED: Permission denied". Dựng **Firebase Database Emulator với đúng `database.rules.json`** + chạy app thật (SDK compat 12.14 thật, auth giả bằng `mockUserToken`) cho 2 vai NV/GD, làm ~20 thao tác: mọi thêm/sửa/đính ảnh/nhập Excel/nhắc hạn đều qua luật; **chỉ xoá cả hợp đồng bị từ chối** (giám đốc xoá thẳng và giám đốc duyệt yêu cầu xoá hợp đồng).
+- Nguyên nhân: `xoaBanGhi('hopDong')` ghi `phuLuc/{hdId}=null` (cả nhánh) trong khi luật chỉ có `.write` ở `phuLuc/{hdId}/{id}` → Firebase không cho xoá ở cấp cha → cả lần ghi nhiều đường bị từ chối. Sửa: xoá **từng bản ghi con**; luật giữ nguyên.
+- Kịch bản giả lập để ngoài repo (`test-emu-hopdong.js` trong thư mục làm việc của Claude); chạy lại khi đổi luật hoặc đổi cách ghi.
 
 ## Đã làm 03/10/2026 (bản v17 — đính ảnh/PDF cho từng bản ghi)
 
