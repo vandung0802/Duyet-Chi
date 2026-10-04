@@ -29,3 +29,15 @@ index_files/
 plugin-cau-duong/
 tien-do-pva-379/
 replace.js
+
+# Anh chup + nhat ky cua Playwright khi thu giao dien — CO DU LIEU THAT (ten nguoi, so tien, so tai khoan) → khong day len
+.playwright-mcp/
+
+# Ghi chu lam viec ca nhan / ban nhap (khong phai file cua app) — de tren may hoac OneDrive tai-lieu, khong day len repo cong khai
+AppsScript_v144.gs
+PHAN_HOI_CHATGPT_BAO_MAT.md
+TRI-NHO-CHO-CHATGPT.md
+YEU-CAU-BAO-CAO-TELEGRAM-DUYET-CHI.md
+duy*t chi.md
+# README nay la cua app Tien do (repo rieng, private) nam nham cho — muon co README cho repo nay thi bo dong duoi
+/README.md
