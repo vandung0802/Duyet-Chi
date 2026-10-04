@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v18**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v20**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,16 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 04/10/2026 (bản v20 — bảo lãnh tạm ứng không nhập 2 lần)
+
+- Anh Dũng: nhập bảo lãnh tạm ứng ở đợt tạm ứng thì tab Bảo lãnh "nhảy thêm 1 lần nữa". Dựng lại: app KHÔNG tự nhân đôi; trùng vì cùng một thư nhập ở 2 cửa (form Tạm ứng tự tạo thư + bấm "＋ Thêm" ở tab Bảo lãnh, hoặc ngược lại). Anh Dũng chọn "cứ làm" phương án 4 bước:
+  1. Form Tạm ứng: ô **"Thư bảo lãnh tạm ứng"** chọn thư có sẵn chưa gắn đợt (tự chọn nếu chỉ có 1) / "＋ Nhập thư mới" (hiện 4 ô cũ) / "Không có".
+  2. Form Bảo lãnh loại tạm ứng: ô **"Cho đợt tạm ứng"** để gắn đợt. Nối 2 chiều `tamUng.baoLanhId` ↔ `baoLanh.tamUngId` qua `ganThuDot()` (gỡ liên kết cũ hai phía, có lịch sử).
+  3. Chặn trùng: thêm thư cùng loại + số tiền + ngày hết hạn trong cùng hợp đồng → hỏi trước (form Tạm ứng: OK = gắn vào thư có sẵn).
+  4. **Gộp thư trùng** (giám đốc, trong form thư): giữ thư đang mở, chuyển ảnh + số thư/ngày phát hành còn thiếu + liên kết đợt tạm ứng / hoàn trả sang, xoá thư thừa (lịch sử "Gộp vào thư …"); không xoá thư do app Công Nợ tạo (báo gộp VÀO thư đó). Tab Bảo lãnh hiện "→ đợt N" / "chưa gắn đợt" / "⚠ trùng".
+- Kèm: `luuCon` tách mọi ô `_…` khỏi bản ghi chính; nhập Excel không còn ghi `_bl` vào bản ghi tạm ứng và dùng lại thư giống hệt chưa gắn đợt.
+- Test: `test-bl-trung.js` (19 kiểm tra, 5 tình huống) ✅; giả lập Firebase luật thật: gắn thư (NV) + gộp (GD) không bị từ chối, NV không thấy nút Gộp ✅; các bộ test cũ ✅.
 
 ## Đã làm 04/10/2026 (bản v18 — sửa lỗi xoá hợp đồng bị PERMISSION_DENIED)
 

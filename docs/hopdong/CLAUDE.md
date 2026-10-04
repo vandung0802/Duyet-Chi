@@ -361,6 +361,7 @@ Mỗi nhánh dưới đây là một "bảng". Khóa `{id}` do Firebase sinh (`p
 ├── tamUng/{hopDongId}/{id}
 │     dot, ngay, soTien
 │     baoLanh: { nganHang, soTien, ngayPhatHanh, ngayHetHan, fileId }
+│     (04/10) bảo lãnh tạm ứng KHÔNG lưu trong tamUng: thư nằm ở bảng phẳng baoLanh/{id}; tamUng.baoLanhId ↔ baoLanh.tamUngId nối 2 chiều, một thư chỉ nhập một lần
 │
 ├── thanhToan/{hopDongId}/{id}
 │     dot, ngayNghiemThu, giaTriNghiemThu, soTienDeNghi
