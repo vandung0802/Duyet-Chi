@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v21**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v22**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,11 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 05/10/2026 (bản v22 — danh sách hợp đồng: sửa lệch cột + vừa màn hình)
+- LỖI từ v16: tiêu đề có 12 cột (thêm Dự phòng, GT không kể dự phòng) nhưng mỗi hàng chỉ 10 ô → số liệu lệch sang cột bên cạnh (VD cột "GT không kể dự phòng" thật ra là "Đã về tiền"). Nay ô của hàng + dòng cộng sinh từ `COT_DS` qua `oDanhSach()` → không lệch được nữa.
+- Gọn cột: Số HĐ + tên gói thầu + chủ đầu tư gộp 1 cột; dự phòng hiện dòng nhỏ "gồm dự phòng …" dưới Giá trị hiện hành (cột riêng vẫn có trong Excel xuất). Bảng vừa khổ 1000px, không kéo ngang.
+- Điện thoại (≤760px): mỗi hợp đồng là 1 thẻ (nhãn từ `data-l`), ẩn tiêu đề; sắp xếp bằng ô `#f-sapxep` (`chonSapXep`).
 
 ## Đã làm 05/10/2026 (bản v21 — danh sách hợp đồng không tràn chữ)
 - Bảng danh sách: cột Số hợp đồng / Tên gói thầu / Chủ đầu tư tự xuống dòng (class `chu c-so|c-gt|c-cdt`, rộng tối thiểu 170/180/160px), số HĐ dài không có dấu cách cũng ngắt được (`overflow-wrap:anywhere`).

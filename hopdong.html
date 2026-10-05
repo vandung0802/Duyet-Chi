@@ -83,7 +83,23 @@ table.p th:first-child,table.p td:first-child,table.p th.tr,table.p td.tr{text-a
 table.p th{color:var(--text-sub);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
 table.p th.sx{color:var(--blue-dark)}
 table.p td.chu{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
-table.p td.c-so{min-width:170px;max-width:300px}table.p td.c-gt{min-width:180px;max-width:300px}table.p td.c-cdt{min-width:160px;max-width:260px}
+table.p td.c-hd{min-width:230px;max-width:380px}
+.ds-gt{font-size:13px;margin-top:2px}.ds-cdt{font-size:13px;margin-top:2px}.ds-dp{display:block;font-size:11px;color:var(--text-sub);font-weight:400}
+#ds-hopdong table.p th{white-space:normal;vertical-align:bottom}
+/* chỉ hiện trên điện thoại (ô sắp xếp thay cho bấm tiêu đề cột) */
+.chi-dt{display:none}
+/* điện thoại: mỗi hợp đồng là 1 thẻ, không phải kéo ngang */
+@media (max-width:760px){
+  #ds-hopdong table.p thead{display:none}
+  .chi-dt{display:block}
+  #ds-hopdong table.p,#ds-hopdong table.p tbody,#ds-hopdong table.p tfoot,#ds-hopdong table.p tr{display:block}
+  #ds-hopdong table.p tr{border-bottom:1px solid var(--gray-border);padding:8px 4px}
+  #ds-hopdong table.p td{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border:0;padding:3px 2px;text-align:right;white-space:normal;min-width:0;max-width:none}
+  #ds-hopdong table.p td::before{content:attr(data-l);color:var(--text-sub);font-size:12px;font-weight:600;text-align:left;flex:0 0 auto}
+  #ds-hopdong table.p td.c-hd{display:block;text-align:left;font-size:15px}
+  #ds-hopdong table.p td.c-hd::before{display:none}
+  #ds-hopdong table.p td:empty{display:none}
+}
 table.p tbody tr{cursor:pointer}
 table.p tbody tr:hover{background:#faf5ff}
 table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
@@ -186,6 +202,7 @@ canvas{max-width:100%}
           <select id="f-congty" onchange="veDanhSach()"></select>
           <select id="f-trangthai" onchange="veDanhSach()"></select>
         </div>
+        <select id="f-sapxep" class="chi-dt" style="margin-top:6px" onchange="chonSapXep(this.value)"></select>
       </div></div>
       <div class="card"><div class="tw" id="ds-hopdong"></div></div>
       <button class="btn sec" onclick="xuatExcelDanhSach()">📤 Xuất Excel danh sách</button>
@@ -266,7 +283,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261005-v21',
+  PHIEN_BAN: '20261005-v22',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -715,12 +732,25 @@ async function veBieuDo(dt){
 
 // ===== 8. MÀN HÌNH: Danh sách hợp đồng — bảng, lọc và sắp xếp theo cột (mục 1.4) =====
 let sapXep={cot:'soHopDong',chieu:1};
-const COT_DS=[ ['congTyId','Công ty','tr'],['soHopDong','Số hợp đồng','tr'],['tenGoiThau','Tên gói thầu','tr'],['chuDauTu','Chủ đầu tư','tr'],['giaTriHienHanh','Giá trị hiện hành'],['giaTriDuPhong','Dự phòng (trong GT)'],['giaTriHienHanhKhongDuPhong','GT không kể dự phòng'],['nghiemThuLuyKe','Đã nghiệm thu'],['tienDaVe','Đã về tiền'],['conPhaiThu','Còn phải thu'],['trangThai','Trạng thái','tr'],['ngayHetBaoHanh','Hết bảo hành'] ];
+// Mỗi cột: [khoá sắp xếp, tiêu đề, 'tr' = canh trái]. Ô của hàng + dòng cộng đều sinh từ mảng này → không bao giờ lệch cột.
+const COT_DS=[ ['congTyId','Cty','tr'],['soHopDong','Hợp đồng · gói thầu · chủ đầu tư','tr'],['giaTriHienHanh','Giá trị hiện hành'],['nghiemThuLuyKe','Đã nghiệm thu'],['tienDaVe','Đã về tiền'],['conPhaiThu','Còn phải thu'],['trangThai','Trạng thái','tr'],['ngayHetBaoHanh','Hết bảo hành'] ];
+function oDanhSach(k,l,r){
+  const td=(html,cls)=>`<td class="${cls||''}" data-l="${esc(l)}">${html}</td>`;
+  if(k==='congTyId'){ l='Công ty'; return td(`<b>${esc(r.congTyId)}</b>${r.noiBo?' <span class="hint">(nội bộ)</span>':''}`,'tr'); }
+  if(k==='soHopDong') return td(`<b>${esc(r.soHopDong)}</b>${r.tenGoiThau?'<div class="ds-gt">'+esc(r.tenGoiThau)+'</div>':''}${r.chuDauTu?'<div class="ct-cdt ds-cdt">🏢 '+esc(r.chuDauTu)+'</div>':''}`,'tr chu c-hd');
+  if(k==='giaTriHienHanh') return td(`<span>${tien(r.giaTriHienHanh)}${r.giaTriDuPhong?'<span class="ds-dp">gồm dự phòng '+tien(r.giaTriDuPhong)+'</span>':''}</span>`);
+  if(k==='trangThai') return td(badgeTrangThai(r.trangThai),'tr');
+  if(k==='ngayHetBaoHanh') return td(ngayVN(r.ngayHetBaoHanh)||'—');
+  return td(tien(r[k]),k==='conPhaiThu'&&r.conPhaiThu>0?'neg':'');
+}
+function chonSapXep(v){ const [cot,c]=v.split('|'); sapXep={cot,chieu:Number(c)||1}; veDanhSach(); }
 function docSapXep(cot){ if(sapXep.cot===cot) sapXep.chieu=-sapXep.chieu; else sapXep={cot,chieu:1}; veDanhSach(); }
 function veDanhSach(){
   const fc=$('f-congty'), ft=$('f-trangthai'); const cc=fc.value, tt=ft.value;
   fc.innerHTML=chonOptions(Object.fromEntries(MA_CONG_TY.map(m=>[m,'Công ty '+m])),cc,'— Mọi công ty —');
   ft.innerHTML=chonOptions(TRANG_THAI,tt,'— Mọi trạng thái —');
+  $('f-sapxep').innerHTML=COT_DS.flatMap(([k,l])=>{ if(k==='congTyId') l='Công ty'; if(k==='soHopDong') l='Số hợp đồng'; return [[k+'|1','Sắp xếp: '+l+' ▲'],[k+'|-1','Sắp xếp: '+l+' ▼']]; })
+    .map(([v,l])=>`<option value="${v}"${v===sapXep.cot+'|'+sapXep.chieu?' selected':''}>${esc(l)}</option>`).join('');
   const q=$('q').value.trim().toLowerCase();
   let rows=tatCaKetQua().map(k=>Object.assign({},DL.hopDong[k.id],k)).filter(r=>{
     if(cc&&r.congTyId!==cc) return false; if(tt&&r.trangThai!==tt) return false;
@@ -728,8 +758,8 @@ function veDanhSach(){
   rows.sort((a,b)=>{ const x=a[sapXep.cot], y=b[sapXep.cot]; const r=typeof x==='number'||typeof y==='number'?(Number(x)||0)-(Number(y)||0):String(x||'').localeCompare(String(y||''),'vi',{numeric:true}); return r*sapXep.chieu; });
   const tong=TINH_TOAN.tinhTongHop(rows.map(r=>r),cc||'all');
   $('ds-hopdong').innerHTML=rows.length?`<table class="p"><thead><tr>${COT_DS.map(([k,l,tr])=>`<th class="${tr||''} ${sapXep.cot===k?'sx':''}" onclick="docSapXep('${k}')">${l}${sapXep.cot===k?(sapXep.chieu>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
-    ${rows.map(r=>`<tr onclick="moChiTiet('${r.id}')"><td class="tr"><b>${esc(r.congTyId)}</b>${r.noiBo?' <span class="hint">(nội bộ)</span>':''}</td><td class="tr chu c-so"><b>${esc(r.soHopDong)}</b></td><td class="tr chu c-gt">${esc(r.tenGoiThau)}</td><td class="tr chu c-cdt">${esc(r.chuDauTu||'')}</td><td>${tien(r.giaTriHienHanh)}</td><td>${tien(r.nghiemThuLuyKe)}</td><td>${tien(r.tienDaVe)}</td><td class="${r.conPhaiThu>0?'neg':''}">${tien(r.conPhaiThu)}</td><td class="tr">${badgeTrangThai(r.trangThai)}</td><td>${ngayVN(r.ngayHetBaoHanh)||'—'}</td></tr>`).join('')}</tbody>
-    <tfoot><tr><td class="tr" colspan="4">Cộng ${rows.length} hợp đồng${cc?'':' (cả 3, đã trừ nội bộ)'}</td><td>${tien(tong.giaTriHienHanh)}</td><td>${tien(tong.nghiemThuLuyKe)}</td><td>${tien(tong.tienDaVe)}</td><td>${tien(tong.conPhaiThu)}</td><td colspan="2"></td></tr></tfoot></table>`
+    ${rows.map(r=>`<tr onclick="moChiTiet('${r.id}')">${COT_DS.map(([k,l])=>oDanhSach(k,l,r)).join('')}</tr>`).join('')}</tbody>
+    <tfoot><tr><td class="tr c-hd" colspan="2">Cộng ${rows.length} hợp đồng${cc?'':' (cả 3, đã trừ nội bộ)'}</td>${COT_DS.slice(2).map(([k,l])=>k==='trangThai'||k==='ngayHetBaoHanh'?'<td></td>':`<td data-l="${esc(l)}"><span>${tien(tong[k])}${k==='giaTriHienHanh'&&tong.giaTriDuPhong?'<span class="ds-dp">gồm dự phòng '+tien(tong.giaTriDuPhong)+'</span>':''}</span></td>`).join('')}</tr></tfoot></table>`
     :'<div class="empty">Chưa có hợp đồng nào. Bấm "Thêm hợp đồng" hoặc nhập từ Excel (tab Khác).</div>';
 }
 // ===== 9. MÀN HÌNH: Chi tiết hợp đồng — tab: Thông tin / Phụ lục / Tạm ứng / Thanh toán / Bảo lãnh / Bảo hành & Quyết toán / Kế hoạch tiền về / File / Lịch sử =====
