@@ -82,6 +82,8 @@ table.p th,table.p td{border-bottom:1px solid var(--gray-border);padding:8px 6px
 table.p th:first-child,table.p td:first-child,table.p th.tr,table.p td.tr{text-align:left}
 table.p th{color:var(--text-sub);font-weight:600;font-size:12px;cursor:pointer;user-select:none}
 table.p th.sx{color:var(--blue-dark)}
+table.p td.chu{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
+table.p td.c-so{min-width:170px;max-width:300px}table.p td.c-gt{min-width:180px;max-width:300px}table.p td.c-cdt{min-width:160px;max-width:260px}
 table.p tbody tr{cursor:pointer}
 table.p tbody tr:hover{background:#faf5ff}
 table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
@@ -264,7 +266,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261004-v20',
+  PHIEN_BAN: '20261005-v21',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -726,7 +728,7 @@ function veDanhSach(){
   rows.sort((a,b)=>{ const x=a[sapXep.cot], y=b[sapXep.cot]; const r=typeof x==='number'||typeof y==='number'?(Number(x)||0)-(Number(y)||0):String(x||'').localeCompare(String(y||''),'vi',{numeric:true}); return r*sapXep.chieu; });
   const tong=TINH_TOAN.tinhTongHop(rows.map(r=>r),cc||'all');
   $('ds-hopdong').innerHTML=rows.length?`<table class="p"><thead><tr>${COT_DS.map(([k,l,tr])=>`<th class="${tr||''} ${sapXep.cot===k?'sx':''}" onclick="docSapXep('${k}')">${l}${sapXep.cot===k?(sapXep.chieu>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead><tbody>
-    ${rows.map(r=>`<tr onclick="moChiTiet('${r.id}')"><td class="tr"><b>${esc(r.congTyId)}</b>${r.noiBo?' <span class="hint">(nội bộ)</span>':''}</td><td class="tr"><b>${esc(r.soHopDong)}</b></td><td class="tr" style="white-space:normal;min-width:180px">${esc(r.tenGoiThau)}</td><td class="tr">${esc(r.chuDauTu||'')}</td><td>${tien(r.giaTriHienHanh)}</td><td>${tien(r.nghiemThuLuyKe)}</td><td>${tien(r.tienDaVe)}</td><td class="${r.conPhaiThu>0?'neg':''}">${tien(r.conPhaiThu)}</td><td class="tr">${badgeTrangThai(r.trangThai)}</td><td>${ngayVN(r.ngayHetBaoHanh)||'—'}</td></tr>`).join('')}</tbody>
+    ${rows.map(r=>`<tr onclick="moChiTiet('${r.id}')"><td class="tr"><b>${esc(r.congTyId)}</b>${r.noiBo?' <span class="hint">(nội bộ)</span>':''}</td><td class="tr chu c-so"><b>${esc(r.soHopDong)}</b></td><td class="tr chu c-gt">${esc(r.tenGoiThau)}</td><td class="tr chu c-cdt">${esc(r.chuDauTu||'')}</td><td>${tien(r.giaTriHienHanh)}</td><td>${tien(r.nghiemThuLuyKe)}</td><td>${tien(r.tienDaVe)}</td><td class="${r.conPhaiThu>0?'neg':''}">${tien(r.conPhaiThu)}</td><td class="tr">${badgeTrangThai(r.trangThai)}</td><td>${ngayVN(r.ngayHetBaoHanh)||'—'}</td></tr>`).join('')}</tbody>
     <tfoot><tr><td class="tr" colspan="4">Cộng ${rows.length} hợp đồng${cc?'':' (cả 3, đã trừ nội bộ)'}</td><td>${tien(tong.giaTriHienHanh)}</td><td>${tien(tong.nghiemThuLuyKe)}</td><td>${tien(tong.tienDaVe)}</td><td>${tien(tong.conPhaiThu)}</td><td colspan="2"></td></tr></tfoot></table>`
     :'<div class="empty">Chưa có hợp đồng nào. Bấm "Thêm hợp đồng" hoặc nhập từ Excel (tab Khác).</div>';
 }
