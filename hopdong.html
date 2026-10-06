@@ -283,7 +283,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261006-v23',
+  PHIEN_BAN: '20261006-v24',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -338,7 +338,7 @@ function lucVN(iso){ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?
 function thangVN(t){ return /^\d{4}-\d{2}$/.test(t)?t.slice(5,7)+'/'+t.slice(0,4):/^\d{4}-Q\d$/.test(t)?'Quý '+t.slice(6)+'/'+t.slice(0,4):t; }
 const layO=(o,p)=>String(p).split('.').reduce((x,k)=>x==null?undefined:x[k],o);
 const datO=(o,p,v)=>{ const ks=String(p).split('.'); let x=o; ks.slice(0,-1).forEach(k=>{ if(x[k]==null||typeof x[k]!=='object') x[k]={}; x=x[k]; }); x[ks[ks.length-1]]=v; return o; };
-let _toastT; function toast(m){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=m; t.hidden=false; clearTimeout(_toastT); _toastT=setTimeout(()=>t.hidden=true,3500); }
+let _toastT; function toast(m,ms){ let t=document.querySelector('.toast'); if(!t){ t=document.createElement('div'); t.className='toast'; document.body.appendChild(t);} t.textContent=m; t.hidden=false; clearTimeout(_toastT); _toastT=setTimeout(()=>t.hidden=true,ms||3500); }
 const tenCongTy = id => (DL.congTy[id]&&DL.congTy[id].ten)||(CONG_TY[id]&&CONG_TY[id].ten)||id||'';
 const badgeTrangThai = tt => `<span class="badge tt-${esc(tt||'dangThiCong')}">${esc(TRANG_THAI[tt]||tt||'—')}</span>`;
 function chonOptions(ds, gt, rong){ const o=rong!=null?`<option value="">${esc(rong)}</option>`:''; return o+Object.entries(ds).map(([k,v])=>`<option value="${esc(k)}" ${String(gt)===String(k)?'selected':''}>${esc(v)}</option>`).join(''); }
@@ -843,7 +843,7 @@ function veTabPhuLuc(id,h,k){
   const ds=danhSachBanGhi('phuLuc',id).sort((a,b)=>String(a.ngayKy||'').localeCompare(String(b.ngayKy||'')));
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📎 Phụ lục hợp đồng</h3><button class="btn sm" onclick="formPhuLuc('${id}')">＋ Thêm</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Số PL</th><th>Ngày ký</th><th class="tr">Loại</th><th>Điều chỉnh giá trị</th><th>Hoàn thành mới</th><th class="tr">Nội dung</th></tr></thead><tbody>
-      ${ds.map(x=>`<tr onclick="formPhuLuc('${id}','${x.id}')"><td class="tr"><b>${esc(x.soPhuLuc)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngayKy)}</td><td class="tr">${esc(LOAI_PHU_LUC[x.loai]||'')}</td><td class="${x.giaTriDieuChinh<0?'neg':'pos'}">${!x.giaTriDieuChinh&&x.loai!=='dieuChinhGia'&&x.loai!=='caHai'?'—':(x.giaTriDieuChinh>=0?'+':'')+tien(x.giaTriDieuChinh)}</td><td>${ngayVN(x.ngayHoanThanhMoi)||'—'}</td><td class="tr" style="white-space:normal">${esc(x.noiDung||'')}</td></tr>`).join('')}</tbody>
+      ${ds.map(x=>`<tr onclick="formPhuLuc('${id}','${x.id}')"><td class="tr"><b>${x.soPhuLuc?esc(x.soPhuLuc):'<span class="hint">(chưa có số)</span>'}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngayKy)||'—'}</td><td class="tr">${esc(LOAI_PHU_LUC[x.loai]||'')}</td><td class="${x.giaTriDieuChinh<0?'neg':'pos'}">${!x.giaTriDieuChinh&&x.loai!=='dieuChinhGia'&&x.loai!=='caHai'?'—':(x.giaTriDieuChinh>=0?'+':'')+tien(x.giaTriDieuChinh)}</td><td>${ngayVN(x.ngayHoanThanhMoi)||'—'}</td><td class="tr" style="white-space:normal">${esc(x.noiDung||'')}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td class="tr" colspan="3">Giá trị hiện hành</td><td>${tien(k.giaTriHienHanh)}</td><td>${ngayVN(k.ngayHoanThanhHienHanh)||'—'}</td><td></td></tr></tfoot></table></div><div class="hint">Bấm vào dòng để sửa. Phụ lục có thể cộng hoặc trừ giá trị, gia hạn thời gian, hoặc cả hai.</div>`:'<div class="hint">Chưa có phụ lục.</div>'}</div></div>`;
 }
 // --- Tab Tạm ứng ---
@@ -1010,16 +1010,21 @@ function formQuyetToan(id){ const h=DL.hopDong[id], k=ketQua(id);
 // --- Bảng con dùng chung: phụ lục / tạm ứng / thanh toán / bảo lãnh / hoàn trả ---
 function moFormCon(bang,hopDongId,id,tieuDe,cacO,macDinh){ _formBang=bang; _formHopDongId=hopDongId; _formId=id||''; _cacO=cacO; _dinhKemCho=[]; const x=id?gan1BanGhi(bang,hopDongId,id):macDinh;
   moForm((id?'✏️ Sửa ':'＋ Thêm ')+tieuDe,cacO,x,`${htmlDinhKem(bang,hopDongId,id)}<div class="row" style="margin-top:12px"><button class="btn" onclick="luuCon(this)">💾 Lưu</button></div>${id?'<div style="margin-top:10px">'+nutXoa(bang,hopDongId,id,tomTatBanGhi(bang,hopDongId,id))+'</div>':''}`); }
-async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); if(window._kiemTraCon) window._kiemTraCon(v);
+async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); batBuoc(_cacO,v); const conThieu=window._kiemTraCon?window._kiemTraCon(v):''; // _kiemTraCon: ném lỗi = không lưu; trả chuỗi = vẫn lưu, nhắc còn thiếu
   const phu={}; Object.keys(v).forEach(k=>{ if(k.charAt(0)==='_'){ phu[k]=v[k]; delete v[k]; } }); // v20: mọi ô "_…" (chọn thư / gắn đợt / thư mới) là phần phụ, không ghi vào bản ghi chính
   const id=await luuBanGhi(_formBang,_formHopDongId,_formId,v,tomTatMoi(_formBang,v)); _formId=id; // đã ghi xong bản chính: bấm Lưu lại (nếu bước phụ lỗi) là SỬA, không tạo trùng
   if(_dinhKemCho.length){ const ds=_dinhKemCho; _dinhKemCho=[]; await ghiDinhKem(_formBang,_formHopDongId,id,ds); } // file tải lên lúc thêm mới → gắn vào bản ghi vừa tạo
-  if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v,phu); toast('✅ Đã lưu'); }); }
+  if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v,phu); if(conThieu) toast('✅ Đã lưu — còn thiếu: '+conThieu+' (bổ sung sau)',7000); else toast('✅ Đã lưu'); }); }
 function tomTatMoi(bang,v){ return (DL.hopDong[_formHopDongId]||{}).soHopDong+' · '+TEN_BANG[bang]+' '+(v.dot||v.soPhuLuc||LOAI_BAO_LANH[v.loai]||LOAI_HOAN_TRA[v.loai]||'')+' '+tienD(v.soTien||v.giaTriDieuChinh||v.giaTriNghiemThu||0); }
 function dotTiep(bang,hopDongId){ return danhSachBanGhi(bang,hopDongId).reduce((m,x)=>Math.max(m,Number(x.dot)||0),0)+1; }
 
-function formPhuLuc(hopDongId,id){ window._kiemTraCon=v=>{ if(v.loai==='thongTin'){ if(!String(v.noiDung||'').trim()) throw new Error('Ghi nội dung thay đổi (VD: đổi người đại diện, số tài khoản…)'); v.giaTriDieuChinh=0; v.ngayHoanThanhMoi=''; return; } if(v.loai!=='giaHan'&&!v.giaTriDieuChinh) throw new Error('Nhập giá trị điều chỉnh'); if(v.loai!=='dieuChinhGia'&&!v.ngayHoanThanhMoi) throw new Error('Nhập ngày hoàn thành mới'); if(v.loai==='giaHan') v.giaTriDieuChinh=0; if(v.loai==='dieuChinhGia') v.ngayHoanThanhMoi=''; }; window._sauKhiLuuCon=null;
-  moFormCon('phuLuc',hopDongId,id,'phụ lục',[{k:'soPhuLuc',nhan:'Số phụ lục',batBuoc:true,placeholder:'VD: PL01'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',batBuoc:true,nua:true},{k:'loai',nhan:'Loại phụ lục',kieu:'chon',ds:LOAI_PHU_LUC,batBuoc:true},{k:'giaTriDieuChinh',nhan:'Giá trị điều chỉnh (đ)',kieu:'tien',choAm:true,hienKhi:'loai!=thongTin',hint:'Tăng: nhập số. Giảm: nhập số và tích "Giá trị GIẢM"'},{k:'ngayHoanThanhMoi',nhan:'Ngày hoàn thành mới (nếu gia hạn)',kieu:'ngay',hienKhi:'loai!=thongTin'},{k:'noiDung',nhan:'Nội dung',kieu:'vanBan',hint:'Phụ lục "Thay đổi thông tin": ghi rõ đổi gì (địa chỉ, người đại diện pháp luật, số tài khoản…)'}],{soPhuLuc:'PL'+pad(danhSachBanGhi('phuLuc',hopDongId).length+1),ngayKy:homNay(),loai:'dieuChinhGia'}); }
+function formPhuLuc(hopDongId,id){ // v24 (D 06/10): thiếu thông tin VẪN LƯU được — chỉ nhắc còn thiếu gì để bổ sung sau
+  window._kiemTraCon=v=>{ const thieu=[]; if(!v.soPhuLuc) thieu.push('số phụ lục'); if(!v.ngayKy) thieu.push('ngày ký');
+    if(v.loai==='thongTin'){ v.giaTriDieuChinh=0; v.ngayHoanThanhMoi=''; if(!String(v.noiDung||'').trim()) thieu.push('nội dung thay đổi'); }
+    else { if(v.loai!=='giaHan'&&!v.giaTriDieuChinh) thieu.push('giá trị điều chỉnh'); if(v.loai!=='dieuChinhGia'&&!v.ngayHoanThanhMoi) thieu.push('ngày hoàn thành mới');
+      if(v.loai==='giaHan') v.giaTriDieuChinh=0; if(v.loai==='dieuChinhGia') v.ngayHoanThanhMoi=''; }
+    return thieu.join(', '); }; window._sauKhiLuuCon=null;
+  moFormCon('phuLuc',hopDongId,id,'phụ lục',[{k:'soPhuLuc',nhan:'Số phụ lục',placeholder:'VD: PL01'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',nua:true},{k:'loai',nhan:'Loại phụ lục',kieu:'chon',ds:LOAI_PHU_LUC},{k:'giaTriDieuChinh',nhan:'Giá trị điều chỉnh (đ)',kieu:'tien',choAm:true,hienKhi:'loai!=thongTin',hint:'Tăng: nhập số. Giảm: nhập số và tích "Giá trị GIẢM"'},{k:'ngayHoanThanhMoi',nhan:'Ngày hoàn thành mới (nếu gia hạn)',kieu:'ngay',hienKhi:'loai!=thongTin'},{k:'noiDung',nhan:'Nội dung',kieu:'vanBan',hint:'Phụ lục "Thay đổi thông tin": ghi rõ đổi gì (địa chỉ, người đại diện pháp luật, số tài khoản…)'}],{soPhuLuc:'PL'+pad(danhSachBanGhi('phuLuc',hopDongId).length+1),ngayKy:homNay(),loai:'dieuChinhGia'}); }
 
 function formTamUng(hopDongId,id){ const x=id?gan1BanGhi('tamUng',hopDongId,id):null; const cuBl=x&&x.baoLanhId&&DL.baoLanh[x.baoLanhId]?x.baoLanhId:'';
   // v20: CHỌN thư bảo lãnh tạm ứng đã có (nhập ở tab Bảo lãnh hoặc app Công Nợ) thay vì gõ lại → không sinh thư trùng
@@ -1285,7 +1290,7 @@ async function chonFileExcel(ev){ const f=ev.target.files[0]; ev.target.value=''
     });
     const trongFile=new Set(D.HopDong.filter(o=>!o.loi.length).map(o=>khoaHD(o.congTyId,o.soHopDong)));
     const kiem=(t,dk)=>D[t].forEach(o=>{ const k=khoaHD(o.congTyId,o.soHopDong); if(/MẪU/i.test(o.soHopDong)) o.loi.push('dòng mẫu, hãy xoá'); else if(!coHD[k]&&!trongFile.has(k)) o.loi.push('không có hợp đồng '+o.congTyId+' '+o.soHopDong+' (trong app lẫn sheet HopDong)'); dk(o); });
-    kiem('PhuLuc',o=>{ if(!o.soPhuLuc) o.loi.push('thiếu số PL'); if(!o.ngayKy) o.loi.push('ngày ký sai'); if(!o.loai) o.loai=o.ngayHoanThanhMoi&&!o.giaTriDieuChinh?'giaHan':o.ngayHoanThanhMoi?'caHai':o.giaTriDieuChinh?'dieuChinhGia':'thongTin'; if(o.loai==='thongTin'){ o.giaTriDieuChinh=0; o.ngayHoanThanhMoi=''; if(!o.noiDung) o.loi.push('phụ lục thay đổi thông tin: thiếu nội dung'); } });
+    kiem('PhuLuc',o=>{ if(!o.soPhuLuc) o.loi.push('thiếu số PL'); if(!o.ngayKy) o.loi.push('ngày ký sai'); if(!o.loai) o.loai=o.ngayHoanThanhMoi&&!o.giaTriDieuChinh?'giaHan':o.ngayHoanThanhMoi?'caHai':o.giaTriDieuChinh?'dieuChinhGia':'thongTin'; if(o.loai==='thongTin'){ o.giaTriDieuChinh=0; o.ngayHoanThanhMoi=''; } });
     kiem('TamUng',o=>{ if(!o.dot) o.loi.push('thiếu đợt'); if(!o.ngay) o.loi.push('ngày sai'); if(!o.soTien) o.loi.push('thiếu số tiền'); });
     kiem('ThanhToan',o=>{ if(!o.dot) o.loi.push('thiếu đợt'); if(!o.ngayNghiemThu) o.loi.push('ngày nghiệm thu sai'); if(!o.giaTriNghiemThu) o.loi.push('thiếu giá trị nghiệm thu'); if(!o.soTienDeNghi) o.soTienDeNghi=o.giaTriNghiemThu; if(!o.soTienThucNhan) o.soTienThucNhan=o.soTienDeNghi-o.thuHoiTamUng-o.giuBaoHanh-o.giuQuyetToan; if(o.thuHoiTamUng+o.giuBaoHanh+o.giuQuyetToan>o.soTienDeNghi) o.loi.push('các khoản trừ lớn hơn đề nghị'); });
     kiem('BaoLanh',o=>{ if(!o.loai) o.loi.push('thiếu loại'); if(!o.nganHang) o.loi.push('thiếu ngân hàng'); if(!o.soTien) o.loi.push('thiếu số tiền'); if(!o.ngayHetHan) o.loi.push('ngày hết hạn sai'); });
