@@ -40,7 +40,7 @@
   6. Lũy kế giải ngân = tạm ứng + Σ giải ngân (mục 2 + mục 5)
 - Không thêm trường, không đổi công thức mục 1.5. Nhãn form: "Giữ lại / chuyển bảo hành", "Tạm giữ chờ quyết toán", "Thanh toán cho nhà thầu — số thực nhận".
 - Excel danh sách, sheet ThanhToan: thêm 7 cột tương ứng.
-- ⚠ Cách hiểu cần anh Dũng xác nhận: mục 2/6 tính "thanh toán KLHT" KHÔNG gồm phần thu hồi tạm ứng (vì tạm ứng đã tính ở dòng Tạm ứng). Nếu mẫu KBNN anh dùng tính gồm cả thu hồi thì sửa trong `deNghiThanhToan`.
+- ✅ Anh Dũng xác nhận 06/10: mục 6 "Lũy kế giải ngân" = tạm ứng + thanh toán KLHT (= mục 2 + mục 5); thanh toán KLHT KHÔNG gồm phần thu hồi tạm ứng. Giữ nguyên `deNghiThanhToan`.
 
 ## Đã làm 06/10/2026 (bản v24 — phụ lục thiếu thông tin vẫn lưu)
 - D chốt: phụ lục thiếu thông tin VẪN LƯU được. Form phụ lục bỏ hết ô bắt buộc (số PL, ngày ký, giá trị, ngày hoàn thành mới, nội dung); lưu xong toast 7 giây "Đã lưu — còn thiếu: …" để bổ sung sau. Bảng hiện "(chưa có số)" / "—".
