@@ -118,6 +118,22 @@ check('baoLanhCua: lọc đúng thư của hợp đồng (bảng phẳng)', T.ba
 check('baoLanhCua: bảng con cũ chưa có hopDongId vẫn nhận', T.baoLanhCua({ hopDong: Object.assign({ id: 'MAU-HD' }, hopDong), baoLanh }).map(b => b.id).join(), 'b1');
 check('cacMoc với bảng phẳng: 2 mốc bảo lãnh của đúng hợp đồng', T.cacMoc({ hopDong: Object.assign({ id: 'MAU-HD' }, hopDong), phuLuc, tamUng, thanhToan, hoanTra, baoLanh: baoLanhPhang }).filter(m => m.loai === 'hetBaoLanh').map(m => m.thamChieuId).join(), 'b1,b4');
 
+console.log('== 6b. Số liệu đề nghị thanh toán từng đợt (06/10) ==');
+const dn1 = T.deNghiThanhToan({ tamUng, thanhToan }, 'd1'), dn2 = T.deNghiThanhToan({ tamUng, thanhToan }, 'd2');
+check('đợt 1: TƯ chưa thu hồi kỳ trước (chỉ TƯ trước ngày NT)', dn1.tamUngChuaThuHoiKyTruoc, 2000000000);
+check('đợt 1: đã thanh toán kỳ trước = 0', dn1.daThanhToanKyTruoc.tong, 0);
+check('đợt 1: lũy kế KL / thu hồi kỳ này', [dn1.luyKeKhoiLuong, dn1.thuHoiTamUngKyNay], [3000000000, 900000000]);
+check('đợt 1: giải ngân kỳ này (nhà thầu, BH, QT, tổng)', dn1.giaiNganKyNay, { nhaThau: 1850000000, baoHanh: 150000000, quyetToan: 100000000, tong: 2100000000 });
+check('đợt 1: lũy kế giải ngân', dn1.luyKeGiaiNgan, { tamUng: 2000000000, thanhToanKLHT: 2100000000, tong: 4100000000 });
+check('đợt 2: TƯ chưa thu hồi kỳ trước = 3 tỷ − 0,9 tỷ', dn2.tamUngChuaThuHoiKyTruoc, 2100000000);
+check('đợt 2: đã thanh toán kỳ trước (= giải ngân đợt 1)', dn2.daThanhToanKyTruoc, { nhaThau: 1850000000, baoHanh: 150000000, quyetToan: 100000000, tong: 2100000000 });
+check('đợt 2: lũy kế KL 7 tỷ, thu hồi 1,2 tỷ', [dn2.luyKeKhoiLuong, dn2.thuHoiTamUngKyNay], [7000000000, 1200000000]);
+check('đợt 2: giải ngân kỳ này = đề nghị − thu hồi', dn2.giaiNganKyNay.tong, 4000000000 - 1200000000);
+check('đợt 2: lũy kế giải ngân = TƯ + Σ giải ngân', dn2.luyKeGiaiNgan, { tamUng: 3000000000, thanhToanKLHT: 4900000000, tong: 7900000000 });
+check('lũy kế giải ngân = tiền đã về + giữ BH + giữ QT', dn2.luyKeGiaiNgan.tong, (r => r.tienDaVe + r.giuBaoHanhLuyKe + r.giuQuyetToanLuyKe)(T.tinhHopDong({ tamUng, thanhToan })));
+check('đợt không có → null', T.deNghiThanhToan({ thanhToan }, 'khongCo'), null);
+check('đợt thiếu số liệu không làm sập', T.deNghiThanhToan({ thanhToan: { x: { dot: 1 } } }, 'x').luyKeGiaiNgan.tong, 0);
+
 console.log('== 7. Dữ liệu rác không làm sập ==');
 check('không có gì → toàn 0', T.tinhHopDong({}).giaTriHienHanh, 0);
 check('chuỗi số / null / undefined', T.tinhHopDong({ hopDong: { giaTriGoc: '1000' }, phuLuc: [null, { giaTriDieuChinh: undefined }, { giaTriDieuChinh: 'abc' }] }).giaTriHienHanh, 1000);

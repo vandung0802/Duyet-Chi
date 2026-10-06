@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v24**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v25**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,18 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 06/10/2026 (bản v25 — số liệu đề nghị thanh toán từng đợt)
+- Anh Dũng liệt kê 6 mục của giấy đề nghị thanh toán. Rà lại: dữ liệu ĐÃ ĐỦ (tạm ứng, nghiệm thu, thu hồi TƯ, giữ BH, giữ QT, thực nhận) — thiếu là chỗ HIỆN các số tổng hợp theo đợt. Thêm `TINH_TOAN.deNghiThanhToan(du, thanhToanId)` (thuần, có test) + thẻ "📄 Số liệu đề nghị thanh toán" dưới bảng tab Thanh toán (chọn đợt, mặc định đợt cuối):
+  1. TƯ còn chưa thu hồi đến cuối kỳ trước = Σ tạm ứng (ngày ≤ ngày NT đợt này) − Σ thu hồi các đợt trước
+  2. Đã thanh toán KLHT đến cuối kỳ trước = Σ các đợt trước (thực nhận + giữ BH + giữ QT), tách 3 khoản
+  3. Lũy kế KL thực hiện = Σ giá trị nghiệm thu đến đợt này
+  4. Thu hồi TƯ kỳ này
+  5. Giải ngân kỳ này = thực nhận (thanh toán cho nhà thầu) + giữ BH (chuyển bảo hành) + giữ QT (tạm giữ chờ QT)
+  6. Lũy kế giải ngân = tạm ứng + Σ giải ngân (mục 2 + mục 5)
+- Không thêm trường, không đổi công thức mục 1.5. Nhãn form: "Giữ lại / chuyển bảo hành", "Tạm giữ chờ quyết toán", "Thanh toán cho nhà thầu — số thực nhận".
+- Excel danh sách, sheet ThanhToan: thêm 7 cột tương ứng.
+- ⚠ Cách hiểu cần anh Dũng xác nhận: mục 2/6 tính "thanh toán KLHT" KHÔNG gồm phần thu hồi tạm ứng (vì tạm ứng đã tính ở dòng Tạm ứng). Nếu mẫu KBNN anh dùng tính gồm cả thu hồi thì sửa trong `deNghiThanhToan`.
 
 ## Đã làm 06/10/2026 (bản v24 — phụ lục thiếu thông tin vẫn lưu)
 - D chốt: phụ lục thiếu thông tin VẪN LƯU được. Form phụ lục bỏ hết ô bắt buộc (số PL, ngày ký, giá trị, ngày hoàn thành mới, nội dung); lưu xong toast 7 giây "Đã lưu — còn thiếu: …" để bổ sung sau. Bảng hiện "(chưa có số)" / "—".
