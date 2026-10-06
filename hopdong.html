@@ -62,6 +62,11 @@ label.ck{display:flex;gap:8px;align-items:center;font-size:16px;margin-top:10px;
 .tile span{display:block;font-size:12px;color:var(--text-sub);font-weight:600;text-transform:uppercase;letter-spacing:.02em}
 .tile b{display:block;font-size:20px;margin-top:4px;word-break:break-all}
 .tile small{display:block;font-size:12px;color:var(--text-sub);margin-top:2px}
+.tile.bam{cursor:pointer;position:relative;transition:box-shadow .15s,transform .15s}.tile.bam:hover{box-shadow:0 4px 14px rgba(126,34,206,.18)}.tile.bam:active{transform:scale(.98)}
+.tile.bam::after{content:'›';position:absolute;right:12px;top:8px;font-size:20px;color:var(--blue);opacity:.55}
+.tk-dong{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding:10px 4px;border-bottom:1px solid var(--gray-border);cursor:pointer}.tk-dong:hover{background:#faf5ff}
+.tk-ten{flex:1;min-width:0;font-size:14px;line-height:1.35}.tk-ten b{font-size:14px}.tk-so{text-align:right;white-space:nowrap;font-weight:700;font-variant-numeric:tabular-nums}
+.tk-tong{display:flex;justify-content:space-between;padding:12px 4px 4px;font-weight:800;font-size:15px}
 .tile.acc b{color:var(--blue-dark)}.tile.ok b{color:var(--green)}.tile.warn b{color:var(--red)}
 @media(min-width:700px){.tiles{grid-template-columns:repeat(3,1fr)}.tile b{font-size:22px}}
 .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 8px;border-radius:999px;white-space:nowrap}
@@ -277,7 +282,7 @@ canvas{max-width:100%}
 
 <!-- ===== 9. MÀN HÌNH: Chi tiết hợp đồng (lớp phủ) ===== -->
 <div id="detail" class="overlay" hidden></div>
-<div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this)dongModal()"><div class="modal" id="modal"></div></div>
+<div id="modal-bg" class="modal-bg" hidden onclick="if(event.target===this&&Date.now()-(window._moModalLuc||0)>600)dongModal()"><div class="modal" id="modal"></div></div>
 
 <script>
 // ===== 1. CAU_HINH — cấu hình Firebase (dùng CHUNG project với app Duyệt Chi: cùng tài khoản, cùng danh sách người được duyệt), hằng số =====
@@ -292,7 +297,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261006-v28',
+  PHIEN_BAN: '20261006-v29',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -723,21 +728,46 @@ function tatCaKetQua(){ return Object.keys(DL.hopDong).map(id=>Object.assign({id
 // ===== 7. MÀN HÌNH: Dashboard — 6 ô số, dòng tiền tháng/quý (bảng + biểu đồ), chờ quyết toán, đếm việc đang nhắc (mục 1.4) =====
 let locCongTy='', kyDongTien='thang', _chart=null;
 function chonCongTyDashboard(id){ locCongTy=id; veDashboard(); }
+// (v29) Bấm 1 ô số ở Tổng quan → bảng TỪNG HỢP ĐỒNG của con số đó (cùng phạm vi công ty với ô), xếp lớn → nhỏ; bấm dòng → mở hợp đồng.
+const THONG_KE={
+  giaTri:{ten:'Tổng giá trị HĐ đang thực hiện',truong:'giaTriHienHanh',chiDangLam:true,phu:k=>k.giaTriDuPhong?'gồm dự phòng '+tienNgan(k.giaTriDuPhong):''},
+  nghiemThu:{ten:'Đã nghiệm thu lũy kế',truong:'nghiemThuLuyKe',phu:k=>(k.giaTriHienHanh>0?Math.round(k.nghiemThuLuyKe/k.giaTriHienHanh*100)+'% giá trị · ':'')+'còn '+tienNgan(k.conLaiChuaNghiemThu)+' chưa nghiệm thu'},
+  tienVe:{ten:'Tiền đã về lũy kế',truong:'tienDaVe',phu:k=>'tạm ứng '+tienNgan(k.tamUngLuyKe)+' + thực nhận '+tienNgan(k.thucNhanLuyKe)},
+  conPhaiThu:{ten:'Còn phải thu',truong:'conPhaiThu',phu:k=>[k.giuBaoHanhDangGiu?'trong đó giữ bảo hành '+tienNgan(k.giuBaoHanhDangGiu):'',k.giuQuyetToanDangGiu?'giữ quyết toán '+tienNgan(k.giuQuyetToanDangGiu):'',k.tamUngChuaThuHoi?'tạm ứng chưa thu hồi '+tienNgan(k.tamUngChuaThuHoi):''].filter(Boolean).join(' · ')},
+  giuBH:{ten:'Đang bị giữ bảo hành',truong:'giuBaoHanhDangGiu',phu:k=>k.ngayHetBaoHanh?'hết bảo hành '+ngayVN(k.ngayHetBaoHanh):''},
+  giuQT:{ten:'Đang bị giữ chờ quyết toán',truong:'giuQuyetToanDangGiu',phu:k=>TRANG_THAI[k.trangThai]||''},
+  chuaThiCong:{ten:'Còn lại chưa thi công',truong:'conLaiChuaThiCong',phu:k=>'giá trị '+tienNgan(k.giaTriHienHanh)+' · '+(TRANG_THAI[k.trangThai]||'')}
+};
+function moThongKe(ma){ const c=THONG_KE[ma]; if(!c) return;
+  const caBa=!locCongTy;
+  const ds=tatCaKetQua().filter(k=>(caBa?!k.noiBo:k.congTyId===locCongTy)&&(!c.chiDangLam||k.dangThucHien)).map(k=>Object.assign({},DL.hopDong[k.id]||{},k)).filter(k=>Number(k[c.truong]));
+  ds.sort((a,b)=>Number(b[c.truong])-Number(a[c.truong]));
+  const tong=ds.reduce((s,k)=>s+Number(k[c.truong]),0);
+  moModal(`<h3 style="margin-bottom:2px">${esc(c.ten)}</h3><div class="hint" style="margin-bottom:6px">${caBa?'Cả 3 công ty, đã trừ hợp đồng nội bộ':'Công ty '+esc(locCongTy)} · ${ds.length} hợp đồng · bấm 1 dòng để mở hợp đồng</div>
+    ${ds.length?ds.map(k=>{ const pt=tong?Math.round(Math.abs(k[c.truong])/Math.abs(tong)*100):0, phu=c.phu(k); return `<div class="tk-dong" onclick="dongModal();moChiTiet('${k.id}')">
+      <div class="tk-ten"><span class="ct-cty" style="font-size:11px;padding:1px 8px;margin-right:6px">${esc(k.congTyId||'?')}</span><b>${esc(k.soHopDong||'(chưa có số)')}</b>
+        ${k.tenGoiThau?'<div class="ds-gt">'+esc(k.tenGoiThau)+'</div>':''}${k.tenDuAn?'<div class="ct-duan ds-gt">📍 '+esc(k.tenDuAn)+'</div>':''}${phu?'<div class="hint">'+esc(phu)+'</div>':''}</div>
+      <div class="tk-so${ma==='conPhaiThu'&&k[c.truong]>0?' neg':''}">${tien(k[c.truong])}<span class="ds-dp">${pt}% tổng</span><span class="ds-bar"><i style="width:${Math.min(100,pt)}%"></i></span></div></div>`; }).join('')
+      :'<div class="empty">Không có hợp đồng nào có khoản này.</div>'}
+    <div class="tk-tong"><span>Cộng</span><span>${tienD(tong)}</span></div>
+    <div class="row" style="margin-top:12px"><button class="btn sec" onclick="dongModal()">Đóng</button></div>`);
+  window._moModalLuc=Date.now(); // bấm đúp vào ô: cú bấm thứ 2 rơi vào nền mờ → không đóng bảng (xem onclick #modal-bg)
+  setTimeout(()=>{ try{ getSelection().removeAllRanges(); }catch(e){} },350); } // bấm đúp không bôi đen chữ trong bảng
 function doiKyDongTien(k){ kyDongTien=k; veDashboard(); }
 function veDashboard(){
   const kq=tatCaKetQua(), t=TINH_TOAN.tinhTongHop(kq,locCongTy);
   $('db-congty').innerHTML=[['','Cả 3 công ty']].concat(MA_CONG_TY.map(m=>[m,'Công ty '+m])).map(([k,l])=>`<div class="chip ${locCongTy===k?'on':''}" onclick="chonCongTyDashboard('${k}')">${l}</div>`).join('');
   const dangNhac=danhSachDangNhac().length, ycx=Object.values(DL.yeuCauXoa).filter(y=>y.trangThai==='cho'&&(!y.app||y.app==='hopDong')).length;
   $('db-tiles').innerHTML=`
-    <div class="tile"><span>Tổng giá trị HĐ đang thực hiện</span><b>${tienD(t.giaTriDangThucHien)}</b><small>${t.soDangThucHien} hợp đồng · ${locCongTy?'công ty '+locCongTy:'cả 3, đã trừ nội bộ'}</small></div>
-    <div class="tile acc"><span>Đã nghiệm thu lũy kế</span><b>${tienD(t.nghiemThuLuyKe)}</b><small>còn ${tienNgan(t.conLaiChuaNghiemThu)} chưa nghiệm thu</small></div>
-    <div class="tile ok"><span>Tiền đã về lũy kế</span><b>${tienD(t.tienDaVe)}</b><small>tạm ứng ${tienNgan(t.tamUngLuyKe)} + thực nhận ${tienNgan(t.thucNhanLuyKe)}</small></div>
-    <div class="tile warn"><span>Còn phải thu</span><b>${tienD(t.conPhaiThu)}</b><small>tạm ứng chưa thu hồi ${tienNgan(t.tamUngChuaThuHoi)}</small></div>
-    <div class="tile"><span>Đang bị giữ bảo hành</span><b>${tienD(t.giuBaoHanhDangGiu)}</b></div>
-    <div class="tile"><span>Đang bị giữ chờ quyết toán</span><b>${tienD(t.giuQuyetToanDangGiu)}</b></div>
-    <div class="tile" style="cursor:pointer" onclick="chuyenTab('nhac')"><span>Việc đang nhắc</span><b class="${dangNhac?'neg':''}">${dangNhac}</b><small>bấm để xem</small></div>
-    <div class="tile"><span>Còn lại chưa thi công</span><b>${tienD(t.conLaiChuaThiCong)}</b><small>theo khối lượng đã thực hiện</small></div>
-    ${laGiamDoc()&&ycx?`<div class="tile" style="cursor:pointer" onclick="chuyenTab('khac')"><span>Yêu cầu xoá chờ duyệt</span><b class="neg">${ycx}</b></div>`:''}`;
+    <div class="tile bam" onclick="moThongKe('giaTri')"><span>Tổng giá trị HĐ đang thực hiện</span><b>${tienD(t.giaTriDangThucHien)}</b><small>${t.soDangThucHien} hợp đồng · ${locCongTy?'công ty '+locCongTy:'cả 3, đã trừ nội bộ'}</small></div>
+    <div class="tile acc bam" onclick="moThongKe('nghiemThu')"><span>Đã nghiệm thu lũy kế</span><b>${tienD(t.nghiemThuLuyKe)}</b><small>còn ${tienNgan(t.conLaiChuaNghiemThu)} chưa nghiệm thu</small></div>
+    <div class="tile ok bam" onclick="moThongKe('tienVe')"><span>Tiền đã về lũy kế</span><b>${tienD(t.tienDaVe)}</b><small>tạm ứng ${tienNgan(t.tamUngLuyKe)} + thực nhận ${tienNgan(t.thucNhanLuyKe)}</small></div>
+    <div class="tile warn bam" onclick="moThongKe('conPhaiThu')"><span>Còn phải thu</span><b>${tienD(t.conPhaiThu)}</b><small>tạm ứng chưa thu hồi ${tienNgan(t.tamUngChuaThuHoi)}</small></div>
+    <div class="tile bam" onclick="moThongKe('giuBH')"><span>Đang bị giữ bảo hành</span><b>${tienD(t.giuBaoHanhDangGiu)}</b></div>
+    <div class="tile bam" onclick="moThongKe('giuQT')"><span>Đang bị giữ chờ quyết toán</span><b>${tienD(t.giuQuyetToanDangGiu)}</b></div>
+    <div class="tile bam" onclick="chuyenTab('nhac')"><span>Việc đang nhắc</span><b class="${dangNhac?'neg':''}">${dangNhac}</b><small>bấm để xem</small></div>
+    <div class="tile bam" onclick="moThongKe('chuaThiCong')"><span>Còn lại chưa thi công</span><b>${tienD(t.conLaiChuaThiCong)}</b><small>theo khối lượng đã thực hiện</small></div>
+    ${laGiamDoc()&&ycx?`<div class="tile bam" onclick="chuyenTab('khac')"><span>Yêu cầu xoá chờ duyệt</span><b class="neg">${ycx}</b></div>`:''}`;
   // dòng tiền
   $('ky-thang').className='btn sm '+(kyDongTien==='thang'?'':'sec'); $('ky-quy').className='btn sm '+(kyDongTien==='quy'?'':'sec');
   const du=Object.keys(DL.hopDong).map(id=>duLieuHopDong(id));
