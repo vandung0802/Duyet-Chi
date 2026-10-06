@@ -283,7 +283,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261005-v22',
+  PHIEN_BAN: '20261006-v23',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -311,7 +311,7 @@ const CONG_TY = { PVA:{ ten:'Công ty CP Xây lắp công trình Phúc Vinh An',
 const MA_CONG_TY = ['PVA','379','279'];
 const TRANG_THAI = { dangThiCong:'Đang thi công', choNghiemThuHoanThanh:'Chờ nghiệm thu hoàn thành', dangBaoHanh:'Đang bảo hành', choQuyetToan:'Chờ quyết toán', daXong:'Đã xong', tamDung:'Tạm dừng', biChamDut:'Bị chấm dứt' };
 const LOAI_HOP_DONG = { tronGoi:'Trọn gói', donGiaCoDinh:'Đơn giá cố định', donGiaDieuChinh:'Đơn giá điều chỉnh' };
-const LOAI_PHU_LUC = { dieuChinhGia:'Điều chỉnh giá trị', giaHan:'Gia hạn thời gian', caHai:'Cả hai' };
+const LOAI_PHU_LUC = { dieuChinhGia:'Điều chỉnh giá trị', giaHan:'Gia hạn thời gian', caHai:'Cả hai', thongTin:'Thay đổi thông tin' }; // thongTin (v23): đổi địa chỉ, người đại diện, tài khoản… — không đổi giá trị/ngày
 const LOAI_BAO_LANH = { thucHienHopDong:'Bảo lãnh thực hiện hợp đồng', tamUng:'Bảo lãnh tạm ứng', baoHanh:'Bảo lãnh bảo hành' }; // 3 loại nhập ở app này
 const TEN_BAO_LANH = Object.assign({ duThau:'Bảo lãnh dự thầu' }, LOAI_BAO_LANH); // + dự thầu (chỉ app Công Nợ nhập) — dùng để hiển thị
 const HINH_THUC_BAO_HANH = { giuTien:'Chủ đầu tư giữ tiền', baoLanh:'Nộp thư bảo lãnh bảo hành', caHai:'Cả hai' };
@@ -361,7 +361,7 @@ function veO(o, gt){
   else inp=`<input ${att} value="${esc(v||'')}" placeholder="${esc(o.placeholder||'')}">`;
   return `<div id="w-${id}" ${o.hienKhi?'data-hienkhi="f-'+o.hienKhi.replace(/\./g,'_')+'"':''}>${nhan}${inp}${o.hint?`<div class="hint">${o.hint}</div>`:''}</div>`;
 }
-function capNhatHienKhi(){ document.querySelectorAll('[data-hienkhi]').forEach(w=>{ const [id,gt]=w.dataset.hienkhi.split('='); const c=$(id); w.hidden=!(c&&(gt!=null?String(c.value)===gt:c.checked)); }); }
+function capNhatHienKhi(){ document.querySelectorAll('[data-hienkhi]').forEach(w=>{ const s=w.dataset.hienkhi, khac=s.indexOf('!=')>0; const [id,gt]=khac?s.split('!='):s.split('='); const c=$(id); w.hidden=!(c&&(gt!=null?(String(c.value)===gt)!==khac:c.checked)); }); } // 'truong=gt' hiện khi bằng, 'truong!=gt' hiện khi khác
 function moForm(tieuDe, cacO, gt, luuHtml){
   gt=gt||{}; let html=`<h3>${tieuDe}</h3>`, i=0;
   while(i<cacO.length){ const o=cacO[i];
@@ -843,7 +843,7 @@ function veTabPhuLuc(id,h,k){
   const ds=danhSachBanGhi('phuLuc',id).sort((a,b)=>String(a.ngayKy||'').localeCompare(String(b.ngayKy||'')));
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📎 Phụ lục hợp đồng</h3><button class="btn sm" onclick="formPhuLuc('${id}')">＋ Thêm</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Số PL</th><th>Ngày ký</th><th class="tr">Loại</th><th>Điều chỉnh giá trị</th><th>Hoàn thành mới</th><th class="tr">Nội dung</th></tr></thead><tbody>
-      ${ds.map(x=>`<tr onclick="formPhuLuc('${id}','${x.id}')"><td class="tr"><b>${esc(x.soPhuLuc)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngayKy)}</td><td class="tr">${esc(LOAI_PHU_LUC[x.loai]||'')}</td><td class="${x.giaTriDieuChinh<0?'neg':'pos'}">${x.giaTriDieuChinh>=0?'+':''}${tien(x.giaTriDieuChinh)}</td><td>${ngayVN(x.ngayHoanThanhMoi)||'—'}</td><td class="tr" style="white-space:normal">${esc(x.noiDung||'')}</td></tr>`).join('')}</tbody>
+      ${ds.map(x=>`<tr onclick="formPhuLuc('${id}','${x.id}')"><td class="tr"><b>${esc(x.soPhuLuc)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngayKy)}</td><td class="tr">${esc(LOAI_PHU_LUC[x.loai]||'')}</td><td class="${x.giaTriDieuChinh<0?'neg':'pos'}">${!x.giaTriDieuChinh&&x.loai!=='dieuChinhGia'&&x.loai!=='caHai'?'—':(x.giaTriDieuChinh>=0?'+':'')+tien(x.giaTriDieuChinh)}</td><td>${ngayVN(x.ngayHoanThanhMoi)||'—'}</td><td class="tr" style="white-space:normal">${esc(x.noiDung||'')}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td class="tr" colspan="3">Giá trị hiện hành</td><td>${tien(k.giaTriHienHanh)}</td><td>${ngayVN(k.ngayHoanThanhHienHanh)||'—'}</td><td></td></tr></tfoot></table></div><div class="hint">Bấm vào dòng để sửa. Phụ lục có thể cộng hoặc trừ giá trị, gia hạn thời gian, hoặc cả hai.</div>`:'<div class="hint">Chưa có phụ lục.</div>'}</div></div>`;
 }
 // --- Tab Tạm ứng ---
@@ -1018,8 +1018,8 @@ async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); bat
 function tomTatMoi(bang,v){ return (DL.hopDong[_formHopDongId]||{}).soHopDong+' · '+TEN_BANG[bang]+' '+(v.dot||v.soPhuLuc||LOAI_BAO_LANH[v.loai]||LOAI_HOAN_TRA[v.loai]||'')+' '+tienD(v.soTien||v.giaTriDieuChinh||v.giaTriNghiemThu||0); }
 function dotTiep(bang,hopDongId){ return danhSachBanGhi(bang,hopDongId).reduce((m,x)=>Math.max(m,Number(x.dot)||0),0)+1; }
 
-function formPhuLuc(hopDongId,id){ window._kiemTraCon=v=>{ if(v.loai!=='giaHan'&&!v.giaTriDieuChinh) throw new Error('Nhập giá trị điều chỉnh'); if(v.loai!=='dieuChinhGia'&&!v.ngayHoanThanhMoi) throw new Error('Nhập ngày hoàn thành mới'); if(v.loai==='giaHan') v.giaTriDieuChinh=0; if(v.loai==='dieuChinhGia') v.ngayHoanThanhMoi=''; }; window._sauKhiLuuCon=null;
-  moFormCon('phuLuc',hopDongId,id,'phụ lục',[{k:'soPhuLuc',nhan:'Số phụ lục',batBuoc:true,placeholder:'VD: PL01'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',batBuoc:true,nua:true},{k:'loai',nhan:'Loại phụ lục',kieu:'chon',ds:LOAI_PHU_LUC,batBuoc:true},{k:'giaTriDieuChinh',nhan:'Giá trị điều chỉnh (đ)',kieu:'tien',choAm:true,hint:'Tăng: nhập số. Giảm: nhập số và tích "Giá trị GIẢM"'},{k:'ngayHoanThanhMoi',nhan:'Ngày hoàn thành mới (nếu gia hạn)',kieu:'ngay'},{k:'noiDung',nhan:'Nội dung',kieu:'vanBan'}],{soPhuLuc:'PL'+pad(danhSachBanGhi('phuLuc',hopDongId).length+1),ngayKy:homNay(),loai:'dieuChinhGia'}); }
+function formPhuLuc(hopDongId,id){ window._kiemTraCon=v=>{ if(v.loai==='thongTin'){ if(!String(v.noiDung||'').trim()) throw new Error('Ghi nội dung thay đổi (VD: đổi người đại diện, số tài khoản…)'); v.giaTriDieuChinh=0; v.ngayHoanThanhMoi=''; return; } if(v.loai!=='giaHan'&&!v.giaTriDieuChinh) throw new Error('Nhập giá trị điều chỉnh'); if(v.loai!=='dieuChinhGia'&&!v.ngayHoanThanhMoi) throw new Error('Nhập ngày hoàn thành mới'); if(v.loai==='giaHan') v.giaTriDieuChinh=0; if(v.loai==='dieuChinhGia') v.ngayHoanThanhMoi=''; }; window._sauKhiLuuCon=null;
+  moFormCon('phuLuc',hopDongId,id,'phụ lục',[{k:'soPhuLuc',nhan:'Số phụ lục',batBuoc:true,placeholder:'VD: PL01'},{k:'ngayKy',nhan:'Ngày ký',kieu:'ngay',batBuoc:true,nua:true},{k:'loai',nhan:'Loại phụ lục',kieu:'chon',ds:LOAI_PHU_LUC,batBuoc:true},{k:'giaTriDieuChinh',nhan:'Giá trị điều chỉnh (đ)',kieu:'tien',choAm:true,hienKhi:'loai!=thongTin',hint:'Tăng: nhập số. Giảm: nhập số và tích "Giá trị GIẢM"'},{k:'ngayHoanThanhMoi',nhan:'Ngày hoàn thành mới (nếu gia hạn)',kieu:'ngay',hienKhi:'loai!=thongTin'},{k:'noiDung',nhan:'Nội dung',kieu:'vanBan',hint:'Phụ lục "Thay đổi thông tin": ghi rõ đổi gì (địa chỉ, người đại diện pháp luật, số tài khoản…)'}],{soPhuLuc:'PL'+pad(danhSachBanGhi('phuLuc',hopDongId).length+1),ngayKy:homNay(),loai:'dieuChinhGia'}); }
 
 function formTamUng(hopDongId,id){ const x=id?gan1BanGhi('tamUng',hopDongId,id):null; const cuBl=x&&x.baoLanhId&&DL.baoLanh[x.baoLanhId]?x.baoLanhId:'';
   // v20: CHỌN thư bảo lãnh tạm ứng đã có (nhập ở tab Bảo lãnh hoặc app Công Nợ) thay vì gõ lại → không sinh thư trùng
@@ -1174,7 +1174,7 @@ function napSheetJs(){ return new Promise((res,rej)=>{ if(window.XLSX) return re
 // Định nghĩa cột từng sheet: [khóa, tiêu đề cột, kiểu ('ngay'|'tien'|'so'|'chon:TEN_DS'|'text')]
 const SHEET_NHAP={
   HopDong:[['congTyId','Công ty (PVA/379/279)','text'],['soHopDong','Số hợp đồng','text'],['ngayKy','Ngày ký','ngay'],['chuDauTu','Chủ đầu tư','text'],['tenGoiThau','Tên gói thầu','text'],['tenDuAn','Tên dự án','text'],['loaiHopDong','Loại HĐ (Trọn gói/Đơn giá cố định/Đơn giá điều chỉnh)','chon:LOAI_HOP_DONG'],['giaTriTruocThue','Giá trị trước thuế','tien'],['thue','Thuế','tien'],['giaTriGoc','Giá trị sau thuế','tien'],['thoiGianThucHien','Thời gian thực hiện','text'],['ngayKhoiCong','Ngày khởi công','ngay'],['ngayHoanThanhHopDong','Ngày hoàn thành theo HĐ','ngay'],['trangThai','Trạng thái','chon:TRANG_THAI'],['baoHanh.hinhThuc','Hình thức bảo hành (Chủ đầu tư giữ tiền/Nộp thư bảo lãnh bảo hành/Cả hai)','chon:HINH_THUC_BAO_HANH'],['baoHanh.ngayNghiemThuBanGiao','Ngày nghiệm thu bàn giao','ngay'],['baoHanh.soThang','Số tháng bảo hành','so'],['quyetToan.ngayNop','Ngày nộp hồ sơ QT','ngay'],['quyetToan.ngayDuyet','Ngày duyệt QT','ngay'],['quyetToan.giaTriDuyet','Giá trị QT được duyệt','tien'],['ghiChu','Ghi chú','text'],['giaTriDuPhong','Giá trị dự phòng (nằm trong giá trị sau thuế)','tien']],
-  PhuLuc:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['soPhuLuc','Số phụ lục','text'],['ngayKy','Ngày ký','ngay'],['loai','Loại (Điều chỉnh giá trị/Gia hạn thời gian/Cả hai)','chon:LOAI_PHU_LUC'],['giaTriDieuChinh','Giá trị điều chỉnh (âm = giảm)','tienAm'],['ngayHoanThanhMoi','Ngày hoàn thành mới','ngay'],['noiDung','Nội dung','text']],
+  PhuLuc:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['soPhuLuc','Số phụ lục','text'],['ngayKy','Ngày ký','ngay'],['loai','Loại (Điều chỉnh giá trị/Gia hạn thời gian/Cả hai/Thay đổi thông tin)','chon:LOAI_PHU_LUC'],['giaTriDieuChinh','Giá trị điều chỉnh (âm = giảm)','tienAm'],['ngayHoanThanhMoi','Ngày hoàn thành mới','ngay'],['noiDung','Nội dung','text']],
   TamUng:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['dot','Đợt','so'],['ngay','Ngày nhận tạm ứng','ngay'],['soTien','Số tiền tạm ứng','tien'],['ghiChu','Ghi chú','text'],['bl.nganHang','Ngân hàng bảo lãnh TƯ','text'],['bl.soTien','Số tiền bảo lãnh TƯ','tien'],['bl.ngayPhatHanh','Ngày phát hành BL','ngay'],['bl.ngayHetHan','Ngày hết hạn BL','ngay']],
   ThanhToan:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['dot','Đợt','so'],['ngayNghiemThu','Ngày nghiệm thu','ngay'],['giaTriNghiemThu','Giá trị nghiệm thu','tien'],['soTienDeNghi','Số tiền đề nghị TT','tien'],['thuHoiTamUng','Thu hồi tạm ứng','tien'],['giuBaoHanh','Giữ lại bảo hành','tien'],['giuQuyetToan','Giữ lại chờ quyết toán','tien'],['soTienThucNhan','Số tiền thực nhận','tien'],['ngayTienVe','Ngày tiền về','ngay'],['ghiChu','Ghi chú','text']],
   BaoLanh:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['loai','Loại (Bảo lãnh thực hiện hợp đồng/Bảo lãnh tạm ứng/Bảo lãnh bảo hành)','chon:LOAI_BAO_LANH'],['nganHang','Ngân hàng','text'],['soTien','Số tiền','tien'],['ngayPhatHanh','Ngày phát hành','ngay'],['ngayHetHan','Ngày hết hạn','ngay'],['ghiChu','Ghi chú / số thư','text']],
@@ -1285,7 +1285,7 @@ async function chonFileExcel(ev){ const f=ev.target.files[0]; ev.target.value=''
     });
     const trongFile=new Set(D.HopDong.filter(o=>!o.loi.length).map(o=>khoaHD(o.congTyId,o.soHopDong)));
     const kiem=(t,dk)=>D[t].forEach(o=>{ const k=khoaHD(o.congTyId,o.soHopDong); if(/MẪU/i.test(o.soHopDong)) o.loi.push('dòng mẫu, hãy xoá'); else if(!coHD[k]&&!trongFile.has(k)) o.loi.push('không có hợp đồng '+o.congTyId+' '+o.soHopDong+' (trong app lẫn sheet HopDong)'); dk(o); });
-    kiem('PhuLuc',o=>{ if(!o.soPhuLuc) o.loi.push('thiếu số PL'); if(!o.ngayKy) o.loi.push('ngày ký sai'); if(!o.loai) o.loai=o.ngayHoanThanhMoi&&!o.giaTriDieuChinh?'giaHan':o.ngayHoanThanhMoi?'caHai':'dieuChinhGia'; });
+    kiem('PhuLuc',o=>{ if(!o.soPhuLuc) o.loi.push('thiếu số PL'); if(!o.ngayKy) o.loi.push('ngày ký sai'); if(!o.loai) o.loai=o.ngayHoanThanhMoi&&!o.giaTriDieuChinh?'giaHan':o.ngayHoanThanhMoi?'caHai':o.giaTriDieuChinh?'dieuChinhGia':'thongTin'; if(o.loai==='thongTin'){ o.giaTriDieuChinh=0; o.ngayHoanThanhMoi=''; if(!o.noiDung) o.loi.push('phụ lục thay đổi thông tin: thiếu nội dung'); } });
     kiem('TamUng',o=>{ if(!o.dot) o.loi.push('thiếu đợt'); if(!o.ngay) o.loi.push('ngày sai'); if(!o.soTien) o.loi.push('thiếu số tiền'); });
     kiem('ThanhToan',o=>{ if(!o.dot) o.loi.push('thiếu đợt'); if(!o.ngayNghiemThu) o.loi.push('ngày nghiệm thu sai'); if(!o.giaTriNghiemThu) o.loi.push('thiếu giá trị nghiệm thu'); if(!o.soTienDeNghi) o.soTienDeNghi=o.giaTriNghiemThu; if(!o.soTienThucNhan) o.soTienThucNhan=o.soTienDeNghi-o.thuHoiTamUng-o.giuBaoHanh-o.giuQuyetToan; if(o.thuHoiTamUng+o.giuBaoHanh+o.giuQuyetToan>o.soTienDeNghi) o.loi.push('các khoản trừ lớn hơn đề nghị'); });
     kiem('BaoLanh',o=>{ if(!o.loai) o.loi.push('thiếu loại'); if(!o.nganHang) o.loi.push('thiếu ngân hàng'); if(!o.soTien) o.loi.push('thiếu số tiền'); if(!o.ngayHetHan) o.loi.push('ngày hết hạn sai'); });
