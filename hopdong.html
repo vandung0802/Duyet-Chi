@@ -283,7 +283,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261006-v24',
+  PHIEN_BAN: '20261006-v25',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -675,9 +675,34 @@ const TINH_TOAN = (function () {
     return moc.sort((a, b) => a.ngayMoc.localeCompare(b.ngayMoc));
   }
 
+  // (06/10, anh Dũng) Số liệu "Giấy đề nghị thanh toán" của MỘT đợt thanh toán — chỉ TÍNH từ số đã nhập, không lưu thêm gì.
+  // Đợt xếp theo số đợt (rồi ngày nghiệm thu). "Kỳ trước" = các đợt đứng trước; tạm ứng tính khoản có ngày ≤ ngày nghiệm thu đợt này.
+  // Giải ngân 1 đợt = thanh toán cho nhà thầu (soTienThucNhan) + chuyển bảo hành (giuBaoHanh) + tạm giữ chờ quyết toán (giuQuyetToan)
+  //                 (= đề nghị − thu hồi tạm ứng khi thực nhận để app tự tính).
+  function deNghiThanhToan(du, thanhToanId) {
+    du = du || {};
+    const ds = (Array.isArray(du.thanhToan) ? du.thanhToan.filter(Boolean) : Object.entries(du.thanhToan || {}).filter(([k, x]) => x).map(([k, x]) => Object.assign({ id: k }, x)))
+      .sort((a, b) => (soNguyen(a.dot) - soNguyen(b.dot)) || String(a.ngayNghiemThu || '').localeCompare(String(b.ngayNghiemThu || '')));
+    const i = ds.findIndex(x => x.id === thanhToanId); if (i < 0) return null;
+    const nay = ds[i], truoc = ds.slice(0, i);
+    const ngayNT = laNgay(nay.ngayNghiemThu) ? nay.ngayNghiemThu : '';
+    const tamUng = tongTruong(danhSach(du.tamUng).filter(t => !ngayNT || !laNgay(t.ngay) || t.ngay <= ngayNT), 'soTien');
+    const giaiNgan = d => { const o = { nhaThau: tongTruong(d, 'soTienThucNhan'), baoHanh: tongTruong(d, 'giuBaoHanh'), quyetToan: tongTruong(d, 'giuQuyetToan') }; o.tong = o.nhaThau + o.baoHanh + o.quyetToan; return o; };
+    const kyTruoc = giaiNgan(truoc), kyNay = giaiNgan([nay]);
+    return {
+      dot: nay.dot, ngayNghiemThu: ngayNT,
+      tamUngChuaThuHoiKyTruoc: tamUng - tongTruong(truoc, 'thuHoiTamUng'),          // 1
+      daThanhToanKyTruoc: kyTruoc,                                                   // 2 (+ 3 khoản con)
+      luyKeKhoiLuong: tongTruong(truoc, 'giaTriNghiemThu') + soNguyen(nay.giaTriNghiemThu), // 3
+      thuHoiTamUngKyNay: soNguyen(nay.thuHoiTamUng),                                 // 4
+      giaiNganKyNay: kyNay,                                                          // 5 (+ 3 khoản con)
+      luyKeGiaiNgan: { tamUng, thanhToanKLHT: kyTruoc.tong + kyNay.tong, tong: tamUng + kyTruoc.tong + kyNay.tong }, // 6
+    };
+  }
+
   return { soNguyen, danhSach, tongTruong, laNgay, congThang, soNgayGiua, thangCua, quyCua, quyCuaThang, kyCua,
     TRANG_THAI_KET_THUC, giaTriHienHanh, ngayHoanThanhHienHanh, ngayHetBaoHanh, daDuyetQuyetToan, doanhThuCuoiCung,
-    tinhHopDong, tinhTongHop, dongTien, baoLanhCua, cacMoc };
+    tinhHopDong, tinhTongHop, dongTien, baoLanhCua, cacMoc, deNghiThanhToan };
 })();
 // ===== HẾT 6. TINH_TOAN =====
 // ===== ĐIỀU PHỐI MÀN HÌNH =====
@@ -860,7 +885,27 @@ function veTabThanhToan(id,h,k){
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🧾 Thanh toán từng đợt</h3><button class="btn sm" onclick="formThanhToan('${id}')">＋ Thêm đợt</button></div>
     ${ds.length?`<div class="tw"><table class="p"><thead><tr><th class="tr">Đợt</th><th>Ngày NT</th><th>Giá trị nghiệm thu</th><th>Đề nghị TT</th><th>Thu hồi TƯ</th><th>Giữ BH</th><th>Giữ QT</th><th>Thực nhận</th><th>Tiền về</th></tr></thead><tbody>
       ${ds.map(x=>`<tr onclick="formThanhToan('${id}','${x.id}')"><td class="tr"><b>Đợt ${esc(x.dot)}</b>${dinhKemNho(x)}</td><td>${ngayVN(x.ngayNghiemThu)}</td><td>${tien(x.giaTriNghiemThu)}</td><td>${tien(x.soTienDeNghi)}</td><td>${x.thuHoiTamUng?tien(x.thuHoiTamUng):'—'}</td><td>${x.giuBaoHanh?tien(x.giuBaoHanh):'—'}</td><td>${x.giuQuyetToan?tien(x.giuQuyetToan):'—'}</td><td><b>${tien(x.soTienThucNhan)}</b></td><td>${ngayVN(x.ngayTienVe)||'<span class="neg">chưa</span>'}</td></tr>`).join('')}</tbody>
-      <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(k.nghiemThuLuyKe)}</td><td>${tien(k.deNghiLuyKe)}</td><td>${tien(k.thuHoiTamUngLuyKe)}</td><td>${tien(k.giuBaoHanhLuyKe)}</td><td>${tien(k.giuQuyetToanLuyKe)}</td><td>${tien(k.thucNhanLuyKe)}</td><td></td></tr></tfoot></table></div><div class="hint">Số tiền thực nhận và thu hồi tạm ứng do kế toán nhập tay theo chứng từ. Bấm vào dòng để sửa.</div>`:'<div class="hint">Chưa có đợt thanh toán nào.</div>'}</div></div>`;
+      <tfoot><tr><td class="tr" colspan="2">Cộng</td><td>${tien(k.nghiemThuLuyKe)}</td><td>${tien(k.deNghiLuyKe)}</td><td>${tien(k.thuHoiTamUngLuyKe)}</td><td>${tien(k.giuBaoHanhLuyKe)}</td><td>${tien(k.giuQuyetToanLuyKe)}</td><td>${tien(k.thucNhanLuyKe)}</td><td></td></tr></tfoot></table></div><div class="hint">Số tiền thực nhận và thu hồi tạm ứng do kế toán nhập tay theo chứng từ. Bấm vào dòng để sửa.</div>`:'<div class="hint">Chưa có đợt thanh toán nào.</div>'}</div></div>${ds.length?veDeNghiThanhToan(id,ds):''}`;
+}
+// (06/10) Số liệu "Giấy đề nghị thanh toán" theo từng đợt — 6 mục anh Dũng liệt kê, tự tính bằng TINH_TOAN.deNghiThanhToan
+let _dotDeNghi={};
+function chonDotDeNghi(hdId,ttId){ _dotDeNghi[hdId]=ttId; veChiTiet(); }
+function veDeNghiThanhToan(id,ds){
+  const du=duLieuHopDong(id); let ttId=_dotDeNghi[id]; if(!ds.some(x=>x.id===ttId)) ttId=ds[ds.length-1].id;
+  const d=TINH_TOAN.deNghiThanhToan(du,ttId); if(!d) return '';
+  const dong=(nhan,so,cls)=>`<tr class="${cls==='tot'?'tot':''}"><td class="${cls==='sub'?'sub':''}">${nhan}</td><td>${tien(so)}</td></tr>`;
+  const ba=(o)=>dong('+ Thanh toán cho nhà thầu',o.nhaThau,'sub')+dong('+ Chuyển bảo hành <span class="hint">(khi không dùng bảo lãnh BH)</span>',o.baoHanh,'sub')+dong('+ Chuyển tạm giữ chờ quyết toán',o.quyetToan,'sub');
+  return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📄 Số liệu đề nghị thanh toán</h3>
+    <select style="width:auto;min-height:36px;padding:6px 10px" onchange="chonDotDeNghi('${id}',this.value)">${ds.map(x=>`<option value="${esc(x.id)}" ${x.id===ttId?'selected':''}>Đợt ${esc(x.dot)}</option>`).join('')}</select></div>
+    <table class="fin">
+      ${dong('1. Tạm ứng còn chưa thu hồi đến cuối kỳ trước',d.tamUngChuaThuHoiKyTruoc,'tot')}
+      ${dong('2. Đã thanh toán KLHT đến cuối kỳ trước',d.daThanhToanKyTruoc.tong,'tot')}${ba(d.daThanhToanKyTruoc)}
+      ${dong('3. Lũy kế giá trị KL thực hiện đến cuối kỳ này',d.luyKeKhoiLuong,'tot')}
+      ${dong('4. Thu hồi tạm ứng kỳ này',d.thuHoiTamUngKyNay,'tot')}
+      ${dong('5. Giá trị giải ngân kỳ này',d.giaiNganKyNay.tong,'tot')}${ba(d.giaiNganKyNay)}
+      ${dong('6. Lũy kế giá trị giải ngân',d.luyKeGiaiNgan.tong,'tot')}${dong('+ Tạm ứng',d.luyKeGiaiNgan.tamUng,'sub')}${dong('+ Thanh toán khối lượng hoàn thành',d.luyKeGiaiNgan.thanhToanKLHT,'sub')}
+    </table>
+    <div class="hint">App tự tính từ các đợt đã nhập, không phải nhập thêm. "Kỳ trước" = các đợt trước đợt đang chọn; tạm ứng tính các khoản nhận trước ngày nghiệm thu đợt này. Thanh toán cho nhà thầu = số thực nhận.</div></div></div>`;
 }
 // --- Tab Bảo lãnh ---
 function veTabBaoLanh(id,h,k){
@@ -1049,8 +1094,8 @@ function formThanhToan(hopDongId,id){ const k=ketQua(hopDongId);
   moFormCon('thanhToan',hopDongId,id,'đợt thanh toán',[{k:'dot',nhan:'Đợt',kieu:'so',batBuoc:true},{k:'ngayNghiemThu',nhan:'Ngày nghiệm thu khối lượng',kieu:'ngay',batBuoc:true,nua:true},
     {k:'giaTriNghiemThu',nhan:'Giá trị nghiệm thu đợt này (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()'},{k:'soTienDeNghi',nhan:'Số tiền đề nghị thanh toán (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()',hint:'Thường = giá trị nghiệm thu'},
     {k:'thuHoiTamUng',nhan:'Thu hồi tạm ứng đợt này (đ)',kieu:'tien',onInput:'goiYThucNhan()',hint:'Kế toán nhập tay theo chứng từ. Tạm ứng chưa thu hồi: '+tienD(k.tamUngChuaThuHoi)},
-    {k:'giuBaoHanh',nhan:'Giữ lại bảo hành (đ)',kieu:'tien',onInput:'goiYThucNhan()'},{k:'giuQuyetToan',nhan:'Giữ lại chờ quyết toán (đ)',kieu:'tien',nua:true,onInput:'goiYThucNhan()'},
-    {k:'soTienThucNhan',nhan:'Số tiền thực nhận (đ)',kieu:'tien',hint:'Để trống → app lấy = đề nghị − thu hồi TƯ − giữ BH − giữ QT (xem gợi ý bên dưới khi gõ)'},{k:'ngayTienVe',nhan:'Ngày tiền về tài khoản',kieu:'ngay',nua:true,hint:'Chưa về thì để trống'},
+    {k:'giuBaoHanh',nhan:'Giữ lại / chuyển bảo hành (đ)',kieu:'tien',onInput:'goiYThucNhan()',hint:'Khi không dùng bảo lãnh bảo hành'},{k:'giuQuyetToan',nhan:'Tạm giữ chờ quyết toán (đ)',kieu:'tien',nua:true,onInput:'goiYThucNhan()'},
+    {k:'soTienThucNhan',nhan:'Thanh toán cho nhà thầu — số thực nhận (đ)',kieu:'tien',hint:'Để trống → app lấy = đề nghị − thu hồi TƯ − giữ BH − giữ QT (xem gợi ý bên dưới khi gõ)'},{k:'ngayTienVe',nhan:'Ngày tiền về tài khoản',kieu:'ngay',nua:true,hint:'Chưa về thì để trống'},
     {k:'ghiChu',nhan:'Ghi chú',placeholder:'Đợt nghiệm thu, số hồ sơ…'}],{dot:dotTiep('thanhToan',hopDongId),ngayNghiemThu:homNay()});
   goiYThucNhan(); }
 function goiYThucNhan(){ const g=k=>docTien(($('f-'+k)||{}).value); const n=g('soTienDeNghi')-g('thuHoiTamUng')-g('giuBaoHanh')-g('giuQuyetToan'); const o=$('f-soTienThucNhan'); if(o&&!o.value) o.placeholder='gợi ý '+tien(n); }
@@ -1351,8 +1396,10 @@ async function xuatExcelDanhSach(){ try{ const X=await napSheetJs(); const kq=ta
     const cot=[['congTyId','Công ty'],['soHopDong','Số hợp đồng'],['tenGoiThau','Tên gói thầu'],['tenDuAn','Tên dự án'],['chuDauTu','Chủ đầu tư'],['ngayKy','Ngày ký',1],['loaiHopDong','Loại HĐ',2],['giaTriGoc','Giá trị gốc'],['dieuChinhPhuLuc','Điều chỉnh PL'],['giaTriHienHanh','Giá trị hiện hành'],['giaTriDuPhong','Dự phòng (trong GT)'],['giaTriHienHanhKhongDuPhong','GT không kể dự phòng'],['nghiemThuLuyKe','Đã nghiệm thu'],['tamUngLuyKe','Tạm ứng'],['thuHoiTamUngLuyKe','Đã thu hồi TƯ'],['tamUngChuaThuHoi','TƯ chưa thu hồi'],['thucNhanLuyKe','Thực nhận'],['tienDaVe','Tiền đã về'],['conPhaiThu','Còn phải thu'],['giuBaoHanhDangGiu','Đang giữ BH'],['giuQuyetToanDangGiu','Đang giữ QT'],['conLaiChuaNghiemThu','Chưa nghiệm thu'],['conLaiChuaThiCong','Chưa thi công'],['doanhThuCuoiCung','Doanh thu cuối cùng'],['trangThai','Trạng thái',3],['ngayKhoiCong','Khởi công',1],['ngayHoanThanhHienHanh','Hoàn thành hiện hành',1],['ngayHetBaoHanh','Hết bảo hành',1],['noiBo','Nội bộ',4]];
     const aoa=[cot.map(c=>c[1])].concat(kq.map(r=>cot.map(c=>{ const v=r[c[0]]; return c[2]===1?ngayVN(v):c[2]===2?(LOAI_HOP_DONG[v]||v||''):c[2]===3?(TRANG_THAI[v]||v||''):c[2]===4?(v?'nội bộ':''):(v==null?'':v); })));
     const wb=X.utils.book_new(), ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=cot.map(()=>({wch:16})); X.utils.book_append_sheet(wb,ws,'HopDong');
-    const tt=[['Công ty','Số HĐ','Tên gói thầu','Đợt','Ngày nghiệm thu','Giá trị nghiệm thu','Đề nghị','Thu hồi TƯ','Giữ BH','Giữ QT','Thực nhận','Ngày tiền về','Ghi chú']];
-    kq.forEach(r=>danhSachBanGhi('thanhToan',r.id).sort((a,b)=>(a.dot||0)-(b.dot||0)).forEach(x=>tt.push([r.congTyId,r.soHopDong,r.tenGoiThau,x.dot,ngayVN(x.ngayNghiemThu),x.giaTriNghiemThu||0,x.soTienDeNghi||0,x.thuHoiTamUng||0,x.giuBaoHanh||0,x.giuQuyetToan||0,x.soTienThucNhan||0,ngayVN(x.ngayTienVe),x.ghiChu||''])));
+    const tt=[['Công ty','Số HĐ','Tên gói thầu','Đợt','Ngày nghiệm thu','Giá trị nghiệm thu','Đề nghị','Thu hồi TƯ','Giữ BH','Giữ QT','Thực nhận','Ngày tiền về','Ghi chú','TƯ chưa thu hồi kỳ trước','Đã TT KLHT kỳ trước','Lũy kế KL đến kỳ này','Giải ngân kỳ này','Lũy kế giải ngân','  trong đó tạm ứng','  trong đó TT KLHT']];
+    kq.forEach(r=>{ const du=duLieuHopDong(r.id); danhSachBanGhi('thanhToan',r.id).sort((a,b)=>(a.dot||0)-(b.dot||0)).forEach(x=>{ const d=TINH_TOAN.deNghiThanhToan(du,x.id)||{daThanhToanKyTruoc:{},giaiNganKyNay:{},luyKeGiaiNgan:{}};
+      tt.push([r.congTyId,r.soHopDong,r.tenGoiThau,x.dot,ngayVN(x.ngayNghiemThu),x.giaTriNghiemThu||0,x.soTienDeNghi||0,x.thuHoiTamUng||0,x.giuBaoHanh||0,x.giuQuyetToan||0,x.soTienThucNhan||0,ngayVN(x.ngayTienVe),x.ghiChu||'',
+        d.tamUngChuaThuHoiKyTruoc||0,d.daThanhToanKyTruoc.tong||0,d.luyKeKhoiLuong||0,d.giaiNganKyNay.tong||0,d.luyKeGiaiNgan.tong||0,d.luyKeGiaiNgan.tamUng||0,d.luyKeGiaiNgan.thanhToanKLHT||0]); }); });
     X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(tt),'ThanhToan');
     X.writeFile(wb,'Hop-dong-'+homNay()+'.xlsx'); }catch(e){ toast('❌ '+e.message); } }
 async function xuatExcelDashboard(){ try{ const X=await napSheetJs(); const kq=tatCaKetQua();
