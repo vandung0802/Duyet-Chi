@@ -354,7 +354,7 @@ Mỗi nhánh dưới đây là một "bảng". Khóa `{id}` do Firebase sinh (`p
 │     taoBoi, taoLuc, suaBoi, suaLuc
 │
 ├── phuLuc/{hopDongId}/{id}
-│     soPhuLuc, ngayKy, loai ("giaHan"|"dieuChinhGia"|"caHai")
+│     soPhuLuc, ngayKy, loai ("giaHan"|"dieuChinhGia"|"caHai"|"thongTin" — thêm 06/10: đổi địa chỉ, người đại diện, tài khoản…; giá trị 0, không ngày, bắt buộc nội dung)
 │     giaTriDieuChinh (số nguyên, có thể âm), ngayHoanThanhMoi, noiDung
 │     fileDinhKem/{id}
 │
