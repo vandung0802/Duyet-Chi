@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v32**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v33**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,12 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 07/10/2026 (bản v33 — hợp đồng thầu phụ + chi phí QLDA)
+- Kế toán Oanh: thêm loại "thầu phụ" và ô nhập chi phí quản lý dự án (bảng giá HĐ thầu phụ: Tổng − Chi phí QLDA 3% = Giá hợp đồng).
+- Form hợp đồng: ô "Thầu chính / thầu phụ" (`hinhThucThau`, mặc định thầu chính → không lưu trường); khi thầu phụ hiện "Nhà thầu chính" (`nhaThauChinh`) + "Chi phí QLDA" `chiPhiQLDA {tyLe, soTien, ghiChu}`. QLDA chỉ THAM KHẢO: giá trị gốc nhập GIÁ HỢP ĐỒNG đã trừ QLDA, công thức không đổi. Đổi về thầu chính → xoá sạch 3 trường.
+- Hiện ở: màn Thông tin (dòng Loại hợp đồng + Nhà thầu chính + Chi phí QLDA), danh sách (chip "thầu phụ" + dòng 🤝 Thầu chính), Excel xuất (4 cột), Excel nhập mẫu 1 sheet (4 cột cuối). Spec 4.3 đã ghi.
+- Chưa làm (chờ nếu cần): thầu chính trừ QLDA theo TỪNG ĐỢT thanh toán.
 
 ## Đã làm 07/10/2026 (bản v32 — mục 6 theo mẫu Kho bạc)
 - Kế toán Oanh (anh Dũng chuyển): mục 6 "Tạm ứng" = TƯ chưa thu hồi kỳ trước − thu hồi kỳ này (số DƯ chưa thu hồi), không phải tổng tạm ứng đã nhận. Để tổng mục 6 vẫn = tổng tiền đã giải ngân, phần tạm ứng đã thu hồi chuyển sang "Thanh toán KLHT": TT KLHT = thu hồi TƯ lũy kế + nhà thầu + chuyển BH + tạm giữ QT (thêm dòng "– Thu hồi tạm ứng (lũy kế)"). Tổng mục 6 KHÔNG đổi. Số liệu Oanh: TƯ 992.995.534 + TT KLHT 31.609.830.673 = 32.602.826.207.

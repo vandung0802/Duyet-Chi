@@ -95,7 +95,7 @@ table.p td.chu{white-space:normal;overflow-wrap:anywhere;line-height:1.35}
 #ds-hopdong table.p td.c-hd{min-width:260px;max-width:560px}
 .hd-dau{line-height:1.6}.hd-dau .ct-cty,.hd-dau .hd-nb{display:inline-block;margin-right:6px;vertical-align:1px;line-height:1.35}
 .hd-so{font-size:15px;line-height:1.35}
-.hd-nb{font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:999px}
+.hd-nb{font-size:11px;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 8px;border-radius:999px}.hd-tp{color:#1d4ed8;background:#dbeafe}
 .ds-gt{font-size:13px;margin-top:3px}.ds-cdt{font-size:13px;margin-top:3px}
 .hd-cuoi{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin-top:8px}
 .hd-cuoi .hint{margin:0;font-size:12px}
@@ -297,7 +297,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261007-v32',
+  PHIEN_BAN: '20261007-v33',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -325,6 +325,7 @@ const CONG_TY = { PVA:{ ten:'Công ty CP Xây lắp công trình Phúc Vinh An',
 const MA_CONG_TY = ['PVA','379','279'];
 const TRANG_THAI = { dangThiCong:'Đang thi công', choNghiemThuHoanThanh:'Chờ nghiệm thu hoàn thành', dangBaoHanh:'Đang bảo hành', choQuyetToan:'Chờ quyết toán', daXong:'Đã xong', tamDung:'Tạm dừng', biChamDut:'Bị chấm dứt' };
 const LOAI_HOP_DONG = { tronGoi:'Trọn gói', donGiaCoDinh:'Đơn giá cố định', donGiaDieuChinh:'Đơn giá điều chỉnh' };
+const HINH_THUC_THAU = { thauChinh:'Thầu chính', thauPhu:'Thầu phụ' }; // (v33) không có trường = thầu chính
 const LOAI_PHU_LUC = { dieuChinhGia:'Điều chỉnh giá trị', giaHan:'Gia hạn thời gian', caHai:'Cả hai', thongTin:'Thay đổi thông tin' }; // thongTin (v23): đổi địa chỉ, người đại diện, tài khoản… — không đổi giá trị/ngày
 const LOAI_BAO_LANH = { thucHienHopDong:'Bảo lãnh thực hiện hợp đồng', tamUng:'Bảo lãnh tạm ứng', baoHanh:'Bảo lãnh bảo hành' }; // 3 loại nhập ở app này
 const TEN_BAO_LANH = Object.assign({ duThau:'Bảo lãnh dự thầu' }, LOAI_BAO_LANH); // + dự thầu (chỉ app Công Nợ nhập) — dùng để hiển thị
@@ -816,8 +817,8 @@ function oDanhSach(k,l,r){
   if(k!=='soHopDong') return oSoDS(k,l,r);
   const hetBH=ngayVN(r.ngayHetBaoHanh);
   return `<td class="tr chu c-hd" data-l="${esc(l)}">
-    <div class="hd-dau"><span class="ct-cty">${esc(r.congTyId||'?')}</span>${r.noiBo?'<span class="hd-nb">nội bộ</span>':''}<b class="hd-so">${esc(r.soHopDong||'(chưa có số HĐ)')}</b></div>
-    ${r.tenGoiThau?'<div class="ds-gt">'+esc(r.tenGoiThau)+'</div>':''}${r.tenDuAn?'<div class="ct-duan ds-gt">📍 '+esc(r.tenDuAn)+'</div>':''}${r.chuDauTu?'<div class="ct-cdt ds-cdt">🏢 '+esc(r.chuDauTu)+'</div>':''}
+    <div class="hd-dau"><span class="ct-cty">${esc(r.congTyId||'?')}</span>${r.noiBo?'<span class="hd-nb">nội bộ</span>':''}${r.hinhThucThau==='thauPhu'?'<span class="hd-nb hd-tp">thầu phụ</span>':''}<b class="hd-so">${esc(r.soHopDong||'(chưa có số HĐ)')}</b></div>
+    ${r.tenGoiThau?'<div class="ds-gt">'+esc(r.tenGoiThau)+'</div>':''}${r.tenDuAn?'<div class="ct-duan ds-gt">📍 '+esc(r.tenDuAn)+'</div>':''}${r.chuDauTu?'<div class="ct-cdt ds-cdt">🏢 '+esc(r.chuDauTu)+'</div>':''}${r.hinhThucThau==='thauPhu'&&r.nhaThauChinh?'<div class="ds-cdt" style="color:#1d4ed8;font-weight:600">🤝 Thầu chính: '+esc(r.nhaThauChinh)+'</div>':''}
     <div class="hd-cuoi">${badgeTrangThai(r.trangThai)}${hetBH?'<span class="hint">🛡 Hết bảo hành '+hetBH+'</span>':''}</div></td>`;
 }
 function chonSapXep(v){ const [cot,c]=v.split('|'); sapXep={cot,chieu:Number(c)||1}; veDanhSach(); }
@@ -880,7 +881,9 @@ function veTabThongTin(id,h,k){
       <div>Chủ đầu tư</div><div>${esc(h.chuDauTu||'—')}</div>
       <div>Gói thầu</div><div>${esc(h.tenGoiThau)}</div>
       <div>Dự án</div><div>${esc(h.tenDuAn||'—')}</div>
-      <div>Loại hợp đồng</div><div>${esc(LOAI_HOP_DONG[h.loaiHopDong]||'—')} · ${h.lienDanh&&h.lienDanh.co?'Liên danh':'Độc lập'}</div>
+      <div>Loại hợp đồng</div><div>${esc(LOAI_HOP_DONG[h.loaiHopDong]||'—')} · ${h.lienDanh&&h.lienDanh.co?'Liên danh':'Độc lập'} · ${h.hinhThucThau==='thauPhu'?'<b>Thầu phụ</b>':'Thầu chính'}</div>
+      ${h.hinhThucThau==='thauPhu'?`<div>Nhà thầu chính</div><div>${esc(h.nhaThauChinh||'—')}</div>
+      <div>Chi phí QLDA</div><div>${(q=>q&&(q.tyLe||q.soTien)?(q.tyLe?'<b>'+esc(q.tyLe)+'%</b>':'')+(q.tyLe&&q.soTien?' · ':'')+(q.soTien?'<b>'+tienD(q.soTien)+'</b>':'')+' <span class="hint">thầu chính giữ, đã trừ trong giá HĐ</span>'+(q.ghiChu?' · '+esc(q.ghiChu):''):'—')(h.chiPhiQLDA)}</div>`:''}
       <div>Giá trước thuế</div><div>${h.giaTriTruocThue?tienD(h.giaTriTruocThue):'—'}${h.thue?' · thuế '+tienD(h.thue):''}</div>
       <div>Giá trị gốc (sau thuế)</div><div><b>${tienD(h.giaTriGoc)}</b>${h.lienDanh&&h.lienDanh.co?' — phần của mình'+(h.lienDanh.tongGiaTriLienDanh?' / tổng liên danh '+tienD(h.lienDanh.tongGiaTriLienDanh):'')+(h.lienDanh.thanhVienKhac?' · cùng '+esc(h.lienDanh.thanhVienKhac):''):''}</div>
       <div>Dự phòng</div><div>${h.giaTriDuPhong?'<b>'+tienD(h.giaTriDuPhong)+'</b> nằm trong giá trị HĐ · không kể dự phòng: '+tienD(k.giaTriHienHanhKhongDuPhong):'—'}</div>
@@ -1036,7 +1039,7 @@ function veTabLichSu(id,h,k){
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>🕘 Lịch sử thay đổi</h3></div>
     <div class="tl">${ds.length?ds.map(l=>`<div class="tl-e"><div class="tl-t">${lucVN(l.luc)} · ${esc(l.nguoi)}</div><div class="tl-b">${hd[l.hanhDong]||l.hanhDong} <b>${esc(TEN_BANG[l.bang]||l.bang)}</b>${l.truong?' · '+esc(tenTruong(l.truong)):''}${l.hanhDong==='sua'?': <span class="neg">'+esc(hienGiaTri(l.truong,l.giaTriCu))+'</span> → <span class="pos">'+esc(hienGiaTri(l.truong,l.giaTriMoi))+'</span>':(l.giaTriMoi||l.giaTriCu?': '+esc(l.giaTriMoi||l.giaTriCu):'')}</div></div>`).join(''):'<div class="empty">Chưa có gì.</div>'}</div></div></div>`;
 }
-const TEN_TRUONG={ congTyId:'Công ty', soHopDong:'Số hợp đồng', ngayKy:'Ngày ký', chuDauTu:'Chủ đầu tư', tenGoiThau:'Tên gói thầu', tenDuAn:'Tên dự án', loaiHopDong:'Loại hợp đồng', giaTriTruocThue:'Giá trước thuế', thue:'Thuế', giaTriGoc:'Giá trị gốc', giaTriDuPhong:'Giá trị dự phòng', thoiGianThucHien:'Thời gian thực hiện', ngayKhoiCong:'Ngày khởi công', ngayHoanThanhHopDong:'Ngày hoàn thành theo HĐ', trangThai:'Trạng thái', ghiChu:'Ghi chú',
+const TEN_TRUONG={ hinhThucThau:'Thầu chính / thầu phụ', nhaThauChinh:'Nhà thầu chính', 'chiPhiQLDA.tyLe':'Chi phí QLDA (%)', 'chiPhiQLDA.soTien':'Chi phí QLDA', 'chiPhiQLDA.ghiChu':'Ghi chú QLDA', congTyId:'Công ty', soHopDong:'Số hợp đồng', ngayKy:'Ngày ký', chuDauTu:'Chủ đầu tư', tenGoiThau:'Tên gói thầu', tenDuAn:'Tên dự án', loaiHopDong:'Loại hợp đồng', giaTriTruocThue:'Giá trước thuế', thue:'Thuế', giaTriGoc:'Giá trị gốc', giaTriDuPhong:'Giá trị dự phòng', thoiGianThucHien:'Thời gian thực hiện', ngayKhoiCong:'Ngày khởi công', ngayHoanThanhHopDong:'Ngày hoàn thành theo HĐ', trangThai:'Trạng thái', ghiChu:'Ghi chú',
   'lienDanh.co':'Liên danh (có/không → độc lập)','lienDanh.tyLe':'Tỷ lệ liên danh','lienDanh.tongGiaTriLienDanh':'Tổng giá trị liên danh','lienDanh.thanhVienKhac':'Thành viên liên danh','noiBo.co':'Nội bộ','noiBo.hopDongGocId':'Hợp đồng gốc',
   'baoHanh.hinhThuc':'Hình thức bảo hành','baoHanh.ngayNghiemThuBanGiao':'Ngày nghiệm thu bàn giao','baoHanh.soThang':'Số tháng bảo hành','baoHanh.ngayHetBaoHanh':'Ngày hết bảo hành',
   'quyetToan.ngayNop':'Ngày nộp hồ sơ QT','quyetToan.ngayDuyet':'Ngày duyệt QT','quyetToan.giaTriDuyet':'Giá trị quyết toán','quyetToan.daNhanDu':'Đã nhận đủ','quyetToan.conNo':'Còn nợ',
@@ -1046,7 +1049,7 @@ const TEN_TRUONG={ congTyId:'Công ty', soHopDong:'Số hợp đồng', ngayKy:'
   nganHang:'Ngân hàng', ngayPhatHanh:'Ngày phát hành', ngayHetHan:'Ngày hết hạn', daGiaHan:'Đã gia hạn', lyDo:'Lý do', tamUngId:'Đợt tạm ứng' };
 function tenTruong(t){ return TEN_TRUONG[t]||(/^\d{4}-\d{2}$/.test(t)?'tháng '+thangVN(t):t); }
 function hienGiaTri(truong,v){ if(v===''||v==null) return '(trống)'; if(typeof v==='boolean') return v?'có':'không'; if(typeof v==='number'&&Math.abs(v)>=1000) return tien(v); if(/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return ngayVN(v);
-  const tu={ ...TRANG_THAI, ...LOAI_HOP_DONG, ...LOAI_PHU_LUC, ...LOAI_BAO_LANH, ...HINH_THUC_BAO_HANH, ...LOAI_HOAN_TRA, ...LY_DO_HOAN_TRA }; return tu[v]||String(v); }
+  const tu={ ...TRANG_THAI, ...LOAI_HOP_DONG, ...HINH_THUC_THAU, ...LOAI_PHU_LUC, ...LOAI_BAO_LANH, ...HINH_THUC_BAO_HANH, ...LOAI_HOAN_TRA, ...LY_DO_HOAN_TRA }; return tu[v]||String(v); }
 // ----- 9b. Các form nhập liệu của chi tiết hợp đồng (dùng moForm/docForm ở khối tiện ích) -----
 let _cacO=null, _formId=null, _formBang='', _formHopDongId='';
 function goiYChuDauTu(){ return Object.values(DL.hopDong).map(h=>h.chuDauTu); }
@@ -1064,10 +1067,14 @@ function formHopDong(id){
     {k:'tenGoiThau',nhan:'Tên gói thầu',batBuoc:true,placeholder:'VD: Gói thầu số 3 – cầu Km12'},
     {k:'tenDuAn',nhan:'Tên dự án / công trình',kieu:'goiY',goiY:danhSachCongTrinh,batBuoc:true,hint:'Chọn từ danh sách công trình dùng chung với Duyệt Chi, hoặc gõ tên mới'},
     {k:'loaiHopDong',nhan:'Loại hợp đồng',kieu:'chon',ds:LOAI_HOP_DONG,batBuoc:true},{k:'trangThai',nhan:'Trạng thái',kieu:'chon',ds:TRANG_THAI,nua:true},
+    {k:'hinhThucThau',nhan:'Thầu chính / thầu phụ',kieu:'chon',ds:{thauChinh:'Thầu chính (ký với chủ đầu tư)',thauPhu:'Thầu phụ (ký với nhà thầu chính)'},macDinh:'thauChinh'},
+    {k:'nhaThauChinh',nhan:'Nhà thầu chính (bên giao thầu)',hienKhi:'hinhThucThau=thauPhu',placeholder:'VD: Công ty CP XD ABC'},
     {tieuDe:'Giá trị (đồng, phần của công ty mình)'},
     {k:'giaTriTruocThue',nhan:'Giá trị trước thuế',kieu:'tien',onInput:'tinhSauThue()'},{k:'thue',nhan:'Thuế GTGT',kieu:'tien',nua:true,onInput:'tinhSauThue()'},
     {k:'giaTriGoc',nhan:'Giá trị sau thuế (giá trị gốc hợp đồng)',kieu:'tien',batBuoc:true,hint:'Tự cộng = trước thuế + thuế khi nhập 2 ô trên; sửa tay được'},
     {k:'giaTriDuPhong',nhan:'Trong đó: giá trị dự phòng',kieu:'tien',hint:'Khoản dự phòng nằm trong giá trị sau thuế. App hiện thêm "giá trị không kể dự phòng" để tham khảo'},
+    {k:'chiPhiQLDA.tyLe',nhan:'Chi phí QLDA thầu chính giữ (%)',placeholder:'VD: 3',hienKhi:'hinhThucThau=thauPhu'},{k:'chiPhiQLDA.soTien',nhan:'Chi phí QLDA (đ)',kieu:'tien',nua:true,hienKhi:'hinhThucThau=thauPhu'},
+    {k:'chiPhiQLDA.ghiChu',nhan:'Ghi chú QLDA',hienKhi:'hinhThucThau=thauPhu',placeholder:'Ghi chú QLDA (nếu cần)',hint:'Thầu phụ: giá trị gốc ở trên nhập GIÁ HỢP ĐỒNG đã trừ chi phí QLDA (dòng "Giá hợp đồng" trong bảng giá). Chi phí QLDA để tham khảo, không trừ thêm.'},
     {tieuDe:'Thời gian'},
     {k:'thoiGianThucHien',nhan:'Thời gian thực hiện',placeholder:'VD: 540 ngày'},
     {k:'ngayKhoiCong',nhan:'Ngày khởi công',kieu:'ngay'},{k:'ngayHoanThanhHopDong',nhan:'Hoàn thành theo HĐ',kieu:'ngay',nua:true},
@@ -1087,6 +1094,11 @@ async function luuHopDong(id,btn){
     const v=docForm(_cacO); batBuoc(_cacO,v);
     const trung=Object.entries(DL.hopDong).find(([k,x])=>k!==id&&x.congTyId===v.congTyId&&String(x.soHopDong).trim().toLowerCase()===v.soHopDong.toLowerCase()); if(trung) throw new Error('Công ty '+v.congTyId+' đã có hợp đồng số '+v.soHopDong);
     v.lienDanh.co=v.lienDanh.hinhThuc==='lienDanh'; delete v.lienDanh.hinhThuc; if(!v.lienDanh.co){ v.lienDanh={co:false}; }
+    if(v.hinhThucThau!=='thauPhu'){ delete v.hinhThucThau; delete v.nhaThauChinh; delete v.chiPhiQLDA; } // thầu chính = mặc định, không lưu trường thừa
+    else { if(!v.nhaThauChinh) delete v.nhaThauChinh; // không lưu chuỗi rỗng (đổi lại thầu chính mới xoá sạch được)
+      const q=v.chiPhiQLDA||{}, t=parseFloat(String(q.tyLe||'').replace(',','.').replace('%',''));
+      v.chiPhiQLDA={}; if(isFinite(t)&&t>0) v.chiPhiQLDA.tyLe=t; if(q.soTien) v.chiPhiQLDA.soTien=q.soTien; if(q.ghiChu) v.chiPhiQLDA.ghiChu=q.ghiChu;
+      if(!Object.keys(v.chiPhiQLDA).length) delete v.chiPhiQLDA; }
     if(v.noiBo.co&&!v.noiBo.hopDongGocId) throw new Error('Chọn hợp đồng gốc của giao khoán nội bộ');
     if(id){ const cu=DL.hopDong[id]; ['baoHanh','quyetToan','keHoachTienVe','fileDinhKem','khoiLuongDaThucHien'].forEach(k=>{ if(cu[k]!=null) v[k]=cu[k]; }); }
     else v.baoHanh={hinhThuc:'giuTien'};
@@ -1316,7 +1328,7 @@ const SHEET_NHAP={
   HoanTra:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['loai','Loại (Tiền giữ bảo hành/Tiền giữ chờ quyết toán)','chon:LOAI_HOAN_TRA'],['ngay','Ngày tiền về','ngay'],['soTien','Số tiền','tien'],['lyDo','Lý do (Phát hành thư bảo lãnh bảo hành/Hết thời gian bảo hành/Quyết toán được duyệt/Khác)','chon:LY_DO_HOAN_TRA'],['ghiChu','Ghi chú','text']],
   KeHoach:[['congTyId','Công ty','text'],['soHopDong','Số hợp đồng','text'],['thang','Tháng (MM/YYYY)','thang'],['soTien','Số tiền dự kiến về','tien']]
 };
-const DS_CHON={TRANG_THAI,LOAI_HOP_DONG,LOAI_PHU_LUC,LOAI_BAO_LANH,HINH_THUC_BAO_HANH,LOAI_HOAN_TRA,LY_DO_HOAN_TRA};
+const DS_CHON={TRANG_THAI,LOAI_HOP_DONG,HINH_THUC_THAU,LOAI_PHU_LUC,LOAI_BAO_LANH,HINH_THUC_BAO_HANH,LOAI_HOAN_TRA,LY_DO_HOAN_TRA};
 const MAU_HANG={ HopDong:[['PVA','MẪU-01/2026 (xoá dòng này)','15/01/2026','Ban QLDA huyện X','Gói thầu số 3 – cầu Km12','CT QL14e cầu','Đơn giá điều chỉnh',11363636364,1136363636,12500000000,'540 ngày','01/02/2026','31/07/2027','Đang thi công','Chủ đầu tư giữ tiền','','12','','','','']],
   PhuLuc:[['PVA','MẪU-01/2026','PL01','01/06/2026','Điều chỉnh giá trị',500000000,'','Bổ sung khối lượng'],['PVA','MẪU-01/2026','PL02','01/08/2026','Cả hai',-200000000,'30/09/2027','Cắt giảm + gia hạn']],
   TamUng:[['PVA','MẪU-01/2026',1,'10/02/2026',2000000000,'','BIDV Nghệ An',2000000000,'05/02/2026','31/12/2026']],
@@ -1344,7 +1356,8 @@ const COT_MOT=[
   ['chuDauTu','HĐ: Chủ đầu tư'],['tenGoiThau','HĐ: Tên gói thầu'],['tenDuAn','HĐ: Tên dự án'],['giaTriTruocThue','HĐ: Giá trị trước thuế'],['thue','HĐ: Thuế'],['thoiGianThucHien','HĐ: Thời gian thực hiện'],['ngayKhoiCong','HĐ: Ngày khởi công'],['ngayHoanThanhHopDong','HĐ: Ngày hoàn thành theo HĐ'],['trangThai','HĐ: Trạng thái'],
   ['hinhThucBH','HĐ: Hình thức bảo hành (Chủ đầu tư giữ tiền/Nộp thư bảo lãnh bảo hành/Cả hai)'],['ngayBanGiao','HĐ: Ngày nghiệm thu bàn giao'],['soThangBH','HĐ: Số tháng bảo hành'],['ngayNopQT','HĐ: Ngày nộp hồ sơ QT'],['ngayDuyetQT','HĐ: Ngày duyệt QT'],['giaTriQT','HĐ: Giá trị QT được duyệt'],
   ['soTienDeNghi','TT: Số tiền đề nghị thanh toán'],['thuHoiTamUng','TT: Thu hồi tạm ứng'],['giuBaoHanh','TT: Giữ lại bảo hành'],['giuQuyetToan','TT: Giữ lại chờ quyết toán'],['soTienThucNhan','TT: Số tiền thực nhận'],['ngayTienVe','TT: Ngày tiền về'],
-  ['blSoTien','TƯ: Số tiền bảo lãnh tạm ứng'],['blNgayPhatHanh','TƯ: Ngày phát hành bảo lãnh TƯ'],['lyDo','HT: Lý do hoàn trả (Phát hành thư bảo lãnh bảo hành/Hết thời gian bảo hành/Quyết toán được duyệt/Khác)'],['giaTriDuPhong','HĐ: Giá trị dự phòng (nằm trong giá trị sau thuế)'] ];
+  ['blSoTien','TƯ: Số tiền bảo lãnh tạm ứng'],['blNgayPhatHanh','TƯ: Ngày phát hành bảo lãnh TƯ'],['lyDo','HT: Lý do hoàn trả (Phát hành thư bảo lãnh bảo hành/Hết thời gian bảo hành/Quyết toán được duyệt/Khác)'],['giaTriDuPhong','HĐ: Giá trị dự phòng (nằm trong giá trị sau thuế)'],
+  ['hinhThucThau','HĐ: Thầu chính/Thầu phụ'],['nhaThauChinh','HĐ: Nhà thầu chính (nếu thầu phụ)'],['qldaTyLe','HĐ: Chi phí QLDA % (thầu phụ)'],['qldaSoTien','HĐ: Chi phí QLDA đồng (thầu phụ)'] ];
 const MAU_MOT=[
   ['Hợp đồng','PVA','MẪU-01/2026 (xoá dòng này)','','15/01/2026','Đơn giá điều chỉnh',12500000000,'','','', 'Ban QLDA huyện X','Gói thầu số 3 – cầu Km12','CT QL14e cầu',11363636364,1136363636,'540 ngày','01/02/2026','31/07/2027','Đang thi công','Chủ đầu tư giữ tiền','',12,'','','', '','','','','','', '','',''],
   ['Phụ lục','PVA','MẪU-01/2026','PL01','01/06/2026','Điều chỉnh giá trị',500000000,'','','Bổ sung khối lượng'],
@@ -1363,7 +1376,7 @@ function docSheetMot(X, wb){ const ws=wb.Sheets.NhapLieu; if(!ws) return null; c
   rows.slice(1).forEach((r,i)=>{ const ld=timKhoa(LOAI_DONG,gs(r,'loaiDong')); const chung={dong:i+2,loi:[],congTyId:gs(r,'congTyId').toUpperCase(),soHopDong:gs(r,'soHopDong')};
     if(!ld){ if(r.some(x=>x!==''&&x!=null)) D.HopDong.push(Object.assign(chung,{loi:['"Loại dòng" phải là: '+Object.values(LOAI_DONG).join(' / ')]})); return; }
     const ngay=docNgayExcel(g(r,'ngay')), tien=docSoExcel(g(r,'soTien')), stt=gs(r,'stt'), gc=gs(r,'ghiChu'), chon=(ds,k)=>{ const v=timKhoa(ds,gs(r,k)); if(gs(r,k)&&!v) chung.loi.push('"Loại" không đúng lựa chọn'); return v; };
-    if(ld==='hopDong'){ D.HopDong.push(Object.assign(chung,{ngayKy:ngay,chuDauTu:gs(r,'chuDauTu'),tenGoiThau:gs(r,'tenGoiThau'),tenDuAn:gs(r,'tenDuAn'),loaiHopDong:chon(LOAI_HOP_DONG,'loai'),giaTriTruocThue:docSoExcel(g(r,'giaTriTruocThue')),thue:docSoExcel(g(r,'thue')),giaTriGoc:tien,giaTriDuPhong:docSoExcel(g(r,'giaTriDuPhong')),thoiGianThucHien:gs(r,'thoiGianThucHien'),ngayKhoiCong:docNgayExcel(g(r,'ngayKhoiCong')),ngayHoanThanhHopDong:docNgayExcel(g(r,'ngayHoanThanhHopDong')),trangThai:chon(TRANG_THAI,'trangThai'),
+    if(ld==='hopDong'){ D.HopDong.push(Object.assign(chung,{ngayKy:ngay,chuDauTu:gs(r,'chuDauTu'),tenGoiThau:gs(r,'tenGoiThau'),tenDuAn:gs(r,'tenDuAn'),loaiHopDong:chon(LOAI_HOP_DONG,'loai'),giaTriTruocThue:docSoExcel(g(r,'giaTriTruocThue')),thue:docSoExcel(g(r,'thue')),giaTriGoc:tien,giaTriDuPhong:docSoExcel(g(r,'giaTriDuPhong')),...(t=>t==='thauPhu'?{hinhThucThau:t,nhaThauChinh:gs(r,'nhaThauChinh'),chiPhiQLDA:{tyLe:parseFloat(String(gs(r,'qldaTyLe')).replace(',','.').replace('%',''))||'',soTien:docSoExcel(g(r,'qldaSoTien'))}}:{})(chon(HINH_THUC_THAU,'hinhThucThau')),thoiGianThucHien:gs(r,'thoiGianThucHien'),ngayKhoiCong:docNgayExcel(g(r,'ngayKhoiCong')),ngayHoanThanhHopDong:docNgayExcel(g(r,'ngayHoanThanhHopDong')),trangThai:chon(TRANG_THAI,'trangThai'),
       baoHanh:{hinhThuc:chon(HINH_THUC_BAO_HANH,'hinhThucBH'),ngayNghiemThuBanGiao:docNgayExcel(g(r,'ngayBanGiao')),soThang:Number(gs(r,'soThangBH'))||0},quyetToan:{ngayNop:docNgayExcel(g(r,'ngayNopQT')),ngayDuyet:docNgayExcel(g(r,'ngayDuyetQT')),giaTriDuyet:docSoExcel(g(r,'giaTriQT'))},ghiChu:gc})); }
     else if(ld==='phuLuc') D.PhuLuc.push(Object.assign(chung,{soPhuLuc:stt,ngayKy:ngay,loai:chon(LOAI_PHU_LUC,'loai'),giaTriDieuChinh:docSoAmExcel(g(r,'soTien')),ngayHoanThanhMoi:docNgayExcel(g(r,'ngayHetHan')),noiDung:gc}));
     else if(ld==='tamUng') D.TamUng.push(Object.assign(chung,{dot:Number(stt)||0,ngay,soTien:tien,ghiChu:gc,bl:{nganHang:gs(r,'nganHang'),soTien:docSoExcel(g(r,'blSoTien')),ngayPhatHanh:docNgayExcel(g(r,'blNgayPhatHanh')),ngayHetHan:docNgayExcel(g(r,'ngayHetHan'))}}));
@@ -1478,8 +1491,8 @@ async function xoaCongTrinh(i){ const s=danhSachCongTrinh[i]; if(!confirm('Xoá 
 
 // ===== 13. XUAT_EXCEL — dashboard và danh sách hợp đồng (chỉ cần Excel — mục 1.3) =====
 async function xuatExcelDanhSach(){ try{ const X=await napSheetJs(); const kq=tatCaKetQua().map(k=>Object.assign({},DL.hopDong[k.id],k)).sort((a,b)=>String(a.congTyId+a.soHopDong).localeCompare(String(b.congTyId+b.soHopDong),'vi',{numeric:true}));
-    const cot=[['congTyId','Công ty'],['soHopDong','Số hợp đồng'],['tenGoiThau','Tên gói thầu'],['tenDuAn','Tên dự án'],['chuDauTu','Chủ đầu tư'],['ngayKy','Ngày ký',1],['loaiHopDong','Loại HĐ',2],['giaTriGoc','Giá trị gốc'],['dieuChinhPhuLuc','Điều chỉnh PL'],['giaTriHienHanh','Giá trị hiện hành'],['giaTriDuPhong','Dự phòng (trong GT)'],['giaTriHienHanhKhongDuPhong','GT không kể dự phòng'],['nghiemThuLuyKe','Đã nghiệm thu'],['tamUngLuyKe','Tạm ứng'],['thuHoiTamUngLuyKe','Đã thu hồi TƯ'],['tamUngChuaThuHoi','TƯ chưa thu hồi'],['thucNhanLuyKe','Thực nhận'],['tienDaVe','Tiền đã về'],['conPhaiThu','Còn phải thu'],['giuBaoHanhDangGiu','Đang giữ BH'],['giuQuyetToanDangGiu','Đang giữ QT'],['conLaiChuaNghiemThu','Chưa nghiệm thu'],['conLaiChuaThiCong','Chưa thi công'],['doanhThuCuoiCung','Doanh thu cuối cùng'],['trangThai','Trạng thái',3],['ngayKhoiCong','Khởi công',1],['ngayHoanThanhHienHanh','Hoàn thành hiện hành',1],['ngayHetBaoHanh','Hết bảo hành',1],['noiBo','Nội bộ',4]];
-    const aoa=[cot.map(c=>c[1])].concat(kq.map(r=>cot.map(c=>{ const v=r[c[0]]; return c[2]===1?ngayVN(v):c[2]===2?(LOAI_HOP_DONG[v]||v||''):c[2]===3?(TRANG_THAI[v]||v||''):c[2]===4?(v?'nội bộ':''):(v==null?'':v); })));
+    const cot=[['congTyId','Công ty'],['soHopDong','Số hợp đồng'],['tenGoiThau','Tên gói thầu'],['tenDuAn','Tên dự án'],['chuDauTu','Chủ đầu tư'],['ngayKy','Ngày ký',1],['loaiHopDong','Loại HĐ',2],['hinhThucThau','Thầu chính/phụ',5],['nhaThauChinh','Nhà thầu chính'],['qldaTyLe','Chi phí QLDA %'],['qldaSoTien','Chi phí QLDA'],['giaTriGoc','Giá trị gốc'],['dieuChinhPhuLuc','Điều chỉnh PL'],['giaTriHienHanh','Giá trị hiện hành'],['giaTriDuPhong','Dự phòng (trong GT)'],['giaTriHienHanhKhongDuPhong','GT không kể dự phòng'],['nghiemThuLuyKe','Đã nghiệm thu'],['tamUngLuyKe','Tạm ứng'],['thuHoiTamUngLuyKe','Đã thu hồi TƯ'],['tamUngChuaThuHoi','TƯ chưa thu hồi'],['thucNhanLuyKe','Thực nhận'],['tienDaVe','Tiền đã về'],['conPhaiThu','Còn phải thu'],['giuBaoHanhDangGiu','Đang giữ BH'],['giuQuyetToanDangGiu','Đang giữ QT'],['conLaiChuaNghiemThu','Chưa nghiệm thu'],['conLaiChuaThiCong','Chưa thi công'],['doanhThuCuoiCung','Doanh thu cuối cùng'],['trangThai','Trạng thái',3],['ngayKhoiCong','Khởi công',1],['ngayHoanThanhHienHanh','Hoàn thành hiện hành',1],['ngayHetBaoHanh','Hết bảo hành',1],['noiBo','Nội bộ',4]];
+    const aoa=[cot.map(c=>c[1])].concat(kq.map(r=>Object.assign({},r,{qldaTyLe:(r.chiPhiQLDA||{}).tyLe||'',qldaSoTien:(r.chiPhiQLDA||{}).soTien||''})).map(r=>cot.map(c=>{ const v=r[c[0]]; return c[2]===5?HINH_THUC_THAU[v||'thauChinh']:c[2]===1?ngayVN(v):c[2]===2?(LOAI_HOP_DONG[v]||v||''):c[2]===3?(TRANG_THAI[v]||v||''):c[2]===4?(v?'nội bộ':''):(v==null?'':v); })));
     const wb=X.utils.book_new(), ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=cot.map(()=>({wch:16})); X.utils.book_append_sheet(wb,ws,'HopDong');
     const tt=[['Công ty','Số HĐ','Tên gói thầu','Đợt','Ngày nghiệm thu','Giá trị nghiệm thu','Đề nghị','Thu hồi TƯ','Giữ BH','Giữ QT','Thực nhận','Ngày tiền về','Ghi chú','TƯ chưa thu hồi kỳ trước','Đã TT KLHT kỳ trước','Lũy kế KL đến kỳ này','Giải ngân kỳ này','Lũy kế giải ngân','  trong đó tạm ứng chưa thu hồi','  trong đó TT KLHT','    – thu hồi TƯ','    – cho nhà thầu','    – chuyển bảo hành','    – tạm giữ chờ QT']];
     kq.forEach(r=>{ const du=duLieuHopDong(r.id); danhSachBanGhi('thanhToan',r.id).sort((a,b)=>(a.dot||0)-(b.dot||0)).forEach(x=>{ const d=TINH_TOAN.deNghiThanhToan(du,x.id)||{daThanhToanKyTruoc:{},giaiNganKyNay:{},luyKeGiaiNgan:{}};
