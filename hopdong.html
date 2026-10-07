@@ -297,7 +297,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261007-v30',
+  PHIEN_BAN: '20261007-v31',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -1112,7 +1112,8 @@ async function luuCon(btn){ await bam(btn,async()=>{ const v=docForm(_cacO); bat
   const phu={}; Object.keys(v).forEach(k=>{ if(k.charAt(0)==='_'){ phu[k]=v[k]; delete v[k]; } }); // v20: mọi ô "_…" (chọn thư / gắn đợt / thư mới) là phần phụ, không ghi vào bản ghi chính
   const id=await luuBanGhi(_formBang,_formHopDongId,_formId,v,tomTatMoi(_formBang,v)); _formId=id; // đã ghi xong bản chính: bấm Lưu lại (nếu bước phụ lỗi) là SỬA, không tạo trùng
   if(_dinhKemCho.length){ const ds=_dinhKemCho; _dinhKemCho=[]; await ghiDinhKem(_formBang,_formHopDongId,id,ds); } // file tải lên lúc thêm mới → gắn vào bản ghi vừa tạo
-  if(window._sauKhiLuuCon) await window._sauKhiLuuCon(id,v,phu); if(conThieu) toast('✅ Đã lưu — còn thiếu: '+conThieu+' (bổ sung sau)',7000); else toast('✅ Đã lưu'); }); }
+  const them=window._sauKhiLuuCon?(await window._sauKhiLuuCon(id,v,phu))||'':''; // _sauKhiLuuCon có thể trả chuỗi báo thêm
+  if(conThieu) toast('✅ Đã lưu — còn thiếu: '+conThieu+' (bổ sung sau)'+them,7000); else toast('✅ Đã lưu'+them,them?7000:0); }); }
 function tomTatMoi(bang,v){ return (DL.hopDong[_formHopDongId]||{}).soHopDong+' · '+TEN_BANG[bang]+' '+(v.dot||v.soPhuLuc||LOAI_BAO_LANH[v.loai]||LOAI_HOAN_TRA[v.loai]||'')+' '+tienD(v.soTien||v.giaTriDieuChinh||v.giaTriNghiemThu||0); }
 function dotTiep(bang,hopDongId){ return danhSachBanGhi(bang,hopDongId).reduce((m,x)=>Math.max(m,Number(x.dot)||0),0)+1; }
 
@@ -1143,9 +1144,16 @@ function formTamUng(hopDongId,id){ const x=id?gan1BanGhi('tamUng',hopDongId,id):
     Object.assign({dot:dotTiep('tamUng',hopDongId),ngay:homNay()},x||{})); }
 
 function formThanhToan(hopDongId,id){ const k=ketQua(hopDongId);
-  window._kiemTraCon=v=>{ if(v.thuHoiTamUng+v.giuBaoHanh+v.giuQuyetToan>v.soTienDeNghi) throw new Error('Thu hồi tạm ứng + giữ bảo hành + giữ quyết toán không được lớn hơn số tiền đề nghị'); if(!v.soTienThucNhan) v.soTienThucNhan=v.soTienDeNghi-v.thuHoiTamUng-v.giuBaoHanh-v.giuQuyetToan; }; window._sauKhiLuuCon=null;
+  window._kiemTraCon=v=>{ if(v.thuHoiTamUng+v.giuBaoHanh+v.giuQuyetToan>v.soTienDeNghi) throw new Error('Thu hồi tạm ứng + giữ bảo hành + giữ quyết toán không được lớn hơn số tiền đề nghị'); if(!v.soTienThucNhan) v.soTienThucNhan=v.soTienDeNghi-v.thuHoiTamUng-v.giuBaoHanh-v.giuQuyetToan;
+    window._tuChenh=chenhTamUngTruoc(); };
+  // (v31) Giấy đề nghị ghi "TƯ còn chưa thu hồi đến cuối kỳ trước" mà app tính thiếu (tạm ứng cũ chưa nhập) → lưu xong tự thêm 1 khoản tạm ứng "số dư chuyển sang" bằng phần chênh
+  window._sauKhiLuuCon=async(ttId,v)=>{ const c=window._tuChenh; window._tuChenh=null; if(!c||!c.chenh) return '';
+    if(c.chenh<0) return ' · ⚠ app đang tính tạm ứng chưa thu hồi LỚN hơn giấy '+tienD(-c.chenh)+' — kiểm tra tab Tạm ứng / thu hồi các đợt trước';
+    await luuBanGhi('tamUng',hopDongId,'',{dot:dotTiep('tamUng',hopDongId),ngay:c.ngay,soTien:c.chenh,ghiChu:'Số dư tạm ứng chuyển sang (điều chỉnh theo giấy đề nghị đợt '+v.dot+')'},'Tạm ứng số dư chuyển sang '+tienD(c.chenh));
+    return ' · đã thêm tạm ứng số dư chuyển sang '+tienD(c.chenh); };
   moFormCon('thanhToan',hopDongId,id,'đợt thanh toán',[{k:'dot',nhan:'Đợt',kieu:'so',batBuoc:true},{k:'ngayNghiemThu',nhan:'Ngày nghiệm thu khối lượng',kieu:'ngay',batBuoc:true,nua:true},
     {k:'giaTriNghiemThu',nhan:'Giá trị nghiệm thu đợt này (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan(1)'},{k:'_luyKeKL',nhan:'… hoặc nhập Lũy kế KL thực hiện đến cuối kỳ này (đ)',kieu:'tien',onInput:'tuLuyKeKL()',hint:'Mục 3 trên giấy đề nghị. Nhập lũy kế → app tự tính giá trị đợt này = lũy kế − các đợt trước'},{k:'soTienDeNghi',nhan:'Số tiền đề nghị thanh toán (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()',hint:'Thường = giá trị nghiệm thu'},
+    {k:'_tuTruoc',nhan:'Tạm ứng còn chưa thu hồi đến cuối kỳ trước — theo giấy (đ)',kieu:'tien',hint:'Mục 1 trên giấy đề nghị. Chỉ nhập khi app tính khác giấy (VD tạm ứng các năm trước chưa nhập vào app) → bấm Lưu, app tự thêm khoản tạm ứng "số dư chuyển sang" cho khớp. Khớp rồi thì để trống.'},
     {k:'thuHoiTamUng',nhan:'Thu hồi tạm ứng đợt này (đ)',kieu:'tien',onInput:'goiYThucNhan()',hint:'Kế toán nhập tay theo chứng từ. Tạm ứng chưa thu hồi: '+tienD(k.tamUngChuaThuHoi)},
     {k:'giuBaoHanh',nhan:'Giữ lại / chuyển bảo hành (đ)',kieu:'tien',onInput:'goiYThucNhan()',hint:'Khi không dùng bảo lãnh bảo hành'},{k:'giuQuyetToan',nhan:'Tạm giữ chờ quyết toán (đ)',kieu:'tien',nua:true,onInput:'goiYThucNhan()'},
     {k:'soTienThucNhan',nhan:'Thanh toán cho nhà thầu — số thực nhận (đ)',kieu:'tien',hint:'Để trống → app lấy = đề nghị − thu hồi TƯ − giữ BH − giữ QT (xem gợi ý bên dưới khi gõ)'},{k:'ngayTienVe',nhan:'Ngày tiền về tài khoản',kieu:'ngay',nua:true,hint:'Chưa về thì để trống'},
@@ -1163,7 +1171,12 @@ function soLieuDangGo(){ const c=window._dnForm; if(!c) return null; const g=k=>
   du.thanhToan[key]=Object.assign({},du.thanhToan[key]||{},{id:key,dot:Number(($('f-dot')||{}).value)||0,ngayNghiemThu:($('f-ngayNghiemThu')||{}).value||'',giaTriNghiemThu:g('giaTriNghiemThu'),thuHoiTamUng:g('thuHoiTamUng'),giuBaoHanh:g('giuBaoHanh'),giuQuyetToan:g('giuQuyetToan'),soTienThucNhan:thucNhan});
   return TINH_TOAN.deNghiThanhToan(du,key); }
 function xemDeNghiForm(){ const o=$('dn-xem'); if(!o) return null; const d=soLieuDangGo(); if(!d) return null;
-  o.innerHTML=`<h4 style="margin:0 0 4px;font-size:14px;color:var(--blue-dark)">📄 Số liệu đề nghị thanh toán đợt này <span class="hint">(app tự tính theo số đang nhập)</span></h4>${htmlBangDeNghi(d)}`; return d; }
+  const c=chenhTamUngTruoc(d), chu=!c||!c.chenh?'':c.chenh>0?`<div class="hint" style="color:var(--blue-dark);font-weight:600">➕ Khi Lưu: thêm tạm ứng "số dư chuyển sang" ${tienD(c.chenh)} (ngày ${ngayVN(c.ngay)}) → mục 1 = ${tienD(c.muon)}, mục 6 tăng theo.</div>`:`<div class="hint neg">⚠ App đang tính mục 1 lớn hơn giấy ${tienD(-c.chenh)} — kiểm tra tab Tạm ứng và thu hồi các đợt trước (app không tự trừ).</div>`;
+  o.innerHTML=`<h4 style="margin:0 0 4px;font-size:14px;color:var(--blue-dark)">📄 Số liệu đề nghị thanh toán đợt này <span class="hint">(app tự tính theo số đang nhập)</span></h4>${chu}${htmlBangDeNghi(d)}`; return d; }
+// Chênh giữa mục 1 trên giấy (ô _tuTruoc) và mục 1 app tính. Ngày khoản bù = ngày nghiệm thu SỚM NHẤT của hợp đồng để mọi đợt đều tính tới.
+function chenhTamUngTruoc(d){ const muon=docTien(($('f-_tuTruoc')||{}).value); if(!muon||!window._dnForm) return null; d=d||soLieuDangGo(); if(!d) return null;
+  const ngays=danhSachBanGhi('thanhToan',window._dnForm.hopDongId).map(x=>x.ngayNghiemThu).concat(($('f-ngayNghiemThu')||{}).value||'').filter(TINH_TOAN.laNgay).sort();
+  return { muon, chenh:muon-d.tamUngChuaThuHoiKyTruoc, ngay:ngays[0]||homNay() }; }
 function tuLuyKeKL(){ const g=k=>docTien(($('f-'+k)||{}).value); const d=soLieuDangGo(); if(!d) return;
   const truoc=d.luyKeKhoiLuong-g('giaTriNghiemThu'), lk=g('_luyKeKL'), dotNay=Math.max(0,lk-truoc);
   const o=$('f-giaTriNghiemThu'); o.value=dotNay?tien(dotNay):''; const dn=$('f-soTienDeNghi'); if(dn&&!dn.value&&dotNay) dn.value=tien(dotNay);
