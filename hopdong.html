@@ -297,7 +297,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261006-v29',
+  PHIEN_BAN: '20261007-v30',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -359,7 +359,7 @@ function chonOptions(ds, gt, rong){ const o=rong!=null?`<option value="">${esc(r
 
 // ----- FORM dùng chung: mô tả các ô → vẽ modal → đọc lại giá trị -----
 // Ô: {k:'baoHanh.soThang', nhan:'…', kieu:'text'|'tien'|'so'|'ngay'|'chon'|'check'|'vanBan'|'goiY', ds:{}, goiY:[], batBuoc, hint, nua (đứng chung 1 hàng với ô trước), choAm (tiền được âm), hienKhi:'lienDanh.co', onInput}
-function moModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
+function moModal(html){ $('modal').oninput=null; window._dnForm=null; $('modal').innerHTML=html; $('modal-bg').hidden=false; }
 function dongModal(){ $('modal-bg').hidden=true; }
 function veO(o, gt){
   const id='f-'+o.k.replace(/\./g,'_'), v=layO(gt,o.k), nhan=`<label class="f">${esc(o.nhan)}${o.batBuoc?' *':''}</label>`;
@@ -942,19 +942,23 @@ function chonDotDeNghi(hdId,ttId){ _dotDeNghi[hdId]=ttId; veChiTiet(); }
 function veDeNghiThanhToan(id,ds){
   const du=duLieuHopDong(id); let ttId=_dotDeNghi[id]; if(!ds.some(x=>x.id===ttId)) ttId=ds[ds.length-1].id;
   const d=TINH_TOAN.deNghiThanhToan(du,ttId); if(!d) return '';
-  const dong=(nhan,so,cls)=>`<tr class="${cls==='tot'?'tot':''}"><td class="${cls&&cls!=='tot'?cls:''}">${nhan}</td><td>${tien(so)}</td></tr>`;
-  const ba=(o,dau,lui)=>{ dau=dau||'+'; const c=lui?'sub sub2':'sub'; return dong(dau+' Thanh toán cho nhà thầu',o.nhaThau,c)+dong(dau+' Chuyển bảo hành <span class="hint">(khi không dùng bảo lãnh BH)</span>',o.baoHanh,c)+dong(dau+' Chuyển tạm giữ chờ quyết toán',o.quyetToan,c); };
   return `<div class="card"><div class="card-body"><div class="sec-h"><h3>📄 Số liệu đề nghị thanh toán</h3>
     <select style="width:auto;min-height:36px;padding:6px 10px" onchange="chonDotDeNghi('${id}',this.value)">${ds.map(x=>`<option value="${esc(x.id)}" ${x.id===ttId?'selected':''}>Đợt ${esc(x.dot)}</option>`).join('')}</select></div>
-    <table class="fin">
+    ${htmlBangDeNghi(d)}
+    <div class="hint">App tự tính từ các đợt đã nhập, không phải nhập thêm. "Kỳ trước" = các đợt trước đợt đang chọn; tạm ứng tính các khoản nhận trước ngày nghiệm thu đợt này. Thanh toán cho nhà thầu = số thực nhận.</div></div></div>`;
+}
+// Bảng 6 mục của 1 đợt (dùng ở tab Thanh toán và xem trước trong form đợt thanh toán)
+function htmlBangDeNghi(d){
+  const dong=(nhan,so,cls)=>`<tr class="${cls==='tot'?'tot':''}"><td class="${cls&&cls!=='tot'?cls:''}">${nhan}</td><td>${tien(so)}</td></tr>`;
+  const ba=(o,dau,lui)=>{ dau=dau||'+'; const c=lui?'sub sub2':'sub'; return dong(dau+' Thanh toán cho nhà thầu',o.nhaThau,c)+dong(dau+' Chuyển bảo hành <span class="hint">(khi không dùng bảo lãnh BH)</span>',o.baoHanh,c)+dong(dau+' Chuyển tạm giữ chờ quyết toán',o.quyetToan,c); };
+  return `<table class="fin">
       ${dong('1. Tạm ứng còn chưa thu hồi đến cuối kỳ trước',d.tamUngChuaThuHoiKyTruoc,'tot')}
       ${dong('2. Đã thanh toán KLHT đến cuối kỳ trước',d.daThanhToanKyTruoc.tong,'tot')}${ba(d.daThanhToanKyTruoc)}
       ${dong('3. Lũy kế giá trị KL thực hiện đến cuối kỳ này',d.luyKeKhoiLuong,'tot')}
       ${dong('4. Thu hồi tạm ứng kỳ này',d.thuHoiTamUngKyNay,'tot')}
       ${dong('5. Giá trị giải ngân kỳ này',d.giaiNganKyNay.tong,'tot')}${ba(d.giaiNganKyNay)}
       ${dong('6. Lũy kế giá trị giải ngân',d.luyKeGiaiNgan.tong,'tot')}${dong('+ Tạm ứng',d.luyKeGiaiNgan.tamUng,'sub')}${dong('+ Thanh toán khối lượng hoàn thành, trong đó:',d.luyKeGiaiNgan.thanhToanKLHT,'sub')}${ba(d.luyKeGiaiNgan,'–',true)}
-    </table>
-    <div class="hint">App tự tính từ các đợt đã nhập, không phải nhập thêm. "Kỳ trước" = các đợt trước đợt đang chọn; tạm ứng tính các khoản nhận trước ngày nghiệm thu đợt này. Thanh toán cho nhà thầu = số thực nhận.</div></div></div>`;
+    </table>`;
 }
 // --- Tab Bảo lãnh ---
 function veTabBaoLanh(id,h,k){
@@ -1141,13 +1145,29 @@ function formTamUng(hopDongId,id){ const x=id?gan1BanGhi('tamUng',hopDongId,id):
 function formThanhToan(hopDongId,id){ const k=ketQua(hopDongId);
   window._kiemTraCon=v=>{ if(v.thuHoiTamUng+v.giuBaoHanh+v.giuQuyetToan>v.soTienDeNghi) throw new Error('Thu hồi tạm ứng + giữ bảo hành + giữ quyết toán không được lớn hơn số tiền đề nghị'); if(!v.soTienThucNhan) v.soTienThucNhan=v.soTienDeNghi-v.thuHoiTamUng-v.giuBaoHanh-v.giuQuyetToan; }; window._sauKhiLuuCon=null;
   moFormCon('thanhToan',hopDongId,id,'đợt thanh toán',[{k:'dot',nhan:'Đợt',kieu:'so',batBuoc:true},{k:'ngayNghiemThu',nhan:'Ngày nghiệm thu khối lượng',kieu:'ngay',batBuoc:true,nua:true},
-    {k:'giaTriNghiemThu',nhan:'Giá trị nghiệm thu đợt này (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()'},{k:'soTienDeNghi',nhan:'Số tiền đề nghị thanh toán (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()',hint:'Thường = giá trị nghiệm thu'},
+    {k:'giaTriNghiemThu',nhan:'Giá trị nghiệm thu đợt này (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan(1)'},{k:'_luyKeKL',nhan:'… hoặc nhập Lũy kế KL thực hiện đến cuối kỳ này (đ)',kieu:'tien',onInput:'tuLuyKeKL()',hint:'Mục 3 trên giấy đề nghị. Nhập lũy kế → app tự tính giá trị đợt này = lũy kế − các đợt trước'},{k:'soTienDeNghi',nhan:'Số tiền đề nghị thanh toán (đ)',kieu:'tien',batBuoc:true,onInput:'goiYThucNhan()',hint:'Thường = giá trị nghiệm thu'},
     {k:'thuHoiTamUng',nhan:'Thu hồi tạm ứng đợt này (đ)',kieu:'tien',onInput:'goiYThucNhan()',hint:'Kế toán nhập tay theo chứng từ. Tạm ứng chưa thu hồi: '+tienD(k.tamUngChuaThuHoi)},
     {k:'giuBaoHanh',nhan:'Giữ lại / chuyển bảo hành (đ)',kieu:'tien',onInput:'goiYThucNhan()',hint:'Khi không dùng bảo lãnh bảo hành'},{k:'giuQuyetToan',nhan:'Tạm giữ chờ quyết toán (đ)',kieu:'tien',nua:true,onInput:'goiYThucNhan()'},
     {k:'soTienThucNhan',nhan:'Thanh toán cho nhà thầu — số thực nhận (đ)',kieu:'tien',hint:'Để trống → app lấy = đề nghị − thu hồi TƯ − giữ BH − giữ QT (xem gợi ý bên dưới khi gõ)'},{k:'ngayTienVe',nhan:'Ngày tiền về tài khoản',kieu:'ngay',nua:true,hint:'Chưa về thì để trống'},
     {k:'ghiChu',nhan:'Ghi chú',placeholder:'Đợt nghiệm thu, số hồ sơ…'}],{dot:dotTiep('thanhToan',hopDongId),ngayNghiemThu:homNay()});
+  window._dnForm={hopDongId,id:id||''};
+  const ghiChu=$('w-f-ghiChu'); if(ghiChu) ghiChu.insertAdjacentHTML('afterend','<div id="dn-xem" style="background:#faf5ff;border-radius:12px;padding:10px 12px;margin-top:12px"></div>');
+  $('modal').oninput=()=>xemDeNghiForm(); // đổi đợt / ngày / số nào cũng tính lại
+  goiYThucNhan(1); }
+function goiYThucNhan(tuGiaTri){ const g=k=>docTien(($('f-'+k)||{}).value); const n=g('soTienDeNghi')-g('thuHoiTamUng')-g('giuBaoHanh')-g('giuQuyetToan'); const o=$('f-soTienThucNhan'); if(o&&!o.value) o.placeholder='gợi ý '+tien(n);
+  const d=xemDeNghiForm(); if(d&&tuGiaTri&&$('f-_luyKeKL')) $('f-_luyKeKL').value=g('giaTriNghiemThu')?tien(d.luyKeKhoiLuong):''; }
+// (v30) Xem trước 6 mục giấy đề nghị NGAY TRONG FORM đợt thanh toán — tính bằng số đang gõ, chưa lưu gì
+function soLieuDangGo(){ const c=window._dnForm; if(!c) return null; const g=k=>docTien(($('f-'+k)||{}).value);
+  const du=duLieuHopDong(c.hopDongId), key=c.id||'_dangNhap'; du.thanhToan=Object.assign({},du.thanhToan);
+  const thucNhan=g('soTienThucNhan')||(g('soTienDeNghi')-g('thuHoiTamUng')-g('giuBaoHanh')-g('giuQuyetToan'));
+  du.thanhToan[key]=Object.assign({},du.thanhToan[key]||{},{id:key,dot:Number(($('f-dot')||{}).value)||0,ngayNghiemThu:($('f-ngayNghiemThu')||{}).value||'',giaTriNghiemThu:g('giaTriNghiemThu'),thuHoiTamUng:g('thuHoiTamUng'),giuBaoHanh:g('giuBaoHanh'),giuQuyetToan:g('giuQuyetToan'),soTienThucNhan:thucNhan});
+  return TINH_TOAN.deNghiThanhToan(du,key); }
+function xemDeNghiForm(){ const o=$('dn-xem'); if(!o) return null; const d=soLieuDangGo(); if(!d) return null;
+  o.innerHTML=`<h4 style="margin:0 0 4px;font-size:14px;color:var(--blue-dark)">📄 Số liệu đề nghị thanh toán đợt này <span class="hint">(app tự tính theo số đang nhập)</span></h4>${htmlBangDeNghi(d)}`; return d; }
+function tuLuyKeKL(){ const g=k=>docTien(($('f-'+k)||{}).value); const d=soLieuDangGo(); if(!d) return;
+  const truoc=d.luyKeKhoiLuong-g('giaTriNghiemThu'), lk=g('_luyKeKL'), dotNay=Math.max(0,lk-truoc);
+  const o=$('f-giaTriNghiemThu'); o.value=dotNay?tien(dotNay):''; const dn=$('f-soTienDeNghi'); if(dn&&!dn.value&&dotNay) dn.value=tien(dotNay);
   goiYThucNhan(); }
-function goiYThucNhan(){ const g=k=>docTien(($('f-'+k)||{}).value); const n=g('soTienDeNghi')-g('thuHoiTamUng')-g('giuBaoHanh')-g('giuQuyetToan'); const o=$('f-soTienThucNhan'); if(o&&!o.value) o.placeholder='gợi ý '+tien(n); }
 
 // ===== 9d. BAO_LANH_TAM_UNG — một thư bảo lãnh tạm ứng chỉ nhập MỘT lần, hai tab cùng thấy (anh Dũng 04/10) =====
 // Nối hai chiều: tamUng/{hd}/{tu}.baoLanhId ↔ baoLanh/{bl}.tamUngId. Form Tạm ứng CHỌN thư có sẵn (hoặc nhập thư mới);

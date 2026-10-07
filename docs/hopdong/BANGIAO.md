@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v29**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v30**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,11 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 07/10/2026 (bản v30 — 6 mục đề nghị thanh toán hiện ngay trong form)
+- Kế toán (Oanh) mở form "Thêm đợt thanh toán" không thấy 6 mục → tưởng app chưa sửa. Form đợt thanh toán nay có khung "📄 Số liệu đề nghị thanh toán đợt này" (dưới Ghi chú) tính ngay theo số đang gõ (`soLieuDangGo` → `TINH_TOAN.deNghiThanhToan` với bản ghi tạm `_dangNhap`, chưa lưu gì). Bảng 6 mục tách thành `htmlBangDeNghi(d)` dùng chung với tab Thanh toán.
+- Thêm ô phụ `_luyKeKL` "… hoặc nhập Lũy kế KL đến cuối kỳ này" (mục 3 trên giấy đề nghị): nhập lũy kế → app điền giá trị đợt này = lũy kế − các đợt trước (và đề nghị nếu trống); sửa giá trị đợt → ô lũy kế tự cập nhật. Ô `_` không lưu vào Firebase.
+- `moModal` xoá `oninput`/`_dnForm` để form khác không dính.
 
 ## Đã làm 06/10/2026 (bản v29 — bấm ô Tổng quan xem chi tiết)
 - Anh Dũng: bấm (đúp) vào các ô Tổng quan phải ra thống kê từng khoản. `moThongKe(ma)` + `THONG_KE`: 7 ô (tổng giá trị, nghiệm thu, tiền về, còn phải thu, giữ BH, giữ QT, chưa thi công) mở bảng TỪNG HỢP ĐỒNG, cùng phạm vi công ty với ô, xếp lớn → nhỏ, % so với tổng, dòng phụ giải thích (VD còn phải thu: trong đó giữ BH / giữ QT / TƯ chưa thu hồi). Dòng "Cộng" = đúng số trên ô. Bấm dòng → mở hợp đồng.
