@@ -297,7 +297,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261007-v31',
+  PHIEN_BAN: '20261007-v32',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -703,15 +703,18 @@ const TINH_TOAN = (function () {
     const tamUng = tongTruong(danhSach(du.tamUng).filter(t => !ngayNT || !laNgay(t.ngay) || t.ngay <= ngayNT), 'soTien');
     const giaiNgan = d => { const o = { nhaThau: tongTruong(d, 'soTienThucNhan'), baoHanh: tongTruong(d, 'giuBaoHanh'), quyetToan: tongTruong(d, 'giuQuyetToan') }; o.tong = o.nhaThau + o.baoHanh + o.quyetToan; return o; };
     const kyTruoc = giaiNgan(truoc), kyNay = giaiNgan([nay]);
+    const thuHoiTruoc = tongTruong(truoc, 'thuHoiTamUng'), thuHoiDenNay = thuHoiTruoc + soNguyen(nay.thuHoiTamUng);
     return {
       dot: nay.dot, ngayNghiemThu: ngayNT,
-      tamUngChuaThuHoiKyTruoc: tamUng - tongTruong(truoc, 'thuHoiTamUng'),          // 1
+      tamUngChuaThuHoiKyTruoc: tamUng - thuHoiTruoc,                                 // 1
       daThanhToanKyTruoc: kyTruoc,                                                   // 2 (+ 3 khoản con)
       luyKeKhoiLuong: tongTruong(truoc, 'giaTriNghiemThu') + soNguyen(nay.giaTriNghiemThu), // 3
       thuHoiTamUngKyNay: soNguyen(nay.thuHoiTamUng),                                 // 4
       giaiNganKyNay: kyNay,                                                          // 5 (+ 3 khoản con)
-      luyKeGiaiNgan: { tamUng, thanhToanKLHT: kyTruoc.tong + kyNay.tong, tong: tamUng + kyTruoc.tong + kyNay.tong, // 6; TT KLHT tách 3 khoản (06/10 anh Dũng)
-        nhaThau: kyTruoc.nhaThau + kyNay.nhaThau, baoHanh: kyTruoc.baoHanh + kyNay.baoHanh, quyetToan: kyTruoc.quyetToan + kyNay.quyetToan },
+      // 6 (sửa 07/10 theo kế toán Oanh, đúng mẫu Kho bạc): Tạm ứng = số dư CHƯA THU HỒI sau kỳ này (= mục 1 − mục 4);
+      //   phần tạm ứng đã thu hồi chuyển thành thanh toán KLHT → TT KLHT = thu hồi TƯ lũy kế + nhà thầu + BH + QT. Tổng mục 6 không đổi.
+      luyKeGiaiNgan: { tamUng: tamUng - thuHoiDenNay, thanhToanKLHT: thuHoiDenNay + kyTruoc.tong + kyNay.tong, tong: tamUng + kyTruoc.tong + kyNay.tong,
+        thuHoiTamUng: thuHoiDenNay, nhaThau: kyTruoc.nhaThau + kyNay.nhaThau, baoHanh: kyTruoc.baoHanh + kyNay.baoHanh, quyetToan: kyTruoc.quyetToan + kyNay.quyetToan },
     };
   }
 
@@ -957,7 +960,7 @@ function htmlBangDeNghi(d){
       ${dong('3. Lũy kế giá trị KL thực hiện đến cuối kỳ này',d.luyKeKhoiLuong,'tot')}
       ${dong('4. Thu hồi tạm ứng kỳ này',d.thuHoiTamUngKyNay,'tot')}
       ${dong('5. Giá trị giải ngân kỳ này',d.giaiNganKyNay.tong,'tot')}${ba(d.giaiNganKyNay)}
-      ${dong('6. Lũy kế giá trị giải ngân',d.luyKeGiaiNgan.tong,'tot')}${dong('+ Tạm ứng',d.luyKeGiaiNgan.tamUng,'sub')}${dong('+ Thanh toán khối lượng hoàn thành, trong đó:',d.luyKeGiaiNgan.thanhToanKLHT,'sub')}${ba(d.luyKeGiaiNgan,'–',true)}
+      ${dong('6. Lũy kế giá trị giải ngân',d.luyKeGiaiNgan.tong,'tot')}${dong('+ Tạm ứng <span class="hint">(còn chưa thu hồi = mục 1 − mục 4)</span>',d.luyKeGiaiNgan.tamUng,'sub')}${dong('+ Thanh toán khối lượng hoàn thành, trong đó:',d.luyKeGiaiNgan.thanhToanKLHT,'sub')}${dong('– Thu hồi tạm ứng (lũy kế)',d.luyKeGiaiNgan.thuHoiTamUng,'sub sub2')}${ba(d.luyKeGiaiNgan,'–',true)}
     </table>`;
 }
 // --- Tab Bảo lãnh ---
@@ -1478,10 +1481,10 @@ async function xuatExcelDanhSach(){ try{ const X=await napSheetJs(); const kq=ta
     const cot=[['congTyId','Công ty'],['soHopDong','Số hợp đồng'],['tenGoiThau','Tên gói thầu'],['tenDuAn','Tên dự án'],['chuDauTu','Chủ đầu tư'],['ngayKy','Ngày ký',1],['loaiHopDong','Loại HĐ',2],['giaTriGoc','Giá trị gốc'],['dieuChinhPhuLuc','Điều chỉnh PL'],['giaTriHienHanh','Giá trị hiện hành'],['giaTriDuPhong','Dự phòng (trong GT)'],['giaTriHienHanhKhongDuPhong','GT không kể dự phòng'],['nghiemThuLuyKe','Đã nghiệm thu'],['tamUngLuyKe','Tạm ứng'],['thuHoiTamUngLuyKe','Đã thu hồi TƯ'],['tamUngChuaThuHoi','TƯ chưa thu hồi'],['thucNhanLuyKe','Thực nhận'],['tienDaVe','Tiền đã về'],['conPhaiThu','Còn phải thu'],['giuBaoHanhDangGiu','Đang giữ BH'],['giuQuyetToanDangGiu','Đang giữ QT'],['conLaiChuaNghiemThu','Chưa nghiệm thu'],['conLaiChuaThiCong','Chưa thi công'],['doanhThuCuoiCung','Doanh thu cuối cùng'],['trangThai','Trạng thái',3],['ngayKhoiCong','Khởi công',1],['ngayHoanThanhHienHanh','Hoàn thành hiện hành',1],['ngayHetBaoHanh','Hết bảo hành',1],['noiBo','Nội bộ',4]];
     const aoa=[cot.map(c=>c[1])].concat(kq.map(r=>cot.map(c=>{ const v=r[c[0]]; return c[2]===1?ngayVN(v):c[2]===2?(LOAI_HOP_DONG[v]||v||''):c[2]===3?(TRANG_THAI[v]||v||''):c[2]===4?(v?'nội bộ':''):(v==null?'':v); })));
     const wb=X.utils.book_new(), ws=X.utils.aoa_to_sheet(aoa); ws['!cols']=cot.map(()=>({wch:16})); X.utils.book_append_sheet(wb,ws,'HopDong');
-    const tt=[['Công ty','Số HĐ','Tên gói thầu','Đợt','Ngày nghiệm thu','Giá trị nghiệm thu','Đề nghị','Thu hồi TƯ','Giữ BH','Giữ QT','Thực nhận','Ngày tiền về','Ghi chú','TƯ chưa thu hồi kỳ trước','Đã TT KLHT kỳ trước','Lũy kế KL đến kỳ này','Giải ngân kỳ này','Lũy kế giải ngân','  trong đó tạm ứng','  trong đó TT KLHT','    – cho nhà thầu','    – chuyển bảo hành','    – tạm giữ chờ QT']];
+    const tt=[['Công ty','Số HĐ','Tên gói thầu','Đợt','Ngày nghiệm thu','Giá trị nghiệm thu','Đề nghị','Thu hồi TƯ','Giữ BH','Giữ QT','Thực nhận','Ngày tiền về','Ghi chú','TƯ chưa thu hồi kỳ trước','Đã TT KLHT kỳ trước','Lũy kế KL đến kỳ này','Giải ngân kỳ này','Lũy kế giải ngân','  trong đó tạm ứng chưa thu hồi','  trong đó TT KLHT','    – thu hồi TƯ','    – cho nhà thầu','    – chuyển bảo hành','    – tạm giữ chờ QT']];
     kq.forEach(r=>{ const du=duLieuHopDong(r.id); danhSachBanGhi('thanhToan',r.id).sort((a,b)=>(a.dot||0)-(b.dot||0)).forEach(x=>{ const d=TINH_TOAN.deNghiThanhToan(du,x.id)||{daThanhToanKyTruoc:{},giaiNganKyNay:{},luyKeGiaiNgan:{}};
       tt.push([r.congTyId,r.soHopDong,r.tenGoiThau,x.dot,ngayVN(x.ngayNghiemThu),x.giaTriNghiemThu||0,x.soTienDeNghi||0,x.thuHoiTamUng||0,x.giuBaoHanh||0,x.giuQuyetToan||0,x.soTienThucNhan||0,ngayVN(x.ngayTienVe),x.ghiChu||'',
-        d.tamUngChuaThuHoiKyTruoc||0,d.daThanhToanKyTruoc.tong||0,d.luyKeKhoiLuong||0,d.giaiNganKyNay.tong||0,d.luyKeGiaiNgan.tong||0,d.luyKeGiaiNgan.tamUng||0,d.luyKeGiaiNgan.thanhToanKLHT||0,d.luyKeGiaiNgan.nhaThau||0,d.luyKeGiaiNgan.baoHanh||0,d.luyKeGiaiNgan.quyetToan||0]); }); });
+        d.tamUngChuaThuHoiKyTruoc||0,d.daThanhToanKyTruoc.tong||0,d.luyKeKhoiLuong||0,d.giaiNganKyNay.tong||0,d.luyKeGiaiNgan.tong||0,d.luyKeGiaiNgan.tamUng||0,d.luyKeGiaiNgan.thanhToanKLHT||0,d.luyKeGiaiNgan.thuHoiTamUng||0,d.luyKeGiaiNgan.nhaThau||0,d.luyKeGiaiNgan.baoHanh||0,d.luyKeGiaiNgan.quyetToan||0]); }); });
     X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(tt),'ThanhToan');
     X.writeFile(wb,'Hop-dong-'+homNay()+'.xlsx'); }catch(e){ toast('❌ '+e.message); } }
 async function xuatExcelDashboard(){ try{ const X=await napSheetJs(); const kq=tatCaKetQua();
