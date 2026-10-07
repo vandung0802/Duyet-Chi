@@ -199,3 +199,6 @@ Cùng ngày phiên khác đã phát hành v16 (mục trên). Đợt này 7 lư�
 - Quy ước đã dùng (ghi trong sheet HuongDan của file): chỉ nhập khoản còn dư nợ; mỗi ngân hàng × công ty một hạn mức với số hợp đồng TẠM (sổ không có hợp đồng hạn mức); khế ước đã trả một phần nhập SỐ DƯ còn lại; số khế ước lấy từ sổ nếu có, không có thì đặt số tạm; ngày trả lãi lấy theo số ghi trên đầu cột lãi suất từng khối; khoản dài hạn (TK 34211) để sheet VayDaiHan, nhập phần còn lại.
 - **Còn thiếu, kế toán điền rồi mới nhập được khế ước**: hạn mức + ngày hết hạn của từng hợp đồng hạn mức; một số lãi suất bỏ trống; một ngày vay bỏ trống; vài khế ước đã qua ngày đáo hạn mà sổ vẫn còn dư nợ (đã trả chưa ghi hay gia hạn); lịch trả của khoản dài hạn. Danh sách đủ ở sheet CAN_DIEN của file. Thuê tài chính, khoản vay của 279 và ngày hết hạn thư bảo lãnh: sổ không có.
 - Gợi ý nếu muốn: thêm sheet BaoLanh vào mẫu nhập Excel (hiện bảo lãnh chỉ nhập tay) — chưa làm, chờ anh Dũng.
+
+## Đã làm 07/10/2026 (bản v18 — nút Đóng ở mọi form, phát hành luôn)
+- Anh Dũng: form nào cũng phải có chữ "Đóng". `moModal` tự thêm nút ✕ góc trên (dính khi cuộn) + nút "Đóng" cuối (trừ khi form đã có Đóng/Huỷ) + phím Esc. Làm cùng app Hợp đồng v34 và Thiết bị v9. `version-congno.txt` = v18.
