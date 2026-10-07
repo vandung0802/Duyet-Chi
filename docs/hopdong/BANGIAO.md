@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v31**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v32**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,10 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 07/10/2026 (bản v32 — mục 6 theo mẫu Kho bạc)
+- Kế toán Oanh (anh Dũng chuyển): mục 6 "Tạm ứng" = TƯ chưa thu hồi kỳ trước − thu hồi kỳ này (số DƯ chưa thu hồi), không phải tổng tạm ứng đã nhận. Để tổng mục 6 vẫn = tổng tiền đã giải ngân, phần tạm ứng đã thu hồi chuyển sang "Thanh toán KLHT": TT KLHT = thu hồi TƯ lũy kế + nhà thầu + chuyển BH + tạm giữ QT (thêm dòng "– Thu hồi tạm ứng (lũy kế)"). Tổng mục 6 KHÔNG đổi. Số liệu Oanh: TƯ 992.995.534 + TT KLHT 31.609.830.673 = 32.602.826.207.
+- `deNghiThanhToan().luyKeGiaiNgan` thêm `thuHoiTamUng`; Excel thêm cột "– thu hồi TƯ"; test cập nhật.
 
 ## Đã làm 07/10/2026 (bản v31 — tạm ứng chưa thu hồi kỳ trước theo giấy)
 - Oanh nhập hợp đồng cũ (đợt 41) nhưng tạm ứng các năm trước chưa có trong app → mục 1 = 0, mục 6 sai; giấy ghi TƯ chưa thu hồi đến cuối kỳ trước 1.866.249.693, không biết nhập đâu.
@@ -61,7 +65,7 @@
   6. Lũy kế giải ngân = tạm ứng + Σ giải ngân (mục 2 + mục 5)
 - Không thêm trường, không đổi công thức mục 1.5. Nhãn form: "Giữ lại / chuyển bảo hành", "Tạm giữ chờ quyết toán", "Thanh toán cho nhà thầu — số thực nhận".
 - Excel danh sách, sheet ThanhToan: thêm 7 cột tương ứng.
-- ✅ Anh Dũng xác nhận 06/10: mục 6 "Lũy kế giải ngân" = tạm ứng + thanh toán KLHT (= mục 2 + mục 5); thanh toán KLHT KHÔNG gồm phần thu hồi tạm ứng. Giữ nguyên `deNghiThanhToan`.
+- ✅ Anh Dũng xác nhận 06/10: mục 6 "Lũy kế giải ngân" = tạm ứng + thanh toán KLHT (= mục 2 + mục 5); thanh toán KLHT KHÔNG gồm phần thu hồi tạm ứng. Giữ nguyên `deNghiThanhToan`. → **ĐÃ THAY 07/10 (v32)**, xem mục bản v32.
 
 ## Đã làm 06/10/2026 (bản v24 — phụ lục thiếu thông tin vẫn lưu)
 - D chốt: phụ lục thiếu thông tin VẪN LƯU được. Form phụ lục bỏ hết ô bắt buộc (số PL, ngày ký, giá trị, ngày hoàn thành mới, nội dung); lưu xong toast 7 giây "Đã lưu — còn thiếu: …" để bổ sung sau. Bảng hiện "(chưa có số)" / "—".
