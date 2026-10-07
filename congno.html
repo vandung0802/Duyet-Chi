@@ -93,6 +93,7 @@ table.p tfoot td{font-weight:800;border-top:2px solid var(--gray-border)}
 .overlay{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:#fbf6f6;z-index:200;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;inset:0;background:rgba(0,0,0,.45);z-index:300;display:flex;align-items:flex-end;justify-content:center}
 .modal{background:#fff;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px 16px calc(20px + env(safe-area-inset-bottom))}
+.modal-x{position:sticky;top:0;float:right;z-index:3;margin:-6px -6px 0 10px;width:38px;height:38px;border-radius:50%;border:0;background:#f3f4f6;font-size:18px;line-height:38px;color:#374151;cursor:pointer}.modal-x:hover{background:#e5e7eb}
 .modal h3{font-size:17px;margin-bottom:6px}
 .kv{display:grid;grid-template-columns:140px 1fr;gap:6px 10px;font-size:15px}
 .kv div:nth-child(odd){color:var(--text-sub)}
@@ -337,7 +338,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261003-v17',
+  PHIEN_BAN: '20261007-v18',
   URL_APPS_SCRIPT: '',            // địa chỉ .../exec của Apps Script (AppsScript_CongNo.gs): bản sao Google Sheets + tải file lên Drive. Trống = chưa nối.
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
@@ -397,7 +398,9 @@ const badgeNhomNo = n => Number(n)>=2?` <span class="badge tt-quaHan">Nợ nhóm
 // ----- FORM dùng chung: mô tả các ô → vẽ hộp nhập → đọc lại giá trị -----
 // Ô: {k:'canBo.ten', nhan:'…', kieu:'text'|'tien'|'so'|'thapPhan'|'ngay'|'chon'|'check'|'vanBan'|'goiY', ds, goiY:[], batBuoc, hint, nua (đứng chung 1 hàng với ô trước), hienKhi:'coCauLai.co'}
 // Dòng không phải ô nhập: {tieuDe:'…'} = tiêu đề nhóm, {loiDan:'…'} = lời dặn
-function moModal(html){ $('modal').innerHTML=html; $('modal-bg').hidden=false; }
+// (v18) Mọi bảng/form đều có nút ✕ góc trên + nút "Đóng" cuối (đóng không lưu) + phím Esc — anh Dũng 07/10
+function moModal(html){ $('modal').innerHTML='<button class="modal-x" onclick="dongModal()" title="Đóng, không lưu" aria-label="Đóng">✕</button>'+html+(/onclick="dongModal\(\)">(Đóng|Huỷ)</.test(html)?'':'<div style="margin-top:10px"><button class="btn sec" onclick="dongModal()">Đóng</button></div>'); $('modal-bg').hidden=false; }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('modal-bg').hidden) dongModal(); });
 function dongModal(){ $('modal-bg').hidden=true; }
 function veO(o, gt){
   const id='f-'+o.k.replace(/\./g,'_'), v=layO(gt,o.k), nhan=`<label class="f">${esc(o.nhan)}${o.batBuoc?' *':''}</label>`;

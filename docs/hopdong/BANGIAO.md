@@ -4,7 +4,7 @@
 
 ## Tình trạng chung (02/10/2026)
 
-- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v33**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
+- App chạy thật tại `https://vandung0802.github.io/Duyet-Chi/hopdong.html` (repo `Duyet-Chi`, file `hopdong.html`, **bản v34**). Đăng nhập email + mật khẩu Firebase chung với app Duyệt Chi (chốt 30/09).
 - Firebase: chung project `duyetchi-pva379`. Mọi nhánh của app nằm dưới **`hopdong/`**: `hopDong`, `phuLuc/{hdId}`, `tamUng/{hdId}`, `thanhToan/{hdId}`, `hoanTra/{hdId}`, **`baoLanh/{id}` (phẳng, có `hopDongId`, từ v12)**, `nhacNho`, `yeuCauXoa`, `lichSu`, `congTy`, `nguoiDung/{uid}`. Đọc thêm `duyetchi/userRoles` (quyền) và `duyetchi/meta/sites` (danh sách công trình).
 - Luật Firebase: `database.rules.json` khối `hopdong`, tự deploy bằng GitHub Actions khi gộp vào `main`.
 - Test: `node test-hopdong-tinhtoan.js` (51), `node test-nhac-han-hopdong.js` (13), `node test-hopdong-excel.js` (15) + 4 test Chromium với Firebase giả (`test-hopdong-v8.js`, `test-nhap-excel.js`, `test-don-baolanh.js` — nằm ngoài repo, trong thư mục làm việc của Claude; chép lại từ nhật ký phiên nếu mất).
@@ -26,6 +26,10 @@
 
 - Không còn. 3 câu ngày 02/10 anh Dũng trả lời "cứ làm" → chốt: (1) app Công Nợ dùng nhánh chung tại `hopdong/...`; (2) đăng nhập email + mật khẩu; (3) chờ anh gửi file Excel Đại Thành. Đã ghi vào `CLAUDE.md` mục 1.6 và đầu `CLAUDE-cong-no.md`.
 - Anh Dũng chốt thêm 02/10: **không có gì mới thì app không thông báo** (kịch bản 07:00 im lặng khi không có mốc đến hạn).
+
+## Đã làm 07/10/2026 (bản v34 — nút Đóng ở mọi form)
+- Anh Dũng: form nào cũng phải có chữ "Đóng" (mở xem không sửa thì đóng). `moModal` tự thêm nút ✕ góc trên (dính khi cuộn) + nút "Đóng" cuối form (trừ khi form đã có nút Đóng/Huỷ riêng) + phím Esc. Đóng = không lưu.
+- Làm cùng lúc ở app Công nợ (v18, `moModal`) và Thiết bị (v9, `openModal`/`closeModal`).
 
 ## Đã làm 07/10/2026 (bản v33 — hợp đồng thầu phụ + chi phí QLDA)
 - Kế toán Oanh: thêm loại "thầu phụ" và ô nhập chi phí quản lý dự án (bảng giá HĐ thầu phụ: Tổng − Chi phí QLDA 3% = Giá hợp đồng).
