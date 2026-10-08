@@ -298,7 +298,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261007-v34',
+  PHIEN_BAN: '20261008-v35',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -405,6 +405,10 @@ function docForm(cacO, vao){
 function batBuoc(cacO, kq){ const thieu=cacO.filter(o=>o.batBuoc&&!o.tieuDe).filter(o=>{ const v=layO(kq,o.k); return v==null||v===''||(o.kieu==='tien'&&!v); }); if(thieu.length) throw new Error('Cần nhập: '+thieu.map(o=>o.nhan).join(', ')); }
 // ===== 3. DANG_NHAP — email + mật khẩu Firebase Auth, chung tài khoản app Duyệt Chi (chốt 30/09: KHÔNG dùng tên + PIN) =====
 firebase.initializeApp(CAU_HINH.firebase);
+// 08/10/2026 TĂNG TỐC MỞ APP TRÊN ĐIỆN THOẠI: Firebase Auth (bản compat) trên điện thoại/Safari tự tải gói Google + trang ẩn
+// <authDomain>/__/auth/iframe (chỉ cần cho đăng nhập Google popup/redirect — app CHỈ dùng email/mật khẩu) rồi MỚI xác nhận
+// người đang đăng nhập, chờ tới 30s trên 4G yếu. Tắt bước đó. Dùng tên nội bộ của SDK 12.14.0 — đổi bản SDK phải kiểm lại.
+try{ const _pr = firebase.auth()._delegate._popupRedirectResolver; if(_pr) Object.defineProperty(_pr, '_shouldInitProactively', { value:false, configurable:true }); }catch(e){}
 const db = firebase.database();
 const kho = (typeof firebase.storage==='function') ? firebase.storage() : null; // Firebase Storage: ảnh/PDF đính kèm (khối 9c)
 let nguoiHienTai=null, tenNguoiDung='', vaiTroDuyetChi='';

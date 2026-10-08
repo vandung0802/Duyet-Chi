@@ -208,9 +208,13 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261007-v9';
+const APP_VERSION = '20261008-v10';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
+// 08/10/2026 TĂNG TỐC MỞ APP TRÊN ĐIỆN THOẠI: Firebase Auth (bản compat) trên điện thoại/Safari tự tải gói Google + trang ẩn
+// <authDomain>/__/auth/iframe (chỉ cần cho đăng nhập Google popup/redirect — app CHỈ dùng email/mật khẩu) rồi MỚI xác nhận
+// người đang đăng nhập, chờ tới 30s trên 4G yếu. Tắt bước đó. Dùng tên nội bộ của SDK 12.14.0 — đổi bản SDK phải kiểm lại.
+try{ const _pr = firebase.auth()._delegate._popupRedirectResolver; if(_pr) Object.defineProperty(_pr, '_shouldInitProactively', { value:false, configurable:true }); }catch(e){}
 const db = firebase.database(), storage = firebase.storage();
 const ROOT = 'thietbi'; // nhánh riêng trong RTDB, luật ở database.rules.json
 

@@ -338,7 +338,7 @@ const CAU_HINH = {
   },
   GOC: 'congNo',                  // TOÀN BỘ dữ liệu của app nằm dưới congNo/ — kể cả người dùng, yêu cầu xoá, lịch sử. App ĐỘC LẬP với app Hợp Đồng (anh Dũng chốt 02/10).
   BAO_LANH: 'hopdong/baoLanh',    // CHỖ DUY NHẤT thông với app Hợp Đồng: bảng thư bảo lãnh tạm ứng + thực hiện hợp đồng (nhập một nơi, hai app cùng thấy). Hiện mới ĐỌC; nhập ở bước 6.
-  PHIEN_BAN: '20261007-v18',
+  PHIEN_BAN: '20261008-v19',
   URL_APPS_SCRIPT: '',            // địa chỉ .../exec của Apps Script (AppsScript_CongNo.gs): bản sao Google Sheets + tải file lên Drive. Trống = chưa nối.
   LICH_TRA_NGAY: 30,              // màn Lịch trả: xem trước 30 ngày
   SAP_DEN_HAN_NGAY: 7,            // trạng thái "sắp đến hạn": có kỳ gốc trong 7 ngày tới (mục 1.5)
@@ -443,6 +443,10 @@ function batBuoc(cacO, kq){ const thieu=cacO.filter(o=>o.batBuoc&&o.k).filter(o=
 
 // ===== 3. DANG_NHAP — email + mật khẩu Firebase Auth, Y NGUYÊN app Hợp Đồng (chung tài khoản app Duyệt Chi; KHÔNG dùng tên + PIN) =====
 firebase.initializeApp(CAU_HINH.firebase);
+// 08/10/2026 TĂNG TỐC MỞ APP TRÊN ĐIỆN THOẠI: Firebase Auth (bản compat) trên điện thoại/Safari tự tải gói Google + trang ẩn
+// <authDomain>/__/auth/iframe (chỉ cần cho đăng nhập Google popup/redirect — app CHỈ dùng email/mật khẩu) rồi MỚI xác nhận
+// người đang đăng nhập, chờ tới 30s trên 4G yếu. Tắt bước đó. Dùng tên nội bộ của SDK 12.14.0 — đổi bản SDK phải kiểm lại.
+try{ const _pr = firebase.auth()._delegate._popupRedirectResolver; if(_pr) Object.defineProperty(_pr, '_shouldInitProactively', { value:false, configurable:true }); }catch(e){}
 const db = firebase.database();
 let nguoiHienTai=null, tenNguoiDung='', vaiTroDuyetChi='';
 const laGiamDoc = () => vaiTroDuyetChi==='dung';   // "giám đốc" trong spec = tài khoản role 'dung' của Duyệt Chi

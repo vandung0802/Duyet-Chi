@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20260928-v83';
+const APP_VERSION = '20261008-v84';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -1915,6 +1915,10 @@ window.addEventListener('online', function(){ setTimeout(function(){ try{ if(typ
 document.addEventListener('visibilitychange', function(){ if(document.visibilityState==='visible'){ setTimeout(function(){ try{ if(typeof currentUser!=='undefined' && currentUser) _pushOutboxFlush(); }catch(e){} }, 2500); } });
 
 firebase.initializeApp(firebaseConfig);
+// 08/10/2026 TĂNG TỐC MỞ APP TRÊN ĐIỆN THOẠI: Firebase Auth (bản compat) trên điện thoại/Safari tự tải gói Google + trang ẩn
+// <authDomain>/__/auth/iframe (chỉ cần cho đăng nhập Google popup/redirect — app CHỈ dùng email/mật khẩu) rồi MỚI xác nhận
+// người đang đăng nhập, chờ tới 30s trên 4G yếu. Tắt bước đó. Dùng tên nội bộ của SDK 12.14.0 — đổi bản SDK phải kiểm lại.
+try{ const _pr = firebase.auth()._delegate._popupRedirectResolver; if(_pr) Object.defineProperty(_pr, '_shouldInitProactively', { value:false, configurable:true }); }catch(e){}
 const db = firebase.database();
 
 // ── GIỮ KẾT NỐI LUÔN TƯƠI KHI QUAY LẠI APP ──
