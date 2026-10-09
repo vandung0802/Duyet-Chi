@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261008-v84';
+const APP_VERSION = '20261009-v85';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2396,6 +2396,7 @@ function _costChip(p){
   const lbl = (p.costType && p.costType!=='congtruong' && COST_TYPES[p.costType]) ? c.label : 'Chi phí công trường';
   return `<span style="color:${c.color};font-weight:800;background:${c.color}18;padding:1px 7px;border-radius:8px;white-space:nowrap">${c.icon} ${esc(lbl)}</span>`;
 }
+const _CT_FREE = ['congtruong','noinghiep','thietbi','khac'];   // v85: 4 mục chi phí thường — đổi qua lại được cả sau khi chuyển tiền (H&L / Dũng)
 const COST_TYPES = {
   congtruong: {label:'Công trường', icon:'🏗️', color:'#047857'},
   kyquy:      {label:'Ký quỹ/Cọc',  icon:'🔒', color:'#2563eb'},   // v83: mỗi mục 1 màu riêng (xanh dương)
@@ -5859,9 +5860,15 @@ function openEditProposal(id){
       // v41 (D chốt 25/09): H&L / Dũng đổi được loại chi phí cả sau duyệt (chưa chuyển tiền); người lập chỉ khi chưa duyệt
       const _hasTr = !!(Array.isArray(p.transfers)&&p.transfers.length);
       const _apv = !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
-      const _lock = _hasTr || (_apv && currentRole!=='hien' && currentRole!=='dung');
+      // v85 (D 09/10): đã chuyển tiền thì H&L / Dũng vẫn đổi được giữa 4 mục chi phí thường; Ký quỹ / Tạm ứng vẫn khoá (có sổ riêng)
+      const _hlD = currentRole==='hien' || currentRole==='dung';
+      const _trOK = _hasTr && _hlD && _CT_FREE.includes(p.costType || 'congtruong');
+      const _lock = (_hasTr && !_trOK) || (_apv && !_hlD);
       _ct.disabled = _lock;
-      if(_ctH) _ctH.textContent = _hasTr ? '🔒 Đã chuyển tiền — không đổi loại chi phí được.' : _lock ? '🔒 Phiếu đã duyệt — loại chi phí sai thì báo Hiền / Lan sửa.' : '';
+      [..._ct.options].forEach(o=>{ o.disabled = _trOK && !_CT_FREE.includes(o.value); });
+      if(_ctH) _ctH.textContent = _trOK ? '💸 Đã chuyển tiền — chỉ đổi được giữa Công trường / Nội nghiệp / Máy móc thiết bị / Khác (không sang Ký quỹ, Tạm ứng).'
+        : _hasTr ? (_hlD ? '🔒 Đã chuyển tiền — phiếu Ký quỹ / Tạm ứng không đổi hạng mục được (có sổ riêng).' : '🔒 Đã chuyển tiền — hạng mục sai thì báo Hiền / Lan sửa.')
+        : _lock ? '🔒 Phiếu đã duyệt — loại chi phí sai thì báo Hiền / Lan sửa.' : '';
     }
   }
   document.getElementById('edit-amount').value = p.amount ? Number(p.amount).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
@@ -6061,6 +6068,7 @@ function saveEditProposal(){
     p.note = note;
   }
   { const _cc=document.getElementById('edit-contract'); if(_cc && !_cc.disabled && p.kind!=='salary' && p.kind!=='kh' && (_cc.value||'')!==(p.contractId||'')){ _chg.push(_cc.value ? 'gắn hợp đồng '+(((contracts.find(c=>c.id===_cc.value))||{}).name||'') : 'bỏ hợp đồng'); if(_cc.value) p.contractId = _cc.value; else delete p.contractId; delete p.contractStage; } }   // v41; v75: đổi hợp đồng → bỏ đợt
+  { const _ct=document.getElementById('edit-costtype'); if(_ct && !_ct.disabled && (Array.isArray(p.transfers)&&p.transfers.length) && (_ct.value||'congtruong')!==(p.costType||'congtruong') && !(_CT_FREE.includes(_ct.value||'congtruong') && _CT_FREE.includes(p.costType||'congtruong'))){ showToast('🔒 Đã chuyển tiền — không đổi sang / từ Ký quỹ, Tạm ứng được'); return; } }   // v85
   { const _ct=document.getElementById('edit-costtype'); if(_ct && !_ct.disabled && p.kind!=='salary' && p.kind!=='kh' && (_mine || currentRole==='hien' || currentRole==='dung') && (_ct.value||'congtruong')!==(p.costType||'congtruong')){ _chg.push('loại chi phí → '+((COST_TYPES[_ct.value]||{}).label||_ct.value)); p.costType = _ct.value || 'congtruong'; } }   // v41: H&L/D sửa loại chi phí (chưa chuyển tiền)
   { const _tx=document.getElementById('edit-tax'); if(_tx && !_tx.disabled && p.kind!=='salary' && p.kind!=='kh' && (_tx.value||'')!==(p.tax||'')){ _chg.push('thuế → '+((TAX_TYPES[_tx.value]||{}).label||'—')); p.tax = _tx.value || ''; if(p.review){ delete p.review; _chg.push('bỏ dấu đã rà soát'); } } } // v40/v41: thuế = người lập / D / H&L (Kế toán sửa ở khung Rà soát); đổi thuế thì dấu rà soát mất
   // Lưu ý kiến: chỉ ghi đè ô mà vai trò hiện tại được sửa (ô kia readonly nên giữ nguyên giá trị cũ)
