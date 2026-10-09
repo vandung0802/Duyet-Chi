@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261009-v85';
+const APP_VERSION = '20261009-v86';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4445,7 +4445,7 @@ function openCardMenu(id){
   const items=[ mk('💬','Gửi phiếu vào Chat nhóm',`openChatWithRef('${sid(id)}')`) ];
   const _prf=Array.isArray(p.proofImages)?p.proofImages:(p.proofB64?[p.proofB64]:[]);
   if(_prf.length) items.push(mk('📤','Chia sẻ ảnh chứng từ ('+_prf.length+' ảnh)',`shareProof('${sid(id)}')`));
-  if(_canOpenEdit(p)) items.push(mk('✏️', _isMyProposal(p) ? 'Sửa đề xuất' : 'Ghi ý kiến / sửa thuế', `openEditProposal('${sid(id)}')`));   // v41
+  if(_canOpenEdit(p)) items.push(mk('✏️', _isMyProposal(p) ? 'Sửa đề xuất' : ((currentRole==='hien'||currentRole==='dung') && p.kind!=='salary' && p.kind!=='kh') ? 'Ghi ý kiến / sửa thuế, hạng mục chi phí' : 'Ghi ý kiến / sửa thuế', `openEditProposal('${sid(id)}')`));   // v41; v86: H&L / Dũng thấy rõ sửa được hạng mục
   if(currentRole==='dung' && p.kind!=='kh') items.push(mk('🔍', p.review ? 'Rà soát lại (KT đã rà)' : 'Rà soát thuế / hợp đồng / hóa đơn', `openReviewModal('${sid(id)}')`));   // v41
   if(_canEditDelete(p)) items.push(mk('🗑','Xoá đề xuất',`del('${sid(id)}')`,true));
   document.getElementById('card-menu-items').innerHTML=items.join('');
