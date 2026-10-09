@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261009-v87';
+const APP_VERSION = '20261009-v88';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -6922,6 +6922,31 @@ setInterval(()=>{ try{ _sheetFlush(); }catch(e){} }, 60000);
 window.addEventListener('online', ()=>{ try{ _sheetFlush(); }catch(e){} });
 document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') setTimeout(()=>{ try{ _sheetFlush(); }catch(e){} }, 4000); });
 setTimeout(()=>{ try{ _sheetFlush(); }catch(e){} }, 20000);   // mở app: gửi nốt phần còn nợ (sau khi dữ liệu đã về)
+// ══ v88: TỰ ĐỐI CHIẾU SHEET MỖI NGÀY (D 09/10 "có làm") ══ máy Dũng / Toàn, 1 lần/ngày, ~70s sau khi mở app:
+// gửi lại toàn bộ phiếu chi, ứng lương, luân chuyển, Cân đối, sổ tạm ứng (ghi-hoặc-cập-nhật theo mã → không trùng dòng),
+// mỗi lệnh cách nhau 1,2s; cuối cùng dựng lại báo cáo 1 lần. Lệnh hỏng vẫn vào hộp chờ v87 và tự gửi lại.
+function _sheetDailyReconcile(force){
+  try{
+    if(!sheetUrl || !currentUser || (currentRole!=='dung' && currentRole!=='toan')) return;
+    const today = ymdLocal(Date.now()), KEY = 'gb_sheet_recon';
+    if(!force){ let last=''; try{ last = localStorage.getItem(KEY)||''; }catch(e){} if(last===today) return; }
+    if(!Array.isArray(proposals) || !proposals.length) return;   // dữ liệu chưa về → lần sau
+    try{ localStorage.setItem(KEY, today); }catch(e){}
+    const jobs = [];
+    proposals.forEach(p=>{
+      if(p.kind==='kh') return;
+      if(p.kind==='salary'){ jobs.push(()=>syncLuongToSheet(p)); return; }
+      jobs.push(()=>syncMainFull(p, true));
+      if(p.costType==='tamung' && (p.transfers||p.settlement)) jobs.push(()=>syncAdvToSheet(p));
+    });
+    (assets||[]).forEach(a=>jobs.push(()=>syncAssetToSheet(a)));
+    (cashflow||[]).forEach(r=>jobs.push(()=>syncCashToSheet(r)));
+    jobs.push(()=>_sheetFetch(sheetUrl+'?action=resyncReport&id=_', null));
+    if(proposals.some(p=>p.kind==='salary')) jobs.push(()=>_sheetFetch(sheetUrl+'?action=luongReport&id=_', null));
+    jobs.forEach((fn,i)=>setTimeout(()=>{ try{ fn(); }catch(e){} }, i*1200));
+  }catch(e){}
+}
+setTimeout(()=>_sheetDailyReconcile(false), 70000);
 function syncAssetToSheet(a){
   if(!sheetUrl || !a || !a.id) return;
   const back = assetReturned(a), left = assetLeft(a);
@@ -8898,6 +8923,16 @@ function _styleMain(sh){
   }catch(e){}
 }
 function num_(x){ var n=parseFloat(String(x).replace(/[^0-9.]/g,'')); return isNaN(n)?0:n; }
+// v88: làm đẹp 1 tab (KHÔNG đổi giá trị ô): phông Arial 10, căn giữa dọc, xuống dòng, kẻ khung, tô xen kẽ dòng
+function dep_(sh, ncol, vien){
+  try{
+    var lr=sh.getLastRow(); if(lr<1) return;
+    sh.getRange(1,1,lr,ncol).setFontFamily('Arial').setFontSize(10).setVerticalAlignment('middle').setWrap(true)
+      .setBorder(true,true,true,true,true,true,vien,SpreadsheetApp.BorderStyle.SOLID);
+    sh.getRange(1,1,1,ncol).setFontWeight('bold').setHorizontalAlignment('center');
+    if(lr>=2){ var br=sh.getRange(2,1,lr-1,ncol), bs=sh.getBandings(); if(bs.length){ bs[0].setRange(br); } else { br.applyRowBanding(SpreadsheetApp.BandingTheme.LIGHT_GREY,false,false); } }
+  }catch(er){}
+}
 function doGet(e){
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   var sh=getMainSheet(ss);
@@ -8964,6 +8999,7 @@ function doGet(e){
     var alr=as.getLastRow();
     if(alr>=3) as.getRange(2,1,alr-1,14).sort([{column:7,ascending:false}]);
     if(alr>=2){ var s3=[]; for(var k3=1;k3<=alr-1;k3++) s3.push([k3]); as.getRange(2,1,alr-1,1).setValues(s3); as.getRange(2,1,alr-1,1).setHorizontalAlignment('center'); }
+    dep_(as,14,'#7fb3c4');   // v88
     return ContentService.createTextOutput('ok');
   } else if(act==='cash' || act==='cashDel'){
     // v40: sheet "Cân đối" — khoản thu / ký quỹ / trả lại vốn góp (app gửi từ v19 nhưng mã mẫu trước chưa nhận)
@@ -8985,6 +9021,7 @@ function doGet(e){
     var clr=cs.getLastRow();
     if(clr>=3) cs.getRange(2,1,clr-1,11).sort([{column:3,ascending:false}]);
     if(clr>=2){ var s4=[]; for(var k4=1;k4<=clr-1;k4++) s4.push([k4]); cs.getRange(2,1,clr-1,1).setValues(s4); cs.getRange(2,7,clr-1,3).setNumberFormat('#,##0" đ"'); cs.getRange(2,1,clr-1,1).setHorizontalAlignment('center'); }
+    dep_(cs,11,'#86c5a4');   // v88
     return ContentService.createTextOutput('ok');
   } else if(act==='advSync' || act==='advDel'){
     // v57: sheet "Tạm ứng" — mỗi dòng = 1 lần ứng / 1 khoản kê chi / 1 lần nộp lại của phiếu tạm ứng; app gửi CẢ BỘ dòng của phiếu (pid)
@@ -9007,6 +9044,7 @@ function doGet(e){
     var tlr=ts_.getLastRow();
     if(tlr>=3) ts_.getRange(2,1,tlr-1,14).sort([{column:4,ascending:true},{column:3,ascending:true}]);
     if(tlr>=2){ var s5=[]; for(var k5=1;k5<=tlr-1;k5++) s5.push([k5]); ts_.getRange(2,1,tlr-1,1).setValues(s5); ts_.getRange(2,8,tlr-1,1).setNumberFormat('#,##0" đ"'); ts_.getRange(2,1,tlr-1,1).setHorizontalAlignment('center'); }
+    dep_(ts_,14,'#e8b27a');   // v88
     // tổng theo người → sheet "Tạm ứng - số dư"
     var sum={}; var tv2=ts_.getDataRange().getValues();
     for(var si=1;si<tv2.length;si++){ var w=String(tv2[si][3]||''); if(!w) continue; var o=sum[w]||(sum[w]={pos:tv2[si][4]||'',ung:0,chi:0,nop:0,cho:0}); var a=Math.abs(num_(tv2[si][7])); var lo=String(tv2[si][5]); var okc=String(tv2[si][9]||''); if(lo==='Ứng') o.ung+=a; else if(okc.indexOf('❌')===0) {} else if(okc.indexOf('⏳ H&L')>=0 || okc.indexOf('⏳ chờ Toàn')>=0) o.cho+=a; else if(lo==='Nộp lại') o.nop+=a; else o.chi+=a; }
@@ -9016,6 +9054,7 @@ function doGet(e){
     ss2.getRange(1,1,o2.length,h2.length).setValues(o2); ss2.getRange(1,1,1,h2.length).setFontWeight('bold').setBackground('#b45309').setFontColor('#fff').setHorizontalAlignment('center').setWrap(true); ss2.setFrozenRows(1);
     if(o2.length>1) ss2.getRange(2,4,o2.length-1,5).setNumberFormat('#,##0" đ"');
     ss2.setColumnWidth(1,40); ss2.setColumnWidth(2,180); ss2.setColumnWidth(3,120); for(var c6=4;c6<=8;c6++) ss2.setColumnWidth(c6,150);
+    dep_(ss2,8,'#e8b27a');   // v88
     return ContentService.createTextOutput('ok');
   } else if(act==='luong'){
     var ls=ss.getSheetByName('Tổng hợp Lương')||ss.insertSheet('Tổng hợp Lương');
