@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261009-v86';
+const APP_VERSION = '20261009-v87';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -6865,6 +6865,63 @@ function renderAssets(){
 
 
 // v40: đồng bộ VẬT TƯ LUÂN CHUYỂN → sheet "Luân chuyển" (upsert theo id). Lỗi mạng bỏ qua, không chặn nghiệp vụ.
+// ══ v87: GỬI GOOGLE SHEET CÓ XÁC NHẬN (D 09/10 "tại sao lại lệch nhau") ══
+// Trước: thẻ <script> gửi rồi gỡ sau 3-4s, không biết sheet nhận chưa → mạng chập chờn / tắt app ngay là MẤT DÒNG
+// (Luân chuyển thiếu 3 máy, Tổng hợp đề xuất thiếu 1 phiếu). Nay: fetch keepalive (vẫn đi khi tắt app) + đọc chữ "ok"
+// (Apps Script trả Access-Control-Allow-Origin: *). Chưa "ok" → giữ trong hộp chờ localStorage, tự gửi lại.
+// Mỗi bản ghi 1 ô trong hộp (bản mới nhất đè bản cũ); khi gửi lại, phiếu / luân chuyển dựng lại từ dữ liệu HIỆN TẠI.
+const _SOB = 'gb_sheet_outbox';
+const _SOB_P = ['add','edit','updateStatus','updateApproval','updateApprovalAmount','updateTransfer','updateRejectedBy','upsertFull','delete'];
+const _sobBusy = new Set();
+function _sobGet(){ try{ return JSON.parse(localStorage.getItem(_SOB)||'{}') || {}; }catch(e){ return {}; } }
+function _sobSet(o){ try{ localStorage.setItem(_SOB, JSON.stringify(o)); }catch(e){} }
+function _sobKey(url){
+  try{
+    const q = new URL(url).searchParams, a = q.get('action')||'', id = q.get('id')||q.get('pid')||'';
+    if(!id || id==='_' || a==='advSync') return null;   // lệnh dựng báo cáo / sổ tạm ứng theo lô: không giữ hộp chờ
+    const fam = _SOB_P.includes(a) ? 'P' : (a==='asset'||a==='assetDel') ? 'A' : (a==='cash'||a==='cashDel') ? 'C'
+              : (a==='luong'||a==='luongDel') ? 'L' : (a==='khchi'||a==='khchiDel') ? 'K' : a==='advDel' ? 'T' : a;
+    return fam + '|' + id;
+  }catch(e){ return null; }
+}
+function _sheetFetch(url, k){
+  if(k) _sobBusy.add(k);
+  let pr; try{ pr = fetch(url, {keepalive:true, cache:'no-store'}); }catch(e){ pr = fetch(url, {cache:'no-store'}); }
+  return pr.then(r=>r.text()).then(t=>{
+    if(k && /^\s*ok/i.test(t||'')){ const o=_sobGet(); if(o[k] && o[k].url===url){ delete o[k]; _sobSet(o); } }
+  }).catch(()=>{}).finally(()=>{ if(k) _sobBusy.delete(k); });
+}
+function _sheetSend(url){
+  const k = _sobKey(url);
+  if(k){
+    const o = _sobGet();
+    // Phiếu còn lệnh CHƯA xác nhận mà lệnh mới chỉ sửa 1 phần (vd đổi trạng thái) → gửi cả dòng, kẻo dòng chưa có trên sheet
+    if(k[0]==='P' && o[k] && !/[?&]action=(upsertFull|delete)(&|$)/.test(url)){
+      const p = (typeof proposals!=='undefined' ? proposals : []).find(x=>x.id===k.slice(2)); if(p){ syncMainFull(p); return; }
+    }
+    o[k] = { url, ts: (o[k] && o[k].ts) || Date.now(), last: Date.now() }; _sobSet(o);
+  }
+  _sheetFetch(url, k);
+}
+function _sheetFlush(){
+  if(!sheetUrl || (typeof navigator!=='undefined' && navigator.onLine===false)) return;
+  const o = _sobGet(), now = Date.now();
+  Object.keys(o).forEach(k=>{
+    const e = o[k]; if(!e || !e.url || _sobBusy.has(k)) return;
+    if(now - (e.ts||now) > 14*864e5){ delete o[k]; _sobSet(o); return; }   // quá 14 ngày → bỏ
+    if(now - (e.last||0) < 45000) return;                                     // vừa gửi → chờ kết quả
+    const id = k.slice(2), fam = k[0];
+    try{
+      if(fam==='P' && !/[?&]action=delete(&|$)/.test(e.url)){ const p=(proposals||[]).find(x=>x.id===id); if(p){ syncMainFull(p); return; } }
+      if(fam==='A' && !/[?&]action=assetDel(&|$)/.test(e.url)){ const a=(assets||[]).find(x=>x.id===id); if(a){ syncAssetToSheet(a); return; } }
+    }catch(err){}
+    e.last = now; _sobSet(o); _sheetFetch(e.url, k);
+  });
+}
+setInterval(()=>{ try{ _sheetFlush(); }catch(e){} }, 60000);
+window.addEventListener('online', ()=>{ try{ _sheetFlush(); }catch(e){} });
+document.addEventListener('visibilitychange', ()=>{ if(document.visibilityState==='visible') setTimeout(()=>{ try{ _sheetFlush(); }catch(e){} }, 4000); });
+setTimeout(()=>{ try{ _sheetFlush(); }catch(e){} }, 20000);   // mở app: gửi nốt phần còn nợ (sau khi dữ liệu đã về)
 function syncAssetToSheet(a){
   if(!sheetUrl || !a || !a.id) return;
   const back = assetReturned(a), left = assetLeft(a);
@@ -6874,11 +6931,11 @@ function syncAssetToSheet(a){
     back, left, status: left<=0 ? 'Đã giảm hết' : (back>0 ? 'Giảm một phần' : (assetOverdue(a) ? 'Thuê QUÁ HẠN' : 'Đang ở công trường')),
     note:a.note||'', hist, by:a.byName||''
   });
-  var sc=document.createElement('script'); sc.src = sheetUrl+'?'+params.toString(); document.head.appendChild(sc); setTimeout(()=>sc.remove(), 4000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 function syncAssetDeleteToSheet(id){
   if(!sheetUrl) return;
-  var sc=document.createElement('script'); sc.src = sheetUrl+'?'+new URLSearchParams({action:'assetDel', id}).toString(); document.head.appendChild(sc); setTimeout(()=>sc.remove(), 4000);
+  _sheetSend(sheetUrl+'?'+new URLSearchParams({action:'assetDel', id}).toString());   // v87: gửi có xác nhận
 }
 
 function openAssetModal(id){
@@ -8473,18 +8530,12 @@ function syncLuongToSheet(p){
     amount: p.amount||0, d: d||0, h: h>0 ? (hlNames(p)+': '+fmtVND(h)) : '', ck: ck||0, conlai: Math.max(0, (off>0?off:(parseFloat(p.amount)||0)) - ck),
     st: _salStatusLabel(p).label.replace(/[✅❌💸⏳ ]+/g,' ').trim()||'cho duyet', by: p.createdBy||''
   });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),4000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 function syncLuongDeleteToSheet(id){
   if(!sheetUrl) return;
   const params=new URLSearchParams({action:'luongDel', id});
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),4000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 // Đồng bộ LẠI toàn bộ phiếu ứng lương → sheet (nút trong Cài đặt, chỉ D) — mỗi phiếu cách 400ms tránh nghẽn
 function syncAllLuongToSheet(){
@@ -8515,18 +8566,12 @@ function syncKhToSheet(p){
     conlai: Math.max(0, (off>0?off:(parseFloat(p.amount)||0)) - ck),
     st: st, note: p.note||''
   });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),4000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 function syncKhDeleteToSheet(id){
   if(!sheetUrl) return;
   const params=new URLSearchParams({action:'khchiDel', id});
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),4000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 // Đồng bộ LẠI toàn bộ phiếu P.KH → sheet (nút trong Cài đặt, chỉ D)
 function syncAllKhToSheet(){
@@ -8566,18 +8611,15 @@ function syncMainFull(p, skipReport, withLegacy){
     officialAmount: off||''
   });
   if(skipReport) params.set('skipReport','1');
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),4000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
   // TƯƠNG THÍCH NGƯỢC: khi gọi từ luồng chuyển tiền (withLegacy), gửi thêm lệnh CŨ để nếu code Apps
   // Script CHƯA có upsertFull thì sheet vẫn cập nhật đúng như trước (cùng giá trị → không xung đột).
   if(withLegacy){
     var pr2=new URLSearchParams({action:'updateTransfer', id:p.id, totalTransferred: tr||'', history});
-    var s2=document.createElement('script'); s2.src=sheetUrl+'?'+pr2.toString(); document.head.appendChild(s2); setTimeout(()=>s2.remove(),4000);
+    _sheetFetch(sheetUrl+'?'+pr2.toString(), null);   // v87
     var lbl={pending:'Chờ duyệt',approved:'Đã duyệt',transferred:'Đã chuyển',rejected:'Từ chối'};
     var pr3=new URLSearchParams({action:'updateStatus', id:p.id, status: lbl[p.status]||st});
-    var s3=document.createElement('script'); s3.src=sheetUrl+'?'+pr3.toString(); document.head.appendChild(s3); setTimeout(()=>s3.remove(),4000);
+    _sheetFetch(sheetUrl+'?'+pr3.toString(), null);   // v87
   }
 }
 // Nút Cài đặt (chỉ D): đẩy LẠI toàn bộ phiếu chi kế toán để sheet khớp 100% với app (vá các dòng đồng bộ thiếu trước đây)
@@ -8604,6 +8646,7 @@ function syncToSheet(p){
   if(!sheetUrl) return;
   if(p && p.kind==='kh'){ syncKhToSheet(p); return; } // v125: phiếu P.KH ghi sang sheet Chi Kế hoạch
   if(p && p.kind==='salary'){ syncLuongToSheet(p); return; } // v118: ứng lương ghi sang sheet Tổng hợp Lương riêng
+  syncMainFull(p); return;   // v87: phiếu mới cũng upsertFull (gửi lại không trùng dòng); phần 'add' cũ bên dưới không còn chạy
   const params = new URLSearchParams({
     action:'add',id:p.id,
     ts:new Date(p.ts).toLocaleString('vi-VN'),
@@ -8611,10 +8654,7 @@ function syncToSheet(p){
     site:p.site||'',amount:p.amount||'',
     note:sheetNoteOf(p)
   });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 function syncStatusToSheet(id,status){
@@ -8624,10 +8664,7 @@ function syncStatusToSheet(id,status){
   if(_pS && _pS.kind==='salary'){ syncLuongToSheet(_pS); return; } // v118
   const lbl={pending:'Chờ duyệt',approved:'Đã duyệt',transferred:'Đã chuyển',rejected:'Từ chối'};
   const params = new URLSearchParams({action:'updateStatus',id,status:lbl[status]||status});
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 function syncDeleteToSheet(id){
@@ -8637,10 +8674,7 @@ function syncDeleteToSheet(id){
   syncLuongDeleteToSheet(id);
   syncKhDeleteToSheet(id);
   const params = new URLSearchParams({action:'delete',id});
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 // Đối chiếu: gửi danh sách ID món hiện có → Sheet tự xoá dòng nào không còn trong app (dọn rác đã xoá)
@@ -8649,10 +8683,7 @@ function syncReconcileToSheet(){
   const ids = proposals.filter(p=>p.kind!=='salary' && p.kind!=='kh').map(p=>p.id).filter(Boolean); // sheet chi không gồm ứng lương + P.KH
   if(!ids.length) return; // an toàn: danh sách rỗng thì không gửi (tránh xoá sạch)
   const params = new URLSearchParams({ action:'reconcile', ids: ids.join(','), total: String(ids.length) });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),5000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 function syncEditToSheet(p){
@@ -8664,10 +8695,7 @@ function syncEditToSheet(p){
     desc:p.desc||'', person:p.person||'',
     site:p.site||'', amount:p.amount||'', note:sheetNoteOf(p)
   });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 // (v164: đã xoá bản sao trùng của syncEditToSheet — trước đây định nghĩa 2 lần y hệt nhau)
 
@@ -8681,10 +8709,7 @@ function syncApprovalToSheet(id, field, time){
     field: field==='approvedD' ? 'D' : 'H',
     time: time ? new Date(time).toLocaleString('vi-VN') : ''
   });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 function syncApprovalAmountToSheet(p){
@@ -8699,10 +8724,7 @@ function syncApprovalAmountToSheet(p){
     dHistory, hHistory,
     officialAmount: getOfficialApprovedAmount(p)||''
   });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 function syncTransferToSheet(p){
@@ -8715,10 +8737,7 @@ function syncTransferToSheet(p){
     totalTransferred: getTotalTransferred(p)||'',
     history
   });
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 function syncRejectedByToSheet(id, rejectedBy){
@@ -8727,10 +8746,7 @@ function syncRejectedByToSheet(id, rejectedBy){
   if(_pR && _pR.kind==='kh'){ syncKhToSheet(_pR); return; } // v125
   if(_pR && _pR.kind==='salary'){ syncLuongToSheet(_pR); return; } // v118
   const params = new URLSearchParams({action:'updateRejectedBy', id, rejectedBy: rejectedBy||''});
-  var s=document.createElement('script');
-  s.src=sheetUrl+'?'+params.toString();
-  document.head.appendChild(s);
-  setTimeout(()=>s.remove(),3000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -10250,7 +10266,7 @@ function syncAdvToSheet(p){
 }
 function syncAdvDeleteToSheet(pid){
   if(!sheetUrl) return;
-  var sc=document.createElement('script'); sc.src = sheetUrl+'?'+new URLSearchParams({action:'advDel', pid}).toString(); document.head.appendChild(sc); setTimeout(()=>sc.remove(), 4000);
+  _sheetSend(sheetUrl+'?'+new URLSearchParams({action:'advDel', pid}).toString());   // v87: gửi có xác nhận
 }
 function syncCashToSheet(r){
   if(!sheetUrl || !r) return;
@@ -10266,17 +10282,11 @@ function syncCashToSheet(r){
     left:  r.type==='dep' ? Math.max(0, amt-back) : 0,
     by: r.byName||''
   });
-  var sc=document.createElement('script');
-  sc.src = sheetUrl+'?'+params.toString();
-  document.head.appendChild(sc);
-  setTimeout(()=>sc.remove(), 4000);
+  _sheetSend(sheetUrl+'?'+params.toString());   // v87: gửi có xác nhận
 }
 function syncCashDeleteToSheet(id){
   if(!sheetUrl) return;
-  var sc=document.createElement('script');
-  sc.src = sheetUrl+'?'+new URLSearchParams({action:'cashDel', id}).toString();
-  document.head.appendChild(sc);
-  setTimeout(()=>sc.remove(), 4000);
+  _sheetSend(sheetUrl+'?'+new URLSearchParams({action:'cashDel', id}).toString());   // v87: gửi có xác nhận
 }
 // Đồng bộ LẠI toàn bộ (nút trong Cài đặt / lần đầu nối sheet)
 function syncAllCashToSheet(){
