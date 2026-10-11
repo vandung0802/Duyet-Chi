@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261009-v89';
+const APP_VERSION = '20261011-v90';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2647,6 +2647,7 @@ function listenOnlineUsers(){
   db.ref('duyetchi/online').off('value');   // v62
   db.ref('duyetchi/online').on('value', snap=>{
     const el = document.getElementById('online-users-list');
+    try{ if(snap.exists()){ const k=_knownUsers(); let ch=false; Object.values(snap.val()).forEach(u=>{ if(u && u.role && u.name && u.name!=='undefined' && k[u.name]!==u.role){ k[u.name]=u.role; ch=true; } }); if(ch) localStorage.setItem('gb_known_users', JSON.stringify(k)); } }catch(e){}   // v90: nhớ tên + vai (kể cả khi chưa mở Cài đặt)
     if(!el) return;
     if(!snap.exists()){ el.innerHTML='<span style="color:var(--text-sub)">Không có ai đang online</span>'; return; }
     const ROLE_LABEL = {dung:'Dũng',hien:'Hiền/Lan',toan:'Toàn',trang:'Trang',ketoan:'Kế toán',other:'Khác'};
@@ -4361,16 +4362,17 @@ function _buildCard(p){
 
   // v106 HỎI–ĐÁP trên phiếu: lịch sử nhắn (bong bóng) + ô trả lời tại chỗ cho người liên quan
   const _chMe = getCurrentUserName();
-  const _chCan = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='toan' || currentRole==='trang' || currentRole==='ketoan';
+  const _chCan = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='toan' || currentRole==='trang' || currentRole==='ketoan' || _chArr.some(m=>_mentionsMe(m.text));   // v90: người bị nhắc tên cũng trả lời được
   const _chClr = r => r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='toan' ? '#0e7490' : r==='trang' ? '#b45309' : r==='ketoan' ? '#0e7490' : '#334155';
   const _chMsgs = _chArr.map(m=>{
     const mine = (m.by||'')===_chMe;
-    return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${mine?'#f1f5f9':'#eff6ff'};border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
-      <div style="font-size:9.5px;font-weight:700;color:${_chClr(m.role)}">${esc(m.by||'')} · ${fmtFull(m.ts)}</div>
-      <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${esc(m.text||'')}</div></div>`;
+    const _tagMe = !mine && _mentionsMe(m.text);   // v90
+    return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${_tagMe?'#fef9c3':mine?'#f1f5f9':'#eff6ff'};${_tagMe?'border:1px solid #facc15;':''}border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
+      <div style="font-size:9.5px;font-weight:700;color:${_chClr(m.role)}">${esc(m.by||'')} · ${fmtFull(m.ts)}${_tagMe?' · <span style="color:#b45309">📣 nhắc tên bạn</span>':''}</div>
+      <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_cardHighlightTags(esc(m.text||''))}</div></div>`;
   }).join('');
   const _chInput = `<div style="display:flex;gap:5px;margin-top:5px">
-      <input id="chat-inp-${sid(p.id)}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến..." onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${sid(p.id)}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
+      <input id="chat-inp-${sid(p.id)}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến... (gõ @ để nhắc tên)" oninput="_cardTagHint(this)" onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${sid(p.id)}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
       <button onclick="sendChatMsg('${sid(p.id)}')" style="padding:7px 12px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">Gửi</button>
     </div>`;
   let chatHtml = '';
@@ -9729,6 +9731,7 @@ function _chatAmIInvolved(p){
   if(currentRole==='hien' && (p.opinionH || arr.some(m=>m.role==='hien'))) return true;
   if(currentRole==='toan' && arr.some(m=>m.role==='toan')) return true;
   if(currentRole==='trang' && arr.some(m=>m.role==='trang')) return true;
+  if(arr.some(m=>_mentionsMe(m.text))) return true;   // v90: bị nhắc tên (@Tên)
   return false;
 }
 function _chatUnreadList(){
@@ -9739,7 +9742,7 @@ function _chatUnreadList(){
     if(!_chatAmIInvolved(p)) return;
     const seen=_chatSeenTs(p);
     const unread=arr.filter(m=>(m.by||'')!==me && (m.ts||0)>seen);
-    if(unread.length) out.push({p:p, last:unread[unread.length-1], count:unread.length});
+    if(unread.length) out.push({p:p, last:unread[unread.length-1], count:unread.length, tag:unread.some(m=>_mentionsMe(m.text))});   // v90
   });
   out.sort((a,b)=>(b.last.ts||0)-(a.last.ts||0));
   return out;
@@ -9754,7 +9757,7 @@ function markChatSeen(id){
 function openChatInput(id){
   const wrap=document.getElementById('chat-inpwrap-'+id); if(!wrap) return;
   wrap.innerHTML=`<div style="display:flex;gap:5px">
-    <input id="chat-inp-${id}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến..." onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${id}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
+    <input id="chat-inp-${id}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến... (gõ @ để nhắc tên)" oninput="_cardTagHint(this)" onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${id}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
     <button onclick="sendChatMsg('${id}')" style="padding:7px 12px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">Gửi</button>
   </div>`;
   try{ document.getElementById('chat-inp-'+id).focus(); }catch(e){}
@@ -9791,8 +9794,60 @@ function sendChatMsg(id){
     roles.delete(currentRole);
     let list=Array.from(roles);
     if(!list.length) list=['dung','hien'].filter(r=>r!==currentRole);
+    // v90: có nhắc tên (@Tên) → báo đẩy ghi rõ ai bị nhắc; biết vai của người đó thì gửi đúng kênh, không biết thì gửi mọi kênh
+    const tags=_mentionNames().filter(n=>text.indexOf('@'+n)>=0);
+    if(tags.length){
+      const rm=_nameRoleMap(); let all=false;
+      tags.forEach(n=>{ const r=rm[n]; if(r) roles.add(r==='ketoan'?'other':r); else all=true; });
+      list = all ? ['dung','hien','toan','trang','other'] : Array.from(roles);
+      sendPushNotif('📣 '+me+' nhắc tên '+tags.join(', '), (p.desc||'')+': '+text.slice(0,90), list);
+    } else
     if(list.length) sendPushNotif('💬 '+me+' nhắn hỏi–đáp', (p.desc||'')+': '+text.slice(0,90), list);
   }catch(e){}
+  try{ const tr=document.getElementById('chat-tagrow-'+id); if(tr) tr.remove(); }catch(e){}
+}
+// ══ v90: NHẮC TÊN (@Tên) TRONG HỎI–ĐÁP TRÊN PHIẾU ══ (D 11/10)
+// Danh sách tên = người dùng app: danh sách người đề xuất (Cài đặt) + ai đã từng nhắn; không gồm chính mình.
+function _knownUsers(){ try{ return JSON.parse(localStorage.getItem('gb_known_users')||'{}')||{}; }catch(e){ return {}; } }   // tên → vai, gom từ danh sách đang trực tuyến
+function _mentionNames(){
+  const set=new Set(), me=getCurrentUserName()||'';
+  try{ Object.keys(_knownUsers()).forEach(n=>set.add(String(n).trim())); }catch(e){}
+  try{ (proposals||[]).forEach(p=>{ if(p.kind!=='salary' && p.person) set.add(String(p.person).trim()); if(p.review&&p.review.byName) set.add(String(p.review.byName).trim()); (Array.isArray(p.editLog)?p.editLog:[]).forEach(x=>{ if(x&&x.byName) set.add(String(x.byName).trim()); }); }); }catch(e){}
+  try{ (persons||[]).forEach(x=>{ if(x&&x.name) set.add(String(x.name).trim()); }); }catch(e){}
+  try{ (proposals||[]).forEach(p=>{ (Array.isArray(p.chat)?p.chat:[]).forEach(m=>{ if(m&&m.by) set.add(String(m.by).trim()); }); }); }catch(e){}
+  set.delete(me); set.delete(''); set.delete('?');
+  return Array.from(set).sort((a,b)=>b.length-a.length);   // tên dài trước (để tô / dò không bị dính tên ngắn nằm trong tên dài)
+}
+function _mentionsMe(text){ const me=getCurrentUserName(); return !!(me && text && String(text).indexOf('@'+me)>=0); }
+function _nameRoleMap(){   // tên → vai, suy từ các tin đã nhắn (phiếu + chat nhóm)
+  const m=Object.assign({}, _knownUsers());
+  try{ (proposals||[]).forEach(p=>{ (Array.isArray(p.chat)?p.chat:[]).forEach(c=>{ if(c&&c.by&&c.role) m[c.by]=c.role; }); }); }catch(e){}
+  try{ (typeof _cMsgs==='function'?_cMsgs():[]).forEach(c=>{ if(c&&c.by&&c.role) m[c.by]=c.role; }); }catch(e){}
+  return m;
+}
+function _cardHighlightTags(escapedText){
+  let h=escapedText; const me=getCurrentUserName()||'';
+  _mentionNames().concat(me?[me]:[]).sort((a,b)=>b.length-a.length).forEach(n=>{ const en=esc(n); if(h.indexOf('@'+en)<0) return;
+    h=h.split('@'+en).join(`<span style="color:${n===me?'#b45309':'var(--blue)'};font-weight:800">@\u200b${en}</span>`); });   // \u200b: tên dài đã tô thì tên ngắn không tô lại
+  return h;
+}
+function _mnNorm(v){ return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d'); }
+// Gõ @ (và vài chữ sau đó) → hiện dãy tên ngay dưới ô nhập; bấm tên để chèn. Bấm vào dãy không làm ô nhập mất tiêu điểm.
+function _cardTagHint(inp){
+  const id=(inp.id||'').replace('chat-inp-',''), host=inp.parentElement; if(!id||!host) return;
+  let row=document.getElementById('chat-tagrow-'+id);
+  const v=inp.value||'', pos=(inp.selectionStart==null?v.length:inp.selectionStart), m=/@([^@\n]{0,24})$/.exec(v.slice(0,pos));
+  const q=m?_mnNorm(m[1]):null;
+  const names=(q===null)?[]:_mentionNames().filter(n=>!q||_mnNorm(n).indexOf(q)>=0).sort((a,b)=>a.localeCompare(b,'vi'));
+  if(!names.length){ if(row) row.remove(); return; }
+  if(!row){ row=document.createElement('div'); row.id='chat-tagrow-'+id; row.style.cssText='margin-top:4px;white-space:nowrap;overflow-x:auto;padding-bottom:2px'; host.parentNode.insertBefore(row, host.nextSibling); }
+  row.innerHTML=names.map(n=>`<button type="button" onpointerdown="event.preventDefault()" onmousedown="event.preventDefault()" onclick="_cardTagPick('${id}','${esc(n).replace(/'/g,'&#39;')}')" style="display:inline-block;margin-right:5px;padding:5px 11px;font-size:12px;font-weight:700;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
+}
+function _cardTagPick(id, name){
+  const inp=document.getElementById('chat-inp-'+id); if(!inp) return;
+  const v=inp.value||'', pos=(inp.selectionStart==null?v.length:inp.selectionStart), head=v.slice(0,pos).replace(/@([^@\n]{0,24})$/, '@'+name+' ');
+  inp.value=head+v.slice(pos); try{ inp.focus(); inp.setSelectionRange(head.length, head.length); }catch(e){}
+  const row=document.getElementById('chat-tagrow-'+id); if(row) row.remove();
 }
 // ── Bảng nhắc khi mở app ──
 let _chatReminderShown=false;
@@ -9811,7 +9866,7 @@ function maybeShowChatReminder(){
     <div onclick="chatRemindGo('${sid(it.p.id)}')" style="border:1px solid var(--gray-border);border-left:3px solid ${clr(it.last.role)};border-radius:10px;padding:8px 10px;margin-bottom:6px;cursor:pointer">
       <div style="font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(it.p.desc||'')} <span style="color:var(--text-sub);font-weight:600">· ${fmtVND(it.p.amount)}</span></div>
       <div style="font-size:12px;margin-top:2px"><span style="font-weight:700;color:${clr(it.last.role)}">${esc(it.last.by||'')}:</span> ${esc((it.last.text||'').slice(0,120))}</div>
-      <div style="font-size:10px;color:var(--text-sub)">${fmtFull(it.last.ts)}${it.count>1?' · +'+(it.count-1)+' tin nữa':''} · bấm để mở phiếu ›</div>
+      <div style="font-size:10px;color:var(--text-sub)">${it.tag?'<b style="color:#b45309">📣 nhắc tên bạn</b> · ':''}${fmtFull(it.last.ts)}${it.count>1?' · +'+(it.count-1)+' tin nữa':''} · bấm để mở phiếu ›</div>
     </div>`).join('');
   document.getElementById('chat-remind-modal').style.display='flex';
 }
