@@ -147,5 +147,21 @@ ok('het han -> tu ve enforce', g.resolveAuthMode({ mode: 'monitor', until: NOW -
 ok('dat han xa hon 24 gio -> khong nhan, enforce', g.resolveAuthMode({ mode: 'monitor', until: NOW + 25 * 3600000 }, NOW) === 'enforce');
 ok('until khong phai so -> enforce', g.resolveAuthMode({ mode: 'monitor', until: '9999999999999' }, NOW) === 'enforce');
 
+// ── 11. NHẮC TÊN (Gia Bình): chọn đúng máy nhận ──
+{
+  const S = (uid, name) => (name ? { endpoint: 'https://x/' + uid, keys: {}, uid, name } : { endpoint: 'https://x/' + uid, keys: {}, uid });
+  const subs = { dung: { a: S('D', 'Võ Văn Dũng') }, hien: { b: S('L', 'Đoàn Phương Lam'), c: S('H', 'Tạ Thu Hiền'), d: S('L', 'Đoàn Phương Lam ') },
+    toan: { e: S('T') }, kt: { f: S('TR', 'Phan Thu Trang'), g: S('HU') }, trang: {} };
+  const keys = (r) => r.map((x) => x.key).sort().join(',');
+  ok('nhac Lam: chi 2 may cua Lam (ke ca ten thua dau cach)', keys(g.pickNamedTargets(subs, [], ['Đoàn Phương Lam'], 'D')) === 'b,d');
+  ok('nhac Lam, Hien cung kenh KHONG nhan', !g.pickNamedTargets(subs, ['hien'], ['Đoàn Phương Lam'], 'D').some((x) => x.key === 'c'));
+  ok('may cu chua co ten trong kenh du phong van nhan', keys(g.pickNamedTargets(subs, ['toan', 'kt'], ['Phan Thu Trang'], 'D')) === 'e,f,g');
+  ok('may cu chua co ten NGOAI kenh du phong khong nhan', keys(g.pickNamedTargets(subs, ['kt'], ['Phan Thu Trang'], 'D')) === 'f,g');
+  ok('khong gui may cua chinh nguoi gui', keys(g.pickNamedTargets(subs, ['dung'], ['Võ Văn Dũng'], 'D')) === '');
+  ok('nhac 2 nguoi', keys(g.pickNamedTargets(subs, [], ['Tạ Thu Hiền', 'Phan Thu Trang'], 'D')) === 'c,f');
+  ok('ten la khong ai nhan', keys(g.pickNamedTargets(subs, [], ['Người Lạ'], 'D')) === '');
+  ok('du lieu hong khong vang loi', keys(g.pickNamedTargets({ hien: { x: null, y: 'rac' } }, ['hien'], ['A'], 'D')) === '');
+}
+
 console.log(pass ? '\n*** TAT CA ' + n + ' PHEP THU DUNG ***' : '\n*** CO LOI ***');
 process.exit(pass ? 0 : 1);

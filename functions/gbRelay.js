@@ -9,6 +9,7 @@
  * minh token (chữ ký Google + đúng project so-quy-gia-binh) rồi làm hộ bằng quyền admin:
  *   sub / unsub : ghi/xoá đăng ký nhận thông báo → gb-push-subs/<kênh>/<khoá> (client không đọc/ghi được)
  *   send        : gửi thông báo đẩy tới các kênh  → tự gửi bằng web-push, khoá VAPID RIÊNG của Gia Bình
+ *                 (kèm names = tên người bị nhắc → chỉ gửi máy của đúng những người đó)
  *   upload      : đưa ảnh lên kho 379, thư mục giabinh/ → trả về link tải
  *   revoke      : (chỉ Dũng) gỡ mọi đăng ký nhận của 1 tài khoản vừa bị thu hồi/xoá
  *
@@ -130,9 +131,12 @@ exports.gbRelay = functions
         if (!(await rateAllow('gb-sub', uid, { limit: 30, windowMs: 10 * 60 * 1000 }))) { res.status(429).json({ ok: false, error: 'Thử lại sau ít phút' }); return; }
         const key = subKey(s.endpoint);
         const ch = channelOf(role); // kênh do MÁY CHỦ quyết theo vai thật — client không tự chọn được
-        await db379('gb-push-subs/' + ch + '/' + key).set({
-          endpoint: s.endpoint, keys: { p256dh: k.p256dh, auth: k.auth }, uid: uid, ts: Date.now(),
-        });
+        // 11/10/2026: lưu kèm TÊN (đọc từ hồ sơ của CHÍNH người gọi) → thông báo "nhắc tên" gửi đúng máy của người đó
+        const nameRaw = await gbField(uid, 'name', b.idToken);
+        const rec = { endpoint: s.endpoint, keys: { p256dh: k.p256dh, auth: k.auth }, uid: uid, ts: Date.now() };
+        const nm = guard.cleanText(typeof nameRaw === 'string' ? nameRaw : '', 80).trim();
+        if (nm) rec.name = nm;
+        await db379('gb-push-subs/' + ch + '/' + key).set(rec);
         // 1 máy chỉ nằm ở 1 kênh (đổi vai → dọn kênh cũ, chống nhận 2 lần)
         await Promise.all(GB_CHANNELS.filter((c) => c !== ch).map((c) => db379('gb-push-subs/' + c + '/' + key).remove()));
         res.json({ ok: true, channel: ch }); return;
@@ -192,6 +196,16 @@ exports.gbRelay = functions
         await gbVapid();
         const payload = JSON.stringify({ title: title, body: body });
         const targets = []; const seen = new Set();
+        // 11/10/2026 NHẮC TÊN: b.names = danh sách tên bị nhắc → CHỈ gửi máy đăng ký mang đúng tên đó (mọi kênh),
+        // không gửi máy của chính người gửi. Máy đăng ký CŨ chưa có tên (chưa mở lại app) nằm trong các kênh
+        // dự phòng `roles` vẫn nhận, để không ai bị sót trong lúc chuyển tiếp. Chỉ người ĐÃ DUYỆT dùng được.
+        const names = (approved && Array.isArray(b.names) ? b.names.slice(0, 10) : [])
+          .map((n) => guard.cleanText(n, 80).trim()).filter((n, i, a) => n && a.indexOf(n) === i);
+        if (names.length) {
+          const all = {};
+          for (const ch of GB_CHANNELS) all[ch] = (await db379('gb-push-subs/' + ch).once('value')).val() || {};
+          guard.pickNamedTargets(all, roles, names, uid).forEach((t) => { seen.add(t.key); targets.push(t); });
+        } else
         for (const ch of roles) {
           const subs = (await db379('gb-push-subs/' + ch).once('value')).val() || {};
           for (const key of Object.keys(subs)) {

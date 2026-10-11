@@ -193,8 +193,31 @@ function resolveAuthMode(raw, now) {
   return 'monitor';
 }
 
+/**
+ * NHẮC TÊN (Gia Bình, 11/10/2026): chọn máy nhận khi tin có danh sách tên bị nhắc.
+ *  - máy đăng ký CÓ tên: nhận khi tên nằm trong `names` (ở bất kỳ kênh nào);
+ *  - máy đăng ký CŨ chưa có tên: nhận khi nằm trong các kênh dự phòng `roles` (để không sót lúc chuyển tiếp);
+ *  - không bao giờ gửi máy của chính người gửi; mỗi máy 1 lần.
+ * subsByCh = { kênh: { khoá: {endpoint, keys, uid, name?} } }
+ */
+function pickNamedTargets(subsByCh, roles, names, senderUid) {
+  const out = []; const seen = new Set();
+  const want = (Array.isArray(names) ? names : []).map((n) => String(n || '').trim()).filter(Boolean);
+  const fb = Array.isArray(roles) ? roles : [];
+  for (const ch of Object.keys(subsByCh || {})) {
+    const subs = subsByCh[ch] || {};
+    for (const key of Object.keys(subs)) {
+      const s0 = subs[key];
+      if (!s0 || typeof s0 !== 'object' || seen.has(key) || (senderUid && s0.uid === senderUid)) continue;
+      const nm = typeof s0.name === 'string' ? s0.name.trim() : '';
+      if (nm ? want.includes(nm) : fb.includes(ch)) { seen.add(key); out.push({ ch: ch, key: key, s: s0 }); }
+    }
+  }
+  return out;
+}
+
 module.exports = {
-  ROLES_379, FIXED_EMAILS, RATE, MAX_TITLE, MAX_BODY, MAX_NAME,
+  pickNamedTargets, ROLES_379, FIXED_EMAILS, RATE, MAX_TITLE, MAX_BODY, MAX_NAME,
   cleanText, cleanRoles, isApproved, safeName, composeUnapproved, authorizeQueueItem,
   keyMatchesHash, secretEquals, keyFromHeaders, nextRateState, resolveAuthMode,
 };

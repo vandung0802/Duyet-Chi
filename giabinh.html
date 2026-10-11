@@ -1860,7 +1860,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261011-v90';
+const APP_VERSION = '20261011-v91';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2934,7 +2934,7 @@ function updateNotifSettingsStatus() {
   }
 }
 
-async function sendPushNotif(title, body, targetRoles) {
+async function sendPushNotif(title, body, targetRoles, names) {   // v91: names = tên người bị nhắc → trạm chỉ gửi đúng máy của họ
   if(typeof _viewAs!=='undefined' && _viewAs) return;   // v62: đang xem thử vai → không gửi thông báo thật
   if(!Array.isArray(targetRoles) || targetRoles.length === 0) return;
   // Dedup: không gửi lại cùng 1 nội dung trong vòng 10 giây
@@ -2946,7 +2946,7 @@ async function sendPushNotif(title, body, targetRoles) {
   // rồi đóng app là thông báo MẤT LUÔN (phiếu thì có cơ chế bù, thông báo thì không) →
   // "thỉnh thoảng không hiện thông báo có đề xuất mới". Nay: bỏ vào HỘP CHỜ trong máy trước,
   // gửi thành công mới gạch; gửi hụt thì lần mở app sau / lúc có mạng lại tự gửi tiếp.
-  _pushOutboxAdd({ title, body, roles: targetRoles, ts: Date.now() });
+  { const it={ title, body, roles: targetRoles, ts: Date.now() }; if(Array.isArray(names) && names.length) it.names=names.slice(0,10); _pushOutboxAdd(it); }
 }
 function _pushOutboxLoad(){ try{ const v=JSON.parse(localStorage.getItem('gb_push_outbox')||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
 function _pushOutboxSave(a){ try{ localStorage.setItem('gb_push_outbox', JSON.stringify(a.slice(-20))); }catch(e){} }
@@ -2959,7 +2959,7 @@ async function _pushOutboxFlush(){
     while(box.length){
       const item=box[0];
       if(Date.now()-(item.ts||0) > 24*3600*1000){ box.shift(); _pushOutboxSave(box); continue; } // quá 1 ngày = thông báo nguội, bỏ
-      await gbRelay('send', { title: item.title, body: item.body, roles: item.roles||[] }); // lỗi/mất mạng → ném ra, giữ hộp, lần sau gửi tiếp
+      await gbRelay('send', item.names ? { title: item.title, body: item.body, roles: item.roles||[], names: item.names } : { title: item.title, body: item.body, roles: item.roles||[] }); // lỗi/mất mạng → ném ra, giữ hộp, lần sau gửi tiếp
       // v24: NẠP LẠI hộp trước khi gạch. Trong lúc chờ mạng ở lệnh trên, tin MỚI có thể đã được thêm vào cuối hộp;
       // gạch trên bản sao cũ rồi lưu đè là MẤT tin đó (duyệt 2 phiếu liên tiếp lúc sóng yếu → chỉ tin đầu tới nơi).
       box=_pushOutboxLoad();
@@ -9797,10 +9797,11 @@ function sendChatMsg(id){
     // v90: có nhắc tên (@Tên) → báo đẩy ghi rõ ai bị nhắc; biết vai của người đó thì gửi đúng kênh, không biết thì gửi mọi kênh
     const tags=_mentionNames().filter(n=>text.indexOf('@'+n)>=0);
     if(tags.length){
-      const rm=_nameRoleMap(); let all=false;
-      tags.forEach(n=>{ const r=rm[n]; if(r) roles.add(r==='ketoan'?'other':r); else all=true; });
-      list = all ? ['dung','hien','toan','trang','other'] : Array.from(roles);
-      sendPushNotif('📣 '+me+' nhắc tên '+tags.join(', '), (p.desc||'')+': '+text.slice(0,90), list);
+      // v91: trạm chỉ gửi máy mang đúng TÊN bị nhắc; `list` chỉ là kênh dự phòng cho máy đăng ký cũ chưa có tên (chưa mở lại app)
+      const rm=_nameRoleMap(), fb=new Set(); let all=false;
+      tags.forEach(n=>{ const r=rm[n]; if(r) fb.add(r==='ketoan'?'other':r); else all=true; });
+      list = all ? ['dung','hien','toan','trang','other'] : Array.from(fb);
+      sendPushNotif('📣 '+me+' nhắc tên '+tags.join(', '), (p.desc||'')+': '+text.slice(0,90), list, tags);   // v91: chỉ gửi đúng người bị nhắc
     } else
     if(list.length) sendPushNotif('💬 '+me+' nhắn hỏi–đáp', (p.desc||'')+': '+text.slice(0,90), list);
   }catch(e){}
