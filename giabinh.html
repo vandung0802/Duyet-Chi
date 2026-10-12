@@ -465,6 +465,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <label class="form-label">Loại chi phí</label>
       <select class="form-input form-select" id="edit-costtype" onchange="editTaxToggle()">
         <option value="congtruong">🏗️ Chi phí công trường</option>
+        <option value="vattu">🧱 Chi phí vật tư</option>
         <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
         <option value="noinghiep">📋 Chi phí nội nghiệp</option>
         <option value="thietbi">🛠️ Máy móc thiết bị (mua sắm, dụng cụ)</option>
@@ -729,6 +730,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <label class="form-label">Loại chi phí <span class="req">*</span></label>
         <select class="form-input form-select" id="inp-costtype" onchange="taxWrapToggle()">
           <option value="congtruong">🏗️ Chi phí công trường</option>
+          <option value="vattu">🧱 Chi phí vật tư</option>
           <option value="kyquy">🔒 Chi phí đặt cọc / ký quỹ</option>
           <option value="noinghiep">📋 Chi phí nội nghiệp</option>
           <option value="thietbi">🛠️ Máy móc thiết bị (mua sắm, dụng cụ)</option>
@@ -1860,7 +1862,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261011-v91';
+const APP_VERSION = '20261012-v92';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2396,9 +2398,10 @@ function _costChip(p){
   const lbl = (p.costType && p.costType!=='congtruong' && COST_TYPES[p.costType]) ? c.label : 'Chi phí công trường';
   return `<span style="color:${c.color};font-weight:800;background:${c.color}18;padding:1px 7px;border-radius:8px;white-space:nowrap">${c.icon} ${esc(lbl)}</span>`;
 }
-const _CT_FREE = ['congtruong','noinghiep','thietbi','khac'];   // v85: 4 mục chi phí thường — đổi qua lại được cả sau khi chuyển tiền (H&L / Dũng)
+const _CT_FREE = ['congtruong','vattu','noinghiep','thietbi','khac'];   // v85: mục chi phí thường — đổi qua lại được cả sau khi chuyển tiền (H&L / Dũng); v92 thêm vattu
 const COST_TYPES = {
   congtruong: {label:'Công trường', icon:'🏗️', color:'#047857'},
+  vattu:      {label:'Vật tư',      icon:'🧱', color:'#0e7490'},   // v92 (D 12/10): chi phí vật tư — xanh ngọc
   kyquy:      {label:'Ký quỹ/Cọc',  icon:'🔒', color:'#2563eb'},   // v83: mỗi mục 1 màu riêng (xanh dương)
   noinghiep:  {label:'Nội nghiệp',  icon:'📋', color:'#92400e'},   // v83: nâu
   thietbi:    {label:'Máy móc thiết bị', icon:'🛠️', color:'#7c3aed'},   // v40; v81: tên theo Kế toán
@@ -5868,7 +5871,7 @@ function openEditProposal(id){
       const _lock = (_hasTr && !_trOK) || (_apv && !_hlD);
       _ct.disabled = _lock;
       [..._ct.options].forEach(o=>{ o.disabled = _trOK && !_CT_FREE.includes(o.value); });
-      if(_ctH) _ctH.textContent = _trOK ? '💸 Đã chuyển tiền — chỉ đổi được giữa Công trường / Nội nghiệp / Máy móc thiết bị / Khác (không sang Ký quỹ, Tạm ứng).'
+      if(_ctH) _ctH.textContent = _trOK ? '💸 Đã chuyển tiền — chỉ đổi được giữa Công trường / Vật tư / Nội nghiệp / Máy móc thiết bị / Khác (không sang Ký quỹ, Tạm ứng).'
         : _hasTr ? (_hlD ? '🔒 Đã chuyển tiền — phiếu Ký quỹ / Tạm ứng không đổi hạng mục được (có sổ riêng).' : '🔒 Đã chuyển tiền — hạng mục sai thì báo Hiền / Lan sửa.')
         : _lock ? '🔒 Phiếu đã duyệt — loại chi phí sai thì báo Hiền / Lan sửa.' : '';
     }
