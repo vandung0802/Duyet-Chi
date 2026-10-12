@@ -38,6 +38,7 @@ node -e "const fs=require('fs'),vm=require('vm');const h=fs.readFileSync('app3.h
   - `tai-lieu\` = Excel mẫu, .lsp AutoCAD, Apps Script, ghi chú. File mới không phải app → để vào đây, KHÔNG để trong repo.
   - `backups\` = backup DB hằng ngày 12:30, chạy bù 17:00 (tác vụ `PVA-Backup` chạy ẩn qua `wscript` vì cửa sổ cmd hay bị Ctrl+C làm chết; script `scripts/backup-db.ps1` chép `/duyetchi` 379 + Gia Bình + `/hopdong` + `/congNo` + `/thietbi`, mỗi file bỏ qua nếu hôm nay đã có). Máy mới hoặc sửa tác vụ: bấm `CAI-BACKUP.bat`. `env\` = khóa app Tiến độ.
   - `CAI-MAY.bat` (cài máy mới: Git/Node/clone/skill/trí nhớ) và `CAI-BACKUP.bat` (tạo tác vụ backup, cần đăng nhập Firebase 1 lần).
+  - `trang-thai\<tên máy>.txt` = trạng thái từng máy, do `CAI-MAY.bat` ghi mỗi lần chạy (thư mục repo, commit, còn gì chưa đẩy/chưa lấy, file sửa dở, trí nhớ, skill, Node/Firebase, tác vụ backup). D hỏi "3 máy đã giống nhau chưa" → đọc thư mục này; file nào cũ thì bảo D bấm lại `CAI-MAY.bat` trên máy đó. Tên máy và đường dẫn từng máy: trí nhớ `project_dong_bo_3_may.md`.
 - Nếu phiên này thấy `autoMemoryDirectory` chưa trỏ vào OneDrive hoặc thiếu skill → bảo D bấm đúp `CAI-MAY.bat`, không tự sửa settings.
 - Bẫy đã gặp: Task Scheduler + đường dẫn có dấu cách (`C:\Users\Vo Van Dung`) → tác vụ chết im lặng; file gọi phải ở `C:\Users\Public\PVA\`.
 - Mật khẩu: KHÔNG có file mật khẩu trong repo hay OneDrive; không tạo, không chép. Chi tiết đầy đủ: trí nhớ `project_dong_bo_3_may.md`.
