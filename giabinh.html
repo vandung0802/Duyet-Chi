@@ -1862,7 +1862,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261014-v95';
+const APP_VERSION = '20261014-v96';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4045,12 +4045,13 @@ function getMyPendingItems(){
     const hAmt = approvedAmtOf(p,'H');
     const total = parseFloat(p.amount)||0;
     const transferred = getTotalTransferred(p);
+    const _ask = askMorePending(p);   // v96: phiếu đã chuyển đủ nhưng có người xin duyệt thêm → vẫn vào chuông D / H&L
     if(currentRole==='dung'){
-      if(dAmt < total - 0.0001 && p.status!=='transferred')
-        items.push({desc:p.desc, note:'Chờ D duyệt', person:p.person, id:p.id});
+      if(dAmt < total - 0.0001 && (p.status!=='transferred' || _ask))
+        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : 'Chờ D duyệt', person:p.person, id:p.id});
     } else if(currentRole==='hien'){
-      if(hAmt < total - 0.0001 && p.status!=='transferred')
-        items.push({desc:p.desc, note:'Chờ H&L duyệt', person:p.person, id:p.id});
+      if(hAmt < total - 0.0001 && (p.status!=='transferred' || _ask))
+        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : 'Chờ H&L duyệt', person:p.person, id:p.id});
     } else if(currentRole==='toan'){
       const official = getOfficialApprovedAmount(p)||0;
       if(official > 0 && transferred < official - 0.0001)
@@ -4388,11 +4389,19 @@ function _buildCard(p){
       const styleAttr = waitDays >= 3 ? '' : ' style="background:#fff7ed;color:#c2410c"';
       waitRow = `<span class="badge${waitDays>=3?' badge-reject':''}"${styleAttr}>${label}</span>`;
     }
+    // v96 (D 14/10): phần đề xuất CHƯA được duyệt không mất đi — hiện rõ "còn lại" trên phiếu đã chuyển đủ số duyệt;
+    // có người xin duyệt thêm (Giục kèm lý do) thì hiện tên + số + lý do cho D và H&L.
+    let remainRow = '', askRow = '';
+    const _remain = remainUnapproved(p);
+    if(isClosed && _remain > 0) remainRow = `<span class="badge badge-wait">⏳ Còn lại ${fmtVND(_remain)} chưa duyệt</span>`;
+    if(askMorePending(p)) askRow = `<span class="badge" style="background:#fdecea;color:#dc0000;font-weight:800">🔁 ${esc(p.askMore.by||'')} xin duyệt thêm ${fmtVND(p.askMore.amount)}</span><div class="badge-history" style="color:#dc0000">Lý do: ${esc(p.askMore.reason||'')} · ${fmtFull(p.askMore.ts)}</div>`;
     badgeHtml = `<div class="badge-stack">
       <span class="badge ${dBadgeClass}"><span>${dAmt>0?'✅':'⏳'} ${dLabel}</span></span>${dHistoryHtml}
       <span class="badge ${hBadgeClass}"><span>${hAmt>0?'✅':'⏳'} ${hLabel}</span></span>${hHistoryHtml}
       ${tRow}
       ${waitRow}
+      ${remainRow}
+      ${askRow}
     </div>`;
   }
   // Đánh dấu phiếu đã bị giục duyệt (chưa duyệt xong) — hiện số lần + thời điểm giục gần nhất
@@ -4669,8 +4678,15 @@ function renderBtnShare(p){
 
 // ── NÚT ĐỀ XUẤT DUYỆT LẠI (🔁) ──
 // Chỉ hiện khi phiếu CHƯA duyệt xong (chưa đủ cả D và H duyệt) và chưa từ chối / chưa chuyển.
+// v96 (D 14/10): phần ĐỀ XUẤT còn chưa được duyệt (tổng đề xuất − số duyệt chính thức). Phiếu đã chuyển đủ
+// số duyệt mà vẫn còn phần này thì KHÔNG mất — người đề xuất bấm Giục (kèm lý do) để xin duyệt thêm,
+// rồi quy trình D → H&L → Toàn lặp lại cho phần đó (chia nhỏ bao nhiêu lần cũng vậy).
+function remainUnapproved(p){ const total=parseFloat(p.amount)||0; const off=getOfficialApprovedAmount(p)||0; return (total-off) > 0.0001 ? total-off : 0; }
+function lastTransferTs(p){ return (Array.isArray(p.transfers)?p.transfers:[]).reduce((m,t)=>Math.max(m, parseFloat(t&&t.ts)||0), 0); }
+function askMorePending(p){ return !!(p && p.askMore && p.askMore.ts > lastTransferTs(p) && remainUnapproved(p) > 0); }
 function canRemind(p){
-  if(p.status==='rejected' || p.status==='transferred') return false;
+  if(p.status==='rejected') return false;
+  if(p.status==='transferred' && !(remainUnapproved(p) > 0)) return false;   // v96: đã chuyển đủ nhưng còn phần chưa duyệt → vẫn giục được
   // v136: chỉ CHỦ phiếu (hoặc D/H/T) mới giục được — chống bấm giục đề xuất của người khác (user báo).
   if(!_canEditDelete(p)) return false;
   // Chưa duyệt xong → giục duyệt (như cũ). ĐÃ duyệt xong cả D,H nhưng CHƯA chuyển → vẫn cho bấm 🔁
@@ -4741,11 +4757,22 @@ function remindApprove(id){
   const p = proposals.find(x=>x.id===id);
   if(!p) return;
   if(!canRemind(p)){ showToast('Phiếu đã chuyển xong — không cần giục'); return; }
-  const isTransferRemind = isAwaitingTransferRemind(p); // D,H đã duyệt xong → đây là GIỤC CHUYỂN (nhắc Trang)
+  // v96 (D 14/10): phiếu ĐÃ CHUYỂN ĐỦ số duyệt nhưng còn phần đề xuất chưa duyệt → "xin duyệt thêm": bắt buộc ghi lý do,
+  // lưu vào phiếu (askMore) để D và H&L thấy "xin duyệt thêm X" + lý do, rồi D → H&L → Toàn lặp lại cho phần đó.
+  const _isAskMore = p.status==='transferred' && remainUnapproved(p) > 0;
+  let _askReason = '';
+  if(_isAskMore){
+    const r = prompt('Xin duyệt thêm ' + fmtVND(remainUnapproved(p)) + ' còn lại của phiếu này.\nLý do (bắt buộc):', (p.askMore && p.askMore.reason) || '');
+    if(r === null) return;
+    _askReason = String(r).trim().replace(/\s+/g,' ').slice(0, 500);
+    if(!_askReason){ showToast('⚠️ Phải ghi lý do xin duyệt thêm'); return; }
+  }
+  const isTransferRemind = !_isAskMore && isAwaitingTransferRemind(p); // D,H đã duyệt xong → đây là GIỤC CHUYỂN (nhắc Trang)
   p.remindCount = (p.remindCount||1) + 1;
   p.lastRemindAt = Date.now();
   const who = getCurrentUserName() || p.person || '';
   p.remindBy = who; // lưu tên người bấm giục gần nhất để báo cáo hiển thị
+  if(_isAskMore) p.askMore = { amount: remainUnapproved(p), reason: _askReason, by: who, ts: p.lastRemindAt };   // v96
   // v77: KHÔNG ghi đuôi giục vào ô ghi chú nữa — ghi chú bị ĐÓNG BĂNG ở máy chủ sau khi duyệt
   // (chống sửa số tài khoản). Thông tin giục đã hiện đầy đủ qua badge "🔔 Đã giục N lần" trên thẻ
   // + nhãn trong báo cáo (remindReportLabel đọc từ remindBy/remindCount, không cần ghi chú).
@@ -4753,12 +4780,15 @@ function remindApprove(id){
   renderAll();
   const pushKey = 'gb_remind_push_' + id;
   const lastPush = parseInt(localStorage.getItem(pushKey)||'0');
-  if(Date.now() - lastPush >= 600000){
+  if(_isAskMore || Date.now() - lastPush >= 600000){   // v96: xin duyệt thêm là việc mới → luôn gửi thông báo
     localStorage.setItem(pushKey, String(Date.now()));
     if(isTransferRemind){
       const official = getOfficialApprovedAmount(p);
       sendPushNotif('💸 Nhắc chuyển tiền', `${p.desc} — ${fmtVND(official)} đã duyệt, chưa chuyển`, ['toan']);
       showToast('💸 Đã nhắc Toàn chuyển tiền (lần '+p.remindCount+')');
+    } else if(_isAskMore){
+      sendPushNotif('🔁 Xin duyệt thêm ' + fmtVND(p.askMore.amount), `${p.desc} — ${who}: ${_askReason}`, ['dung','hien']);
+      showToast('🔁 Đã xin D và H&L duyệt thêm ' + fmtVND(p.askMore.amount));
     } else {
       sendPushNotif('🔁 Xin duyệt lại', `${p.desc} — đề xuất ${fmtFull(p.ts)}, chưa duyệt xong`, ['dung','hien']);
       showToast('🔁 Đã giục D và H&L duyệt lại (lần '+p.remindCount+')');
@@ -4885,7 +4915,8 @@ function approveBy(id, field){
     inputGroup.style.display = 'none';
     document.getElementById('aa-undo-btn').style.display = 'block';
   } else {
-    sub.textContent = `Tổng đề xuất: ${fmtVND(p.amount)}${already>0?` — Đã duyệt trước: ${fmtVND(already)}`:''}`;
+    sub.innerHTML = 'Tổng đề xuất: ' + fmtVND(p.amount) + (already>0 ? ' — Đã duyệt trước: ' + fmtVND(already) : '')
+      + (askMorePending(p) ? `<br><span style="color:#dc0000;font-weight:800">🔁 ${esc(p.askMore.by||'')} xin duyệt thêm ${fmtVND(p.askMore.amount)}: ${esc(p.askMore.reason||'')}</span>` : '');   // v96
     inputGroup.style.display = 'block';
     document.getElementById('aa-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
     document.getElementById('aa-undo-btn').style.display = already>0 ? 'block' : 'none';
