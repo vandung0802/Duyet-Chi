@@ -1862,7 +1862,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261014-v96';
+const APP_VERSION = '20261014-v97';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4395,6 +4395,7 @@ function _buildCard(p){
     const _remain = remainUnapproved(p);
     if(isClosed && _remain > 0) remainRow = `<span class="badge badge-wait">⏳ Còn lại ${fmtVND(_remain)} chưa duyệt</span>`;
     if(askMorePending(p)) askRow = `<span class="badge" style="background:#fdecea;color:#dc0000;font-weight:800">🔁 ${esc(p.askMore.by||'')} xin duyệt thêm ${fmtVND(p.askMore.amount)}</span><div class="badge-history" style="color:#dc0000">Lý do: ${esc(p.askMore.reason||'')} · ${fmtFull(p.askMore.ts)}</div>`;
+    else if(askMoreRejected(p)) askRow = `<span class="badge badge-reject">❌ ${esc(p.askMore.rej.name||'')} từ chối duyệt thêm ${fmtVND(p.askMore.amount)}</span><div class="badge-history" style="color:#c81e1e;font-style:italic">${esc(p.askMore.by||'')} xin: "${esc(p.askMore.reason||'')}" · ${esc(p.askMore.rej.name||'')}: "${esc(p.askMore.rej.reason||'')}" · ${fmtFull(p.askMore.rej.ts)}</div>`;   // v97
     badgeHtml = `<div class="badge-stack">
       <span class="badge ${dBadgeClass}"><span>${dAmt>0?'✅':'⏳'} ${dLabel}</span></span>${dHistoryHtml}
       <span class="badge ${hBadgeClass}"><span>${hAmt>0?'✅':'⏳'} ${hLabel}</span></span>${hHistoryHtml}
@@ -4606,6 +4607,10 @@ function renderBtnReject(p){
   const hHasRejected = !!(hRejected || legacyH);
   const canRejectD = currentRole==='dung' && p.status!=='transferred';
   const canRejectH = currentRole==='hien' && p.status!=='transferred';
+  // v97 (D 14/10): phiếu ĐÃ CHUYỂN ĐỦ nhưng có người XIN DUYỆT THÊM → D / H&L từ chối lời xin đó (kèm lý do),
+  // KHÔNG đổi trạng thái phiếu (tiền đã chuyển vẫn nguyên), chỉ đóng lời xin; người đề xuất giục lại được với lý do mới.
+  if(p.status==='transferred' && askMorePending(p) && (currentRole==='dung' || currentRole==='hien'))
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectAskMore('${sid(p.id)}')" title="Từ chối lời xin duyệt thêm ${fmtVND(p.askMore.amount)}"><div class="ab-row-top"><span class="ab-mid-label" style="color:var(--red)">✕ Từ chối xin thêm</span></div></button></div>`;
 
   if(isRejected){
     const officialAmt = getOfficialApprovedAmount(p);
@@ -4683,7 +4688,8 @@ function renderBtnShare(p){
 // rồi quy trình D → H&L → Toàn lặp lại cho phần đó (chia nhỏ bao nhiêu lần cũng vậy).
 function remainUnapproved(p){ const total=parseFloat(p.amount)||0; const off=getOfficialApprovedAmount(p)||0; return (total-off) > 0.0001 ? total-off : 0; }
 function lastTransferTs(p){ return (Array.isArray(p.transfers)?p.transfers:[]).reduce((m,t)=>Math.max(m, parseFloat(t&&t.ts)||0), 0); }
-function askMorePending(p){ return !!(p && p.askMore && p.askMore.ts > lastTransferTs(p) && remainUnapproved(p) > 0); }
+function askMorePending(p){ return !!(p && p.askMore && !p.askMore.rej && p.askMore.ts > lastTransferTs(p) && remainUnapproved(p) > 0); }   // v97: đã bị từ chối (rej) thì hết chờ
+function askMoreRejected(p){ return !!(p && p.askMore && p.askMore.rej && p.askMore.ts > lastTransferTs(p)); }   // v97: lời xin thêm gần nhất đã bị D / H&L từ chối
 function canRemind(p){
   if(p.status==='rejected') return false;
   if(p.status==='transferred' && !(remainUnapproved(p) > 0)) return false;   // v96: đã chuyển đủ nhưng còn phần chưa duyệt → vẫn giục được
@@ -5230,6 +5236,27 @@ function rejectBy(id, who){
   syncRejectedByToSheet(id, who + (reason.trim() ? `: ${reason.trim()}` : ''));
   renderAll();
   showToast(`✕ ${name} đã từ chối`);
+}
+
+// v97 (D 14/10): TỪ CHỐI LỜI XIN DUYỆT THÊM (phiếu đã chuyển đủ số duyệt, còn phần chưa duyệt) — D hoặc H&L, bắt buộc lý do.
+// Chỉ ghi vào askMore.rej, KHÔNG đổi trạng thái phiếu, không đụng tiền đã chuyển. Người đề xuất giục lại được (lời xin mới thay lời cũ).
+function rejectAskMore(id){
+  const p = proposals.find(x=>x.id===id);
+  if(!p || !askMorePending(p)) return;
+  if(currentRole!=='dung' && currentRole!=='hien'){ showToast('🔒 Chỉ Dũng hoặc Hiền/Lan từ chối được'); return; }
+  const name = currentRole==='dung' ? 'Dũng' : hlMe();
+  const r = prompt(`${name} từ chối lời xin duyệt thêm ${fmtVND(p.askMore.amount)} của ${p.askMore.by||'người đề xuất'}.\nLý do (bắt buộc):`);
+  if(r === null) return;
+  const reason = String(r).trim().replace(/\s+/g,' ').slice(0, 500);
+  if(!reason){ showToast('⚠️ Phải ghi lý do từ chối'); return; }
+  p.askMore = Object.assign({}, p.askMore, { rej: { ts: Date.now(), reason, by: (currentUser&&currentUser.uid)||'', name: getCurrentUserName()||name, role: currentRole } });
+  logEdit(p, `${getCurrentUserName()||name} từ chối xin duyệt thêm ${fmtVND(p.askMore.amount)}: ${reason}`);
+  save();
+  _cardCache.delete(id);
+  renderAll();
+  showToast(`✕ ${getCurrentUserName()||name} đã từ chối xin duyệt thêm`);
+  // Báo cho người xin (đúng tên) + người duyệt còn lại biết đã có người từ chối
+  sendPushNotif(`✕ ${getCurrentUserName()||name} từ chối duyệt thêm ${fmtVND(p.askMore.amount)}`, `${p.desc} — ${reason}`, ['dung','hien','toan','trang','ketoan','other'], [p.askMore.by||p.person||'']);
 }
 
 // Bỏ từ chối (undo) — riêng cho D hoặc H
