@@ -992,7 +992,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
   </div>
 
-  <!-- Danh sách người đề xuất — v94 (D 14/10): ẨN. Người đề xuất luôn = tên người đang đăng nhập; dữ liệu persons vẫn giữ -->
+  <!-- Danh sách người đề xuất — v94 (D 14/10): ẨN với mọi người; v95: CHỈ Dũng (quản trị) thấy — bật trong renderSettings -->
   <div class="card" id="person-list-card" style="display:none">
     <div class="card-header">👤 Danh sách người đề xuất</div>
     <div class="card-body">
@@ -1862,7 +1862,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261014-v94';
+const APP_VERSION = '20261014-v95';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2098,6 +2098,7 @@ function _safeArr(key){
 }
 let proposals = _safeArr('gb_proposals');
 let persons    = _safeArr('gb_persons');
+let _acctNames = [], _acctNamesLoaded = false;   // v95: tên tài khoản đã Cho xem — chỉ Dũng nạp (xem _loadAcctNames)
 let sites      = _safeArr('gb_sites');
 let sheetUrl   = sanitizeSheetUrl(localStorage.getItem('gb_sheetUrl')||'');
 // v41: link XEM bảng tính Google (docs.google.com/spreadsheets) — chỉ nhận đúng tên miền, tránh nhét link lạ
@@ -5920,10 +5921,18 @@ function openEditProposal(id){
     siteSel.innerHTML = '<option value="Chi phí chung">🧾 Chi phí chung</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     siteSel.disabled = false;
   } else {
-    // v94 (D 14/10): người đề xuất KHÓA theo phiếu — không hiện danh sách tên người khác
-    personSel.innerHTML = `<option value="${esc(p.person||'')}">${esc(p.person||'')}</option>`;
+    // v94 (D 14/10): người đề xuất KHÓA theo phiếu — không hiện danh sách tên người khác; v95: riêng Dũng (quản trị) hiện đủ danh sách
+    if(currentRole==='dung'){
+      const opts = _proposerOptions();
+      if(p.person && !opts.some(o=>o.name===p.person)) opts.unshift({name:p.person, role:''});
+      personSel.innerHTML = '<option value="">— Chọn tên —</option>' + opts.map(pp=>`<option value="${esc(pp.name)}">${esc(pp.name)}${pp.role?' — '+esc(pp.role):''}</option>`).join('');
+      personSel.disabled = false;
+    } else {
+      personSel.innerHTML = `<option value="${esc(p.person||'')}">${esc(p.person||'')}</option>`;
+      personSel.disabled = true;
+    }
     siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
-    personSel.disabled = true; siteSel.disabled = false;
+    siteSel.disabled = false;
   }
 
   document.getElementById('edit-person').value = p.person||'';
@@ -6638,7 +6647,7 @@ function submitProposal(){
     // Kiểm tra tên đúng với tài khoản đang đăng nhập
     const roleName = currentRole==='hien'?'Hiền': currentRole==='toan'?'Toàn': currentRole==='trang'?'Trang': currentRole==='ketoan'?'Kế toán': '';
     const lockedName = currentUserName || roleName || (currentRole==='dung' ? 'Dũng' : '');
-    if(lockedName && person !== lockedName){   // v94: áp cho cả Dũng
+    if(currentRole !== 'dung' && lockedName && person !== lockedName){   // v95: Dũng (quản trị) được chọn tên người khác
       showToast('⛔ Bạn chỉ được đề xuất với tên của mình: '+lockedName);
       document.getElementById('inp-person').value = lockedName;
       return;
@@ -6726,13 +6735,43 @@ function submitProposal(){
 }
 
 // ── POPULATES ──
+// v95 (D 14/10): tên mọi tài khoản đã được Cho xem — CHỈ Dũng nạp, để ô "Người đề xuất" của Dũng hiện đủ người
+// (khai báo _acctNames ở gần "let persons" phía trên — tránh lỗi gọi trước khi khai báo)
+function _loadAcctNames(){
+  if(currentRole!=='dung' || typeof db==='undefined' || !db) return;
+  db.ref('duyetchi/userRoles').get().then(s=>{
+    const a=[];
+    if(s.exists()) Object.values(s.val()||{}).forEach(u=>{ const n = u && String(u.name||'').trim(); if(n && n!=='undefined' && (u.approved===true || u.role==='dung') && a.indexOf(n)<0) a.push(n); });
+    a.sort((x,y)=>x.localeCompare(y,'vi'));
+    if(a.join('|')===_acctNames.join('|')) return;
+    _acctNames = a;
+    try{ populateSelects(); }catch(e){}
+    try{ if(document.getElementById('person-list')) renderSettings(); }catch(e){}
+  }).catch(()=>{});
+}
+function _proposerOptions(){   // danh sách gõ tay (có chức vụ) trước, rồi tài khoản chưa có trong danh sách — không trùng
+  const seen=new Set(), out=[];
+  (persons||[]).forEach(p=>{ const n = p && String(p.name||'').trim(); if(n && !seen.has(n)){ seen.add(n); out.push({name:n, role:p.role||''}); } });
+  _acctNames.forEach(n=>{ if(!seen.has(n)){ seen.add(n); out.push({name:n, role:''}); } });
+  return out;
+}
 function populateSelects(){
   const ps=document.getElementById('inp-person');
   const ss=document.getElementById('inp-site');
   const roleName = currentRole==='hien'?'Hiền': currentRole==='toan'?'Toàn': currentRole==='trang'?'Trang': currentRole==='ketoan'?'Kế toán': '';
   const lockedName = currentUserName || roleName || (currentRole==='dung' ? 'Dũng' : '');
   const roInput = document.getElementById('inp-person-readonly');
-  if(lockedName){   // v94 (D 14/10): MỌI người (kể cả Dũng) chỉ đề xuất bằng tên của chính mình — không còn chọn tên người khác
+  if(currentRole==='dung'){
+    // v95 (D 14/10): DŨNG = quản trị → hiện ĐẦY ĐỦ: danh sách gõ tay + mọi tài khoản đã Cho xem (có cả Kế toán, người mới)
+    if(!_acctNamesLoaded){ _acctNamesLoaded = true; _loadAcctNames(); }
+    const keep = ps.value || lockedName;
+    roInput.style.display = 'none';
+    ps.style.display = 'block';
+    ps.disabled = false;
+    ps.innerHTML='<option value="">— Chọn tên —</option>'+_proposerOptions().map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
+    ps.value = keep;
+    if(ps.value !== keep) ps.value = '';
+  } else if(lockedName){   // v94 (D 14/10): người khác chỉ đề xuất bằng tên của chính mình
     // Non-D: ẩn dropdown, hiện input readonly
     ps.style.display = 'none';
     roInput.style.display = 'block';
@@ -7927,8 +7966,13 @@ function renderSettings(){
     if(es){ es.style.display = employees.length ? 'block' : 'none'; if(employees.length) renderSettingsEmpList(); }
   }catch(e){}
   updateNotifSettingsStatus();
+  { const _pc=document.getElementById('person-list-card'); if(_pc) _pc.style.display = currentRole==='dung' ? '' : 'none'; }   // v95: chỉ Dũng (quản trị) thấy
+  if(currentRole==='dung' && !_acctNamesLoaded){ _acctNamesLoaded = true; _loadAcctNames(); }
   const pl=document.getElementById('person-list');
-  pl.innerHTML=persons.length
+  const _accExtra = currentRole==='dung' ? _acctNames.filter(n=>!(persons||[]).some(p=>p && String(p.name||'').trim()===n)) : [];
+  const _accHtml = _accExtra.length ? `<div style="font-size:12px;color:var(--text-sub);margin:8px 0 4px">Tài khoản trong app (tự có trong ô chọn người đề xuất của anh):</div>`
+    + _accExtra.map(n=>`<div class="person-item"><div class="person-info"><div class="person-avatar">${esc(initials(n))}</div><div><div class="person-name">${esc(n)}</div><div class="person-role">Tài khoản app</div></div></div></div>`).join('') : '';
+  pl.innerHTML=(persons.length
     ? persons.map((p,i)=>`<div class="person-item">
         <div class="person-info">
           <div class="person-avatar">${esc(initials(p.name))}</div>
@@ -7936,7 +7980,7 @@ function renderSettings(){
         </div>
         <button class="delete-btn" onclick="delPerson(${i})">×</button>
       </div>`).join('')
-    : '<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chưa có người nào. Thêm bên dưới.</p>';
+    : '<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chưa có người nào. Thêm bên dưới.</p>') + _accHtml;
 
   const sl=document.getElementById('site-list');
   sl.innerHTML=sites.length
