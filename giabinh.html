@@ -992,8 +992,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
   </div>
 
-  <!-- Danh sách người đề xuất -->
-  <div class="card">
+  <!-- Danh sách người đề xuất — v94 (D 14/10): ẨN. Người đề xuất luôn = tên người đang đăng nhập; dữ liệu persons vẫn giữ -->
+  <div class="card" id="person-list-card" style="display:none">
     <div class="card-header">👤 Danh sách người đề xuất</div>
     <div class="card-body">
       <div id="person-list"></div>
@@ -1862,7 +1862,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261014-v93';
+const APP_VERSION = '20261014-v94';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2535,7 +2535,7 @@ function switchAuthTab(mode){
   // v131: đổ danh sách tên đã biết vào GỢI Ý (datalist) — người mới vẫn gõ tên tự do được
   if(isReg){
     const dl = document.getElementById('auth-name-list');
-    if(dl) dl.innerHTML = (persons||[]).map(p=>`<option value="${esc(p.name)}"></option>`).join('');
+    if(dl) dl.innerHTML = '';   // v94 (D 14/10): không gợi ý tên người khác — chỉ điền sẵn tên đã đăng ký
   }
 }
 
@@ -5920,9 +5920,10 @@ function openEditProposal(id){
     siteSel.innerHTML = '<option value="Chi phí chung">🧾 Chi phí chung</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
     siteSel.disabled = false;
   } else {
-    personSel.innerHTML = '<option value="">— Chọn tên —</option>' + persons.map(pp=>`<option value="${esc(pp.name)}">${esc(pp.name)}${pp.role?' — '+esc(pp.role):''}</option>`).join('');
+    // v94 (D 14/10): người đề xuất KHÓA theo phiếu — không hiện danh sách tên người khác
+    personSel.innerHTML = `<option value="${esc(p.person||'')}">${esc(p.person||'')}</option>`;
     siteSel.innerHTML = '<option value="">— Chọn công trường —</option>' + sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
-    personSel.disabled = false; siteSel.disabled = false;
+    personSel.disabled = true; siteSel.disabled = false;
   }
 
   document.getElementById('edit-person').value = p.person||'';
@@ -6636,8 +6637,8 @@ function submitProposal(){
     if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
     // Kiểm tra tên đúng với tài khoản đang đăng nhập
     const roleName = currentRole==='hien'?'Hiền': currentRole==='toan'?'Toàn': currentRole==='trang'?'Trang': currentRole==='ketoan'?'Kế toán': '';
-    const lockedName = currentUserName || roleName;
-    if(currentRole !== 'dung' && lockedName && person !== lockedName){
+    const lockedName = currentUserName || roleName || (currentRole==='dung' ? 'Dũng' : '');
+    if(lockedName && person !== lockedName){   // v94: áp cho cả Dũng
       showToast('⛔ Bạn chỉ được đề xuất với tên của mình: '+lockedName);
       document.getElementById('inp-person').value = lockedName;
       return;
@@ -6729,20 +6730,19 @@ function populateSelects(){
   const ps=document.getElementById('inp-person');
   const ss=document.getElementById('inp-site');
   const roleName = currentRole==='hien'?'Hiền': currentRole==='toan'?'Toàn': currentRole==='trang'?'Trang': currentRole==='ketoan'?'Kế toán': '';
-  const lockedName = currentUserName || roleName;
+  const lockedName = currentUserName || roleName || (currentRole==='dung' ? 'Dũng' : '');
   const roInput = document.getElementById('inp-person-readonly');
-  if(currentRole !== 'dung' && lockedName){
+  if(lockedName){   // v94 (D 14/10): MỌI người (kể cả Dũng) chỉ đề xuất bằng tên của chính mình — không còn chọn tên người khác
     // Non-D: ẩn dropdown, hiện input readonly
     ps.style.display = 'none';
     roInput.style.display = 'block';
     roInput.value = lockedName;
   } else {
-    // D: hiện dropdown, ẩn input readonly
-    roInput.style.display = 'none';
-    ps.style.display = 'block';
-    ps.disabled = false;
-    ps.innerHTML='<option value="">— Chọn tên —</option>'+persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
-    ps.value = '';
+    // v94: chưa có tên tài khoản → KHÔNG hiện tên người khác; ô trống, gửi phiếu sẽ bị nhắc
+    ps.style.display = 'none';
+    roInput.style.display = 'block';
+    roInput.value = '';
+    roInput.placeholder = 'Tài khoản chưa có họ tên — báo anh Dũng';
   }
   ss.innerHTML='<option value="">— Chọn công trường —</option>'+sites.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('');
   if(sites.length===1) ss.value = sites[0];   // v41: chỉ có 1 công trường → chọn sẵn (vẫn đổi được khi có thêm dự án)
@@ -7587,7 +7587,7 @@ function showUpdateRolePrompt(){
   if(!overlay) return;
   // v132: gợi ý = danh sách người đã biết (nếu có); điền SẴN tên đã đăng ký để người mới chỉ cần bấm Xác nhận
   const dl = document.getElementById('first-login-namelist');
-  if(dl) dl.innerHTML = (persons||[]).map(p=>`<option value="${esc(p.name)}"></option>`).join('');
+  if(dl) dl.innerHTML = '';   // v94 (D 14/10): không gợi ý tên người khác — chỉ điền sẵn tên đã đăng ký
   const inp = document.getElementById('first-login-name');
   if(inp && !inp.value) inp.value = currentUserName || '';
   overlay.style.display = 'flex';
