@@ -298,7 +298,7 @@ const CAU_HINH = {
     appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
   },
   GOC: 'hopdong',                 // mọi nhánh của app nằm dưới hopdong/ (luật trong database.rules.json của repo Duyet-Chi)
-  PHIEN_BAN: '20261008-v35',
+  PHIEN_BAN: '20261014-v36',
   VAPID_PUBLIC: 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0', // khoá CÔNG KHAI web push, cùng bộ khoá với app Duyệt Chi (khoá bí mật nằm trong Firebase, chỉ máy chủ đọc)
   NHAC_TRUOC_NGAY: 30,            // nhắc trước 30 ngày (quy tắc 18)
   NHAC_LAP_NGAY: 5,               // sau đó cứ 5 ngày nhắc lại
@@ -314,10 +314,87 @@ function _soPhienBan(v){ var m=/^(\d{8})-v(\d+)$/.exec(String(v||'').trim()); re
 function kiemTraBanMoi(){
   fetch('version-hopdong.txt?_='+Date.now(),{cache:'no-store'}).then(r=>r.ok?r.text():null).then(txt=>{
     if(!txt) return; var sv=_soPhienBan(txt), lv=_soPhienBan(CAU_HINH.PHIEN_BAN);
-    if(sv>0&&lv>0?sv>lv:txt.trim()!==CAU_HINH.PHIEN_BAN) document.getElementById('update-banner').style.display='block';
+    _auFound((sv>0&&lv>0?sv>lv:txt.trim()!==CAU_HINH.PHIEN_BAN) ? txt.trim() : '', capNhatNgay); // v14/10: tự cập nhật ngầm
   }).catch(()=>{});
 }
-function capNhatNgay(){ location.replace(location.origin+location.pathname+'?u='+Date.now()); }
+function capNhatNgay(){ _auRefreshCache().then(function(){ location.replace(location.origin+location.pathname+'?u='+Date.now()); }); }
+// ── TỰ CẬP NHẬT NGẦM (D 14/10/2026: "không cần bấm cập nhật, tự chạy ngầm") ──
+// Thấy bản mới trên máy chủ → KHÔNG bắt bấm; tự tải lại vào lúc AN TOÀN:
+//  (a) vừa mở / vừa quay lại app mà chưa chạm gì (trong 20 giây đầu), hoặc
+//  (b) lúc rời app (ẩn xuống nền) → lần sau mở ra đã là bản mới.
+// KHÔNG tải lại khi: đang gõ trong 1 ô, còn ô đã nhập mà chưa lưu (form còn mở), hoặc vừa bấm gì
+// chưa đủ 5 giây (để lệnh ghi kịp gửi đi). Đang dùng dở thì đợi tới lúc rời app.
+// Chống lặp: cùng 1 bản mà tự tải 2 lần (trong 30 phút) vẫn chưa lên (iPhone giữ bản cũ) → thôi tự động,
+// hiện lại thanh cũ để bấm tay. Trước khi tải lại: làm tươi bản lưu tạm của địa chỉ mở app (…?t=pwa)
+// để lần mở sau từ màn hình chính không lôi bản cũ ra nữa.
+var _AU = { key:'au_' + (location.pathname.split('/').pop() || 'app'), want:'', go:null, lastAct:0, seenAt:Date.now(), typed:[] };
+(function(){
+  function act(e){
+    _AU.lastAct = Date.now();
+    if(e && (e.type==='input' || e.type==='change') && e.target && _AU.typed.indexOf(e.target) < 0){
+      _AU.typed.push(e.target); if(_AU.typed.length > 200) _AU.typed.shift();
+    }
+  }
+  ['touchstart','mousedown','keydown','input','change','wheel'].forEach(function(ev){
+    document.addEventListener(ev, act, {passive:true, capture:true});
+  });
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible'){ _AU.seenAt = Date.now(); _AU.lastAct = 0; }
+    else _auTry();
+  });
+})();
+// Còn dữ liệu đang nhập dở? (chỉ tính ô NGƯỜI DÙNG đã gõ/chọn, còn hiện trên màn hình và còn nội dung)
+function _auDirty(){
+  try{
+    var a = document.activeElement;
+    if(a && (a.isContentEditable || a.tagName === 'TEXTAREA' ||
+       (a.tagName === 'INPUT' && !/^(button|submit|reset|checkbox|radio|range|color)$/i.test(a.type||'')))) return true;
+    for(var i = 0; i < _AU.typed.length; i++){
+      var e = _AU.typed[i];
+      if(!e || !document.contains(e) || !e.getClientRects().length) continue; // form đã đóng / đã lưu
+      var t = (e.type || '').toLowerCase();
+      if(t === 'file'){ if(e.files && e.files.length) return true; }
+      else if(t === 'checkbox' || t === 'radio' || e.tagName === 'SELECT') continue; // đổi bộ lọc mất cũng không sao
+      else if(e.isContentEditable ? (e.textContent || '').trim() : String(e.value || '').trim()) return true;
+    }
+  }catch(x){}
+  return false;
+}
+function _auRefreshCache(){
+  return new Promise(function(done){
+    setTimeout(done, 4000);
+    try{
+      var p = location.pathname;
+      Promise.all([p, p + '?t=pwa'].map(function(u){
+        return fetch(u, {cache:'reload', credentials:'same-origin'}).catch(function(){});
+      })).then(done, done);
+    }catch(e){ done(); }
+  });
+}
+// Gọi sau mỗi lần so phiên bản: want = phiên bản máy chủ nếu MỚI HƠN, '' nếu máy đang chạy bản mới nhất.
+function _auFound(want, go){
+  _AU.go = go;
+  if(!want){ _AU.want = ''; try{ localStorage.removeItem(_AU.key); }catch(e){} return; }
+  _AU.want = want;
+  _auTry();
+}
+function _auTry(){
+  if(!_AU.want || !_AU.go) return;
+  var now = Date.now(), hidden = document.visibilityState === 'hidden';
+  if(_auDirty()) return;
+  if(_AU.lastAct && now - _AU.lastAct < 5000) return;
+  if(!hidden && (_AU.lastAct || now - _AU.seenAt > 20000)) return; // đang dùng dở → đợi lúc rời app
+  var b = document.getElementById('update-banner');
+  var r = {};
+  try{ r = JSON.parse(localStorage.getItem(_AU.key) || '{}') || {}; }catch(e){ r = {}; }
+  if(r.v !== _AU.want || now - (r.t || 0) > 30*60*1000) r = {v:_AU.want, n:0, t:now};
+  if(r.n >= 2){ if(b) b.style.display = 'block'; return; }  // tự tải 2 lần chưa lên → để người dùng bấm
+  r.n++;
+  try{ localStorage.setItem(_AU.key, JSON.stringify(r)); }catch(e){}
+  var go = _AU.go; _AU.want = '';
+  if(b && !hidden){ b.textContent = '⏳ Đang tự cập nhật bản mới...'; b.onclick = null; b.style.display = 'block'; }
+  go();
+}
 
 // ===== 2. DU_LIEU_TINH — danh sách công ty, trạng thái, loại hợp đồng, loại bảo lãnh… (mục 1.4) =====
 const CONG_TY = { PVA:{ ten:'Công ty CP Xây lắp công trình Phúc Vinh An', tenVietTat:'PVA', ghiChu:'tên cũ: Công ty CP Xây dựng 439' },
