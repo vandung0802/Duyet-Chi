@@ -1643,6 +1643,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div style="flex-shrink:0;display:flex;gap:6px;padding:8px;background:#fff;border-top:1px solid var(--gray-border);padding-bottom:calc(8px + env(safe-area-inset-bottom))">
     <button onclick="document.getElementById('chat-img-input').click()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gửi ảnh">📷</button>
     <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImg(this)">
+    <button onclick="chatPasteImg()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Dán ảnh đã sao chép">📥</button>
     <button onclick="openChatPick()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gắn phiếu vào tin">📋</button>
     <input id="chat-msg-inp" type="text" autocomplete="off" placeholder="Nhắn tin... (gõ @ để tag tên)" oninput="_chatTagHint(this)" onkeydown="if(event.key==='Enter')sendGroupMsg()" style="flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;outline:none;font-family:inherit">
     <button onclick="sendGroupMsg()" style="flex-shrink:0;padding:9px 16px;font-size:14px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:10px;cursor:pointer">Gửi</button>
@@ -1867,7 +1868,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261015-v99';
+const APP_VERSION = '20261015-v100';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -10421,6 +10422,17 @@ function clearChatAttachImg(){ _chatAttachImg=null; _chatRenderAttach(); }
 function handleChatImg(input){
   const f=(input.files||[])[0];
   input.value='';
+  _chatAddImgFile(f);
+}
+// v100: nút 📥 — dán ảnh đang có trong bộ nhớ tạm (điện thoại: sao chép ảnh ở Zalo / Ảnh rồi bấm nút này)
+async function chatPasteImg(){ const b = await _readClipboardImages(); if(b && b.length) _chatAddImgFile(b[0]); }
+// v100: đang mở Chat nhóm mà DÁN (Ctrl+V, hoặc giữ ô nhắn → Dán) có ảnh → gắn ảnh chờ gửi
+document.addEventListener('paste', (e)=>{
+  const cp=document.getElementById('chat-page'); if(!cp || cp.style.display==='none') return;
+  const items=(e.clipboardData||window.clipboardData)?.items; if(!items) return;
+  for(const it of items){ if(it.kind==='file' && it.type.startsWith('image/')){ const f=it.getAsFile(); if(f){ e.preventDefault(); _chatAddImgFile(f); return; } } }
+});
+function _chatAddImgFile(f){
   if(!f || !f.type || !f.type.startsWith('image/')) return;
   showToast('⏳ Đang tải ảnh lên...');
   compressImage(f).then(dataUrl=>
