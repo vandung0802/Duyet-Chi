@@ -1868,7 +1868,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261015-v101';
+const APP_VERSION = '20261015-v102';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4053,11 +4053,13 @@ function getMyPendingItems(){
     const transferred = getTotalTransferred(p);
     const _ask = askMorePending(p);   // v96: phiếu đã chuyển đủ nhưng có người xin duyệt thêm → vẫn vào chuông D / H&L
     if(currentRole==='dung'){
-      if(dAmt < total - 0.0001 && (p.status!=='transferred' || _ask))
-        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : 'Chờ D duyệt', person:p.person, id:p.id});
+      const _hd=_payDueInfo(p), _den=!!(_hd && _hd.unap && _hd.left<=0);   // v102: đến hẹn thanh toán nốt mà phần còn lại chưa duyệt
+      if(dAmt < total - 0.0001 && (p.status!=='transferred' || _ask || _den))
+        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : _den ? 'Đến hẹn: duyệt nốt phần còn lại' : 'Chờ D duyệt', person:p.person, id:p.id});
     } else if(currentRole==='hien'){
-      if(hAmt < total - 0.0001 && (p.status!=='transferred' || _ask))
-        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : 'Chờ H&L duyệt', person:p.person, id:p.id});
+      const _hd=_payDueInfo(p), _den=!!(_hd && _hd.unap && _hd.left<=0);   // v102
+      if(hAmt < total - 0.0001 && (p.status!=='transferred' || _ask || _den))
+        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : _den ? 'Đến hẹn: duyệt nốt phần còn lại' : 'Chờ H&L duyệt', person:p.person, id:p.id});
     } else if(currentRole==='toan'){
       const official = getOfficialApprovedAmount(p)||0;
       if(official > 0 && transferred < official - 0.0001 && !_payDueLater(p))   // v98
@@ -5176,15 +5178,18 @@ function _taDueToggle(){
 // v98: thông tin hẹn chuyển nốt của 1 phiếu (null nếu không hẹn / đã chuyển đủ). left = số ngày còn tới hẹn (âm = quá hẹn)
 function _payDueInfo(p){
   if(!p || !p.payDue || p.status==='rejected') return null;
-  const remain=(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p); if(remain<=0.0001) return null;
+  const remain=_payDueRemainAll(p); if(remain<=0.0001) return null;   // v102: tính cả phần chưa duyệt
   const a=String(p.payDue).split('-').map(Number); if(a.length!==3||!a[0]) return null;
   const t=new Date(); const left=Math.round((new Date(a[0],a[1]-1,a[2]) - new Date(t.getFullYear(),t.getMonth(),t.getDate()))/86400000);
-  return { left, remain, dm: String(a[2]).padStart(2,'0')+'/'+String(a[1]).padStart(2,'0') };
+  const unap=(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)<=0.0001;   // phần còn lại chưa được duyệt
+  return { left, remain, unap, dm: String(a[2]).padStart(2,'0')+'/'+String(a[1]).padStart(2,'0') };
 }
 // v99: ai được đặt hẹn chuyển nốt: phiếu ĐÃ chuyển một phần (còn thiếu), người lập hoặc D / H&L / Toàn
+// v102: phần còn phải trả = max(số duyệt chính thức, số đề xuất) − đã chuyển (gồm cả phần CHƯA duyệt)
+function _payDueRemainAll(p){ return Math.max(getOfficialApprovedAmount(p)||0, parseFloat(p.amount)||0) - getTotalTransferred(p); }
 function _payDueCan(p){
   if(!p || p.kind==='kh' || p.status==='rejected' || !currentUser) return false;
-  const tr=getTotalTransferred(p), remain=(getOfficialApprovedAmount(p)||0)-tr;
+  const tr=getTotalTransferred(p), remain=_payDueRemainAll(p);
   if(!(tr>0) || remain<=0.0001) return false;
   return _isMyProposal(p) || currentRole==='dung' || currentRole==='hien' || currentRole==='toan';
 }
@@ -5193,13 +5198,13 @@ function openPayDueModal(id){
   let ov=document.getElementById('paydue-modal');
   if(!ov){ ov=document.createElement('div'); ov.id='paydue-modal'; ov.style.cssText='position:fixed;inset:0;z-index:4000;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;padding:16px';
     ov.onclick=e=>{ if(e.target===ov) ov.style.display='none'; }; document.body.appendChild(ov); }
-  const remain=(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p);
+  const remain=_payDueRemainAll(p), unap=(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)<=0.0001;
   ov.innerHTML=`<div style="background:#fff;border-radius:14px;padding:16px;width:100%;max-width:360px">
     <div style="font-size:15px;font-weight:800;margin-bottom:4px">⏰ Hẹn chuyển nốt phần còn lại</div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;line-height:1.45">${esc(p.desc||'')}<br>Đã chuyển ${fmtVND(getTotalTransferred(p))} · <b style="color:#c2410c">còn ${fmtVND(remain)}</b></div>
     <label class="form-label">Ngày hẹn chuyển nốt</label>
     <input class="form-input" id="paydue-inp" type="date" value="${esc(p.payDue||'')}" style="margin-bottom:6px">
-    <div style="font-size:11px;color:var(--text-sub);margin-bottom:12px;line-height:1.4">Toàn được nhắc chuyển nốt khi tới ngày này. Thẻ phiếu hiện dòng hẹn cho mọi người cùng thấy.</div>
+    <div style="font-size:11px;color:var(--text-sub);margin-bottom:12px;line-height:1.4">${unap?'Phần còn lại <b>chưa được duyệt</b>: tới ngày này app nhắc Dũng, Hiền / Lan duyệt nốt và Toàn chuyển.':'Toàn được nhắc chuyển nốt khi tới ngày này.'} Thẻ phiếu hiện dòng hẹn cho mọi người cùng thấy.</div>
     <div style="display:flex;gap:6px">
       <button class="btn-sm btn-primary-full" style="flex:1;margin:0" onclick="savePayDue('${sid(p.id)}')">💾 Lưu hẹn</button>
       ${p.payDue?`<button class="btn-sm btn-outline-full" style="flex:0 0 auto;margin:0;color:#b91c1c;border-color:#fca5a5" onclick="savePayDue('${sid(p.id)}',true)">Bỏ hẹn</button>`:''}
@@ -5219,12 +5224,16 @@ function savePayDue(id, clear){
   _cardCache.delete(p.id); save(); renderAll();
   document.getElementById('paydue-modal').style.display='none';
   showToast(d ? ('⏰ Đã hẹn chuyển nốt ngày '+dm) : 'Đã bỏ hẹn');
-  if(d && currentRole!=='toan'){ try{ sendPushNotif('⏰ '+(getCurrentUserName()||'')+' hẹn chuyển nốt ngày '+dm, (p.desc||'')+': còn '+fmtVND((getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)), ['toan']); }catch(e){} }
+  if(d){ try{ const unap=(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)<=0.0001;   // v102: phần còn lại chưa duyệt → báo cả D, H&L
+    const rs=(unap?['dung','hien','toan']:['toan']).filter(r=>r!==currentRole);
+    if(rs.length) sendPushNotif('⏰ '+(getCurrentUserName()||'')+' hẹn thanh toán nốt ngày '+dm, (p.desc||'')+': còn '+fmtVND(_payDueRemainAll(p))+(unap?' (phần này chưa duyệt)':''), rs); }catch(e){} }
 }
 function _payDueLater(p){ const i=_payDueInfo(p); return !!(i && i.left>0); }   // hẹn ngày tương lai → chưa nhắc
 function _payDueChip(p){
   const i=_payDueInfo(p); if(!i) return '';
-  const lbl = i.left>0 ? ('⏰ Hẹn chuyển nốt '+fmtTr(i.remain)+' · '+i.dm) : i.left===0 ? ('⏰ Đến hẹn hôm nay: chuyển nốt '+fmtTr(i.remain)) : ('⏰ Quá hẹn '+(-i.left)+' ngày: còn '+fmtTr(i.remain)+' (hẹn '+i.dm+')');
+  const viec = i.unap ? 'duyệt + chuyển nốt ' : 'chuyển nốt ';
+  const lbl = (i.left>0 ? ('⏰ Hẹn '+viec+fmtTr(i.remain)+' · '+i.dm) : i.left===0 ? ('⏰ Đến hẹn hôm nay: '+viec+fmtTr(i.remain)) : ('⏰ Quá hẹn '+(-i.left)+' ngày: còn '+fmtTr(i.remain)+' (hẹn '+i.dm+')'))
+    + (i.unap ? ' · phần này chưa duyệt' : '');
   const red = i.left<=0;
   return `<div style="display:inline-block;font-size:12px;font-weight:800;color:${red?'#b91c1c':'#c2410c'};background:${red?'#fee2e2':'#fff7ed'};border:1px solid ${red?'#fca5a5':'#fed7aa'};padding:3px 9px;border-radius:8px;margin-top:4px">${lbl}</div>`;
 }
