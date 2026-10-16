@@ -1278,6 +1278,19 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </div>
     </div>
     <div id="cash-in-src"></div>
+    <div style="display:flex;gap:6px;margin:0 0 8px">
+      <input id="in-search" type="search" list="in-name-list" placeholder="🔍 Tìm theo nội dung / người ghi…" oninput="renderCashList('in')" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px">
+      <datalist id="in-name-list"></datalist>
+      <select id="in-filter" onchange="renderCashList('in')" style="padding:9px 8px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff;max-width:46%">
+        <option value="">Tất cả</option>
+        <option value="cdt">Chủ đầu tư</option>
+        <option value="134">Công ty 134</option>
+        <option value="pva">Công ty PVA</option>
+        <option value="other">Khác</option>
+        <option value="ret">Trả lại vốn góp</option>
+      </select>
+    </div>
+    <div id="in-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
     <div id="cash-in-list"></div>
   </div>
 
@@ -1289,6 +1302,17 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button onclick="openCashModal('dep')" style="font-size:13px;padding:8px 16px;background:#b45309;color:#fff;border:none;border-radius:10px;font-weight:700;cursor:pointer">➕ Thêm khoản KÝ QUỸ / CỌC</button><!-- v65: cùng cỡ nút tab Thu -->
       </div>
     </div>
+    <div style="display:flex;gap:6px;margin:0 0 8px">
+      <input id="dep-search" type="search" list="dep-name-list" placeholder="🔍 Tìm theo nơi giữ tiền / nội dung…" oninput="renderCashList('dep')" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px">
+      <datalist id="dep-name-list"></datalist>
+      <select id="dep-filter" onchange="renderCashList('dep')" style="padding:9px 8px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff;max-width:46%">
+        <option value="">Tất cả</option>
+        <option value="open">Còn treo</option>
+        <option value="done">Đã lấy về đủ</option>
+        <option value="stale">Treo quá 6 tháng</option>
+      </select>
+    </div>
+    <div id="dep-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
     <div id="cash-dep-list"></div>
   </div>
 
@@ -1879,7 +1903,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261016-v103';
+const APP_VERSION = '20261016-v104';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -11935,11 +11959,36 @@ function renderCashList(type){
   const arr = cashflow.filter(r=> type==='in' ? (r.type==='in' || r.type==='ret') : r.type===type)   // v40: tab Thu hiện cả khoản trả lại
                       .sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
   if(!arr.length){
+    const se0 = document.getElementById(type+'-sum'); if(se0) se0.style.display='none';
     el.innerHTML = `<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">
       Chưa có khoản ${type==='in'?'thu':'ký quỹ / cọc'} nào</div></div>`;
     return;
   }
-  el.innerHTML = arr.map(r => r.type==='ret' ? cashCardRet(r) : (type==='in' ? cashCardIn(r) : cashCardDep(r))).join('');
+  // v104: tìm (không dấu) + lọc + dòng tổng phần đang lọc — giống tab Vay
+  try{ const dl=document.getElementById(type+'-name-list'); if(dl){ const ns=[...new Set(arr.map(r=>String((type==='dep'?r.holder:r.desc)||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi')).slice(0,80); dl.innerHTML=ns.map(n=>`<option value="${esc(n)}">`).join(''); } }catch(e){}
+  const qRaw = ((document.getElementById(type+'-search')||{}).value||'').trim(), q = _mnNorm(qRaw).trim();
+  const fl = (document.getElementById(type+'-filter')||{}).value||'';
+  const depOld = r => { const t = r.date ? new Date(r.date).getTime() : (r.ts||0); return t ? Math.floor((Date.now()-t)/86400000) : 0; };
+  const shown = arr.filter(r=>{
+    if(q){ const src=(CASH_SRC[r.src]||CASH_SRC.other).label; if(_mnNorm([r.desc,r.holder,r.byName,src,r.type==='ret'?'tra lai von gop':''].join(' ')).indexOf(q)<0) return false; }
+    if(!fl) return true;
+    if(type==='in') return fl==='ret' ? r.type==='ret' : (r.type==='in' && (CASH_SRC[r.src]?r.src:'other')===fl);
+    const done = cashDepOutstanding(r) <= 0.0001;
+    return fl==='open' ? !done : fl==='done' ? done : (!done && depOld(r) > 180);
+  });
+  const se = document.getElementById(type+'-sum');
+  if(se){
+    if(q||fl){
+      const N=v=>parseFloat(v)||0; let txt;
+      if(type==='in'){ const tin=shown.filter(r=>r.type==='in').reduce((t,r)=>t+N(r.amount),0), tret=shown.filter(r=>r.type==='ret').reduce((t,r)=>t+N(r.amount),0);
+        txt=`${shown.length} khoản · <span style="color:#047857">thu ${fmtVND(tin)}</span>${tret?` · <span style="color:#6d28d9">trả lại ${fmtVND(tret)}</span>`:''}`; }
+      else { const tg=shown.reduce((t,r)=>t+N(r.amount),0), tl=shown.reduce((t,r)=>t+Math.max(0,cashDepOutstanding(r)),0);
+        txt=`${shown.length} khoản · đưa ${fmtVND(tg)} · <span style="color:#b45309">còn treo ${fmtVND(tl)}</span>`; }
+      se.innerHTML=(q?'🔍 '+esc(qRaw)+' · ':'')+txt; se.style.display='block';
+    } else se.style.display='none';
+  }
+  if(!shown.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Không có khoản nào khớp — thử bỏ bớt chữ tìm hoặc chọn "Tất cả"</div></div>'; return; }
+  el.innerHTML = shown.map(r => r.type==='ret' ? cashCardRet(r) : (type==='in' ? cashCardIn(r) : cashCardDep(r))).join('');
 }
 
 // ── XOÁ KHOẢN TRONG CÂN ĐỐI (v25 — D chốt 22/09/2026) ──
