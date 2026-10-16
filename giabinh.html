@@ -1298,6 +1298,17 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Tiền <b>vay ngân hàng, vay cá nhân</b> về tài khoản dự án và các lần <b>trả nợ</b> (tách gốc, lãi). Thủ quỹ (Toàn) ghi. Lãi vay tính là chi phí nội nghiệp. Sắp đến hạn trả thì nút Cân đối có chấm đỏ.</div>
       <button onclick="openLoanModal()" class="btn-sm btn-primary-full">➕ Ghi khoản VAY</button>
     </div></div>
+    <div style="display:flex;gap:6px;margin:0 0 8px">
+      <input id="loan-search" type="search" list="loan-name-list" placeholder="🔍 Tìm theo người cho vay / nội dung…" oninput="renderLoanList()" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px">
+      <datalist id="loan-name-list"></datalist>
+      <select id="loan-filter" onchange="renderLoanList()" style="padding:9px 8px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
+        <option value="">Tất cả</option>
+        <option value="owe">Còn nợ</option>
+        <option value="done">Đã trả hết gốc</option>
+        <option value="due">Sắp / quá hạn</option>
+      </select>
+    </div>
+    <div id="loan-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
     <div id="cash-loan-list"></div>
   </div>
 
@@ -1305,7 +1316,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="cash-tab-adv" style="display:none">
     <div class="card"><div class="card-body" style="padding:12px;font-size:12px;color:var(--text-sub);line-height:1.45">Mỗi người đi công trường có một <b>sổ tạm ứng</b>: phiếu tạm ứng Toàn chuyển → cộng vào sổ; chi xong, <b>người lập phiếu hoặc Kế toán</b> kê từng khoản đã chi ngay trong sổ; từng khoản chi có ô <b>D duyệt</b> (khi người khác ứng) và ô <b>H&L duyệt</b> — H&L duyệt xong mới trừ sổ và tính là chi phí; tiền nộp lại do <b>Toàn xác nhận</b>. Bấm 🔍 Xem để thấy đủ nội dung, thuế, ảnh chứng từ của từng món trước khi duyệt. Chi ít hơn ứng thì còn dư trên sổ; chi vượt thì sổ <b>âm</b> (công ty còn nợ). Kết sổ: dư → nộp lại quỹ; âm → lập phiếu tạm ứng mới để chi bù.</div></div>
     <div style="display:flex;gap:6px;margin:0 0 8px">
-      <input id="adv-search" type="text" placeholder="🔍 Tìm theo tên người nhận tạm ứng…" oninput="renderAdvLedger()" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:14px;font-family:inherit">
+      <input id="adv-search" type="search" placeholder="🔍 Tìm theo tên người nhận tạm ứng…" oninput="renderAdvLedger()" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:14px;font-family:inherit">
       <select id="adv-filter" onchange="renderAdvLedger()" style="padding:9px 8px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px;font-weight:600;color:var(--text);background:#fff">
         <option value="">Tất cả</option>
         <option value="hold">Còn giữ tiền</option>
@@ -1868,7 +1879,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261015-v102';
+const APP_VERSION = '20261016-v103';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -1932,7 +1943,7 @@ function _auDirty(){
       if(!e || !document.contains(e) || !e.getClientRects().length) continue; // form đã đóng / đã lưu
       var t = (e.type || '').toLowerCase();
       if(t === 'file'){ if(e.files && e.files.length) return true; }
-      else if(t === 'checkbox' || t === 'radio' || e.tagName === 'SELECT') continue; // đổi bộ lọc mất cũng không sao
+      else if(t === 'checkbox' || t === 'radio' || t === 'search' || e.tagName === 'SELECT') continue; // đổi bộ lọc / ô tìm mất cũng không sao (v103)
       else if(e.isContentEditable ? (e.textContent || '').trim() : String(e.value || '').trim()) return true;
     }
   }catch(x){}
@@ -12173,8 +12184,25 @@ async function saveBankBalance(a){
 // ══ v41: VAY / TRẢ NỢ / CHUYỂN NỘI BỘ (D chốt 25/09/2026) ══
 function renderLoanList(){
   const el = document.getElementById('cash-loan-list'); if(!el) return;
-  const loans = cashflow.filter(r=>r.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
-  if(!loans.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có khoản vay nào</div></div>'; return; }
+  const allLoans = cashflow.filter(r=>r.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
+  const sumEl = document.getElementById('loan-sum');
+  // v103: tìm theo người cho vay / nội dung / người ghi (không dấu) + lọc tình trạng + tổng phần đang lọc
+  try{ const dl=document.getElementById('loan-name-list'); if(dl){ const ns=[...new Set(allLoans.map(l=>String(l.lenderName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi')); dl.innerHTML=ns.map(n=>`<option value="${esc(n)}">`).join(''); } }catch(e){}
+  const q = _mnNorm((document.getElementById('loan-search')||{}).value||'').trim();
+  const fl = (document.getElementById('loan-filter')||{}).value||'';
+  const loans = allLoans.filter(l=>{
+    if(q){ const lf=LOAN_FROM[l.lender]||LOAN_FROM.canhan; if(_mnNorm([l.lenderName,l.desc,lf.label,l.byName].join(' ')).indexOf(q)<0) return false; }
+    if(!fl) return true;
+    const left=loanLeft(l), done=left<=0.0001, d=daysTo(l.due);
+    return fl==='owe' ? !done : fl==='done' ? done : (!done && d!==null && d<=7);
+  });
+  if(sumEl){
+    if((q||fl) && allLoans.length){ const owe=loans.reduce((t,l)=>t+Math.max(0,loanLeft(l)),0), vay=loans.reduce((t,l)=>t+(parseFloat(l.amount)||0),0);
+      sumEl.innerHTML=`${q?'🔍 '+esc((document.getElementById('loan-search')||{}).value.trim())+' · ':''}${loans.length} khoản · vay ${fmtVND(vay)} · <span style="color:#b91c1c">còn nợ ${fmtVND(owe)}</span>`; sumEl.style.display='block'; }
+    else sumEl.style.display='none';
+  }
+  if(!allLoans.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có khoản vay nào</div></div>'; return; }
+  if(!loans.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Không có khoản vay nào khớp — thử bỏ bớt chữ tìm hoặc chọn "Tất cả"</div></div>'; return; }
   el.innerHTML = loans.map(l=>{
     const rp = loanRepaid(l), left = loanLeft(l), amt = parseFloat(l.amount)||0, done = left <= 0.0001;
     const d = daysTo(l.due);
