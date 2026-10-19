@@ -1903,7 +1903,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261016-v104';
+const APP_VERSION = '20261019-v105';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -5224,8 +5224,8 @@ function _payDueInfo(p){
 function _payDueRemainAll(p){ return Math.max(getOfficialApprovedAmount(p)||0, parseFloat(p.amount)||0) - getTotalTransferred(p); }
 function _payDueCan(p){
   if(!p || p.kind==='kh' || p.status==='rejected' || !currentUser) return false;
-  const tr=getTotalTransferred(p), remain=_payDueRemainAll(p);
-  if(!(tr>0) || remain<=0.0001) return false;
+  const remain=_payDueRemainAll(p);
+  if(remain<=0.0001) return false;   // v105: chưa chuyển lần nào cũng hẹn được (vd chuyển cọc trước, phần còn lại hẹn sau)
   return _isMyProposal(p) || currentRole==='dung' || currentRole==='hien' || currentRole==='toan';
 }
 function openPayDueModal(id){
@@ -5236,7 +5236,7 @@ function openPayDueModal(id){
   const remain=_payDueRemainAll(p), unap=(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)<=0.0001;
   ov.innerHTML=`<div style="background:#fff;border-radius:14px;padding:16px;width:100%;max-width:360px">
     <div style="font-size:15px;font-weight:800;margin-bottom:4px">⏰ Hẹn chuyển nốt phần còn lại</div>
-    <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;line-height:1.45">${esc(p.desc||'')}<br>Đã chuyển ${fmtVND(getTotalTransferred(p))} · <b style="color:#c2410c">còn ${fmtVND(remain)}</b></div>
+    <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px;line-height:1.45">${esc(p.desc||'')}<br>${getTotalTransferred(p)>0?`Đã chuyển ${fmtVND(getTotalTransferred(p))} · <b style="color:#c2410c">còn ${fmtVND(remain)}</b>`:`<b style="color:#c2410c">Chưa chuyển lần nào</b> · tổng ${fmtVND(remain)}. Toàn vẫn được nhắc chuyển lần đầu (vd tiền cọc) như thường; <b>phần còn lại</b> sau lần đó chờ tới ngày hẹn mới nhắc.`}</div>
     <label class="form-label">Ngày hẹn chuyển nốt</label>
     <input class="form-input" id="paydue-inp" type="date" value="${esc(p.payDue||'')}" style="margin-bottom:6px">
     <div style="font-size:11px;color:var(--text-sub);margin-bottom:12px;line-height:1.4">${unap?'Phần còn lại <b>chưa được duyệt</b>: tới ngày này app nhắc Dũng, Hiền / Lan duyệt nốt và Toàn chuyển.':'Toàn được nhắc chuyển nốt khi tới ngày này.'} Thẻ phiếu hiện dòng hẹn cho mọi người cùng thấy.</div>
@@ -5263,9 +5263,13 @@ function savePayDue(id, clear){
     const rs=(unap?['dung','hien','toan']:['toan']).filter(r=>r!==currentRole);
     if(rs.length) sendPushNotif('⏰ '+(getCurrentUserName()||'')+' hẹn thanh toán nốt ngày '+dm, (p.desc||'')+': còn '+fmtVND(_payDueRemainAll(p))+(unap?' (phần này chưa duyệt)':''), rs); }catch(e){} }
 }
-function _payDueLater(p){ const i=_payDueInfo(p); return !!(i && i.left>0); }   // hẹn ngày tương lai → chưa nhắc
+function _payDueLater(p){ const i=_payDueInfo(p); return !!(i && i.left>0 && getTotalTransferred(p)>0); }   // v105: chưa chuyển lần nào → vẫn nhắc chuyển lần đầu   // hẹn ngày tương lai → chưa nhắc
 function _payDueChip(p){
   const i=_payDueInfo(p); if(!i) return '';
+  if(!(getTotalTransferred(p)>0)){   // v105: chưa chuyển lần nào
+    const red0 = i.left<0;
+    return `<div style="display:inline-block;font-size:12px;font-weight:800;color:${red0?'#b91c1c':'#c2410c'};background:${red0?'#fee2e2':'#fff7ed'};border:1px solid ${red0?'#fca5a5':'#fed7aa'};padding:3px 9px;border-radius:8px;margin-top:4px">⏰ Chuyển trước 1 phần · phần còn lại hẹn ${i.dm}${red0?' (đã quá hẹn)':''}</div>`;
+  }
   const viec = i.unap ? 'duyệt + chuyển nốt ' : 'chuyển nốt ';
   const lbl = (i.left>0 ? ('⏰ Hẹn '+viec+fmtTr(i.remain)+' · '+i.dm) : i.left===0 ? ('⏰ Đến hẹn hôm nay: '+viec+fmtTr(i.remain)) : ('⏰ Quá hẹn '+(-i.left)+' ngày: còn '+fmtTr(i.remain)+' (hẹn '+i.dm+')'))
     + (i.unap ? ' · phần này chưa duyệt' : '');
