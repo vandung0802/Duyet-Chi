@@ -1903,7 +1903,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261019-v105';
+const APP_VERSION = '20261022-v106';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -7243,6 +7243,7 @@ function _sheetDailyReconcile(force){
     });
     (assets||[]).forEach(a=>jobs.push(()=>syncAssetToSheet(a)));
     (cashflow||[]).forEach(r=>jobs.push(()=>syncCashToSheet(r)));
+    jobs.push(()=>syncReconcileToSheet());   // v106: dọn dòng mất mã / trùng mã (vd 2 dòng "cáp cẩu D20" 20/10)
     jobs.push(()=>_sheetFetch(sheetUrl+'?action=resyncReport&id=_', null));
     if(proposals.some(p=>p.kind==='salary')) jobs.push(()=>_sheetFetch(sheetUrl+'?action=luongReport&id=_', null));
     jobs.forEach((fn,i)=>setTimeout(()=>{ try{ fn(); }catch(e){} }, i*1200));
@@ -8967,6 +8968,7 @@ function syncAllExpenseToSheet(){
     if(i===list.length-1){
       // dòng cuối đã gửi → chờ chút cho các dòng kịp ghi rồi dựng lại báo cáo 1 lần
       setTimeout(()=>{
+        syncReconcileToSheet();   // v106: dọn dòng mất mã / trùng mã rồi mới dựng báo cáo
         var s=document.createElement('script'); s.src=sheetUrl+'?action=resyncReport&id=_'; document.head.appendChild(s); setTimeout(()=>s.remove(),8000);
         showToast('✅ Đã đẩy '+list.length+' phiếu chi. Đợi ~15s rồi mở sheet kiểm tra báo cáo "Đã chuyển".');
       }, 2500);
@@ -9446,7 +9448,11 @@ function doGet(e){
     String(e.parameter.ids||'').split(',').forEach(function(x){ x=x.trim(); if(x){ keep[x]=1; cnt++; } });
     var total=parseInt(e.parameter.total||'0',10);
     if(cnt>0 && total>0 && cnt>=total-1){
-      for(var r=v.length-1;r>=1;r--){ var id2=String(v[r][1]); if(id2 && !keep[id2]) sh.deleteRow(r+1); }
+      // v106: xoá cả dòng KHÔNG có mã (mất mã do sắp xếp/kéo tay) và dòng TRÙNG mã (giữ dòng đầu = dòng upsertFull ghi)
+      var seen={}, del=[];
+      for(var r=1;r<v.length;r++){ var id2=String(v[r][1]).replace(/^'/,'').trim(); if(!id2 && !String(v[r][3]).trim()) continue;
+        if(!id2 || !keep[id2] || seen[id2]) del.push(r+1); else seen[id2]=1; }
+      for(var q=del.length-1;q>=0;q--) sh.deleteRow(del[q]);
     }
   }
   var lr=sh.getLastRow();
