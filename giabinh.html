@@ -1903,7 +1903,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261022-v106';
+const APP_VERSION = '20261022-v107';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -9243,6 +9243,8 @@ function dep_(sh, ncol, vien){
   }catch(er){}
 }
 function doGet(e){
+  // v107: KHOÁ XẾP HÀNG — 2 lệnh chạy cùng lúc (2 máy đối chiếu, gửi lại) đọc vị trí dòng cũ trong khi lệnh kia sắp xếp bảng → ghi đè nhầm dòng, sinh dòng TRÙNG mã (D20, khoan giếng 22/10). Chưa lấy được khoá → trả busy, app tự gửi lại.
+  var lock=LockService.getScriptLock(); if(!lock.tryLock(60000)) return ContentService.createTextOutput('busy');
   var ss=SpreadsheetApp.getActiveSpreadsheet();
   var sh=getMainSheet(ss);
   var v=sh.getDataRange().getValues();
