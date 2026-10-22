@@ -115,6 +115,7 @@ body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên đi�
 .proposal-badge-area{padding-left:8px;flex-shrink:0;width:33%;min-width:33%;word-break:normal;overflow-wrap:break-word;text-align:right}
 .proposal-badge-area .badge{white-space:normal;word-break:normal;overflow-wrap:break-word;text-align:right}
 .proposal-badge-area .badge-history{white-space:normal}
+.proposal-badge-area .badge-stack,.proposal-badge-area .badge-stack>.badge{max-width:100%}   /* v108: nhãn 'đã duyệt X/Y' không tràn ra ngoài khung */
 .proposal-left-col .proposal-meta{margin-top:4px}
 .proposal-left-col .proposal-amount{margin-top:4px}
 .proposal-badge-area .badge-stack,.badge-stack{align-items:flex-end;flex-shrink:0}
@@ -1903,7 +1904,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261022-v107';
+const APP_VERSION = '20261022-v108';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4397,10 +4398,10 @@ function _buildCard(p){
     const hFull = isClosed ? hAmt>0 : (hAmt>0 && hAmt >= total - 0.0001);
     const tFull = transferredAmt>0 && transferredAmt >= approvedAmt - 0.0001;
     const dLabel = dAmt>0
-      ? (dFull ? `D đã duyệt ${fmtVND(isClosed?dAmt:total)}` : `D đã duyệt <span style="color:#ff0000">${fmtVND(dAmt)}/${fmtVND(total)}</span>`)
+      ? (dFull ? `D đã duyệt ${fmtVND(isClosed?dAmt:total)}` : `D đã duyệt <span style="color:#ff0000">${fmtVND(dAmt)}/<wbr>${fmtVND(total)}</span>`)
       : 'D chờ duyệt';
     const hLabel = hAmt>0
-      ? (hFull ? `${_hWho} đã duyệt ${fmtVND(isClosed?hAmt:total)}` : `${_hWho} đã duyệt <span style="color:#ff0000">${fmtVND(hAmt)}/${fmtVND(total)}</span>`)
+      ? (hFull ? `${_hWho} đã duyệt ${fmtVND(isClosed?hAmt:total)}` : `${_hWho} đã duyệt <span style="color:#ff0000">${fmtVND(hAmt)}/<wbr>${fmtVND(total)}</span>`)
       : 'H&amp;L chờ duyệt';
     const dBadgeClass = dAmt>0 ? 'badge-approved' : 'badge-wait';
     const hBadgeClass = hAmt>0 ? 'badge-approved' : 'badge-wait';
@@ -4414,7 +4415,7 @@ function _buildCard(p){
       `${t.by ? esc(t.by)+' · ' : ''}Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}`).join('<br>')}</div>` : '';
     let tRow = '';
     if(transferredAmt>0){
-      const tLabel = `T đã chuyển ${tFull ? fmtVND(approvedAmt) : fmtVND(transferredAmt)+'/'+fmtVND(approvedAmt)}`;
+      const tLabel = `T đã chuyển ${tFull ? fmtVND(approvedAmt) : fmtVND(transferredAmt)+'/<wbr>'+fmtVND(approvedAmt)}`;
       const history = Array.isArray(p.transfers) ? p.transfers : [];
       const historyHtml = history.length>=1 ? `<div class="badge-history">${history.map((t,idx)=>
         `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}${t.acct ? ' · <b style="color:'+CASH_ACCT[acctOf(t)].color+'">'+CASH_ACCT[acctOf(t)].short+'</b>' : ''}`
