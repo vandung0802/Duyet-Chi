@@ -1905,7 +1905,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261023-v109';
+const APP_VERSION = '20261023-v110';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -11730,7 +11730,7 @@ function cashKindLabel(r){ const t=r&&r.type; return t==='in' ? 'THU' : t==='ret
 const CASH_ACCT = { cty:{label:'TK công ty', short:'Cty', color:'#047857'}, quy:{label:'TK quỹ (Toàn)', short:'Quỹ', color:'#b45309'} };
 function acctOf(x){ return (x && CASH_ACCT[x.acct]) ? x.acct : 'cty'; }
 // v109 (D chốt 23/10): CHỈ CÒN 1 TÀI KHOẢN. Đang cho D + Hiền/Lan xem trước; phát hành cho mọi người: _ONE_ACCT_ALL = true.
-const _ONE_ACCT_ALL = false;
+const _ONE_ACCT_ALL = true;
 function _oneAcct(){ return _ONE_ACCT_ALL || currentRole==='dung' || currentRole==='hien'; }
 function _applyOneAcct(){ try{ document.body.classList.toggle('one-acct', _oneAcct()); }catch(e){} }
 function acctLabel(a){ return (CASH_ACCT[a]||CASH_ACCT.cty).label; }
