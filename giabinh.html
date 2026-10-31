@@ -1910,7 +1910,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261031-v113';
+const APP_VERSION = '20261031-v114';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4112,6 +4112,11 @@ function getMyPendingItems(){
         items.push({desc:p.desc, note:'Đã chuyển xong ✅', person:p.person, id:p.id});
     }
   });
+  // v114 (D 31/10 "nó nổi lên ở đâu để H và L ấn duyệt"): trả nợ Toàn ghi, chờ H&L duyệt → vào chuông của Hiền/Lan; bấm nhảy tới khoản vay
+  if(currentRole==='hien' || currentRole==='dung'){
+    (cashflow||[]).forEach(r=>{ if(!repayPending(r)) return; const l=(cashflow||[]).find(x=>x.id===r.loanId);
+      items.push({desc:'💸 Trả nợ: '+((l&&l.desc)||r.desc||''), note:'Chờ H&L duyệt '+fmtVND((+r.principal||0)+(+r.interest||0)), person:r.byName||'Toàn', id:'repay_'+r.id}); });
+  }
   return items;
 }
 
@@ -4185,6 +4190,13 @@ function renderNotifPanel(){
 
 function closeNotifAndGo(id){
   document.getElementById('notif-panel').style.display='none';
+  if(String(id).indexOf('repay_')===0){   // v114: khoản trả nợ chờ duyệt → tab Cân đối › Vay, cuộn tới khoản vay
+    const r=(cashflow||[]).find(x=>x.id===String(id).slice(6));
+    showPage('cash', document.getElementById('nav-cash'));
+    try{ setCashTab('loan', document.querySelector('#page-cash .report-subtab[data-tab="loan"]')); }catch(e){}
+    setTimeout(()=>{ const el=r && document.getElementById('loan-card-'+r.loanId); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.outline='3px solid #f59e0b'; setTimeout(()=>{ el.style.outline=''; },2500); } }, 350);
+    return;
+  }
   // v105: dùng chung jumpToProposal — tự nâng giới hạn vẽ nếu phiếu cũ + xoá ô tìm + highlight
   const p = proposals.find(x=>x.id===id);
   if(p && p.kind==='kh'){ showPage('kh', document.getElementById('nav-kh')); jumpToKhProposal(id); return; } // v125
@@ -12289,7 +12301,7 @@ function renderLoanList(){
     const lf = LOAN_FROM[l.lender] || LOAN_FROM.canhan;
     const repays = cashflow.filter(r=>r.type==='repay' && r.loanId===l.id).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
     const hist = repays.map(r=>`<div style="display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-sub);margin-top:3px"><span>${r.pending ? '<b style="color:#b45309">⏳ CHỜ H&amp;L DUYỆT</b> · ' : (r.okH ? '✅ '+esc(shortName(r.okH.name||'')||'H&L')+' duyệt · ' : '')}↩️ ${esc(r.date||'')} · gốc ${fmtShortMoney(parseFloat(r.principal)||0)} · lãi ${fmtShortMoney(parseFloat(r.interest)||0)}${r.desc?' · '+esc(r.desc):''}${r.byName?' · '+esc(r.byName):''}</span><span>${r.pending && (currentRole==='hien'||currentRole==='dung') ? `<button onclick="approveRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt</button> ` : ''}${cashDelBtn(r)}</span></div>${cashDelReqBox(r)}`).join('');
-    return `<div class="card" style="${d!==null && d<=7 && !done ? 'border-left:4px solid #dc2626' : ''}"><div class="card-body" style="padding:11px 13px">
+    return `<div class="card" id="loan-card-${sid(l.id)}" style="${d!==null && d<=7 && !done ? 'border-left:4px solid #dc2626' : ''}"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div style="min-width:0;flex:1">
           <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${lf.icon} ${esc(l.desc||'Khoản vay')}</div>
