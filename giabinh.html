@@ -689,7 +689,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <!-- v111 (D 31/10): phiếu duyệt 1 phần — đã chuyển đủ số duyệt nhưng ĐỀ XUẤT CÒN PHẦN CHƯA DUYỆT, trước lẫn trong "Đã chuyển xong" không ai thấy -->
     <div class="stat-box" data-f="remain" onclick="setFilter('remain',this)">
-      <div class="stat-row"><div class="stat-val" style="color:#ea580c" id="st-remain">0</div><div class="stat-lbl">Còn phần chưa duyệt</div></div>
+      <div class="stat-row"><div class="stat-val" style="color:#ea580c" id="st-remain">0</div><div class="stat-lbl">Chờ duyệt thêm</div></div>
       <div class="stat-row stat-amt" id="st-remain-amt">—</div>
     </div>
   </div>
@@ -1910,7 +1910,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261031-v111';
+const APP_VERSION = '20261031-v112';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
