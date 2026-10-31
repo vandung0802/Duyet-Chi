@@ -80,7 +80,7 @@ body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên đi�
 
 /* Stats compact - 7 ô */
 .stats-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px}
-.stats-grid .stat-box{flex:1 1 calc(25% - 4px);min-width:60px}
+.stats-grid .stat-box{flex:1 1 calc(33.33% - 4px);min-width:60px}   /* v111: 6 ô → 2 hàng x 3 */
 .stat-box{background:#fff;border-radius:8px;padding:4px 6px;text-align:center;box-shadow:var(--shadow);cursor:pointer;border:1.5px solid transparent;display:flex;flex-direction:column;justify-content:center;position:relative;min-height:0}   /* v69: dẹt (D) */
 /* v165 UX: ô nào BẤM ĐƯỢC thì có mũi tên › góc phải — hết cảnh "bảng tĩnh" không ai biết bấm */
 .stat-box[onclick]::after{content:'›';position:absolute;right:4px;top:1px;font-size:12px;font-weight:900;color:#93b4f0}
@@ -686,6 +686,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="stat-box" data-f="transferred" onclick="setFilter('transferred',this)">
       <div class="stat-row"><div class="stat-val" style="color:var(--green)" id="st-done">0</div><div class="stat-lbl">Đã chuyển xong</div></div>
       <div class="stat-row stat-amt" id="st-done-amt">—</div>
+    </div>
+    <!-- v111 (D 31/10): phiếu duyệt 1 phần — đã chuyển đủ số duyệt nhưng ĐỀ XUẤT CÒN PHẦN CHƯA DUYỆT, trước lẫn trong "Đã chuyển xong" không ai thấy -->
+    <div class="stat-box" data-f="remain" onclick="setFilter('remain',this)">
+      <div class="stat-row"><div class="stat-val" style="color:#ea580c" id="st-remain">0</div><div class="stat-lbl">Còn phần chưa duyệt</div></div>
+      <div class="stat-row stat-amt" id="st-remain-amt">—</div>
     </div>
   </div>
 
@@ -1905,7 +1910,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261023-v110';
+const APP_VERSION = '20261031-v111';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4203,6 +4208,7 @@ function _expenseMatch(p, f){
     case 'approved':    return p.status!=='rejected' && !!p.approvedH && !_full;            // v143: CHỈ CẦN H duyệt (bất kể D), CHƯA chuyển đủ
     case 'transferred': return p.status!=='rejected' && _full;                              // đã chuyển đủ số duyệt
     case 'rejected':    return p.status==='rejected';
+    case 'remain':      return p.status!=='rejected' && _full && remainUnapproved(p) > 0;   // v111: duyệt 1 phần, phần còn lại chưa ai duyệt
     // 2 Ô THÔNG TIN (đếm chữ ký, có thể trùng với 4 ô trên): D đã ký / H đã ký — GỒM cả phiếu D+H
     case 'd_only':      return !!p.approvedD && p.status!=='rejected';                      // v143: mọi phiếu D đã ký
     case 'h_only':      return !!p.approvedH && p.status!=='rejected';                      // v143: mọi phiếu H đã ký
@@ -4211,6 +4217,7 @@ function _expenseMatch(p, f){
 }
 function _expenseAmt(p, f){
   return f==='transferred' ? getTotalTransferred(p)      // đã chuyển → số THỰC chuyển
+    : f==='remain'         ? remainUnapproved(p)           // v111: phần đề xuất chưa duyệt
     : f==='d_only'         ? approvedAmtOf(p,'D')          // D duyệt → số D duyệt
     : (f==='h_only'||f==='approved') ? getOfficialApprovedAmount(p) // H/đã duyệt → số duyệt chính thức
     : (parseFloat(p.amount)||0);                           // còn lại → số đề xuất
@@ -4222,7 +4229,7 @@ function matchFilter(p, f){
 }
 
 function renderStats(){
-  const IDMAP={all:'all',pending:'pending',approved:'approved',rejected:'rejected',transferred:'done'}; // v153: bo 2 o "D duyet"/"H duyet"
+  const IDMAP={all:'all',pending:'pending',approved:'approved',rejected:'rejected',transferred:'done',remain:'remain'};   // v111 // v153: bo 2 o "D duyet"/"H duyet"
   Object.keys(IDMAP).forEach(f=>{
     const items = proposals.filter(p=>matchFilter(p,f));
     const sum = items.reduce((a,p)=>a+_expenseAmt(p,f),0);
