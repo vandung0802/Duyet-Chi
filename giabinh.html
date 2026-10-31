@@ -1910,7 +1910,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261031-v112';
+const APP_VERSION = '20261031-v113';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -8735,7 +8735,7 @@ async function downloadMonthExcel(){
   const ws = XLSX.utils.aoa_to_sheet(aoa);
   ws['!cols'] = [{wch:11},{wch:40},{wch:14},{wch:16},{wch:16},{wch:16},{wch:14},{wch:22},{wch:15},{wch:9},{wch:10}];
   for(let r=r0-1; r<=r1+5; r++){ const c = ws['I'+r]; if(c && c.t==='n') c.z = '#,##0'; }
-  const cash = (cashflow||[]).filter(r=>inMd(r.date) && !(_oneAcct() && r.type==='xfer')).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
+  const cash = (cashflow||[]).filter(r=>inMd(r.date) && !(_oneAcct() && r.type==='xfer') && !repayPending(r))   // v113.sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
   const aoa2 = [['THU / KÝ QUỸ / VAY / TRẢ LẠI — THÁNG '+mon.slice(5)+'/'+mon.slice(0,4)], [], ['Ngày','Loại','Nội dung','Nguồn / nơi giữ',_oneAcct()?'':'Tài khoản','Tiền vào','Tiền ra','Người ghi']];
   cash.forEach(r=>{ const a = +r.amount||0, out = r.type==='ret'||r.type==='dep'||r.type==='repay', src = (r.type==='in'||r.type==='ret') ? (CASH_SRC[r.src]||CASH_SRC.other).label : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||'');
     aoa2.push([r.date||'', cashKindLabel(r), r.desc||'', src, (r.type==='xfer'||_oneAcct()) ? '' : acctLabel(acctOf(r)), out||r.type==='xfer' ? '' : a, out ? a : '', r.byName||'']);
@@ -10742,7 +10742,7 @@ function syncCashToSheet(r){
   const params = new URLSearchParams({
     action:'cash', id:r.id,
     date: r.date||'',
-    loai: r.type==='in' ? 'Thu' : r.type==='ret' ? 'Trả lại vốn góp' : r.type==='loan' ? 'Vay' : r.type==='repay' ? 'Trả nợ vay' : r.type==='xfer' ? 'Chuyển nội bộ' : 'Ký quỹ',
+    loai: r.type==='in' ? 'Thu' : r.type==='ret' ? 'Trả lại vốn góp' : r.type==='loan' ? 'Vay' : r.type==='repay' ? (r.pending ? 'Trả nợ vay (CHỜ DUYỆT)' : 'Trả nợ vay') : r.type==='xfer' ? 'Chuyển nội bộ' : 'Ký quỹ',   // v113
     desc: r.desc||'',
     src:  (r.type==='in'||r.type==='ret') ? ((CASH_SRC[r.src]||CASH_SRC.other).label) : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='repay' ? ('gốc '+(parseFloat(r.principal)||0)+' + lãi '+(parseFloat(r.interest)||0)) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||''),
     amount: amt,
@@ -11744,7 +11744,9 @@ function acctLabel(a){ return (CASH_ACCT[a]||CASH_ACCT.cty).label; }
 // v41: type 'loan' = VAY (lender nh/canhan), 'repay' = TRẢ NỢ (principal gốc + interest lãi, loanId), 'xfer' = CHUYỂN NỘI BỘ (from → to)
 const LOAN_FROM = { nh:{label:'Ngân hàng', icon:'🏦'}, canhan:{label:'Cá nhân', icon:'👤'} };
 function cashCanWriteIn(){ return currentRole==='toan' || currentRole==='dung'; }   // D chốt 26/09: Cân đối chỉ THỦ QUỸ (Toàn) nhập; dung = quản trị ngầm, không nêu trên app
-function loanRepaid(l){ return cashflow.filter(r=>r.type==='repay' && r.loanId===l.id).reduce((a,r)=>({g:a.g+(parseFloat(r.principal)||0), l:a.l+(parseFloat(r.interest)||0)}), {g:0,l:0}); }
+// v113 (D 31/10): TRẢ NỢ do Toàn ghi phải được Hiền/Lan DUYỆT mới tính (pending=true cho tới khi okH ghi). Chưa duyệt: không trừ số dư, không giảm nợ.
+function repayPending(r){ return !!(r && r.type==='repay' && r.pending===true); }
+function loanRepaid(l){ return cashflow.filter(r=>r.type==='repay' && !r.pending && r.loanId===l.id).reduce((a,r)=>({g:a.g+(parseFloat(r.principal)||0), l:a.l+(parseFloat(r.interest)||0)}), {g:0,l:0}); }
 function loanLeft(l){ return Math.max(0, (parseFloat(l.amount)||0) - loanRepaid(l).g); }
 function daysTo(ymd){ if(!ymd) return null; const d=new Date(ymd+'T00:00:00'); if(isNaN(d)) return null; return Math.ceil((d.getTime()-Date.now())/86400000); }
 // v41: THÙNG RÁC — xoá = chuyển vào duyetchi/trash/<loại>/<id> (ai cũng xem được), chỉ Dũng khôi phục / xóa hẳn. Lỗi ghi rác không chặn việc xoá.
@@ -11790,7 +11792,7 @@ function cashTotals(){
   const deps = cashflow.filter(r=>r.type==='dep');
   const rets = cashflow.filter(r=>r.type==='ret');
   const loans = cashflow.filter(r=>r.type==='loan');
-  const repays = cashflow.filter(r=>r.type==='repay');
+  const repays = cashflow.filter(r=>r.type==='repay' && !r.pending);   // v113
   const xfers = cashflow.filter(r=>r.type==='xfer');
   const byAcct = { cty:0, quy:0 };
   const add = (a, v) => { byAcct[CASH_ACCT[a]?a:'cty'] += v; };
@@ -11917,7 +11919,7 @@ function renderCashChart(){
     if(r.type==='in') touch(m).in += parseFloat(r.amount)||0;
     else if(r.type==='ret') touch(m).out += parseFloat(r.amount)||0;   // v40: trả lại vốn góp = tiền ra
     else if(r.type==='loan') touch(m).in += parseFloat(r.amount)||0;   // v41
-    else if(r.type==='repay') touch(m).out += (parseFloat(r.principal)||0)+(parseFloat(r.interest)||0);
+    else if(r.type==='repay'){ if(!r.pending) touch(m).out += (parseFloat(r.principal)||0)+(parseFloat(r.interest)||0); }   // v113: chờ duyệt chưa tính
     else if(r.type==='dep'){
       touch(m).out += parseFloat(r.amount)||0;                                  // đưa cọc đi = tiền ra
       (r.returned||[]).forEach(x=>{ const mm = x.date?String(x.date).slice(0,7):mOf(x.ts); if(mm) touch(mm).in += parseFloat(x.amount)||0; });
@@ -12136,6 +12138,7 @@ function cashBookRows(){
   const rows = [];
   const N = v => +v||0;
   cashflow.forEach(r=>{
+    if(repayPending(r)) return;   // v113: trả nợ chưa được H&L duyệt → chưa vào sổ quỹ
     const a = acctOf(r);
     if(r.type==='in') rows.push({date:r.date, ts:r.ts, desc:r.desc||'Tiền về', kind:'in', amount:N(r.amount), acct:a,
                                  tag:(CASH_SRC[r.src]||CASH_SRC.other).label});
@@ -12285,7 +12288,7 @@ function renderLoanList(){
     const dueTxt = !l.due ? '' : done ? '' : d < 0 ? `<span style="color:#dc2626;font-weight:800">⏰ Quá hạn ${-d} ngày</span>` : d <= 7 ? `<span style="color:#b45309;font-weight:800">⏰ Còn ${d} ngày đến hạn</span>` : `<span style="color:var(--text-sub)">Hạn trả ${esc(l.due)}</span>`;
     const lf = LOAN_FROM[l.lender] || LOAN_FROM.canhan;
     const repays = cashflow.filter(r=>r.type==='repay' && r.loanId===l.id).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
-    const hist = repays.map(r=>`<div style="display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-sub);margin-top:3px"><span>↩️ ${esc(r.date||'')} · gốc ${fmtShortMoney(parseFloat(r.principal)||0)} · lãi ${fmtShortMoney(parseFloat(r.interest)||0)}${r.desc?' · '+esc(r.desc):''}${r.byName?' · '+esc(r.byName):''}</span><span>${cashDelBtn(r)}</span></div>${cashDelReqBox(r)}`).join('');
+    const hist = repays.map(r=>`<div style="display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-sub);margin-top:3px"><span>${r.pending ? '<b style="color:#b45309">⏳ CHỜ H&amp;L DUYỆT</b> · ' : (r.okH ? '✅ '+esc(shortName(r.okH.name||'')||'H&L')+' duyệt · ' : '')}↩️ ${esc(r.date||'')} · gốc ${fmtShortMoney(parseFloat(r.principal)||0)} · lãi ${fmtShortMoney(parseFloat(r.interest)||0)}${r.desc?' · '+esc(r.desc):''}${r.byName?' · '+esc(r.byName):''}</span><span>${r.pending && (currentRole==='hien'||currentRole==='dung') ? `<button onclick="approveRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt</button> ` : ''}${cashDelBtn(r)}</span></div>${cashDelReqBox(r)}`).join('');
     return `<div class="card" style="${d!==null && d<=7 && !done ? 'border-left:4px solid #dc2626' : ''}"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div style="min-width:0;flex:1">
@@ -12353,12 +12356,26 @@ async function submitRepay(){
   if(principal > loanLeft(l) + 0.0001){ showToast('⚠️ Trả gốc nhiều hơn số còn nợ ('+fmtVND(loanLeft(l))+')'); return; }
   const rec = { type:'repay', loanId, principal, interest, amount: principal+interest, desc:(document.getElementById('repay-inp-desc').value||'').trim()||(l.desc||''),
     date: document.getElementById('repay-inp-date').value||ymdLocal(), acct: CASH_ACCT[document.getElementById('repay-inp-acct').value]?document.getElementById('repay-inp-acct').value:'cty',
-    ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'' };
+    ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', pending:true };   // v113: chờ H&L duyệt
   try{
     const ref = await db.ref('duyetchi/cashflow').push(rec);
     try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
-    closeRepayModal(); showToast('✅ Đã ghi trả nợ');
+    closeRepayModal(); showToast('✅ Đã ghi trả nợ — chờ Hiền/Lan duyệt mới trừ sổ');
+    sendPushNotif('💸 '+(getCurrentUserName()||'Toàn')+' ghi trả nợ '+fmtVND(principal+interest), (l.desc||'')+' — gốc '+fmtVND(principal)+', lãi '+fmtVND(interest)+' · chờ Hiền/Lan duyệt', ['dung','hien']);
   }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
+}
+// v113: Hiền/Lan duyệt khoản trả nợ Toàn đã ghi → ghi okH {by,name,ts} + gỡ pending (luật: chỉ hien/dung). Duyệt xong mới trừ số dư, giảm nợ.
+async function approveRepay(id){
+  if(currentRole!=='hien' && currentRole!=='dung'){ showToast('🔒 Chỉ Hiền/Lan duyệt được trả nợ'); return; }
+  const r = cashflow.find(x=>x.id===id); if(!r || !r.pending) return;
+  const l = cashflow.find(x=>x.id===r.loanId);
+  if(!confirm('Duyệt trả nợ '+fmtVND((+r.principal||0)+(+r.interest||0))+' ('+(l&&l.desc||r.desc||'')+')?\nDuyệt xong sẽ trừ số dư và giảm nợ.')) return;
+  try{
+    await db.ref('duyetchi/cashflow/'+id).update({ pending:null, okH:{ by:(currentUser&&currentUser.uid)||'', name:getCurrentUserName()||'', ts:Date.now() } });
+    try{ syncCashToSheet(Object.assign({}, r, {pending:false})); }catch(e){}
+    showToast('✅ Đã duyệt trả nợ');
+    sendPushNotif('✅ '+(getCurrentUserName()||'H&L')+' đã duyệt trả nợ '+fmtVND((+r.principal||0)+(+r.interest||0)), (l&&l.desc||r.desc||''), ['dung','hien','toan']);
+  }catch(e){ showToast('❌ Không duyệt được: '+(e.message||e.code||'')); }
 }
 function openXferModal(){
   if(currentRole!=='toan' && currentRole!=='dung'){ showToast('🔒 Chỉ thủ quỹ (Toàn) mới ghi chuyển tiền giữa 2 tài khoản'); return; }

@@ -216,7 +216,7 @@
           ".write": "auth != null && (root.child('duyetchi/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com') && (newData.exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' && data.child('deleteReq/ok/hien1').exists() && data.child('deleteReq/ok/hien2').exists()) || (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'toan' && $id.beginsWith('p_') && data.child('fromProposal').isString() && data.child('tn').isString() && !root.child('duyetchi/proposals').child(data.child('fromProposal').val()).child('transfers').child(data.child('tn').val()).exists()))",
           // v62: CHẶN XOÁ LẺ TRƯỜNG (type/amount/by phải còn — validate con không chạy khi xoá; newData ở đây là dữ liệu SAU KHI GHI nên ghi lẻ returned/deleteReq vẫn qua);
           //      huỷ đề nghị xoá chỉ người đề nghị / Dũng / H&L.
-          ".validate": "newData.hasChildren(['type', 'amount', 'by']) && (newData.child('deleteReq').exists() || !data.child('deleteReq').exists() || data.child('deleteReq/by').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien')",
+          ".validate": "newData.hasChildren(['type', 'amount', 'by']) && (!data.child('pending').exists() || newData.child('pending').exists() || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung') && (newData.child('deleteReq').exists() || !data.child('deleteReq').exists() || data.child('deleteReq/by').val() === auth.uid || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien')",
           // VÒNG 2: người ghi ('by') bất biến; tạo mới phải = chính mình.
           "by": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid) || (!data.exists() && !data.parent().exists() && root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung')" },
           // v25: NỘI DUNG khoản đóng băng sau khi ghi (chỉ Dũng sửa) — nếu không, "xoá phải 3 người duyệt" bị lách
@@ -250,6 +250,9 @@
           // (Xoá phiếu đồng ý / huỷ đề nghị thì luật không cản — chỉ làm CHẬM việc xoá, không làm mất tiền.)
           "ts":       { ".validate": "newData.isNumber()" },
           "$other":   { ".validate": false },
+          // v113 (D 31/10): TRẢ NỢ chờ duyệt — Toàn ghi pending=true lúc tạo; CHỈ Hiền/Lan (hoặc Dũng) gỡ được pending và ghi okH (= chính mình, bất biến).
+          "pending":  { ".validate": "newData.val() === true && !data.exists()" },
+          "okH":      { ".validate": "(data.exists() && newData.child('by').val() === data.child('by').val() && newData.child('ts').val() === data.child('ts').val()) || (!data.exists() && newData.child('by').val() === auth.uid && newData.child('ts').isNumber() && (root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('duyetchi/userRoles').child(auth.uid).child('role').val() === 'dung'))" },
           "deleteReq": {
             "by":     { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid)" },
             "byName": { ".validate": "newData.isString() && newData.val().length <= 200" },
