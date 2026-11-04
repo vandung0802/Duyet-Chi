@@ -600,6 +600,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- v142: nút Thêm mới đưa vào trong tab (bỏ nút Thêm mới ở thanh dưới) -->
   <button class="btn-full btn-primary-full" onclick="showPage('add', document.getElementById('nav-home'))" style="margin-bottom:8px">➕ Thêm phiếu chi mới</button>
+  <!-- v184: mở trang chụp hóa đơn vật tư (Apps Script → Google Sheet sổ vật tư công trường), chỉ là link ra ngoài, không đụng dữ liệu app -->
+  <a href="https://script.google.com/macros/s/AKfycbzbizmLpmLrnl83gnnTPZfgt8MCee_xremIZuB__gNG0-RQXFuzznvDNWyln8ig9cbrxw/exec" target="_blank" rel="noopener" class="btn-full" style="display:block;text-align:center;text-decoration:none;background:#e8f0fe;color:var(--blue-dark);margin-bottom:8px">📷 Chụp hóa đơn vật tư → sổ kế toán</a>
   <div style="position:relative;margin-bottom:8px">
     <input id="search-input" type="text" name="dc-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm kiếm đề xuất..." oninput="renderProposals()" style="width:100%;padding:9px 12px 9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit">
   </div>
@@ -1438,7 +1440,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261023-v183';
+const APP_VERSION = '20261104-v184';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
