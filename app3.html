@@ -1438,7 +1438,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261023-v183';
+const APP_VERSION = '20261105-v185';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3870,18 +3870,17 @@ function _buildCard(p){
 
   // v106 HỎI–ĐÁP trên phiếu: lịch sử nhắn (bong bóng) + ô trả lời tại chỗ cho người liên quan
   const _chMe = getCurrentUserName();
-  const _chCan = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='trang';
+  const _chCan0 = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='trang';
   const _chClr = r => r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155';
+  // v185: người được @tag trong hỏi–đáp cũng trả lời được ngay trên phiếu
+  const _chCan = _chCan0 || (!!_chMe && _chArr.some(m=>(m.text||'').indexOf('@'+_chMe)>=0));
   const _chMsgs = _chArr.map(m=>{
     const mine = (m.by||'')===_chMe;
     return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${mine?'#f1f5f9':'#eff6ff'};border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
       <div style="font-size:9.5px;font-weight:700;color:${_chClr(m.role)}">${esc(m.by||'')} · ${fmtFull(m.ts)}</div>
-      <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${esc(m.text||'')}</div></div>`;
+      <div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_chatHighlightTags(esc(m.text||''))}</div></div>`;
   }).join('');
-  const _chInput = `<div style="display:flex;gap:5px;margin-top:5px">
-      <input id="chat-inp-${sid(p.id)}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến..." onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${sid(p.id)}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
-      <button onclick="sendChatMsg('${sid(p.id)}')" style="padding:7px 12px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">Gửi</button>
-    </div>`;
+  const _chInput = _pqInputHtml(sid(p.id), 'margin-top:5px');
   let chatHtml = '';
   if(_chMsgs){ chatHtml = `<div style="margin-top:6px;border-top:1px dashed var(--gray-border);padding-top:4px">${_chMsgs}${_chCan?_chInput:''}</div>`; }
   else if(_chCan){ chatHtml = `<div id="chat-inpwrap-${sid(p.id)}" style="margin-top:5px"><button onclick="openChatInput('${sid(p.id)}')" style="padding:4px 10px;font-size:11px;font-weight:600;background:#f8fafc;color:var(--text-sub);border:1px dashed var(--gray-border);border-radius:14px;cursor:pointer">💬 Hỏi–đáp về phiếu này</button></div>`; }
@@ -7701,7 +7700,43 @@ function _chatAmIInvolved(p){
   if(currentRole==='dung' && (p.opinionD || arr.some(m=>m.role==='dung'))) return true;
   if(currentRole==='hien' && (p.opinionH || arr.some(m=>m.role==='hien'))) return true;
   if(currentRole==='trang' && arr.some(m=>m.role==='trang')) return true;
+  if(arr.some(m=>(m.by||'')!==me && (m.text||'').indexOf('@'+me)>=0 && _chatTagsOf(m.text).indexOf(me)>=0)) return true; // v185: bị @tag
   return false;
+}
+// ── v185 @TAG trong hỏi–đáp trên phiếu: gõ @ → hiện dãy tên (gõ thêm chữ để lọc, không cần dấu), bấm tên để chèn.
+// Người được tag: phiếu vào bảng nhắc "Có tin nhắn mới cho bạn" + chuông khi mở app; D/H/Trang còn được báo đẩy.
+// shortcut: người KHÁC D/H/T chưa có báo đẩy riêng từng người (máy chủ chỉ gửi theo vai/phòng) — cần thì nâng hàm processPushQueue.
+function _chatTagsOf(text){
+  let t=String(text||''); const out=[];
+  const me=getCurrentUserName();
+  _chatMemberNames().concat(me?[me]:[]).sort((a,b)=>b.length-a.length)
+    .forEach(n=>{ if(t.indexOf('@'+n)>=0){ out.push(n); t=t.split('@'+n).join(''); } }); // tên dài trước: "@Hiền Lê" không tính nhầm "Hiền"
+  return out;
+}
+function _pqInputHtml(id, style){
+  return `<div style="${style||''}"><div style="display:flex;gap:5px">
+      <input id="chat-inp-${id}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến... (gõ @ để tag tên)" oninput="_pqTagHint('${id}',this)" onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${id}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
+      <button onclick="sendChatMsg('${id}')" style="padding:7px 12px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">Gửi</button>
+    </div><div id="ptag-${id}" style="display:none;white-space:nowrap;overflow-x:auto;padding-top:5px"></div></div>`;
+}
+const _pqTagList={};
+function _pqTagHint(id, inp){
+  const row=document.getElementById('ptag-'+id); if(!row) return;
+  const m=/(?:^|\s)@([^@]{0,20})$/.exec(inp.value||'');
+  const q=m?_normName(m[1]):null;
+  const names=(q===null)?[]:_chatMemberNames().filter(n=>_normName(n).indexOf(q)===0 && !(m[1].endsWith(' ') && _normName(n)===q)).slice(0,30);
+  _pqTagList[id]=names;
+  if(!names.length){ row.style.display='none'; return; }
+  // onmousedown chặn mất focus ô gõ (mất focus → _chatInpBlur có thể vẽ lại thẻ phiếu, mất chữ đang gõ)
+  row.innerHTML=names.map((n,i)=>`<button onmousedown="event.preventDefault()" onclick="_pqTagPick('${id}',${i})" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
+  row.style.display='block';
+}
+function _pqTagPick(id, i){
+  const inp=document.getElementById('chat-inp-'+id); const n=(_pqTagList[id]||[])[i];
+  if(!inp || !n) return;
+  inp.value=inp.value.replace(/@([^@]{0,20})$/, '@'+n+' ');
+  const row=document.getElementById('ptag-'+id); if(row) row.style.display='none';
+  inp.focus();
 }
 function _chatUnreadList(){
   const me=getCurrentUserName(); if(!me||!currentUser) return [];
@@ -7725,10 +7760,7 @@ function markChatSeen(id){
 }
 function openChatInput(id){
   const wrap=document.getElementById('chat-inpwrap-'+id); if(!wrap) return;
-  wrap.innerHTML=`<div style="display:flex;gap:5px">
-    <input id="chat-inp-${id}" type="text" autocomplete="off" placeholder="💬 Trả lời / ý kiến..." onblur="_chatInpBlur()" onkeydown="if(event.key==='Enter')sendChatMsg('${id}')" style="flex:1;min-width:0;padding:7px 10px;border:1.5px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none;font-family:inherit">
-    <button onclick="sendChatMsg('${id}')" style="padding:7px 12px;font-size:12px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;flex-shrink:0">Gửi</button>
-  </div>`;
+  wrap.innerHTML=_pqInputHtml(id, '');
   try{ document.getElementById('chat-inp-'+id).focus(); }catch(e){}
 }
 function _chatInpBlur(){
@@ -7753,13 +7785,15 @@ function sendChatMsg(id){
   const pgL=document.getElementById('page-luong');
   if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} } else { renderProposals(); }
   try{ updateNotifBadge(); }catch(e){}
-  showToast('💬 Đã gửi');
+  const tagged=_chatTagsOf(text).filter(n=>n!==me);
+  showToast(tagged.length ? '💬 Đã gửi — đã nhắc '+tagged.join(', ') : '💬 Đã gửi');
   // Báo đẩy cho các vai trò liên quan (trừ mình). Người đề xuất vai 'other' nhận qua bảng nhắc khi mở app.
   try{
     const roles=new Set();
     if(p.opinionD) roles.add('dung');
     if(p.opinionH) roles.add('hien');
     (p.chat||[]).forEach(m=>{ if(m.role==='dung'||m.role==='hien'||m.role==='trang') roles.add(m.role); });
+    tagged.forEach(n=>{ const r={'Dũng':'dung','Hiền':'hien','Trang':'trang'}[n]; if(r) roles.add(r); }); // v185: @tag D/H/T → báo đẩy
     roles.delete(currentRole);
     let list=Array.from(roles);
     if(!list.length) list=['dung','hien'].filter(r=>r!==currentRole);
