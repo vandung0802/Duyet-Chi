@@ -371,6 +371,11 @@
         "roles": {
           "$i": { ".validate": "$i.matches(/^[0-9]$/) && newData.isString() && newData.val().length <= 20" }
         },
+        // 05/11/2026 @tag trong Hỏi–đáp phiếu: tên người được nhắc (tối đa 10, mỗi tên ≤ 60 ký tự).
+        // Hàm processPushQueue so tên với hồ sơ userRoles/<uid>/name để gửi riêng cho người đó.
+        "names": {
+          "$i": { ".validate": "$i.matches(/^[0-9]$/) && newData.isString() && newData.val().length <= 60" }
+        },
         "$other": { ".validate": false }
       }
     },

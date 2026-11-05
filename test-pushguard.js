@@ -163,5 +163,35 @@ ok('until khong phai so -> enforce', g.resolveAuthMode({ mode: 'monitor', until:
   ok('du lieu hong khong vang loi', keys(g.pickNamedTargets({ hien: { x: null, y: 'rac' } }, ['hien'], ['A'], 'D')) === '');
 }
 
+// ── 12. NHẮC TÊN app 379 (05/11/2026): @tag trong Hỏi–đáp phiếu → gửi riêng theo TÊN HỒ SƠ ──
+{
+  console.log('\n== 12. @tag 379: ten lay tu HO SO tai khoan, khong tin ten may tu khai ==');
+  const S = (uid, ep, extra) => Object.assign({ endpoint: 'https://x/' + (ep || uid), keys: {}, uid }, extra || {});
+  const subs = { kt: { a: S('KA'), b: S('HIEP'), c: S('HANG', 'hang', { name: 'Kim Anh' }), z: S('KA', 'ka2') },
+    kh: { d: S('QUY') }, dung: { e: S('D') }, trang: { f: S('KA', 'KA') }, other: { g: { endpoint: 'https://x/cu', keys: {} } } };
+  const names = new Map([['KA', 'Kim Anh'], ['HIEP', 'Hiệp'], ['HANG', 'Hằng'], ['QUY', 'Nguyễn Văn Quy'], ['D', 'Dũng']]);
+  const keys = (r) => r.map((x) => x.key).sort().join(',');
+  ok('tag Kim Anh -> moi may cua Kim Anh (2 may), 1 lan moi endpoint', keys(g.pickByProfileName(subs, names, ['Kim Anh'], [], 'D')) === 'a,z');
+  ok('ten TU KHAI trong dang ky (Hang ghi name Kim Anh) KHONG duoc tinh', !g.pickByProfileName(subs, names, ['Kim Anh'], [], 'D').some((x) => x.key === 'c'));
+  ok('lech dau: tag "Hiêp" -> tai khoan "Hiệp"', keys(g.pickByProfileName(subs, names, ['Hiêp'], [], 'D')) === 'b');
+  ok('hoa/thuong + thua dau cach: "  kim  ANH " -> Kim Anh', keys(g.pickByProfileName(subs, names, ['  kim  ANH '], [], 'D')) === 'a,z');
+  ok('may da nhan theo kenh (skip khoa) khong gui lan 2', keys(g.pickByProfileName(subs, names, ['Kim Anh'], ['a', 'https://x/KA'], 'D')) === 'z');
+  ok('may da nhan theo kenh (skip endpoint) khong gui lan 2', keys(g.pickByProfileName(subs, names, ['Kim Anh'], ['https://x/ka2'], 'D')) === 'a');
+  ok('khong gui may cua chinh nguoi gui', keys(g.pickByProfileName(subs, names, ['Kim Anh'], [], 'KA')) === '');
+  ok('dang ky doi cu (khong uid) khong bao gio nhan theo ten', !g.pickByProfileName(subs, names, ['Kim Anh', 'Hiệp'], [], 'D').some((x) => x.key === 'g'));
+  ok('ten la / rong -> khong ai', keys(g.pickByProfileName(subs, names, ['Người Lạ'], [], 'D')) === '' && keys(g.pickByProfileName(subs, names, [], [], 'D')) === '');
+  ok('nameOfUid khong phai Map -> khong ai (khong vang loi)', keys(g.pickByProfileName(subs, { KA: 'Kim Anh' }, ['Kim Anh'], [], 'D')) === '');
+  ok('du lieu hong khong vang loi', keys(g.pickByProfileName({ kt: { x: null, y: 'rac', w: { uid: 5 } } }, names, ['Kim Anh'], [], 'D')) === '');
+  ok('cleanNames: toi da 8 ten, bo trung, bo khong phai chuoi', (() => { const r = g.cleanNames(['A', 'A', 1, null, 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K']); return r.length === 8 && r[0] === 'A' && r[1] === 'B'; })());
+  ok('cleanNames nhan object {0:..} cua RTDB', eq(g.cleanNames({ 0: 'Kim Anh', 1: 'Hiệp' }), ['Kim Anh', 'Hiệp']));
+  ok('cleanNames cat 40 ky tu', g.cleanNames([big('a', 500)])[0].length === 40);
+  d = g.authorizeQueueItem({ title: 't', body: 'b', roles: ['dung'], names: ['Kim Anh'] }, APPROVED);
+  ok('nguoi DA duyet: names duoc giu', d.ok && eq(d.names, ['Kim Anh']));
+  d = g.authorizeQueueItem({ title: 'Dang ky: An', body: 'ma 123456', roles: ['dung'], names: ['Kim Anh'] }, UNAPPROVED);
+  ok('nguoi CHUA duyet: names bi bo han', d.ok && d.tier === 'unapproved' && !d.names);
+  d = g.authorizeQueueItem({ title: 't', body: 'b', roles: ['dung'] }, APPROVED);
+  ok('khong co names -> mang rong (goi tin cu van chay)', d.ok && eq(d.names, []));
+}
+
 console.log(pass ? '\n*** TAT CA ' + n + ' PHEP THU DUNG ***' : '\n*** CO LOI ***');
 process.exit(pass ? 0 : 1);

@@ -64,20 +64,52 @@ async function recipientAllowed(uid, cache) {
   return ok;
 }
 
-/** Gửi tới các kênh. roles/title/body PHẢI đã qua pushGuard (danh sách trắng + cắt độ dài). */
-async function sendToRoles(title, body, roles) {
-  await ensureVapid();
+const UID_RE = /^[A-Za-z0-9_-]{1,128}$/;
+
+/** Đọc đăng ký nhận của các kênh → { kênh: { khoá: sub } } (bản ghi đời cũ lưu dạng chuỗi JSON). */
+async function loadSubs(channels) {
   const db = rtdb379();
-  const subs = []; // [{role, key, sub}]
-  for (const role of roles) {
-    const snap = await db.ref('push-subs/' + role).get();
+  const byCh = {};
+  for (const ch of channels) {
+    const snap = await db.ref('push-subs/' + ch).get();
+    const m = {};
     if (snap.exists()) {
       Object.entries(snap.val()).forEach(([key, s]) => {
-        try { subs.push({ role, key, sub: typeof s === 'string' ? JSON.parse(s) : s }); } catch (e) { /* bỏ qua bản ghi hỏng */ }
+        try { m[key] = typeof s === 'string' ? JSON.parse(s) : s; } catch (e) { /* bỏ qua bản ghi hỏng */ }
       });
     }
+    byCh[ch] = m;
   }
-  if (!subs.length) return { sent: 0, failed: 0, revoked: 0 };
+  return byCh;
+}
+
+/**
+ * Gửi tới các kênh + (tuỳ chọn) người được @tag. roles/names/title/body PHẢI đã qua pushGuard.
+ * NHẮC TÊN (05/11/2026): tên người nhận lấy từ hồ sơ duyetchi/userRoles/<uid>/name theo uid của từng đăng ký
+ * (chỉ đọc đúng trường name). Người nhận vẫn phải qua recipientAllowed như mọi thông báo khác.
+ */
+async function sendToRoles(title, body, roles, names, senderUid) {
+  await ensureVapid();
+  const db = rtdb379();
+  const tagging = Array.isArray(names) && names.length > 0;
+  const byCh = await loadSubs(tagging ? guard.ROLES_379 : roles);
+  const subs = []; // [{role, key, sub}]
+  for (const role of roles) {
+    Object.entries(byCh[role] || {}).forEach(([key, sub]) => subs.push({ role, key, sub }));
+  }
+  let tagged = 0;
+  if (tagging) {
+    const uids = new Set();
+    Object.values(byCh).forEach((m) => Object.values(m).forEach((s) => { if (s && typeof s.uid === 'string' && UID_RE.test(s.uid)) uids.add(s.uid); }));
+    const nameOfUid = new Map();
+    await Promise.all(Array.from(uids).slice(0, 300).map(async (u) => {
+      const v = (await db.ref('duyetchi/userRoles/' + u + '/name').once('value')).val();
+      if (typeof v === 'string') nameOfUid.set(u, v);
+    }));
+    const skip = subs.map((x) => x.key).concat(subs.map((x) => x.sub && x.sub.endpoint).filter(Boolean));
+    guard.pickByProfileName(byCh, nameOfUid, names, skip, senderUid).forEach((x) => { subs.push({ role: x.ch, key: x.key, sub: x.s }); tagged++; });
+  }
+  if (!subs.length) return { sent: 0, failed: 0, revoked: 0, tagged: 0 };
   const payload = JSON.stringify({ title, body });
   const cache = new Map();
   let sent = 0;
@@ -87,7 +119,7 @@ async function sendToRoles(title, body, roles) {
     try {
       if (!sub || typeof sub.endpoint !== 'string' || sub.endpoint.indexOf('https://') !== 0) { failed++; return; }
       // Bản ghi CŨ chưa có uid (trước v137) → vẫn gửi, để máy đang chạy không bị cắt; app ghi lại kèm uid mỗi lần mở.
-      const uid = (typeof sub.uid === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(sub.uid)) ? sub.uid : '';
+      const uid = (typeof sub.uid === 'string' && UID_RE.test(sub.uid)) ? sub.uid : '';
       if (uid && !(await recipientAllowed(uid, cache))) {
         revoked++;
         await db.ref('push-subs/' + role + '/' + key).remove().catch(() => {});
@@ -104,7 +136,7 @@ async function sendToRoles(title, body, roles) {
       }
     }
   }));
-  return { sent, failed, revoked };
+  return { sent, failed, revoked, tagged };
 }
 
 // ───────────────────────── sendPush: hàm HTTP để THỬ TAY ─────────────────────────
@@ -140,8 +172,8 @@ exports.sendPush = functions
       const b = (req.body && typeof req.body === 'object') ? req.body : {};
       const d = guard.authorizeQueueItem({ title: b.title, body: b.body, roles: b.roles }, { authType: 'ADMIN' });
       if (!d.ok) { res.json({ sent: 0, failed: 0 }); return; }
-      console.log(`sendPush (có khoá): title="${d.title}" roles=${JSON.stringify(d.roles)}`);
-      const result = await sendToRoles(d.title, d.body, d.roles);
+      console.log(`sendPush (có khoá): title="${d.title}" roles=${JSON.stringify(d.roles)} names=${d.names.length}`);
+      const result = await sendToRoles(d.title, d.body, d.roles, d.names);
       res.json(result);
     } catch (e) {
       console.error('sendPush lỗi', e && e.message);
@@ -203,9 +235,9 @@ exports.processPushQueue = functions
       }
 
       // Chỉ ghi TIÊU ĐỀ vào nhật ký — nội dung có thể chứa mã xác nhận
-      console.log(`processPushQueue: tier=${d.tier} title="${d.title}" roles=${JSON.stringify(d.roles)}`);
-      const result = await sendToRoles(d.title, d.body, d.roles);
-      console.log(`processPushQueue result: sent=${result.sent} failed=${result.failed} revoked=${result.revoked}`);
+      console.log(`processPushQueue: tier=${d.tier} title="${d.title}" roles=${JSON.stringify(d.roles)} names=${(d.names || []).length}`);
+      const result = await sendToRoles(d.title, d.body, d.roles, d.names, sender.uid);
+      console.log(`processPushQueue result: sent=${result.sent} failed=${result.failed} revoked=${result.revoked} tagged=${result.tagged}`);
     } catch (e) {
       console.error('processPushQueue lỗi', e && e.message);
     } finally {

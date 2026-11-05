@@ -32,6 +32,7 @@ const MAX_TITLE = 140;
 const MAX_BODY = 400;
 const MAX_ROLES = 8;
 const MAX_NAME = 40;
+const MAX_NAMES = 8;
 
 // Giới hạn tần suất (số thông báo / cửa sổ).
 const RATE = {
@@ -124,11 +125,12 @@ function authorizeQueueItem(item, sender) {
 
   const s = sender || {};
   // Ghi bằng quyền quản trị (Console / CLI / Admin SDK) — đã qua xác thực của Google Cloud
-  if (s.authType === 'ADMIN') return { ok: true, tier: 'admin', title, body, roles };
+  const names = cleanNames(it.names); // @tag (05/11/2026) — người CHƯA duyệt không được dùng (nhánh dưới bỏ hẳn)
+  if (s.authType === 'ADMIN') return { ok: true, tier: 'admin', title, body, roles, names };
   // Không đăng nhập: luật database vốn đã chặn; tới được đây là bất thường → từ chối
   if (s.authType !== 'USER' || !s.uid) return { ok: false, reason: 'chua-dang-nhap' };
 
-  if (isApproved(s.profile, s.email)) return { ok: true, tier: 'approved', title, body, roles };
+  if (isApproved(s.profile, s.email)) return { ok: true, tier: 'approved', title, body, roles, names };
 
   // CHƯA được duyệt (kể cả người lạ vừa tự đăng ký): chỉ tới được Dũng, nội dung do máy chủ soạn
   roles = roles.filter((r) => r === 'dung');
@@ -216,7 +218,63 @@ function pickNamedTargets(subsByCh, roles, names, senderUid) {
   return out;
 }
 
+/** Chuẩn hoá tên để SO KHỚP (NFC, gộp dấu cách, cắt 40). Tên chỉ dùng để so, KHÔNG bao giờ đưa vào nội dung thông báo. */
+function normName(v) {
+  if (typeof v !== 'string') return '';
+  return cleanText(v, 200).normalize('NFC').replace(/ +/g, ' ').trim().slice(0, MAX_NAME);
+}
+
+/**
+ * Khoá so tên KHÔNG dấu, không hoa/thường: danh sách người của app ghi lệch dấu so với tên tài khoản
+ * (thật 05/11/2026: "Hiêp" ↔ tài khoản "Hiệp", "HIền" ↔ "Hiền"). Hơn chục tài khoản → trùng khoá gần như không xảy ra.
+ */
+const COMBINING = new RegExp('[' + String.fromCharCode(0x300) + '-' + String.fromCharCode(0x36f) + ']', 'g');
+function foldName(v) {
+  return normName(v).toLowerCase().normalize('NFD').replace(COMBINING, '').replace(/đ/g, 'd');
+}
+
+/** Danh sách tên được @tag: mảng HOẶC object {0:..} (RTDB), tối đa 8 tên khác nhau. */
+function cleanNames(v) {
+  let arr = [];
+  if (Array.isArray(v)) arr = v.slice(0, 64);
+  else if (v && typeof v === 'object') arr = Object.keys(v).slice(0, 64).map((k) => v[k]);
+  const out = [];
+  for (const x of arr) {
+    const n = normName(x);
+    if (n && out.indexOf(n) < 0) out.push(n);
+    if (out.length >= MAX_NAMES) break;
+  }
+  return out;
+}
+
+/**
+ * NHẮC TÊN app 379 (05/11/2026, @tag trong Hỏi–đáp phiếu): chọn máy của người được tag.
+ * Tên lấy từ HỒ SƠ TÀI KHOẢN theo uid của đăng ký (nameOfUid = Map uid→tên, máy chủ tự đọc) — KHÔNG có tên
+ * do máy gửi tự khai. Bỏ: đăng ký không có uid (đời cũ), máy của người gửi, máy đã nhận theo kênh (skip = khoá
+ * hoặc endpoint), mỗi máy 1 lần. subsByCh = { kênh: { khoá: {endpoint, keys, uid} } }
+ */
+function pickByProfileName(subsByCh, nameOfUid, names, skip, senderUid) {
+  const want = cleanNames(names).map(foldName); const out = [];
+  if (!want.length || !(nameOfUid instanceof Map)) return out;
+  const seen = new Set(Array.isArray(skip) ? skip : []);
+  for (const ch of Object.keys(subsByCh || {})) {
+    const subs = subsByCh[ch] || {};
+    for (const key of Object.keys(subs)) {
+      const s = subs[key];
+      if (!s || typeof s !== 'object' || typeof s.uid !== 'string' || !s.uid || s.uid === senderUid) continue;
+      const ep = typeof s.endpoint === 'string' ? s.endpoint : '';
+      if (seen.has(key) || (ep && seen.has(ep))) continue;
+      const nm = foldName(nameOfUid.get(s.uid));
+      if (!nm || want.indexOf(nm) < 0) continue;
+      seen.add(key); if (ep) seen.add(ep);
+      out.push({ ch: ch, key: key, s: s });
+    }
+  }
+  return out;
+}
+
 module.exports = {
+  cleanNames, normName, foldName, pickByProfileName, MAX_NAMES,
   pickNamedTargets, ROLES_379, FIXED_EMAILS, RATE, MAX_TITLE, MAX_BODY, MAX_NAME,
   cleanText, cleanRoles, isApproved, safeName, composeUnapproved, authorizeQueueItem,
   keyMatchesHash, secretEquals, keyFromHeaders, nextRateState, resolveAuthMode,

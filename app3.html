@@ -1438,7 +1438,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261105-v185';
+const APP_VERSION = '20261105-v186';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -2525,7 +2525,7 @@ function updateNotifSettingsStatus() {
   }
 }
 
-async function sendPushNotif(title, body, targetRoles) {
+async function sendPushNotif(title, body, targetRoles, names) {
   if(!Array.isArray(targetRoles) || targetRoles.length === 0) return;
   // Dedup: không gửi lại cùng 1 nội dung trong vòng 10 giây
   const key = 'dc_notif_' + btoa(unescape(encodeURIComponent(title + body))).substring(0, 20);
@@ -2536,7 +2536,9 @@ async function sendPushNotif(title, body, targetRoles) {
   // rồi đóng app là thông báo MẤT LUÔN (phiếu thì có cơ chế bù, thông báo thì không) →
   // "thỉnh thoảng không hiện thông báo có đề xuất mới". Nay: bỏ vào HỘP CHỜ trong máy trước,
   // gửi thành công mới gạch; gửi hụt thì lần mở app sau / lúc có mạng lại tự gửi tiếp.
-  _pushOutboxAdd({ title, body, roles: targetRoles, ts: Date.now() });
+  const item = { title, body, roles: targetRoles, ts: Date.now() };
+  if(Array.isArray(names) && names.length) item.names = names.slice(0, 10); // v185: @tag → máy chủ gửi riêng từng người (theo tên hồ sơ)
+  _pushOutboxAdd(item);
 }
 function _pushOutboxLoad(){ try{ const v=JSON.parse(localStorage.getItem('dc_push_outbox')||'[]'); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
 function _pushOutboxSave(a){ try{ localStorage.setItem('dc_push_outbox', JSON.stringify(a.slice(-20))); }catch(e){} }
@@ -3873,7 +3875,7 @@ function _buildCard(p){
   const _chCan0 = (_chMe && _chatProposerOf(p)===_chMe) || currentRole==='dung' || currentRole==='hien' || currentRole==='trang';
   const _chClr = r => r==='dung' ? 'var(--blue-dark)' : r==='hien' ? '#7c3aed' : r==='trang' ? '#b45309' : '#334155';
   // v185: người được @tag trong hỏi–đáp cũng trả lời được ngay trên phiếu
-  const _chCan = _chCan0 || (!!_chMe && _chArr.some(m=>(m.text||'').indexOf('@'+_chMe)>=0));
+  const _chCan = _chCan0 || _chArr.some(m=>_chatTagsMe(m.text));
   const _chMsgs = _chArr.map(m=>{
     const mine = (m.by||'')===_chMe;
     return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${mine?'#f1f5f9':'#eff6ff'};border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
@@ -7700,18 +7702,26 @@ function _chatAmIInvolved(p){
   if(currentRole==='dung' && (p.opinionD || arr.some(m=>m.role==='dung'))) return true;
   if(currentRole==='hien' && (p.opinionH || arr.some(m=>m.role==='hien'))) return true;
   if(currentRole==='trang' && arr.some(m=>m.role==='trang')) return true;
-  if(arr.some(m=>(m.by||'')!==me && (m.text||'').indexOf('@'+me)>=0 && _chatTagsOf(m.text).indexOf(me)>=0)) return true; // v185: bị @tag
+  if(arr.some(m=>(m.by||'')!==me && _chatTagsMe(m.text))) return true; // v185: bị @tag
   return false;
 }
 // ── v185 @TAG trong hỏi–đáp trên phiếu: gõ @ → hiện dãy tên (gõ thêm chữ để lọc, không cần dấu), bấm tên để chèn.
-// Người được tag: phiếu vào bảng nhắc "Có tin nhắn mới cho bạn" + chuông khi mở app; D/H/Trang còn được báo đẩy.
-// shortcut: người KHÁC D/H/T chưa có báo đẩy riêng từng người (máy chủ chỉ gửi theo vai/phòng) — cần thì nâng hàm processPushQueue.
+// Người được tag: phiếu vào bảng nhắc "Có tin nhắn mới cho bạn" + chuông khi mở app, và báo đẩy về điện thoại
+// (D/H/Trang theo kênh vai; người khác: gói tin kèm names → processPushQueue tìm máy theo tên hồ sơ userRoles/<uid>/name).
 function _chatTagsOf(text){
-  let t=String(text||''); const out=[];
+  let t=_tagFold(text); const out=[];
   const me=getCurrentUserName();
   _chatMemberNames().concat(me?[me]:[]).sort((a,b)=>b.length-a.length)
-    .forEach(n=>{ if(t.indexOf('@'+n)>=0){ out.push(n); t=t.split('@'+n).join(''); } }); // tên dài trước: "@Hiền Lê" không tính nhầm "Hiền"
+    .forEach(n=>{ const f='@'+_tagFold(n); if(t.indexOf(f)>=0){ out.push(n); t=t.split(f).join(''); } }); // tên dài trước: "@Hiền Lê" không tính nhầm "Hiền"
   return out;
+}
+// So tên KHÔNG dấu/hoa-thường: danh sách người ghi lệch dấu so với tên tài khoản (vd "Hiêp" ↔ "Hiệp") — khớp máy chủ (pushGuard.foldName)
+function _tagFold(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/ +/g,' ').trim(); }
+function _chatTagsMe(text){
+  const me=getCurrentUserName(); if(!me || !text) return false;
+  const f=_tagFold(me);
+  if(_tagFold(text).indexOf('@'+f)<0) return false; // lọc nhanh
+  return _chatTagsOf(text).some(n=>_tagFold(n)===f);
 }
 function _pqInputHtml(id, style){
   return `<div style="${style||''}"><div style="display:flex;gap:5px">
@@ -7785,7 +7795,8 @@ function sendChatMsg(id){
   const pgL=document.getElementById('page-luong');
   if(pgL && pgL.style.display!=='none'){ try{ renderLuongActive(); }catch(e){} } else { renderProposals(); }
   try{ updateNotifBadge(); }catch(e){}
-  const tagged=_chatTagsOf(text).filter(n=>n!==me);
+  const tagged=_chatTagsOf(text).filter(n=>_tagFold(n)!==_tagFold(me));
+  const _dht={dung:'dung',hien:'hien',trang:'trang'}; // tên D/H/T (không dấu) → kênh vai
   showToast(tagged.length ? '💬 Đã gửi — đã nhắc '+tagged.join(', ') : '💬 Đã gửi');
   // Báo đẩy cho các vai trò liên quan (trừ mình). Người đề xuất vai 'other' nhận qua bảng nhắc khi mở app.
   try{
@@ -7793,11 +7804,12 @@ function sendChatMsg(id){
     if(p.opinionD) roles.add('dung');
     if(p.opinionH) roles.add('hien');
     (p.chat||[]).forEach(m=>{ if(m.role==='dung'||m.role==='hien'||m.role==='trang') roles.add(m.role); });
-    tagged.forEach(n=>{ const r={'Dũng':'dung','Hiền':'hien','Trang':'trang'}[n]; if(r) roles.add(r); }); // v185: @tag D/H/T → báo đẩy
+    tagged.forEach(n=>{ const r=_dht[_tagFold(n)]; if(r) roles.add(r); }); // v185: @tag D/H/T → báo đẩy
     roles.delete(currentRole);
     let list=Array.from(roles);
     if(!list.length) list=['dung','hien'].filter(r=>r!==currentRole);
-    if(list.length) sendPushNotif('💬 '+me+' nhắn hỏi–đáp', (p.desc||'')+': '+text.slice(0,90), list);
+    const others=tagged.filter(n=>!_dht[_tagFold(n)]); // người khác D/H/T: máy chủ tìm máy theo tên hồ sơ
+    if(list.length) sendPushNotif('💬 '+me+(tagged.length?' nhắc '+tagged.join(', '):' nhắn hỏi–đáp'), (p.desc||'')+': '+text.slice(0,90), list, others);
   }catch(e){}
 }
 // ── Bảng nhắc khi mở app ──
@@ -7855,7 +7867,9 @@ function _chatMemberNames(){
   try{ persons.forEach(p=>{ if(p&&p.name) s.add(p.name); }); }catch(e){}
   try{ employees.forEach(e=>{ if(e&&e.name) s.add(e.name); }); }catch(e){}
   if(getCurrentUserName()) s.delete(getCurrentUserName()); // không tag chính mình
-  return Array.from(s);
+  // v185: bỏ tên trùng chỉ khác dấu/hoa-thường (danh sách người có "HIền" cạnh "Hiền") — giữ bản đứng trước
+  const seen=new Set(getCurrentUserName()?[_tagFold(getCurrentUserName())]:[]);
+  return Array.from(s).filter(n=>{ const f=_tagFold(n); if(seen.has(f)) return false; seen.add(f); return true; });
 }
 function _chatRefStatus(p){
   if(p.kind==='salary'){ const st=_salStatusLabel(p); return st.label; }
