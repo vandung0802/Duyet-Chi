@@ -1438,7 +1438,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261105-v186';
+const APP_VERSION = '20261110-v187';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3492,6 +3492,7 @@ function getMyPendingItems(){
     if(p.kind==='salary') return; // ứng lương không đẩy vào chuông thông báo chi (có tab Lương riêng)
     if(p.kind==='kh') return;     // v125: phiếu P.KH có chấm số riêng trên nút P.KH
     if(p.status==='rejected') return;
+    if(!_canSeeP(p)) return;      // v187
     const dAmt = approvedAmtOf(p,'D');
     const hAmt = approvedAmtOf(p,'H');
     const total = parseFloat(p.amount)||0;
@@ -3622,6 +3623,7 @@ function _expenseAmt(p, f){
 function matchFilter(p, f){
   if(p && p.kind==='salary') return false; // phiếu ỨNG LƯƠNG chỉ hiện ở tab Lương, KHÔNG lẫn vào Danh sách/Thống kê chi
   if(p && p.kind==='kh') return false;     // v125: phiếu P.KẾ HOẠCH chỉ hiện ở tab P.KH
+  if(!_canSeeP(p)) return false;            // v187: phiếu người khác ẩn (danh sách + ô thống kê)
   return _expenseMatch(p, f);
 }
 
@@ -4626,6 +4628,20 @@ function _isMyProposal(p){
 }
 function _canEditDelete(p){
   return currentRole==='dung'||currentRole==='hien'||currentRole==='trang'||_isMyProposal(p);
+}
+// v187 (D chốt 10/11/2026) AI THẤY PHIẾU NÀO — áp cho phiếu chi, ứng lương, P.KH:
+//  D, Hiền: thấy hết · Trang: phiếu của mình + phiếu ĐÃ DUYỆT (có số duyệt chính thức, để chuyển tiền) ·
+//  người khác (kể cả kế toán trưởng): chỉ phiếu của mình + phiếu mình bị @tag trong Hỏi–đáp.
+// CHỈ LỌC LÚC HIỂN THỊ — mảng proposals giữ nguyên (save() ghi cả mảng, bớt phiếu ra là XOÁ trên máy chủ).
+// shortcut: chỉ ẩn trên màn hình, dữ liệu vẫn tải về máy (người rành máy tính moi được) — khoá thật cần đổi luật đọc + cách tải theo người.
+function _canSeeP(p){
+  if(!p) return false;
+  if(currentRole==='dung' || currentRole==='hien') return true;
+  if(_isMyProposal(p)) return true;
+  const me=getCurrentUserName();
+  if(me && (_tagFold(p.person)===_tagFold(me) || _tagFold(p.createdBy)===_tagFold(me))) return true; // tên lệch dấu ("Hiêp"/"Hiệp")
+  if(currentRole==='trang' && (getOfficialApprovedAmount(p)||0) > 0) return true;
+  return Array.isArray(p.chat) && p.chat.some(m=>_chatTagsMe(m.text));
 }
 function del(id){
   if(_chuaTaiXong()) return;
@@ -6068,8 +6084,8 @@ function renderReportFilters(){
   const selS = document.getElementById('filter-site');
   if(!selP || !selS) return;
   const curP = selP.value, curS = selS.value;
-  const _exp = proposals.filter(p=>p.kind!=='salary'); // báo cáo chi không lấy tên/nhóm của ứng lương
-  const names = [...new Set(_exp.map(p=>p.person||'').filter(Boolean))].sort(_cmpTen); // v160: A→Z theo TÊN
+  const _exp = proposals.filter(p=>p.kind!=='salary' && _canSeeP(p)); // báo cáo chi không lấy tên/nhóm của ứng lương; v187 chỉ phiếu được thấy
+  const names =[...new Set(_exp.map(p=>p.person||'').filter(Boolean))].sort(_cmpTen); // v160: A→Z theo TÊN
   const siteList = [...new Set(_exp.map(p=>p.site||'').filter(Boolean))].sort();
   selP.innerHTML = '<option value="">👤 Tất cả người</option>' +
     names.map(n=>`<option value="${esc(n)}"${curP===n?' selected':''}>${esc(n)}</option>`).join('');
@@ -6081,7 +6097,7 @@ function getFilteredProposals(){
   const p = (document.getElementById('filter-person')||{}).value||'';
   const s = (document.getElementById('filter-site')||{}).value||'';
   // Loại phiếu ỨNG LƯƠNG + P.KẾ HOẠCH khỏi mọi báo cáo/CSV chi phí (chúng có tab riêng)
-  return proposals.filter(x=>x.kind!=='salary' && x.kind!=='kh' && (!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
+  return proposals.filter(x=>x.kind!=='salary' && x.kind!=='kh' && _canSeeP(x) && (!p||(x.person||'')===p)&&(!s||(x.site||'')===s)); // v187
 }
 
 function applyReportFilter(){
@@ -7441,7 +7457,7 @@ function renderKhActive(tab){
 }
 function renderKhList(){
   const el=document.getElementById('kh-list'); if(!el) return;
-  const all=proposals.filter(p=>p.kind==='kh');
+  const all=proposals.filter(p=>p.kind==='kh' && _canSeeP(p)); // v187
   try{ renderExpenseStatBar('kh-stats-bar', all, _khStatFilter, 'khStatPick'); }catch(e){} // v139/v140: dải 7 ô bấm lọc
   // v126: 2 ô lọc Người + Công trình (giống tab Báo cáo) — nạp danh sách từ phiếu, GIỮ lựa chọn hiện tại
   const selP=document.getElementById('kh-filter-person'), selS=document.getElementById('kh-filter-site');
@@ -7481,7 +7497,7 @@ function jumpToKhProposal(id){
   // v126: bỏ lọc để chắc chắn phiếu cần nhảy tới đang hiển thị
   const _fp=document.getElementById('kh-filter-person'); if(_fp) _fp.value='';
   const _fs=document.getElementById('kh-filter-site'); if(_fs) _fs.value='';
-  const idx=proposals.filter(p=>p.kind==='kh').findIndex(p=>p.id===id);
+  const idx=proposals.filter(p=>p.kind==='kh' && _canSeeP(p)).findIndex(p=>p.id===id);
   if(idx>=0 && idx+20>_khRenderLimit){ _khRenderLimit=idx+20; }
   renderKhList();
   const tryScroll=()=>{ const el=document.getElementById('card-'+id); if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.outline='3px solid var(--blue)'; setTimeout(()=>{el.style.outline='';},2500); } };
@@ -7501,7 +7517,7 @@ function renderKhStats(){
   _khEnsureMonth();
   const lbl=document.getElementById('kh-month-label');
   if(lbl) lbl.textContent=monthLabel(_khMonth);
-  const items=proposals.filter(p=>p.kind==='kh' && _khMonthKey(p.ts)===_khMonth);
+  const items=proposals.filter(p=>p.kind==='kh' && _khMonthKey(p.ts)===_khMonth && _canSeeP(p)); // v187
   const sumDX=items.reduce((a,p)=>a+(parseFloat(p.amount)||0),0);
   const sumDuyet=items.reduce((a,p)=>a+(getOfficialApprovedAmount(p)||0),0);
   const sumCK=items.reduce((a,p)=>a+getTotalTransferred(p),0);
@@ -7883,6 +7899,7 @@ function _chatRefStatus(p){
 function _chatRefChip(refId){
   const p=proposals.find(x=>x.id===refId);
   if(!p) return `<div style="border:1px solid var(--gray-border);background:#f8fafc;border-radius:8px;padding:5px 8px;margin-top:4px;font-size:11px;color:var(--text-sub)">📋 (phiếu đã xoá hoặc không còn)</div>`;
+  if(!_canSeeP(p)) return `<div style="border:1px solid var(--gray-border);background:#f8fafc;border-radius:8px;padding:5px 8px;margin-top:4px;font-size:11px;color:var(--text-sub)">🔒 Phiếu của người khác — bạn không xem được</div>`; // v187
   return `<div onclick="event.stopPropagation();chatOpenRef('${sid(p.id)}')" style="border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-top:4px;cursor:pointer">
     <div style="font-size:11px;font-weight:700;color:var(--blue-dark);word-break:break-word">📋 ${esc(p.desc||'')}</div>
     <div style="font-size:10px;color:var(--blue-dark)">${fmtVND(p.amount)} · ${esc(p.person||'')} · ${_chatRefStatus(p)} — bấm mở phiếu ›</div>
@@ -8242,7 +8259,7 @@ function renderChatPick(){
   const el=document.getElementById('chat-pick-list'); if(!el) return;
   const q=((document.getElementById('chat-pick-search')||{}).value||'').trim().toLowerCase();
   // v126: kênh Kế Hoạch chỉ gắn được phiếu P.KH; kênh Kế Toán không lộ phiếu P.KH
-  let items=proposals.filter(p=>_cIsKh() ? p.kind==='kh' : p.kind!=='kh').sort((a,b)=>(b.ts||0)-(a.ts||0));
+  let items=proposals.filter(p=>(_cIsKh() ? p.kind==='kh' : p.kind!=='kh') && _canSeeP(p)).sort((a,b)=>(b.ts||0)-(a.ts||0)); // v187: chỉ gắn phiếu mình được thấy
   if(q) items=items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q));
   items=items.slice(0,30);
   if(!items.length){ el.innerHTML='<div style="text-align:center;padding:20px;color:var(--text-sub);font-size:13px">Không có phiếu nào khớp</div>'; return; }
@@ -8440,6 +8457,7 @@ function _empAdvancedMap(year){
   const m={};
   proposals.forEach(p=>{
     if(p.kind!=='salary' || p.status==='rejected') return;
+    if(!_canSeeP(p)) return; // v187: chỉ cộng phiếu mình được thấy
     if(year && String(p.month||'').indexOf(year+'-')!==0) return;
     const tr=getTotalTransferred(p); if(!tr) return;
     if(p.empId) m[p.empId]=(m[p.empId]||0)+tr;
@@ -8488,7 +8506,7 @@ async function exportEmployeesExcel(){
   showToast('📤 Đã xuất file Excel danh sách nhân viên');
 }
 async function exportSalaryByPersonExcel(){
-  const all=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected');
+  const all=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected' && _canSeeP(p)); // v187
   if(!all.length){ showToast('Chưa có dữ liệu ứng lương'); return; }
   let XLSX; try{ XLSX=await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
   const months=Array.from(new Set(all.map(p=>p.month).filter(Boolean))).sort();
@@ -8851,7 +8869,7 @@ function renderSalaryAdvances(){
   if(label) label.textContent=monthLabel(salaryMonth);
   const list=document.getElementById('sal-adv-list');
   if(!list) return;
-  const items=proposals.filter(p=>p.kind==='salary' && p.month===salaryMonth);
+  const items=proposals.filter(p=>p.kind==='salary' && p.month===salaryMonth && _canSeeP(p)); // v187
   try{ renderExpenseStatBar('lg-stats-bar', items, _lgStatFilter, 'lgStatPick'); }catch(e){} // v140: dải 7 ô bấm lọc (theo THÁNG đang xem)
   const tDX=items.reduce((s,p)=>s+(parseFloat(p.amount)||0),0);
   const tDuyet=items.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
@@ -8861,10 +8879,10 @@ function renderSalaryAdvances(){
   if(!items.length){
     // v169: tháng trống (đầu tháng mới) → gợi ý nhảy về tháng gần nhất CÓ dữ liệu, khỏi giật mình "mất hết"
     let hint='';
-    const prevMonths=[...new Set(proposals.filter(p=>p.kind==='salary'&&p.month&&p.month<salaryMonth).map(p=>p.month))].sort();
+    const prevMonths=[...new Set(proposals.filter(p=>p.kind==='salary'&&p.month&&p.month<salaryMonth&&_canSeeP(p)).map(p=>p.month))].sort();
     if(prevMonths.length){
       const pm=prevMonths[prevMonths.length-1];
-      const n=proposals.filter(p=>p.kind==='salary'&&p.month===pm).length;
+      const n=proposals.filter(p=>p.kind==='salary'&&p.month===pm&&_canSeeP(p)).length;
       hint=`<div style="margin-top:14px"><button onclick="salaryMonth='${esc(pm)}';renderSalaryAdvances()" style="padding:10px 16px;font-size:13px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:10px;cursor:pointer">‹ Xem ${esc(monthLabel(pm))} (${n} khoản)</button></div>`;
     }
     list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Tháng mới chưa có khoản ứng nào<br><small>Nhấn "➕ Đề xuất ứng lương" để tạo</small>'+hint+'</div>';
@@ -8985,7 +9003,7 @@ function attachSalaryStatsDoubleTap(container){
 function renderSalaryStats(){
   const el=document.getElementById('sal-stats-content');
   if(!el) return;
-  const all=proposals.filter(p=>p.kind==='salary');
+  const all=proposals.filter(p=>p.kind==='salary' && _canSeeP(p)); // v187
   const per=document.getElementById('sal-stats-period');
   const months=Array.from(new Set(all.map(p=>p.month).filter(Boolean))).sort().reverse();
   const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
@@ -9102,7 +9120,7 @@ function attachRowDoubleTap(container, selector){
 function renderSalaryStatsByName(){
   const el=document.getElementById('sal-sn-content');
   if(!el) return;
-  const all=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected');
+  const all=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected' && _canSeeP(p)); // v187
   const per=document.getElementById('sal-sn-period');
   const months=Array.from(new Set(all.map(p=>p.month).filter(Boolean))).sort().reverse();
   const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
@@ -9155,7 +9173,7 @@ function salNameExpand(name){
 }
 function _snMonthTable(name){
   const nn=_normName(name);
-  const items=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected' && _normName(p.person||'')===nn);
+  const items=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected' && _normName(p.person||'')===nn && _canSeeP(p)); // v187
   const byM={};
   items.forEach(p=>{ const m=p.month||'?'; if(!byM[m]) byM[m]={dx:0,duyet:0,ck:0,n:0}; byM[m].dx+=parseFloat(p.amount)||0; byM[m].duyet+=getOfficialApprovedAmount(p)||0; byM[m].ck+=getTotalTransferred(p); byM[m].n++; });
   const months=Object.keys(byM).sort();
