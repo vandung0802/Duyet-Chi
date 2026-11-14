@@ -1910,7 +1910,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261031-v114';
+const APP_VERSION = '20261114-v115';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -11902,7 +11902,7 @@ function renderCashSummary(){
   el.innerHTML = `<div class="card"><div class="card-body" style="padding:12px 14px">
     ${row('Đã thu về', t.thu, {color:'#047857', sub: srcLine || 'Tiền chủ đầu tư trả + tiền 2 công ty góp vào. Toàn ghi ở tab "Thu".'})}
     ${t.traLai>0 ? row('Đã trả lại vốn góp', -t.traLai, {color:'#6d28d9', sub:(retLine?retLine+' — ':'')+'tiền trả lại cho công ty đã góp, không phải chi phí công trình.'}) : ''}
-    ${t.vay>0 ? row('Tiền vay đã nhận', t.vay, {color:'#dc2626', sub:'Vay ngân hàng, vay cá nhân về tài khoản dự án. Xem tab "Vay".'}) : ''}
+    ${t.vay>0 ? row('Tiền vay đã nhận', t.vay, {color:'#dc2626', sub:`Tổng đã vay từ đầu (trả nợ không làm số này giảm). <b style="color:#b91c1c">Còn nợ ${fmtShortMoney(t.noVay)}</b> — xem tab "Vay".`}) : ''}
     ${row('Đã chi ra (thật sự)', -t.daChi, {color:'#b91c1c', sub:'Tổng tiền thủ quỹ ĐÃ chuyển đi theo các phiếu chi + ứng lương (không tính ký quỹ).'})}
     ${t.dangTamUng>0 ? row('Đang tạm ứng (chưa kê chi)', -t.dangTamUng, {color:'#b45309', sub:'Tiền đã ứng cho người đi công trường, chưa kê khoản chi. Kê xong mới thành chi phí. Xem tab "Tạm ứng".'}) : ''}
     ${t.noTamUng>0 ? row('Chi vượt ứng, tiền vẫn trong tài khoản', t.noTamUng, {color:'#b45309', sub:'Người đi công trường đã chi vượt số ứng: chi phí đã tính vào "Đã chi ra" nhưng tiền CHƯA ra khỏi tài khoản (công ty còn nợ họ) — cộng lại để khớp ngân hàng.'}) : ''}
@@ -12288,8 +12288,13 @@ function renderLoanList(){
     return fl==='owe' ? !done : fl==='done' ? done : (!done && d!==null && d<=7);
   });
   if(sumEl){
-    if((q||fl) && allLoans.length){ const owe=loans.reduce((t,l)=>t+Math.max(0,loanLeft(l)),0), vay=loans.reduce((t,l)=>t+(parseFloat(l.amount)||0),0);
-      sumEl.innerHTML=`${q?'🔍 '+esc((document.getElementById('loan-search')||{}).value.trim())+' · ':''}${loans.length} khoản · vay ${fmtVND(vay)} · <span style="color:#b91c1c">còn nợ ${fmtVND(owe)}</span>`; sumEl.style.display='block'; }
+    // v115: dòng tổng LUÔN hiện — đã vay (không giảm) · đã trả gốc · CÒN NỢ · phần trả nợ đang chờ H&L duyệt (chưa trừ)
+    if(allLoans.length){ const ids=new Set(loans.map(l=>l.id)), owe=loans.reduce((t,l)=>t+Math.max(0,loanLeft(l)),0), vay=loans.reduce((t,l)=>t+(parseFloat(l.amount)||0),0), goc=loans.reduce((t,l)=>t+loanRepaid(l).g,0);
+      const pend=cashflow.filter(r=>repayPending(r) && ids.has(r.loanId)).reduce((t,r)=>t+(parseFloat(r.principal)||0),0);
+      sumEl.innerHTML=`<div>${q?'🔍 '+esc((document.getElementById('loan-search')||{}).value.trim())+' · ':(fl?'':'Tổng: ')}${loans.length} khoản · đã vay ${fmtVND(vay)} · đã trả gốc ${fmtVND(goc)}</div>`
+        + `<div style="font-size:15px;font-weight:900;color:#b91c1c;margin-top:2px">Còn nợ ${fmtVND(owe)}</div>`
+        + (pend>0 ? `<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px">⏳ ${fmtVND(pend)} trả nợ đang chờ Hiền / Lan duyệt — duyệt xong mới trừ</div>` : '');
+      sumEl.style.display='block'; }
     else sumEl.style.display='none';
   }
   if(!allLoans.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có khoản vay nào</div></div>'; return; }
