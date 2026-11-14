@@ -1909,7 +1909,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261114-v116';
+const APP_VERSION = '20261114-v117';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -11763,7 +11763,7 @@ const _ACCT_OPTS = Object.keys(CASH_ACCT).map(k=>`<option value="${k}">${CASH_AC
 const _ONE_ACCT_ALL = false;   // v116: không dùng nữa (xem _oneAcct)
 function _oneAcct(){ return !(currentRole==='dung' || currentRole==='hien' || currentRole==='toan'); }   // v116: chỉ D, Hiền/Lan, Toàn thấy từng nguồn; người khác thấy tổng
 function _applyOneAcct(){ try{ document.body.classList.toggle('one-acct', _oneAcct()); }catch(e){} }
-function acctLabel(a){ return (CASH_ACCT[a]||CASH_ACCT.cty).label; }
+function acctLabel(a){ return CASH_ACCT[acctKey(a)].label; }   // v117: mã cũ cty/quy → Tiền mặt (trước trỏ CASH_ACCT.cty không còn → lỗi, dừng Đồng bộ lại / Sổ quỹ tháng)
 // v41: type 'loan' = VAY (lender nh/canhan), 'repay' = TRẢ NỢ (principal gốc + interest lãi, loanId), 'xfer' = CHUYỂN NỘI BỘ (from → to)
 const LOAN_FROM = { nh:{label:'Ngân hàng', icon:'🏦'}, canhan:{label:'Cá nhân', icon:'👤'} };
 function cashCanWriteIn(){ return currentRole==='toan' || currentRole==='dung'; }   // D chốt 26/09: Cân đối chỉ THỦ QUỸ (Toàn) nhập; dung = quản trị ngầm, không nêu trên app
