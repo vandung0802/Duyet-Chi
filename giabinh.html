@@ -1909,7 +1909,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261114-v118';
+const APP_VERSION = '20261114-v119';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -4438,7 +4438,7 @@ function _buildCard(p){
       const tLabel = `T đã chuyển ${tFull ? fmtVND(approvedAmt) : fmtVND(transferredAmt)+'/<wbr>'+fmtVND(approvedAmt)}`;
       const history = Array.isArray(p.transfers) ? p.transfers : [];
       const historyHtml = history.length>=1 ? `<div class="badge-history">${history.map((t,idx)=>
-        `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}${(t.acct && !_oneAcct()) ? ' · <b style="color:'+CASH_ACCT[acctOf(t)].color+'">'+CASH_ACCT[acctOf(t)].short+'</b>' : ''}`
+        `Lần ${idx+1}: ${fmtVND(t.amount)} · ${fmtFull(t.ts)}${_oneAcct() ? '' : canChangeAcct() ? ' · '+transferAcctChip(p,t,idx) : t.acct ? ' · <b style="color:'+CASH_ACCT[acctOf(t)].color+'">'+CASH_ACCT[acctOf(t)].short+'</b>' : ''}`
       ).join('<br>')}</div>` : '';
       tRow = `<span class="badge badge-done">💸 ${tLabel}</span>${historyHtml}`;
     }
@@ -4724,8 +4724,8 @@ function renderBtnTransfer(p){
   if(transferred>0){
     const full = transferred >= approvedAmt - 0.0001;
     const inner = `<div class="ab-row-top"><span class="ab-big-letter">T</span><span class="ab-mid-label">${full?'Đã chuyển':fmt(transferred)+'/'+fmtVND(approvedAmt)}</span></div>`;
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="color:var(--yellow)" onclick="undoTransfer('${sid(p.id)}')" title="Bấm để hoàn tác lần chuyển gần nhất">${inner}</button>${transferAcctLines(p)}</div>`;   // v118
-    return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><div class="ab-done-btn" style="color:var(--yellow)">${inner}</div>${transferAcctLines(p)}</div>`;   // v118: Dũng cũng đổi được
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><button class="ab-done-btn" style="color:var(--yellow)" onclick="undoTransfer('${sid(p.id)}')" title="Bấm để hoàn tác lần chuyển gần nhất">${inner}</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><div class="ab-done-btn" style="color:var(--yellow)">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 T</div></div>`;
 }
@@ -11800,9 +11800,9 @@ function cashAcctBtn(r){
   const b = (field, pre) => { const k=acctKey(r[field]); return `<button onclick="changeCashAcct('${sid(r.id)}','${field}')" title="Bấm để đổi nguồn tiền" style="${_CASH_BTN}background:${CASH_ACCT[k].color}14;color:${CASH_ACCT[k].color};border:1px solid ${CASH_ACCT[k].color}55">${pre}${CASH_ACCT[k].icon} ${CASH_ACCT[k].short} ✎</button>`; };
   return r.type==='xfer' ? b('from','từ ')+b('to','đến ') : b('acct','');
 }
-function transferAcctLines(p){
-  if(!canChangeAcct() || _oneAcct() || !Array.isArray(p.transfers) || !p.transfers.length) return '';
-  return '<div style="margin-top:4px;display:flex;flex-direction:column;gap:3px">' + p.transfers.map((t,i)=>{ const k=acctKey(t.acct); return `<button onclick="event.stopPropagation();changeTransferAcct('${sid(p.id)}',${i})" title="Bấm để đổi nguồn tiền của lần chuyển này" style="${_CASH_BTN}display:flex;justify-content:space-between;gap:6px;background:${CASH_ACCT[k].color}14;color:${CASH_ACCT[k].color};border:1px solid ${CASH_ACCT[k].color}55"><span>L${i+1}: ${fmtTr(t.amount)}</span><span>${CASH_ACCT[k].icon} ${CASH_ACCT[k].short} ✎</span></button>`; }).join('') + '</div>';
+function transferAcctChip(p,t,i){   // v119: chữ nguồn bấm được, nằm ngay trong dòng "Lần 1: … · TM"
+  const c=CASH_ACCT[acctOf(t)];
+  return `<button onclick="event.stopPropagation();changeTransferAcct('${sid(p.id)}',${i})" title="Bấm để đổi nguồn tiền" style="font-size:10px;font-weight:800;line-height:1.4;padding:0 5px;border-radius:6px;border:1px solid ${c.color}66;background:${c.color}14;color:${c.color};cursor:pointer;white-space:nowrap">${c.short} ✎</button>`;
 }   // v117: mã cũ cty/quy → Tiền mặt (trước trỏ CASH_ACCT.cty không còn → lỗi, dừng Đồng bộ lại / Sổ quỹ tháng)
 // v41: type 'loan' = VAY (lender nh/canhan), 'repay' = TRẢ NỢ (principal gốc + interest lãi, loanId), 'xfer' = CHUYỂN NỘI BỘ (from → to)
 const LOAN_FROM = { nh:{label:'Ngân hàng', icon:'🏦'}, canhan:{label:'Cá nhân', icon:'👤'} };
