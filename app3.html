@@ -1438,7 +1438,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261110-v187';
+const APP_VERSION = '20261118-v188';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -4380,9 +4380,9 @@ function confirmApproveAmount(){
   const full = val >= p.amount;
   showToast(`✓ ${field==='approvedD'?'Dũng':'Hiền'} đã duyệt ${fmtVND(val)}${full?' (toàn bộ)':' (1 phần)'}`);
   if(field === 'approvedD') {
-    sendPushNotif('✅ Dũng đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['hien', 'trang']);
+    sendPushNotif('✅ Dũng đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['hien', 'trang'], _ownerNames(p)); // v188: + người lập phiếu
   } else {
-    sendPushNotif('✅ Hiền đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['dung', 'trang']);
+    sendPushNotif('✅ Hiền đã duyệt chi', `${p.desc}: ${fmtVND(val)}`, ['dung', 'trang'], _ownerNames(p));
   }
 }
 
@@ -4523,7 +4523,7 @@ function confirmTransferAmount(){
   closeTransferAmountModal();
   const remaining = officialApproved - totalAfter;
   showToast(`💸 Đã chuyển ${fmtVND(val)}${isFullyDone?' (đủ số đã duyệt)':' — còn '+fmtVND(remaining)+' chưa chuyển'}`);
-  sendPushNotif('💸 Trang đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien']);
+  sendPushNotif('💸 Trang đã chuyển tiền', `${p.desc}: ${fmtVND(val)}`, ['dung', 'hien'], _ownerNames(p)); // v188: + người lập phiếu
   if(isFullyDone) setTimeout(()=>uploadProof(id),500);
 }
 
@@ -4870,13 +4870,13 @@ function saveEditProposal(){
       if(!Array.isArray(p.chat)) p.chat=[];
       p.chat.push({ by:_chMe2||'Dũng', role:'dung', text:p.opinionD, ts:Date.now() });
       if(currentUser){ (p.chatSeen=p.chatSeen||{})[currentUser.uid]=Date.now(); }
-      sendPushNotif('💬 Ý kiến mới của D', (p.desc||'')+': '+p.opinionD.slice(0,90), ['hien','trang']);
+      sendPushNotif('💬 Ý kiến mới của D', (p.desc||'')+': '+p.opinionD.slice(0,90), ['hien','trang'], _ownerNames(p));
     }
     if(currentRole==='hien' && p.opinionH && p.opinionH!==_prevOpH){
       if(!Array.isArray(p.chat)) p.chat=[];
       p.chat.push({ by:_chMe2||'Hiền', role:'hien', text:p.opinionH, ts:Date.now() });
       if(currentUser){ (p.chatSeen=p.chatSeen||{})[currentUser.uid]=Date.now(); }
-      sendPushNotif('💬 Ý kiến mới của H', (p.desc||'')+': '+p.opinionH.slice(0,90), ['dung','trang']);
+      sendPushNotif('💬 Ý kiến mới của H', (p.desc||'')+': '+p.opinionH.slice(0,90), ['dung','trang'], _ownerNames(p));
     }
   }catch(e){}
   p.priority = _ePrio;
@@ -5331,7 +5331,8 @@ function submitProposal(){
     showToast('Đã gửi đề xuất!');
     showPage('home', document.querySelector('.nav-item'));
     renderAll();
-    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang', 'kt']); // v137: kế toán → kênh 'kt' (không lẫn sang P.KH)
+    // v188 (D chốt 18/11): KHÔNG báo cả phòng kế toán nữa — chỉ D/H/Trang + người đứng tên phiếu (khi D lập hộ)
+    sendPushNotif('📋 Phiếu mới cần duyệt', `${desc} — ${fmtVND(amountRaw)}`, ['dung', 'hien', 'trang'], _ownerNames({person}));
   }catch(err){
     // Hiện rõ lỗi thật trên màn hình (kể cả trên điện thoại, không cần mở Console)
     // để dễ chẩn đoán khi có sự cố, thay vì nút bấm im lặng không phản ứng gì.
@@ -7658,7 +7659,7 @@ function saveKhFromModal(){
   closeKhModal();
   setKhTab('list', document.querySelector('#page-kh .report-subtab[data-tab="list"]'));
   showToast('✅ Đã gửi đề xuất chi phí Kế hoạch');
-  sendPushNotif('📐 Đề xuất P.Kế hoạch mới', me+': '+(desc.length>40?desc.slice(0,40)+'…':desc)+' · '+fmtVND(amount), ['dung','hien','trang','kh']); // v137: P.KH → kênh 'kh' (báo cho người phòng Kế hoạch)
+  sendPushNotif('📐 Đề xuất P.Kế hoạch mới', me+': '+(desc.length>40?desc.slice(0,40)+'…':desc)+' · '+fmtVND(amount), ['dung','hien','trang']); // v188: bỏ kênh 'kh' — người phòng KH không nhận phiếu của nhau
 }
 // Hiện/ẩn nút P.KH theo quyền — gọi sau khi biết vai trò/phòng (setRole + sau khi đọc dept)
 function _applyKhNav(){
@@ -7709,6 +7710,12 @@ function updateNavBadges(){
 // lưu trên phiếu → đồng bộ mọi thiết bị. Module thêm mới — không đụng luồng duyệt/chuyển.
 // ══════════════════════════════════════════════════════════════════════════
 function _chatProposerOf(p){ return p.kind==='salary' ? (p.createdBy||'') : (p.person||''); }
+// v188 (D chốt 18/11): thông báo về 1 phiếu chỉ tới D/H/Trang (kênh vai) + NGƯỜI LẬP phiếu đó (gửi riêng theo tên,
+// máy chủ tìm máy theo tên hồ sơ) — không báo cả phòng. Bỏ khi người lập là chính mình.
+function _ownerNames(p){
+  const n=_chatProposerOf(p||{}); const me=getCurrentUserName();
+  return (n && _tagFold(n)!==_tagFold(me)) ? [n] : [];
+}
 function _chatSeenTs(p){ return ((p.chatSeen||{})[(currentUser&&currentUser.uid)||''])||0; }
 // "Liên quan" = người đề xuất, hoặc D/H đã có ý kiến/đã nhắn, hoặc T đã nhắn
 function _chatAmIInvolved(p){
@@ -7825,6 +7832,7 @@ function sendChatMsg(id){
     let list=Array.from(roles);
     if(!list.length) list=['dung','hien'].filter(r=>r!==currentRole);
     const others=tagged.filter(n=>!_dht[_tagFold(n)]); // người khác D/H/T: máy chủ tìm máy theo tên hồ sơ
+    _ownerNames(p).forEach(n=>{ if(!others.some(o=>_tagFold(o)===_tagFold(n))) others.push(n); }); // v188: người lập phiếu cũng nhận
     if(list.length) sendPushNotif('💬 '+me+(tagged.length?' nhắc '+tagged.join(', '):' nhắn hỏi–đáp'), (p.desc||'')+': '+text.slice(0,90), list, others);
   }catch(e){}
 }
