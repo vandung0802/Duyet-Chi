@@ -238,17 +238,19 @@ exports.gbRelay = functions
         if (!(await rateAllow('gb-upload', uid, { limit: 200, windowMs: 10 * 60 * 1000 }))) {
           res.status(429).json({ ok: false, error: 'Tải ảnh quá nhanh — thử lại sau ít phút' }); return;
         }
-        const m = /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(b.dataUrl || ''));
+        const m = /^data:(image\/(?:jpeg|png|webp|gif)|application\/pdf);base64,([A-Za-z0-9+/=]+)$/.exec(String(b.dataUrl || ''));   // 18/11: nhận thêm PDF (hóa đơn nhà cung cấp)
         if (!m) { res.status(400).json({ ok: false, error: 'Ảnh không hợp lệ' }); return; }
         const buf = Buffer.from(m[2], 'base64');
-        if (buf.length > 4 * 1024 * 1024) { res.status(413).json({ ok: false, error: 'Ảnh quá lớn' }); return; }
+        if (buf.length > 4 * 1024 * 1024) { res.status(413).json({ ok: false, error: 'File quá lớn (tối đa 4 MB)' }); return; }
+        const isPdf = m[1] === 'application/pdf';
+        if (isPdf && buf.subarray(0, 5).toString('latin1') !== '%PDF-') { res.status(400).json({ ok: false, error: 'File PDF không hợp lệ' }); return; }
         // Thư mục: lấy phần đường dẫn client gợi ý (đã lọc ký tự) — nhưng TÊN FILE do máy chủ đặt (ngẫu nhiên)
         // và chỉ-tạo-mới (ifGenerationMatch:0) → không ai ghi đè / phá được ảnh chứng từ của người khác.
         const dir = String(b.path || '')
           .replace(/[^a-zA-Z0-9/_-]/g, '')
           .split('/').filter((x) => x && x !== '.' && x !== '..').slice(0, 4).join('/')
           .slice(0, 120) || 'misc';
-        const path = 'giabinh/' + dir + '/' + crypto.randomUUID();
+        const path = 'giabinh/' + dir + '/' + crypto.randomUUID() + (isPdf ? '.pdf' : '');   // đuôi .pdf để app nhận ra là PDF
         const token = crypto.randomUUID();
         await admin.storage().bucket(GB_BUCKET).file(path).save(buf, {
           resumable: false,

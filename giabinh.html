@@ -539,11 +539,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div id="edit-img-preview-wrap" class="img-preview-grid" style="display:none"></div>
       <label class="upload-zone" for="edit-file-input" id="edit-paste-zone" tabindex="0" style="margin-top:6px">
         <div class="upload-icon">📸</div>
-        <div class="upload-txt">Thêm / Thay ảnh</div>
+        <div class="upload-txt">Thêm / Thay ảnh hoặc file PDF</div>
         <div class="upload-sub">Có thể chọn nhiều ảnh · Nhấn giữ ảnh để xóa từng cái</div>
       </label>
       <button type="button" onclick="pasteImgFromClipboard('edit')" style="margin-top:6px;width:100%;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer">📋 Dán ảnh từ clipboard</button>
-      <input type="file" id="edit-file-input" accept="image/*" multiple style="display:none" onchange="handleEditImg(this)">
+      <input type="file" id="edit-file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="handleEditImg(this)">
     </div>
 
     <button class="btn-full btn-primary-full" onclick="saveEditProposal()">💾 Lưu thay đổi</button>
@@ -608,6 +608,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <button id="imgModalShare" onclick="modalImgShare(event)" style="position:absolute;top:14px;left:196px;z-index:5;background:#fff;color:#b45309;border:none;border-radius:16px;height:32px;padding:0 12px;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.4)">📤 Chia sẻ</button>
   <button class="img-modal-nav img-modal-prev" onclick="navModalImg(event,-1)" id="imgModalPrev">‹</button>
   <img id="imgModalSrc" src="" alt="">
+  <button id="imgModalPdf" onclick="event.stopPropagation();openPdf(modalImages[modalIdx])" style="display:none;position:absolute;left:50%;bottom:90px;transform:translateX(-50%);z-index:5;background:#dc2626;color:#fff;border:none;border-radius:22px;padding:12px 24px;font-size:15px;font-weight:800;cursor:pointer;white-space:nowrap">📄 Mở file PDF</button>
   <button class="img-modal-nav img-modal-next" onclick="navModalImg(event,1)" id="imgModalNext">›</button>
   <div class="img-modal-counter" id="imgModalCounter"></div>
   <div class="img-modal-hint" id="imgModalHint">🔍 Chụm/nhấn đúp để zoom · Sao chép rồi Ctrl+V vào Zalo/Telegram</div>
@@ -712,11 +713,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div id="upload-area">
           <label class="upload-zone" for="file-input" id="paste-zone" tabindex="0">
             <div class="upload-icon">📸</div>
-            <div class="upload-txt">Chọn / Chụp ảnh</div>
-            <div class="upload-sub">Có thể chọn nhiều ảnh cùng lúc</div>
+            <div class="upload-txt">Chọn / Chụp ảnh hoặc file PDF</div>
+            <div class="upload-sub">Chọn được nhiều ảnh / PDF cùng lúc</div>
           </label>
           <button type="button" onclick="pasteImgFromClipboard('add')" style="margin-top:6px;width:100%;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer">📋 Dán ảnh từ clipboard</button>
-          <input type="file" id="file-input" accept="image/*" multiple style="display:none" onchange="handleImg(this)">
+          <input type="file" id="file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="handleImg(this)">
         </div>
         <div id="img-preview-wrap" class="img-preview-grid" style="display:none"></div>
       </div>
@@ -1513,7 +1514,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div style="font-size:13px;font-weight:600;color:var(--blue)">Chọn / Chụp ảnh</div>
         <div style="font-size:11px;color:var(--text-sub)">Có thể chọn nhiều ảnh</div>
       </label>
-      <input type="file" id="adv-file-input" accept="image/*" multiple style="display:none" onchange="handleAdvImg(this)">
+      <input type="file" id="adv-file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="handleAdvImg(this)">
       <div id="adv-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
     </div>
     <div class="form-group">
@@ -1574,11 +1575,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div>
         <label class="upload-zone" for="plan-file-input" id="plan-paste-zone" tabindex="0">
           <div class="upload-icon">📸</div>
-          <div class="upload-txt">Chọn / Chụp ảnh</div>
-          <div class="upload-sub">Có thể chọn nhiều ảnh cùng lúc</div>
+          <div class="upload-txt">Chọn / Chụp ảnh hoặc file PDF</div>
+          <div class="upload-sub">Chọn được nhiều ảnh / PDF cùng lúc</div>
         </label>
         <button type="button" onclick="pasteImgFromClipboard('plan')" style="margin-top:6px;width:100%;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer">📋 Dán ảnh từ clipboard</button>
-        <input type="file" id="plan-file-input" accept="image/*" multiple style="display:none" onchange="handlePlanImg(this)">
+        <input type="file" id="plan-file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="handlePlanImg(this)">
       </div>
       <div id="plan-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
     </div>
@@ -1683,7 +1684,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="chat-attach-preview" style="display:none;flex-shrink:0;padding:6px 8px 0;background:#fff;border-top:1px solid var(--gray-border)"></div>
   <div style="flex-shrink:0;display:flex;gap:6px;padding:8px;background:#fff;border-top:1px solid var(--gray-border);padding-bottom:calc(8px + env(safe-area-inset-bottom))">
     <button onclick="document.getElementById('chat-img-input').click()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gửi ảnh">📷</button>
-    <input type="file" id="chat-img-input" accept="image/*" style="display:none" onchange="handleChatImg(this)">
+    <input type="file" id="chat-img-input" accept="image/*,application/pdf,.pdf" style="display:none" onchange="handleChatImg(this)">
     <button onclick="chatPasteImg()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Dán ảnh đã sao chép">📥</button>
     <button onclick="openChatPick()" style="width:38px;flex-shrink:0;font-size:17px;background:#eff6ff;border:1.5px solid var(--gray-border);border-radius:10px;cursor:pointer" title="Gắn phiếu vào tin">📋</button>
     <input id="chat-msg-inp" type="text" autocomplete="off" placeholder="Nhắn tin... (gõ @ để tag tên)" oninput="_chatTagHint(this)" onkeydown="if(event.key==='Enter')sendGroupMsg()" style="flex:1;min-width:0;padding:9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:14px;outline:none;font-family:inherit">
@@ -1818,7 +1819,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <div style="font-size:13px;font-weight:600;color:var(--blue)">Chọn / Chụp ảnh</div>
         <div style="font-size:11px;color:var(--text-sub)">Có thể chọn nhiều ảnh · hoặc dán ảnh (Ctrl+V)</div>
       </label>
-      <input type="file" id="kh-file-input" accept="image/*" multiple style="display:none" onchange="handleKhImg(this)">
+      <input type="file" id="kh-file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="handleKhImg(this)">
       <div id="kh-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
     </div>
     <button class="btn-full btn-primary-full" onclick="saveKhFromModal()">💾 Gửi đề xuất</button>
@@ -1909,7 +1910,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261114-v119';
+const APP_VERSION = '20261118-v120';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -2112,6 +2113,7 @@ async function gbRelay(action, data){
 // Upload ảnh (dataUrl) lên Kho ảnh (thư mục giabinh/ trong kho 379), trả về link tải.
 // Lỗi thì ném ra — nơi gọi giữ ảnh base64 trong database như cũ, không chặn nghiệp vụ.
 async function uploadToStorage(dataUrl, storagePath){
+  if(/^https:/.test(dataUrl||'')) return dataUrl;   // v120: PDF đã lên kho từ lúc chọn file
   const j = await gbRelay('upload', {dataUrl, path: String(storagePath||'')});
   return j.url;
 }
@@ -2300,9 +2302,28 @@ function hideImgActionMenu(){
   imgActionContext = null;
 }
 
+// v120 (D 18/11): mọi chỗ đính kèm nhận thêm FILE PDF (hóa đơn nhà cung cấp chỉ gửi PDF).
+// PDF không nén → tải thẳng lên Kho ảnh qua trạm; database chỉ giữ link (không nhét base64 nặng vào phiếu).
+const PDF_MAX = 4*1024*1024;   // trạm gbRelay chặn file > 4 MB
+function isPdfFile(f){ return !!f && (f.type==='application/pdf' || /\.pdf$/i.test(f.name||'')); }
+function isAttachFile(f){ return !!f && ((f.type||'').startsWith('image/') || isPdfFile(f)); }
+function _attachType(t){ return (t||'').startsWith('image/') || t==='application/pdf'; }
+function isPdfSrc(s){ return typeof s==='string' && /^https:[^#]*\.pdf(\?|#|$)/i.test(s); }
+const PDF_THUMB = 'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect width="80" height="80" fill="#fef2f2"/><path d="M22 10h26l12 12v48H22z" fill="#fff" stroke="#dc2626" stroke-width="3" stroke-linejoin="round"/><path d="M48 10v12h12" fill="none" stroke="#dc2626" stroke-width="3" stroke-linejoin="round"/><text x="41" y="55" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#dc2626" text-anchor="middle">PDF</text></svg>');
+function thumbSrc(s){ return isPdfSrc(s) ? PDF_THUMB : s; }
+async function pdfToStorage(file){
+  if(file.size > PDF_MAX) throw new Error('File PDF quá 4 MB — hãy nén nhỏ lại rồi gửi');
+  const dataUrl = await new Promise((ok,no)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result)); r.onerror=()=>no(new Error('Không đọc được file PDF')); r.readAsDataURL(file); });
+  return uploadToStorage(dataUrl.replace(/^data:[^;,]*/, 'data:application/pdf'), 'duyetchi/pdf');
+}
+function openPdf(src){
+  if(/^https:\/\/firebasestorage\.googleapis\.com\//.test(src||'')) window.open(src, '_blank', 'noopener');   // chỉ mở link Kho ảnh — không mở link lạ ghi trong dữ liệu
+}
+
 // Nén ảnh: resize về tối đa 1000px (đủ rõ khi zoom 4x trong modal, tăng dung lượng không đáng kể —
 // đã đo thực tế: 600px≈34KB/~0.3s, 1000px≈80KB/~0.3s, chênh lệch tải/nén không cảm nhận được)
 function compressImage(file){
+  if(isPdfFile(file)) return pdfToStorage(file);   // v120: PDF → link Kho ảnh (mọi nơi gọi compressImage tự nhận PDF)
   return new Promise(resolve=>{
     const r = new FileReader();
     r.onload = e=>{
@@ -2380,6 +2401,7 @@ async function imgActionCopy(){
   if(!imgActionContext) return;
   const src = imgActionContext.src;
   hideImgActionMenu();
+  if(isPdfSrc(src)){ showToast('📄 File PDF không sao chép được — bấm Tải về hoặc Chia sẻ'); return; }   // v120
   try{
     if(navigator.clipboard && window.ClipboardItem){
       // Safari (iPhone) CHỈ chấp nhận clipboard.write() nếu gọi NGAY trong lúc bấm —
@@ -2467,7 +2489,7 @@ async function imgActionShare(){
     // chia sẻ đúng FILE ảnh. Trước đây ảnh ở Kho ảnh (https://…) bị rơi vào nhánh chia sẻ LINK
     // (Zalo/Messenger nhận link không hiện ảnh, người nhận phải bấm mở — sai mục đích).
     const blob = await dataUrlToBlob(src);
-    const file = new File([blob], 'anh-duyet-chi.jpg', {type: blob.type||'image/jpeg'});
+    const file = new File([blob], blob.type==='application/pdf' ? 'hoa-don.pdf' : 'anh-duyet-chi.jpg', {type: blob.type||'image/jpeg'});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       await navigator.share({files:[file], title:'Ảnh Gia Bình'});
       return;
@@ -4357,7 +4379,7 @@ function attachThumbLongPress(container){
     const p = proposals.find(x=>x.id===pid);
     const canDel = currentRole==='dung' || (p && p.person===getCurrentUserName() && getCurrentUserName());
     const getDeleteFn = canDel
-      ? (kind==='proof' ? (()=>(()=>removeProofImage(pid, idx))) : (()=>(()=>removeZaloImage(pid, idx))))
+      ? (kind==='proof' ? (()=>(()=>removeProofImage(pid, idx))) : kind==='invoice' ? (()=>(()=>removeInvoiceImage(pid, idx))) : (()=>(()=>removeZaloImage(pid, idx))))
       : null;
     attachLongPress(img, getSrc, getDeleteFn);
   });
@@ -4479,12 +4501,12 @@ function _buildCard(p){
   const imgImages = Array.isArray(p.imgImages) && p.imgImages.length ? p.imgImages : (p.imgB64 ? [p.imgB64] : []);
   const imgHtml = imgImages.length ? `<div class="proof-grid">${imgImages.map((src,idx)=>`
     <div class="proof-thumb" data-pid="${sid(p.id)}" data-kind="img" data-idx="${idx}">
-      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','img',${idx})" alt="Ảnh Zalo ${idx+1}">
+      <img src="${esc(thumbSrc(src))}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','img',${idx})" alt="Ảnh Zalo ${idx+1}">
     </div>`).join('')}</div>` : '';
   const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64 ? [p.proofB64] : []);
   const proofHtml = proofImages.length ? `<div class="proof-grid">${proofImages.map((src,idx)=>`
     <div class="proof-thumb" data-pid="${sid(p.id)}" data-kind="proof" data-idx="${idx}">
-      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','proof',${idx})" alt="Chứng từ ${idx+1}">
+      <img src="${esc(thumbSrc(src))}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','proof',${idx})" alt="Chứng từ ${idx+1}">
     </div>`).join('')}</div>` : '';
   const noteHtml  = p.note     ? `<div class="proposal-note">💬 ${esc(p.note)}</div>` : '';
   // v41: HÓA ĐƠN / PHIẾU MUA HÀNG — người lập thêm; ai cũng xem/copy; nhắc khi đã chuyển tiền mà chưa có
@@ -4495,7 +4517,7 @@ function _buildCard(p){
       ${_invMine ? `<span style="display:flex;gap:4px"><button onclick="uploadInvoice('${sid(p.id)}')" style="padding:3px 9px;font-size:11px;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📎 Thêm hóa đơn</button><button onclick="pasteInvoice('${sid(p.id)}')" title="Dán ảnh đã copy" style="padding:3px 9px;font-size:11px;font-weight:700;background:#fff;color:#c2410c;border:1px dashed #fed7aa;border-radius:8px;cursor:pointer">📋 Dán</button></span>` : ''}
     </div>${invoiceImages.length ? `<div class="proof-grid">${invoiceImages.map((src,idx)=>`
     <div class="proof-thumb" data-pid="${sid(p.id)}" data-kind="invoice" data-idx="${idx}">
-      <img src="${esc(src)}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','invoice',${idx})" alt="Hóa đơn ${idx+1}">
+      <img src="${esc(thumbSrc(src))}" loading="lazy" decoding="async" onclick="openImg('${sid(p.id)}','invoice',${idx})" alt="Hóa đơn ${idx+1}">
     </div>`).join('')}</div>` : ''}`;
   const settleHtml = (p.costType==='tamung' && p.kind!=='kh') ? _settleHtml(p) : '';   // v41: tạm ứng / hoàn ứng
   const logHtml = editLogHtml(p);   // v41: nhật ký sửa
@@ -4521,7 +4543,7 @@ function _buildCard(p){
     const _tagMe = !mine && _mentionsMe(m.text);   // v90
     return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${_tagMe?'#fef9c3':mine?'#f1f5f9':'#eff6ff'};${_tagMe?'border:1px solid #facc15;':''}border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
       <div style="font-size:9.5px;font-weight:700;color:${_chClr(m.role)}">${esc(m.by||'')} · ${fmtFull(m.ts)}${_tagMe?' · <span style="color:#b45309">📣 nhắc tên bạn</span>':''}</div>
-      ${m.img?`<img src="${esc(m.img)}" loading="lazy" decoding="async" onclick="event.stopPropagation();openCardChatImg('${esc(m.img).replace(/'/g,'&#39;')}')" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin:3px 0;cursor:zoom-in;background:#e2e8f0">`:''}
+      ${m.img?`<img src="${esc(thumbSrc(m.img))}" loading="lazy" decoding="async" onclick="event.stopPropagation();openCardChatImg('${esc(m.img).replace(/'/g,'&#39;')}')" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin:3px 0;cursor:zoom-in;background:#e2e8f0">`:''}
       ${(m.img && (m.text||'')==='📷') ? '' : `<div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_cardHighlightTags(esc(m.text||''))}</div>`}</div>`;
   }).join('');
   const _chInput = `<div style="display:flex;gap:5px;margin-top:5px">
@@ -5592,7 +5614,7 @@ function renderAdvLedger(){
           <div><b>${esc(e.desc)}</b></div>
           <div>Số tiền: <b>${fmtVND(e.amount)}</b>${e.kind==='chi'?' · Thuế: '+(TAX_TYPES[e.tax]?TAX_TYPES[e.tax].icon+' '+esc(TAX_TYPES[e.tax].label):'<span style="color:#b91c1c">chưa chọn</span>'):''} · Ngày: ${esc(e.date||'')}</div>
           <div style="color:var(--text-sub)">Người kê: ${esc(e.by||'')}${e.okD?' · D duyệt: '+esc(e.okD.byName||'')+' '+fmtFull(e.okD.ts):''}${e.ok?' · '+(e.kind==='ret'?'Toàn xác nhận: ':'H&L duyệt: ')+esc(e.ok.byName||'')+' '+fmtFull(e.ok.ts):''}${e.rej?' · <span style="color:#b91c1c">Từ chối: '+esc(e.rej.byName||'')+' '+fmtFull(e.rej.ts)+' — '+esc(e.rej.reason||'')+'</span>':''}</div>
-          ${showImgs.length ? `<div class="proof-grid" style="margin-top:6px">${showImgs.map(k=>`<div class="proof-thumb"><img src="${esc(imgs[k])}" loading="lazy" onclick="openImg('${sid(e.pid)}','invoice',${k})" alt="Chứng từ"></div>`).join('')}</div>`
+          ${showImgs.length ? `<div class="proof-grid" style="margin-top:6px">${showImgs.map(k=>`<div class="proof-thumb"><img src="${esc(thumbSrc(imgs[k]))}" loading="lazy" onclick="openImg('${sid(e.pid)}','invoice',${k})" alt="Chứng từ"></div>`).join('')}</div>`
             : (imgs.length ? `<div style="margin-top:4px;color:var(--text-sub)">Món này không kèm ảnh riêng — phiếu tạm ứng có ${imgs.length} ảnh chứng từ: <a href="#" onclick="openImg('${sid(e.pid)}','invoice',0);return false" style="color:var(--blue)">xem</a></div>` : '<div style="margin-top:4px;color:#b91c1c">Chưa có ảnh chứng từ</div>')}
         </div>`;
       }
@@ -5656,14 +5678,14 @@ function settleRenderImgs(){
   const w = document.getElementById('settle-img-preview'); if(!w) return;
   if(!_settleImgs.length){ w.style.display='none'; w.innerHTML=''; return; }
   w.style.display='grid';
-  w.innerHTML = _settleImgs.map((src,i)=>`<div class="img-preview-item" style="position:relative"><img src="${esc(src)}" style="width:100%;height:80px;object-fit:cover;border-radius:6px"><button type="button" onclick="_settleImgs.splice(${i},1);settleRenderImgs()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:10px;width:20px;height:20px;font-size:12px;cursor:pointer">✕</button></div>`).join('');
+  w.innerHTML = _settleImgs.map((src,i)=>`<div class="img-preview-item" style="position:relative"><img src="${esc(thumbSrc(src))}" style="width:100%;height:80px;object-fit:cover;border-radius:6px"><button type="button" onclick="_settleImgs.splice(${i},1);settleRenderImgs()" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:10px;width:20px;height:20px;font-size:12px;cursor:pointer">✕</button></div>`).join('');
 }
 function settleAddImages(input){ _settleAddFiles(Array.from(input.files||[])); input.value=''; }
 function _settleAddFiles(list){
-  const files = (list||[]).filter(f=>f && f.type && f.type.startsWith('image/')); if(!files.length){ showToast('📋 Không có ảnh'); return; }
+  const files = (list||[]).filter(f=>isAttachFile(f)); if(!files.length){ showToast('📋 Không có ảnh'); return; }
   showToast('⏳ Đang xử lý '+files.length+' ảnh...');
   let done=0;
-  files.forEach(f=>compressImage(f).then(u=>{ _settleImgs.push(u); done++; if(done===files.length){ settleRenderImgs(); showToast('✅ Đã thêm '+files.length+' ảnh (bấm Ghi vào sổ để lưu)'); } }).catch(()=>{ done++; showToast('❌ Ảnh lỗi'); }));
+  files.forEach(f=>compressImage(f).then(u=>{ _settleImgs.push(u); done++; if(done===files.length){ settleRenderImgs(); showToast('✅ Đã thêm '+files.length+' ảnh (bấm Ghi vào sổ để lưu)'); } }).catch(err=>{ done++; showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại')); if(done===files.length) settleRenderImgs(); }));
 }
 // v52/v54: đọc ảnh đang có trong clipboard (dùng cho mọi nút 📋 Dán). null = không đọc được / không có ảnh (đã báo toast)
 async function _readClipboardImages(){
@@ -5680,7 +5702,7 @@ async function pasteInvoice(id){ const p=proposals.find(x=>x.id===id); if(!p) re
 document.addEventListener('paste', (e)=>{
   const ov=document.getElementById('settle-modal-overlay'); if(!ov || ov.style.display==='none') return;
   const items = (e.clipboardData||window.clipboardData)?.items; if(!items) return;
-  const files=[]; for(const it of items){ if(it.kind==='file' && it.type.startsWith('image/')){ const f=it.getAsFile(); if(f) files.push(f); } }
+  const files=[]; for(const it of items){ if(it.kind==='file' && _attachType(it.type)){ const f=it.getAsFile(); if(f) files.push(f); } }
   if(files.length){ e.preventDefault(); _settleAddFiles(files); }
 });
 const _SETTLE_TAX_TXT = { cothue:'Có thuế VAT', khongthue:'Không thuế VAT', khonghl:'Không HL' };
@@ -6267,7 +6289,7 @@ function setZoneLoading(zoneId, loading, total){
 }
 
 function handleEditImg(input){
-  const files = Array.from(input.files||[]).filter(f=>f.type && f.type.startsWith('image/'));
+  const files = Array.from(input.files||[]).filter(f=>isAttachFile(f));
   if(!files.length) return;
   setZoneLoading('edit-paste-zone', true, files.length);
   let done=0;
@@ -6276,10 +6298,10 @@ function handleEditImg(input){
       editingImages.push(dataUrl);
       done++;
       if(done===files.length){ setZoneLoading('edit-paste-zone',false); renderEditImgPreview(); showToast(`✅ Đã thêm ${done} ảnh`); }
-    }).catch(()=>{
+    }).catch(err=>{
       done++;
       if(done===files.length){ setZoneLoading('edit-paste-zone',false); renderEditImgPreview(); }
-      showToast('❌ Xử lý ảnh thất bại');
+      showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại'));
     });
   });
   input.value='';
@@ -6295,7 +6317,7 @@ function renderEditImgPreview(){
   wrap.style.display='flex';
   wrap.innerHTML = editingImages.map((src,idx)=>`
     <div class="img-preview-item" data-idx="${idx}">
-      <img src="${esc(src)}" alt="Ảnh ${idx+1}">
+      <img src="${esc(thumbSrc(src))}" alt="Ảnh ${idx+1}">
     </div>`).join('');
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{
     const idx = parseInt(item.dataset.idx, 10);
@@ -6419,7 +6441,7 @@ function _setImgLoading(delta){
 }
 
 function addImagesToUpload(files){
-  const validFiles = files.filter(f=>f.type && f.type.startsWith('image/'));
+  const validFiles = files.filter(f=>isAttachFile(f));
   if(!validFiles.length) return;
   setZoneLoading('paste-zone', true, validFiles.length);
   let done=0;
@@ -6431,7 +6453,7 @@ function addImagesToUpload(files){
       if(done===validFiles.length){ setZoneLoading('paste-zone',false); renderUploadPreview(); showToast(`✅ Đã thêm ${done} ảnh`); }
     }).catch(err=>{
       done++; _setImgLoading(-1);
-      showToast('❌ Xử lý ảnh thất bại');
+      showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại'));
       if(done===validFiles.length){ setZoneLoading('paste-zone',false); renderUploadPreview(); }
     });
   });
@@ -6449,7 +6471,7 @@ function renderUploadPreview(){
   document.getElementById('upload-area').style.display='block'; // vẫn cho thêm ảnh tiếp
   wrap.innerHTML = uploadedImages.map((src,idx)=>`
     <div class="img-preview-item" data-idx="${idx}">
-      <img src="${esc(src)}" alt="Ảnh Zalo ${idx+1}">
+      <img src="${esc(thumbSrc(src))}" alt="Ảnh Zalo ${idx+1}">
     </div>`).join('');
   // Gắn nhấn giữ cho từng ảnh vừa render
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{
@@ -6512,7 +6534,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(!items) return;
     const files=[];
     for(const item of items){
-      if(item.kind==='file' && item.type.startsWith('image/')){
+      if(item.kind==='file' && _attachType(item.type)){
         const f = item.getAsFile();
         if(f) files.push(f);
       }
@@ -6530,7 +6552,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(!items) return;
     const files=[];
     for(const item of items){
-      if(item.kind==='file' && item.type.startsWith('image/')){
+      if(item.kind==='file' && _attachType(item.type)){
         const f = item.getAsFile();
         if(f) files.push(f);
       }
@@ -6547,7 +6569,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
     if(!items) return;
     const files=[];
     for(const item of items){
-      if(item.kind==='file' && item.type.startsWith('image/')){
+      if(item.kind==='file' && _attachType(item.type)){
         const f = item.getAsFile();
         if(f) files.push(f);
       }
@@ -6560,7 +6582,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
           editingImages.push(dataUrl);
           done++;
           if(done===files.length){ setZoneLoading('edit-paste-zone',false); renderEditImgPreview(); showToast(`✅ Đã dán ${done} ảnh`); }
-        }).catch(()=>{ done++; if(done===files.length) setZoneLoading('edit-paste-zone',false); showToast('❌ Xử lý ảnh thất bại'); });
+        }).catch(err=>{ done++; if(done===files.length) setZoneLoading('edit-paste-zone',false); showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại')); });
       });
     }
   });
@@ -6587,8 +6609,8 @@ function openImg(id, type, idx){
     modalIdx = idx!=null ? idx : 0;
   }
   if(!modalImages.length) return;
-  showModalImg();
-  document.getElementById('imgModal').classList.add('open');
+  if(isPdfSrc(modalImages[modalIdx])){ openPdf(modalImages[modalIdx]); return; }
+  showModalImg(); document.getElementById('imgModal').classList.add('open');
 }
 
 // Ảnh của đề xuất VẬT TƯ nằm trong plans chứ không phải proposals → cần hàm riêng,
@@ -6600,12 +6622,15 @@ function openPlanImg(id, idx){
   modalKind = 'img';
   modalImages = pl.images;
   modalIdx = idx!=null ? idx : 0;
-  showModalImg();
-  document.getElementById('imgModal').classList.add('open');
+  if(isPdfSrc(modalImages[modalIdx])){ openPdf(modalImages[modalIdx]); return; }
+  showModalImg(); document.getElementById('imgModal').classList.add('open');
 }
 
 function showModalImg(){
-  document.getElementById('imgModalSrc').src = modalImages[modalIdx];
+  const _pdf = isPdfSrc(modalImages[modalIdx]);   // v120
+  document.getElementById('imgModalSrc').src = _pdf ? PDF_THUMB : modalImages[modalIdx];
+  document.getElementById('imgModalPdf').style.display = _pdf ? 'block' : 'none';
+  document.getElementById('imgModalCopy').style.display = _pdf ? 'none' : '';
   resetModalZoom(); // đổi ảnh (mở mới / lướt ‹ ›) → về zoom gốc, tránh ảnh sau bị phóng to nhầm theo ảnh trước
   const multi = modalImages.length > 1;
   document.getElementById('imgModalPrev').style.display = multi ? 'flex' : 'none';
@@ -6635,7 +6660,7 @@ async function downloadImageDataUrl(dataUrl, filename){
   try{
     // Lấy blob (xử lý đúng cả data URL base64 lẫn URL thường)
     const blob = await dataUrlToBlob(dataUrl);
-    const ext = blob.type.includes('png') ? '.png' : (blob.type.includes('webp') ? '.webp' : '.jpg');
+    const ext = blob.type.includes('pdf') ? '.pdf' : blob.type.includes('png') ? '.png' : (blob.type.includes('webp') ? '.webp' : '.jpg');
     const safeFilename = filename.replace(/\.[a-z]+$/i,'') + ext;
 
     if(window.showSaveFilePicker){
@@ -6702,10 +6727,10 @@ function uploadInvoice(id){
   if(!_isMyProposal(p)){ showToast('🔒 Chỉ người lập phiếu mới đính kèm hóa đơn'); return; }
   pendingUploadProofId = id; pendingUploadKind = 'invoice';
   const inp=document.createElement('input');
-  inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+  inp.type='file'; inp.accept='image/*,application/pdf,.pdf'; inp.multiple=true;
   inp.onchange=e=>{ const files=Array.from(e.target.files||[]); if(files.length) addInvoiceImages(id, files); };
   inp.click();
-  showToast('📎 Chọn ảnh hóa đơn (hoặc Ctrl+V dán ảnh)');
+  showToast('📎 Chọn ảnh hoặc file PDF hóa đơn (hoặc Ctrl+V dán ảnh)');
 }
 // v62: mở app trên mạng chậm, kho ảnh chưa tải xong mà đã thêm ảnh / sửa phiếu → trước đây pushToFirebase ghi node ảnh với mảng cũ RỖNG → MẤT ảnh trên máy chủ.
 async function _ensureImagesFor(p){
@@ -6725,14 +6750,14 @@ async function addInvoiceImages(id, files){
   if(!_isMyProposal(p)){ showToast('🔒 Chỉ người lập phiếu mới đính kèm hóa đơn'); return; }
   await _ensureImagesFor(p);   // v62
   if(!Array.isArray(p.invoiceImages)) p.invoiceImages = [];
-  const validFiles = files.filter(f=>f.type && f.type.startsWith('image/')); if(!validFiles.length) return;
+  const validFiles = files.filter(f=>isAttachFile(f)); if(!validFiles.length) return;
   showToast('⏳ Đang tải ảnh hóa đơn...');
   let done=0;
   validFiles.forEach(file=>{
     compressImage(file).then(dataUrl=>{
       p.invoiceImages.push(dataUrl); done++;
       if(done===validFiles.length){ logEdit(p, 'thêm '+validFiles.length+' ảnh hóa đơn'); _cardCache.delete(p.id); save(); renderAll(); showToast('✅ Đã đính kèm '+validFiles.length+' ảnh hóa đơn'); }
-    }).catch(()=>{ done++; showToast('❌ Xử lý ảnh thất bại'); if(done===validFiles.length){ save(); renderAll(); } });
+    }).catch(err=>{ done++; showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại')); if(done===validFiles.length){ save(); renderAll(); } });
   });
 }
 function removeInvoiceImage(id, idx){
@@ -6744,7 +6769,7 @@ function removeInvoiceImage(id, idx){
 function uploadProof(id){
   pendingUploadProofId = id; pendingUploadKind = 'proof';
   const inp=document.createElement('input');
-  inp.type='file'; inp.accept='image/*'; inp.multiple=true;
+  inp.type='file'; inp.accept='image/*,application/pdf,.pdf'; inp.multiple=true;
   inp.onchange=e=>{
     const files=Array.from(e.target.files||[]);
     if(!files.length) return;
@@ -6758,7 +6783,7 @@ async function addProofImages(id, files){
   if(!p) return;
   await _ensureImagesFor(p);   // v62
   if(!Array.isArray(p.proofImages)) p.proofImages = p.proofB64 ? [p.proofB64] : [];
-  const validFiles = files.filter(f=>f.type && f.type.startsWith('image/'));
+  const validFiles = files.filter(f=>isAttachFile(f));
   if(!validFiles.length) return;
   showToast('⏳ Đang tải ảnh chứng từ lên...');
   let done=0;
@@ -6771,9 +6796,9 @@ async function addProofImages(id, files){
         renderAll();
         showToast(validFiles.length>1 ? `✅ Đã đính kèm ${validFiles.length} ảnh chứng từ` : '✅ Đã đính kèm chứng từ');
       }
-    }).catch(()=>{
+    }).catch(err=>{
       done++;
-      showToast('❌ Xử lý ảnh chứng từ thất bại');
+      showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại'));
       if(done===validFiles.length){ save(); renderAll(); }
     });
   });
@@ -6786,7 +6811,7 @@ document.addEventListener('paste', (e)=>{
   if(!items) return;
   const files=[];
   for(const item of items){
-    if(item.kind==='file' && item.type.startsWith('image/')){
+    if(item.kind==='file' && _attachType(item.type)){
       const f = item.getAsFile();
       if(f) files.push(f);
     }
@@ -6806,7 +6831,7 @@ document.addEventListener('paste', (e)=>{
   if(!items) return;
   const files=[];
   for(const item of items){
-    if(item.kind==='file' && item.type.startsWith('image/')){
+    if(item.kind==='file' && _attachType(item.type)){
       const f = item.getAsFile(); if(f) files.push(f);
     }
   }
@@ -7616,7 +7641,7 @@ function buildPlanCard(p){
       </div>
       ${p.note?`<div class="proposal-note">${esc(p.note)}</div>`:''}
       ${(Array.isArray(p.images)&&p.images.length)?`<div class="proof-grid" style="margin-top:8px">${p.images.map((src,idx)=>`
-        <div class="proof-thumb"><img src="${esc(src)}" loading="lazy" decoding="async" onclick="openPlanImg('${sid(p.id)}',${idx})" alt="Ảnh ${idx+1}"></div>`).join('')}</div>`:''}
+        <div class="proof-thumb"><img src="${esc(thumbSrc(src))}" loading="lazy" decoding="async" onclick="openPlanImg('${sid(p.id)}',${idx})" alt="Ảnh ${idx+1}"></div>`).join('')}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;align-items:center">
         <select onchange="setPlanStatus('${sid(p.id)}', this.value)" style="padding:5px 8px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
           <option value="pending" ${p.status==='pending'?'selected':''}>Đang chờ</option>
@@ -7644,7 +7669,7 @@ let _pendingPlanLink = null;
 // ── ẢNH ĐÍNH KÈM cho đề xuất VẬT TƯ (làm giống hệt bên Đề xuất chi) ──
 let planImages = [];
 function handlePlanImg(input){
-  const files = Array.from(input.files||[]).filter(f=>f.type && f.type.startsWith('image/'));
+  const files = Array.from(input.files||[]).filter(f=>isAttachFile(f));
   input.value='';
   if(!files.length) return;
   setZoneLoading('plan-paste-zone', true, files.length);
@@ -7653,7 +7678,7 @@ function handlePlanImg(input){
     compressImage(file).then(dataUrl=>{
       planImages.push(dataUrl); done++;
       if(done===files.length){ setZoneLoading('plan-paste-zone',false); renderPlanImgPreview(); }
-    }).catch(()=>{ done++; if(done===files.length){ setZoneLoading('plan-paste-zone',false); showToast('❌ Xử lý ảnh thất bại'); } });
+    }).catch(err=>{ done++; showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại')); if(done===files.length) setZoneLoading('plan-paste-zone',false); });
   });
 }
 function renderPlanImgPreview(){
@@ -7663,7 +7688,7 @@ function renderPlanImgPreview(){
   wrap.style.display='flex';
   wrap.innerHTML = planImages.map((src,idx)=>`
     <div class="img-preview-item" data-idx="${idx}">
-      <img src="${esc(src)}" alt="Ảnh ${idx+1}">
+      <img src="${esc(thumbSrc(src))}" alt="Ảnh ${idx+1}">
     </div>`).join('');
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{
     const idx = parseInt(item.dataset.idx, 10);
@@ -9951,18 +9976,18 @@ function khStatsSiteGo(site){
 // ── Modal tạo phiếu P.KH (dùng chung mảng uploadedImages như modal ứng lương) ──
 function handleKhImg(input){ const files=Array.from(input.files||[]); if(files.length) addKhImages(files); input.value=''; }
 function addKhImages(files){
-  const valid=files.filter(f=>f.type&&f.type.startsWith('image/'));
+  const valid=files.filter(f=>isAttachFile(f));
   if(!valid.length) return;
   showToast('⏳ Đang tải ảnh...');
   let done=0;
   valid.forEach(file=>compressImage(file).then(d=>{ uploadedImages.push(d); done++; if(done===valid.length){ renderKhImgPreview(); showToast('✅ Đã thêm '+valid.length+' ảnh'); } })
-    .catch(()=>{ done++; if(done===valid.length) renderKhImgPreview(); }));
+    .catch(err=>{ done++; showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại')); if(done===valid.length) renderKhImgPreview(); }));
 }
 function renderKhImgPreview(){
   const wrap=document.getElementById('kh-img-preview'); if(!wrap) return;
   if(!uploadedImages.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   wrap.style.display='flex';
-  wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(src)}" alt="Ảnh ${idx+1}"></div>`).join('');
+  wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(thumbSrc(src))}" alt="Ảnh ${idx+1}"></div>`).join('');
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{ const idx=parseInt(item.dataset.idx,10); const img=item.querySelector('img'); attachLongPress(img, ()=>uploadedImages[idx], ()=>(()=>{ uploadedImages.splice(idx,1); renderKhImgPreview(); })); });
 }
 function _khClearImages(){ uploadedImages=[]; renderKhImgPreview(); const fi=document.getElementById('kh-file-input'); if(fi) fi.value=''; }
@@ -10150,7 +10175,7 @@ function sendChatMsg(id){
 // ══ v101: ẢNH TRONG HỎI–ĐÁP TRÊN PHIẾU (D 15/10) ══ 📥 dán ảnh đã sao chép · 📷 chọn ảnh · Ctrl+V / Dán khi đang gõ ô hỏi–đáp
 const _cardChatImg = {}, _cardChatImgBusy = {};
 function _cardChatImgAdd(id, f){
-  if(!f || !f.type || !f.type.startsWith('image/')) return;
+  if(!isAttachFile(f)) return;
   _cardChatImgBusy[id]=true; _cardChatImgPreview(id);
   compressImage(f).then(dataUrl=>uploadToStorage(dataUrl, 'chat/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.jpg'))
     .then(url=>{ _cardChatImg[id]=url; showToast('✅ Ảnh sẵn sàng — bấm Gửi'); })
@@ -10163,23 +10188,24 @@ function _cardChatImgPreview(id){
   if(!_cardChatImg[id] && !_cardChatImgBusy[id]){ if(pv) pv.remove(); return; }
   if(!pv){ pv=document.createElement('div'); pv.id='chat-imgprev-'+id; pv.style.cssText='display:flex;align-items:center;gap:8px;border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-top:4px'; host.parentNode.insertBefore(pv, host.nextSibling); }
   pv.innerHTML = _cardChatImgBusy[id] ? '<div style="font-size:11.5px;font-weight:700;color:var(--blue-dark)">⏳ Đang tải ảnh lên…</div>'
-    : `<img src="${esc(_cardChatImg[id])}" style="width:46px;height:46px;object-fit:cover;border-radius:6px;flex-shrink:0"><div style="flex:1;font-size:11.5px;font-weight:700;color:var(--blue-dark)">📷 Ảnh sẽ gửi kèm tin</div><button type="button" onclick="delete _cardChatImg['${id}'];_cardChatImgPreview('${id}')" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>`;
+    : `<img src="${esc(thumbSrc(_cardChatImg[id]))}" style="width:46px;height:46px;object-fit:cover;border-radius:6px;flex-shrink:0"><div style="flex:1;font-size:11.5px;font-weight:700;color:var(--blue-dark)">📷 Ảnh sẽ gửi kèm tin</div><button type="button" onclick="delete _cardChatImg['${id}'];_cardChatImgPreview('${id}')" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>`;
 }
 async function cardChatPaste(id){ const b = await _readClipboardImages(); if(b && b.length) _cardChatImgAdd(id, b[0]); }
 function cardChatPick(id){
   let fi=document.getElementById('card-chat-file');
-  if(!fi){ fi=document.createElement('input'); fi.type='file'; fi.accept='image/*'; fi.id='card-chat-file'; fi.style.display='none'; document.body.appendChild(fi);
+  if(!fi){ fi=document.createElement('input'); fi.type='file'; fi.accept='image/*,application/pdf,.pdf'; fi.id='card-chat-file'; fi.style.display='none'; document.body.appendChild(fi);
     fi.onchange=()=>{ const f=(fi.files||[])[0]; const k=fi.dataset.id; fi.value=''; if(k) _cardChatImgAdd(k, f); }; }
   fi.dataset.id=id; fi.click();
 }
 document.addEventListener('paste', (e)=>{
   const a=document.activeElement, aid=(a&&a.id)||''; if(aid.indexOf('chat-inp-')!==0) return;
   const items=(e.clipboardData||window.clipboardData)?.items; if(!items) return;
-  for(const it of items){ if(it.kind==='file' && it.type.startsWith('image/')){ const f=it.getAsFile(); if(f){ e.preventDefault(); _cardChatImgAdd(aid.slice(9), f); return; } } }
+  for(const it of items){ if(it.kind==='file' && _attachType(it.type)){ const f=it.getAsFile(); if(f){ e.preventDefault(); _cardChatImgAdd(aid.slice(9), f); return; } } }
 });
 function openCardChatImg(url){
   if(!url) return;
   modalProposalId=null; modalKind='chat'; modalImages=[url]; modalIdx=0;
+  if(isPdfSrc(modalImages[modalIdx])){ openPdf(modalImages[modalIdx]); return; }
   showModalImg(); document.getElementById('imgModal').classList.add('open');
 }
 // ══ v90: NHẮC TÊN (@Tên) TRONG HỎI–ĐÁP TRÊN PHIẾU ══ (D 11/10)
@@ -10399,7 +10425,7 @@ function renderChatMsgs(){
         ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
         ${reBox}
         ${body}
-        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(m.img)}" loading="lazy" decoding="async" onclick="event.stopPropagation();openChatImg('${esc(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
+        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(thumbSrc(m.img))}" loading="lazy" decoding="async" onclick="event.stopPropagation();openChatImg('${esc(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
         ${m.ref?_chatRefChip(m.ref):''}
         <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${delBtn}${time}</div>
       </div>
@@ -10526,7 +10552,7 @@ function _chatRenderAttach(){
   // v115: ảnh chờ gửi
   if(_chatAttachImg){
     html+=`<div style="display:flex;align-items:center;gap:8px;border:1.5px solid var(--blue);background:#eff6ff;border-radius:8px;padding:5px 8px;margin-bottom:4px">
-      <img src="${esc(_chatAttachImg)}" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0">
+      <img src="${esc(thumbSrc(_chatAttachImg))}" style="width:52px;height:52px;object-fit:cover;border-radius:6px;flex-shrink:0">
       <div style="flex:1;font-size:11px;font-weight:700;color:var(--blue-dark)">📷 Ảnh sẽ gửi kèm tin</div>
       <button onclick="clearChatAttachImg()" style="width:22px;height:22px;padding:0;font-size:11px;border-radius:50%;border:1px solid var(--gray-border);background:#fff;cursor:pointer">✕</button>
     </div>`;
@@ -10549,10 +10575,10 @@ async function chatPasteImg(){ const b = await _readClipboardImages(); if(b && b
 document.addEventListener('paste', (e)=>{
   const cp=document.getElementById('chat-page'); if(!cp || cp.style.display==='none') return;
   const items=(e.clipboardData||window.clipboardData)?.items; if(!items) return;
-  for(const it of items){ if(it.kind==='file' && it.type.startsWith('image/')){ const f=it.getAsFile(); if(f){ e.preventDefault(); _chatAddImgFile(f); return; } } }
+  for(const it of items){ if(it.kind==='file' && _attachType(it.type)){ const f=it.getAsFile(); if(f){ e.preventDefault(); _chatAddImgFile(f); return; } } }
 });
 function _chatAddImgFile(f){
-  if(!f || !f.type || !f.type.startsWith('image/')) return;
+  if(!isAttachFile(f)) return;
   showToast('⏳ Đang tải ảnh lên...');
   compressImage(f).then(dataUrl=>
     uploadToStorage(dataUrl, 'chat/'+Date.now()+'_'+Math.random().toString(36).slice(2,8)+'.jpg')
@@ -10583,8 +10609,8 @@ function openChatImg(k){
   const m=_cMsgs().find(x=>x._k===k); if(!m||!m.img) return;
   modalProposalId=null; modalKind='chat';
   modalImages=[m.img]; modalIdx=0;
-  showModalImg();
-  document.getElementById('imgModal').classList.add('open');
+  if(isPdfSrc(modalImages[modalIdx])){ openPdf(modalImages[modalIdx]); return; }
+  showModalImg(); document.getElementById('imgModal').classList.add('open');
 }
 
 // ══ v116: MENU TIN NHẮN (bấm vào tin) — Trả lời / Chia sẻ / Copy / Ghim / Chi tiết / Xóa ══
@@ -11019,18 +11045,18 @@ async function exportSalaryByPersonExcel(){
 //    (Ảnh đính kèm dùng chung mảng `uploadedImages` + compressImage với form Thêm mới.)
 function handleAdvImg(input){ const files=Array.from(input.files||[]); if(files.length) addAdvImages(files); input.value=''; }
 function addAdvImages(files){
-  const valid=files.filter(f=>f.type&&f.type.startsWith('image/'));
+  const valid=files.filter(f=>isAttachFile(f));
   if(!valid.length) return;
   showToast('⏳ Đang tải ảnh...');
   let done=0;
   valid.forEach(file=>compressImage(file).then(d=>{ uploadedImages.push(d); done++; if(done===valid.length){ renderAdvImgPreview(); showToast('✅ Đã thêm '+valid.length+' ảnh'); } })
-    .catch(()=>{ done++; if(done===valid.length) renderAdvImgPreview(); }));
+    .catch(err=>{ done++; showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại')); if(done===valid.length) renderAdvImgPreview(); }));
 }
 function renderAdvImgPreview(){
   const wrap=document.getElementById('adv-img-preview'); if(!wrap) return;
   if(!uploadedImages.length){ wrap.style.display='none'; wrap.innerHTML=''; return; }
   wrap.style.display='flex';
-  wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(src)}" alt="Ảnh ${idx+1}"></div>`).join('');
+  wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(thumbSrc(src))}" alt="Ảnh ${idx+1}"></div>`).join('');
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{ const idx=parseInt(item.dataset.idx,10); const img=item.querySelector('img'); attachLongPress(img, ()=>uploadedImages[idx], ()=>(()=>{ uploadedImages.splice(idx,1); renderAdvImgPreview(); })); });
 }
 function _advClearImages(){ uploadedImages=[]; renderAdvImgPreview(); const fi=document.getElementById('adv-file-input'); if(fi) fi.value=''; }
@@ -12775,11 +12801,11 @@ function updateCashBadge(){
       <label class="form-label">📎 Ảnh hóa đơn / chứng từ (đính vào phiếu tạm ứng, ai cũng xem được)</label>
       <div id="settle-img-preview" class="img-preview-grid" style="display:none"></div>
       <div style="display:flex;gap:6px;margin-top:4px">
-        <button type="button" onclick="document.getElementById('settle-file-input').click()" style="flex:1;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:12.5px;font-weight:700;cursor:pointer">📸 Thêm ảnh</button>
+        <button type="button" onclick="document.getElementById('settle-file-input').click()" style="flex:1;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:12.5px;font-weight:700;cursor:pointer">📸 Thêm ảnh / PDF</button>
         <button type="button" onclick="settlePasteImages()" style="flex:1;padding:8px;border:1.5px dashed var(--blue);border-radius:8px;background:#eff6ff;color:var(--blue);font-size:12.5px;font-weight:700;cursor:pointer">📋 Dán ảnh từ clipboard</button>
       </div>
       <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Máy tính: copy ảnh (Zalo, chụp màn hình) rồi bấm "Dán ảnh" hoặc nhấn Ctrl+V ngay trong khung này.</div>
-      <input type="file" id="settle-file-input" accept="image/*" multiple style="display:none" onchange="settleAddImages(this)">
+      <input type="file" id="settle-file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="settleAddImages(this)">
     </div>
     <div id="settle-sum" style="font-size:12px;color:var(--text);margin-bottom:12px"></div>
     <button onclick="saveSettlement()" class="btn-full btn-primary-full" style="font-size:15px;padding:13px">Ghi vào sổ</button>
