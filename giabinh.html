@@ -1910,7 +1910,7 @@ const firebaseConfig = {
 // 379 nữa — cách đó không bao giờ chạy được (token project này không đăng nhập được project kia),
 // khiến thông báo đẩy + kho ảnh hỏng âm thầm từ v1 tới v18.
 const GB_RELAY_URL = 'https://us-central1-duyetchi-pva379.cloudfunctions.net/gbRelay';
-const APP_VERSION = '20261118-v120';
+const APP_VERSION = '20261119-v121';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Sổ Quỹ ' + VER_LABEL; })();
@@ -3213,7 +3213,25 @@ function pushToFirebase(){
     const lightJson = JSON.stringify(lightFields);
     nowProposalsMap[p.id] = lightJson;
     if(prevProposalsMap[p.id] !== lightJson){
-      updates[_propNodeFor(p.id)+p.id] = lightFields; // v125: phiếu P.KH → khProposals
+      const goc = _propNodeFor(p.id)+p.id; // v125: phiếu P.KH → khProposals
+      let prev = null; try{ prev = prevProposalsMap[p.id] ? JSON.parse(prevProposalsMap[p.id]) : null; }catch(e){}
+      if(!prev || typeof prev!=='object'){ updates[goc] = lightFields; } // phiếu mới → ghi cả node
+      else {
+        // v121 (bê từ app 379 v180): phiếu đã có → CHỈ ghi TRƯỜNG đã đổi. Trước đây ghi đè cả node: máy chưa kịp
+        // nhận lần duyệt mới của máy khác (sóng yếu) mà bấm chuyển tiền / sửa là ghi đè MẤT lần duyệt đó.
+        // Mảng lịch sử duyệt/chuyển ghi theo TỪNG PHẦN TỬ mới/đổi; chỉ khi mảng cục bộ NGẮN đi
+        // (bỏ duyệt / hoàn tác — thao tác chủ ý) mới ghi cả mảng.
+        const MANG_LICH_SU = ['approvedDHistory','approvedHHistory','transfers'];
+        Object.keys(Object.assign({}, prev, lightFields)).forEach(k=>{
+          const a = prev[k], b = lightFields[k];
+          if(JSON.stringify(a===undefined?null:a) === JSON.stringify(b===undefined?null:b)) return;
+          if(MANG_LICH_SU.includes(k) && Array.isArray(b) && Array.isArray(a) && b.length >= a.length){
+            b.forEach((x,i)=>{ if(JSON.stringify(a[i]===undefined?null:a[i]) !== JSON.stringify(x)) updates[goc+'/'+k+'/'+i] = x; });
+            return;
+          }
+          updates[goc+'/'+k] = (b===undefined ? null : b);
+        });
+      }
       hasChange = true;
     }
   });
@@ -3450,6 +3468,14 @@ function initFirebaseSync(){
       if(currentRole === 'dung'){
         // Chỉ thiết bị Dũng đẩy bản sửa lệch lên máy chủ — luật bảo mật v77 chỉ cho đúng vai trò
         // ghi lịch sử duyệt, thiết bị khác đẩy sẽ bị máy chủ từ chối làm KẸT đồng bộ cả thiết bị.
+        // v121 (bê từ 379 v180): nay ghi theo trường → phần sửa thuộc trường của H&L (approvedH*) máy Dũng
+        // KHÔNG được ghi; đánh dấu "đã đẩy" để không lọt vào batch (lọt vào là cả batch bị từ chối, lặp mãi).
+        _fixedIds.forEach(id=>{
+          const p = proposals.find(x=>x.id===id);
+          if(p && lastPushedSnapshot && lastPushedSnapshot.proposalsMap && lastPushedSnapshot.proposalsMap[id]){
+            try{ const sv = JSON.parse(lastPushedSnapshot.proposalsMap[id]); ['approvedHAmount','approvedHHistory','approvedH'].forEach(k=>{ if(p[k]===undefined) delete sv[k]; else sv[k]=p[k]; }); lastPushedSnapshot.proposalsMap[id] = JSON.stringify(sv); }catch(e){}
+          }
+        });
         pushToFirebase();
       } else {
         // Thiết bị khác: giữ bản sửa CỤC BỘ để hiển thị đúng, nhưng đánh dấu "đã đẩy rồi" cho các
