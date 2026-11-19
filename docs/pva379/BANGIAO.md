@@ -60,7 +60,7 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 
 ## Việc còn lại / khi chuyển hẳn
 1. D dùng thử, rồi nói "phát hành": đổi `PUSH_TRIAL=false`, bump `APP_VERSION` + `version-pva379.txt` + `VERSION` trong `sw-pva379.js`.
-2. Chuyển dữ liệu (khi D bảo):
+2. Chuyển dữ liệu (khi D bảo) — **NGUỒN LÀ APP DUYỆT CHI (nhánh `duyetchi/` của project 379). KHÔNG chuyển, KHÔNG đụng dữ liệu Gia Bình** (project `so-quy-gia-binh` chạy riêng mãi, D chốt 19/11):
    - chép `duyetchi/{proposals,images,khProposals,khImages,plans,employees,salaryAdvances,groupChat,chatPin,khChat,khChatPin,meta/persons,meta/sites}` → `pva379/…`;
    - `userRoles`: đổi `role:'trang'` → `'thuquy'`;
    - các lần chuyển cũ không có `acct` sẽ tự tính vào tài khoản mặc định (Tiền mặt). Nếu cần đúng từng tài khoản thì thủ quỹ đổi bằng chip tài khoản trên phiếu.
