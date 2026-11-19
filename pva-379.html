@@ -2891,7 +2891,21 @@ function initAuth(){
         trackOnline(user.uid, currentUserName||user.email, role);
         // v82: ghi EMAIL + LẦN ĐĂNG NHẬP gần nhất vào hồ sơ (để Dũng soi tài khoản lạ ở Cài đặt).
         // update() giữ nguyên role/name/approved. Lỗi (mạng) bỏ qua, không chặn vào app.
-        db.ref('pva379/userRoles/'+user.uid).update({ email: user.email||'', lastLogin: Date.now() }).catch(()=>{});
+        // PVA-379: Dũng đăng nhập lần ĐẦU bằng tài khoản app Duyệt Chi → nhánh pva379 chưa có hồ sơ → luật máy chủ (xét
+        // userRoles/<uid>/role) sẽ chặn MỌI lệnh ghi của Dũng. Tự tạo hồ sơ vai 'dung' (luật cho đúng email Dũng tự đặt),
+        // tên lấy từ hồ sơ app Duyệt Chi (duyetchi/userRoles/<uid>, chính chủ đọc được).
+        (async()=>{
+          const upd = { email: user.email||'', lastLogin: Date.now() };
+          if(role==='dung' && !(role_val && typeof role_val==='object' && role_val.role==='dung')){
+            upd.role = 'dung';
+            let nm = currentUserName;
+            if(!nm){ try{ const o=(await db.ref('duyetchi/userRoles/'+user.uid+'/name').get()).val(); if(typeof o==='string' && o.trim()) nm=o.trim(); }catch(e){} }
+            upd.name = nm || 'Võ Văn Dũng';
+            if(!currentUserName){ currentUserName = upd.name; try{ localStorage.setItem('pv_role_'+user.uid, JSON.stringify({ role, name: currentUserName, dept: currentDept })); }catch(e){} }
+          }
+          await db.ref('pva379/userRoles/'+user.uid).update(upd);
+          if(upd.role){ _seedTried=false; try{ _autoSeedAccounts(); }catch(e){} }
+        })().catch(()=>{});
       } else {
         showUpdateRolePrompt();
       }
@@ -2969,6 +2983,7 @@ function setRole(role, skipFcm){
   renderAll();
   populateSelects();
   try{ _applyDeptView(); }catch(e){} // v125: hiện/ẩn nút P.KH theo vai trò + phòng
+  try{ _autoSeedAccounts(); }catch(e){}   // Dũng mở lần đầu → tự nạp danh sách tài khoản
   // Trang vừa vào app (đã đăng nhập xong) → nhắc các khoản chờ chuyển nếu dữ liệu đã tải xong
   setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
   setTimeout(function(){ try{ maybeShowChatReminder(); }catch(e){} }, 1100); // v106: bảng nhắc hỏi–đáp
@@ -3605,6 +3620,7 @@ function initFirebaseSync(){
       _metaData = snap.val() || {};
       try{ _loadAccounts(_metaData.accounts); const _ps=document.getElementById('page-settings'); if(_ps && _ps.style.display!=='none' && currentRole==='dung') renderAccountsSettings(); }catch(e){ console.warn('accounts', e); }
       _metaLoaded = true;
+      try{ _autoSeedAccounts(); }catch(e){}
       _mergeAndRender();
     }, ()=>{ /* bị hủy khi đăng xuất — sẽ nối lại lúc đăng nhập */ });
 
@@ -11936,13 +11952,25 @@ function renderAccountsSettings(){
   }).join('');
 }
 function _newAcctKey(){ return 'a' + Date.now().toString(36) + Math.floor(Math.random()*1296).toString(36); }
-async function seedAccounts(){
+async function seedAccounts(silent){
   if(currentRole!=='dung') return;
-  if(Object.keys((_metaData&&_metaData.accounts)||{}).length){ showToast('Đã có danh sách rồi'); return; }
-  if(!confirm('Nạp sẵn danh sách tài khoản theo sơ đồ (CT 379, CT PVA, CT 279, CT THHD, Tiền mặt)? Sau đó anh sửa / thêm / ẩn được.')) return;
+  if(Object.keys((_metaData&&_metaData.accounts)||{}).length){ if(!silent) showToast('Đã có danh sách rồi'); return; }
+  if(!silent && !confirm('Nạp sẵn danh sách tài khoản theo sơ đồ (CT 379, CT PVA, CT 279, CT THHD, Tiền mặt)? Sau đó anh sửa / thêm / ẩn được.')) return;
   const up={}; let order=10;
   DEFAULT_ACCOUNTS.forEach(([g, names])=>names.forEach(nm=>{ const k=_newAcctKey()+order; up['pva379/meta/accounts/'+k] = {name:nm, group:g, order}; order+=10; }));
-  try{ await db.ref().update(up); showToast('✅ Đã nạp '+Object.keys(up).length+' tài khoản'); }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
+  try{ await db.ref().update(up); showToast('✅ Đã nạp '+Object.keys(up).length+' tài khoản theo sơ đồ — sửa ở Cài đặt → Tài khoản & nguồn tiền'); }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
+}
+// D chốt 19/11 "chạy tự động": lần ĐẦU Dũng mở app mà chưa có danh sách tài khoản → tự nạp theo sơ đồ, không cần bấm.
+// Cờ meta/accountsSeeded (transaction) chống 2 máy của Dũng cùng nạp → trùng 50 tài khoản.
+let _seedTried=false;
+function _autoSeedAccounts(){
+  if(_seedTried || currentRole!=='dung' || !_metaLoaded || !currentUser) return;
+  if(typeof _viewAs!=='undefined' && _viewAs) return;
+  _seedTried=true;
+  if(Object.keys((_metaData&&_metaData.accounts)||{}).length || (_metaData&&_metaData.accountsSeeded)) return;
+  db.ref('pva379/meta/accountsSeeded').transaction(v => v ? undefined : Date.now())
+    .then(r=>{ if(r && r.committed) seedAccounts(true); })
+    .catch(()=>{ _seedTried=false; });
 }
 async function addAccount(){
   if(currentRole!=='dung') return;
