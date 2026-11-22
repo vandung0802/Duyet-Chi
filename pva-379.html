@@ -902,6 +902,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card">
     <div class="card-header">📖 Hướng dẫn nhanh — app này dùng để làm gì?</div>
     <div class="card-body" style="font-size:13px;line-height:1.6">
+      <div id="copied-info" style="display:none;margin-bottom:8px;padding:8px 10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;font-size:12.5px;color:#3730a3"></div>
       <div style="margin-bottom:8px"><b>PVA-379</b> là app duyệt chi và sổ quỹ của công ty (PVA, 379, 279, THHD). Mọi khoản chi phải đi đủ 4 bước:</div>
       <div style="background:var(--gray-light);border-radius:8px;padding:8px 10px;margin-bottom:8px">
         <b>1.</b> Ai cũng <b>đề xuất</b> được (tab Đề xuất → ➕)<br>
@@ -1922,11 +1923,13 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-// GIAI ĐOẠN DÙNG THỬ: mọi thông báo đẩy CHỈ gửi về máy Dũng (kênh 'dung'), tiêu đề gắn "[Thử]".
-// Lý do: kênh thông báo dùng chung với app Duyệt Chi → không để phiếu thử làm phiền Hiền/Trang/nhân viên.
-// Khi D nói "phát hành" → đổi thành false.
+// GIAI ĐOẠN DÙNG THỬ (D chốt 22/11: "1 mình tôi làm app này ngon lành thì mới thông báo cho mọi người"):
+//  - CHỈ Dũng vào được app; người khác thấy màn "đang thử nghiệm", dùng app Duyệt Chi như cũ (_trialGate).
+//  - Mọi thông báo đẩy CHỈ gửi về máy Dũng (kênh 'dung'), tiêu đề gắn "[Thử]" — kênh thông báo dùng chung với app Duyệt Chi.
+// Dữ liệu thử = bản chép từ app Duyệt Chi (workflow chep-du-lieu-pva379.yml), 2 app chạy song song, không ảnh hưởng nhau.
+// Khi D nói "phát hành" → đổi thành false (và chép dữ liệu lần cuối).
 const PUSH_TRIAL = true;
-const APP_VERSION = '20261119-v1';
+const APP_VERSION = '20261122-v2';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -2974,9 +2977,10 @@ function setRole(role, skipFcm){
   const badgeName = currentUserName || r.label; // hiện tên người (vd Ngọc) thay vì nhãn vai trò chung "Khác"
   document.getElementById('role-badge').innerHTML = `<span style="color:${r.color};font-weight:800">${r.icon}</span> ${badgeName}`;
   document.getElementById('role-screen').style.display='none';
+  const _gated = _trialGate(role);   // giai đoạn thử: không phải Dũng → chặn màn hình, không đăng ký thông báo
   // Đăng ký FCM nếu đã có quyền — BỎ QUA khi gọi lúc mở app từ cache (skipFcm): v147 ghi Firebase TRƯỚC auth
   // làm nghẽn kết nối → auth chậm hẳn (95-123s). onAuthStateChanged sau sẽ gọi setRole lại (có FCM).
-  if(!skipFcm && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+  if(!skipFcm && !_gated && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
     fcmRegister(role).catch(()=>{});
   }
   checkNotifBanner();
@@ -2987,6 +2991,25 @@ function setRole(role, skipFcm){
   // Trang vừa vào app (đã đăng nhập xong) → nhắc các khoản chờ chuyển nếu dữ liệu đã tải xong
   setTimeout(function(){ try{ maybeShowTransferReminder(); }catch(e){} }, 400);
   setTimeout(function(){ try{ maybeShowChatReminder(); }catch(e){} }, 1100); // v106: bảng nhắc hỏi–đáp
+}
+
+// Màn chặn giai đoạn thử: ai không phải Dũng (và không phải Dũng đang "xem thử vai") thì không dùng được app này.
+function _trialGate(role){
+  const block = PUSH_TRIAL && role!=='dung' && !(typeof _viewAs!=='undefined' && _viewAs);
+  let g = document.getElementById('trial-gate');
+  if(!block){ if(g) g.style.display='none'; return false; }
+  if(!g){
+    g = document.createElement('div'); g.id = 'trial-gate';
+    g.style.cssText = 'position:fixed;inset:0;z-index:10002;background:#4338ca;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;text-align:center';
+    g.innerHTML = `<div style="font-size:44px;margin-bottom:10px">🚧</div>
+      <div style="font-size:20px;font-weight:800;margin-bottom:8px">PVA-379 đang chạy thử</div>
+      <div style="font-size:14px;line-height:1.55;opacity:.95;max-width:340px">App này chưa mở cho mọi người. Anh/chị vẫn dùng <b>app Duyệt Chi</b> như cũ — khi nào xong anh Dũng sẽ báo.</div>
+      <a href="app3.html" style="display:inline-block;margin-top:18px;padding:12px 22px;background:#fff;color:#3730a3;border-radius:12px;font-weight:800;font-size:15px;text-decoration:none">📋 Mở app Duyệt Chi</a>
+      <button onclick="firebase.auth().signOut().then(()=>location.reload())" style="margin-top:14px;background:none;border:none;color:#e0e7ff;font-size:13px;text-decoration:underline;cursor:pointer">Đăng xuất</button>`;
+    document.body.appendChild(g);
+  }
+  g.style.display = 'flex';
+  return true;
 }
 
 const VAPID_PUBLIC = 'BAS4KVdEpnAD6f2xlElAx0KnegpJanRKumyBBJTSZxFBQJxr5ngRmC0eOS3LzZgiWQmJYrY8LMqWoeHCs5J4hn0'; // khoá của project 379 (chung app Duyệt Chi)
@@ -3618,6 +3641,7 @@ function initFirebaseSync(){
     db.ref('pva379/meta').off('value');
     db.ref('pva379/meta').on('value', snap=>{
       _metaData = snap.val() || {};
+      try{ const ci=document.getElementById('copied-info'), c=_metaData.copiedFrom; if(ci){ ci.style.display = c ? '' : 'none'; if(c) ci.textContent = '📥 Dữ liệu đang xem là BẢN CHÉP từ app Duyệt Chi lúc '+fmtFull(c.ts)+' ('+(c.proposals||0)+' phiếu). Thao tác ở đây không ảnh hưởng app Duyệt Chi; muốn lấy số mới nhất thì bảo Claude chép lại.'; } }catch(e){}
       try{ _loadAccounts(_metaData.accounts); const _ps=document.getElementById('page-settings'); if(_ps && _ps.style.display!=='none' && currentRole==='dung') renderAccountsSettings(); }catch(e){ console.warn('accounts', e); }
       _metaLoaded = true;
       try{ _autoSeedAccounts(); }catch(e){}

@@ -42,6 +42,18 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## Giai đoạn thử (D chốt 22/11: "1 mình tôi làm app này ngon lành thì mới thông báo cho mọi người")
+- `PUSH_TRIAL = true` làm 2 việc: (1) `_trialGate()` — ai không phải Dũng thì thấy màn "PVA-379 đang chạy thử" + nút mở app Duyệt Chi, không đăng ký thông báo; Dũng "xem thử vai" vẫn dùng được; (2) thông báo đẩy chỉ về máy Dũng, tiêu đề "[Thử]".
+- **Dữ liệu thử = BẢN CHÉP từ app Duyệt Chi** (`duyetchi/` → `pva379/`), 2 app chạy song song:
+  - Kịch bản `scripts/chep-duyetchi-sang-pva379.js`, chạy bằng tác vụ GitHub **"Chep du lieu Duyet Chi sang PVA-379"** (`.github/workflows/chep-du-lieu-pva379.yml`, Run workflow, gõ `CHEP`; để trống = chạy thử chỉ đọc). Dùng cùng chìa khoá FIREBASE_TOKEN với tác vụ đưa luật.
+  - Chỉ ĐỌC `duyetchi/`, chỉ GHI `pva379/…` (hàm `kiemDich` chặn). Mỗi nhánh đích XOÁ rồi chép lại = bản chụp lúc chạy; chạy lại bao nhiêu lần cũng được (D muốn số mới thì bảo chép lại; thao tác thử của D trong PVA-379 trên các nhánh đó sẽ mất).
+  - Chép: userRoles (role `trang` → `thuquy`), proposals, images, khProposals, khImages, plans, employees, salaryAdvances, groupChat, chatPin, chatRead, khChat, khChatPin, khChatRead, meta/persons, meta/sites. Ghi dấu `meta/copiedFrom {ts, proposals}` (app hiện dòng "bản chép" trong Cài đặt).
+  - KHÔNG chép: meta/sheetUrl, sheetViewUrl, telegram* (PVA-379 dùng Sheet riêng), pendingOtp, online. GIỮ NGUYÊN: pva379/meta/accounts, accountsSeeded, cashflow, bankBalance, advPeople, trash.
+  - Kho ảnh chia lô ≤12 MB mỗi lệnh ghi. Thử trên emulator (chế độ REST, `FIREBASE_DATABASE_EMULATOR_HOST`): đúng.
+- Trong lúc thử, việc thật (duyệt, chuyển) vẫn làm ở app Duyệt Chi. D duyệt trong PVA-379 chỉ là thử, không ai thấy.
+- Máy Dũng có 2 service worker (app3 + pva-379) cùng đăng ký kênh `dung` → mỗi thông báo thật hiện 2 lần trên máy D trong giai đoạn thử. Hết khi chuyển hẳn.
+- Khi D nói "phát hành": chép lần cuối (`CHEP`), đổi `PUSH_TRIAL=false`, bump version, rồi cho app3 báo chuyển.
+
 ## Thông báo đẩy
 - Đi qua `push-queue` / `push-subs` của 379 (Cloud Function `processPushQueue`). Không dùng trạm `gbRelay`.
 - Kênh: `dung`, `hien`, `thuquy`→`trang`, còn lại → `kt` / `kh` theo phòng (`_pushChanOfRole`, `_pushMapTargets`).
@@ -63,8 +75,7 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 ## Việc còn lại / khi chuyển hẳn
 1. D dùng thử, rồi nói "phát hành": đổi `PUSH_TRIAL=false`, bump `APP_VERSION` + `version-pva379.txt` + `VERSION` trong `sw-pva379.js`.
 2. Chuyển dữ liệu (khi D bảo) — **NGUỒN LÀ APP DUYỆT CHI (nhánh `duyetchi/` của project 379). KHÔNG chuyển, KHÔNG đụng dữ liệu Gia Bình** (project `so-quy-gia-binh` chạy riêng mãi, D chốt 19/11):
-   - chép `duyetchi/{proposals,images,khProposals,khImages,plans,employees,salaryAdvances,groupChat,chatPin,khChat,khChatPin,meta/persons,meta/sites}` → `pva379/…`;
-   - `userRoles`: đổi `role:'trang'` → `'thuquy'`;
+   - chạy tác vụ "Chep du lieu Duyet Chi sang PVA-379" với `CHEP` (xem mục Giai đoạn thử) — đã có sẵn, chạy lại được;
    - các lần chuyển cũ không có `acct` sẽ tự tính vào tài khoản mặc định (Tiền mặt). Nếu cần đúng từng tài khoản thì thủ quỹ đổi bằng chip tài khoản trên phiếu.
    - Sau đó cho `app3.html` hiện thông báo chuyển sang PVA-379.
 3. Kế toán: D cấp vai `ketoan` trong Cài đặt khi có người.
