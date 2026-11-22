@@ -1,0 +1,61 @@
+# CHÉP DỮ LIỆU app Duyệt Chi (/duyetchi) sang app PVA-379 (/pva379) — chạy TAY khi D bảo (tab Actions → Run workflow,
+# hoặc Claude gọi). Ô "xacnhan" phải gõ đúng CHEP mới chép thật; để trống = chạy thử (chỉ đọc, in số lượng).
+# Chạy lại bao nhiêu lần cũng được: nhánh đích xoá rồi chép lại y nguồn. KHÔNG đụng /duyetchi (chỉ đọc).
+# Chìa khoá: dùng lại FIREBASE_TOKEN (hoặc FIREBASE_SERVICE_ACCOUNT) đã có trong GitHub Secrets.
+name: Chep du lieu Duyet Chi sang PVA-379
+
+on:
+  workflow_dispatch:
+    inputs:
+      xacnhan:
+        description: 'Gõ CHEP để chép thật (ghi đè các nhánh dữ liệu của pva379). Để trống = chạy thử, chỉ đọc.'
+        required: false
+        default: ''
+
+concurrency:
+  group: chep-du-lieu-pva379
+  cancel-in-progress: false
+
+jobs:
+  chep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cai firebase-tools
+        run: npm install -g firebase-tools
+
+      - name: Kiem tra da co chia khoa chua
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ] && [ "$HAS_SA" != "true" ]; then
+            echo "::error::Chua co chia khoa FIREBASE_TOKEN (lay bang LAY-KHOA-TU-DONG.bat) trong GitHub → Settings → Secrets → Actions."
+            exit 1
+          fi
+
+      - name: Chep du lieu
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          XACNHAN: ${{ github.event.inputs.xacnhan }}
+        run: |
+          if [ "$HAS_SA" = "true" ]; then
+            printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+            unset FIREBASE_TOKEN
+          fi
+          if [ "$XACNHAN" = "CHEP" ]; then
+            node scripts/chep-duyetchi-sang-pva379.js
+          else
+            echo "Chua go CHEP → chi chay thu (doc, khong ghi)."
+            node scripts/chep-duyetchi-sang-pva379.js --thu
+          fi
+          rm -f "$RUNNER_TEMP/sa.json"
