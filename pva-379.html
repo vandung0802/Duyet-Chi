@@ -1929,7 +1929,7 @@ const firebaseConfig = {
 // Dữ liệu thử = bản chép từ app Duyệt Chi (workflow chep-du-lieu-pva379.yml), 2 app chạy song song, không ảnh hưởng nhau.
 // Khi D nói "phát hành" → đổi thành false (và chép dữ liệu lần cuối).
 const PUSH_TRIAL = true;
-const APP_VERSION = '20261122-v4';
+const APP_VERSION = '20261122-v5';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -3163,6 +3163,8 @@ async function sendPushNotif(title, body, targetRoles, names) {   // v91: names 
   targetRoles = _pushMapTargets(targetRoles);
   // D 22/11: "chính tôi bấm duyệt thì tôi không cần nhận thông báo" → bỏ kênh của CHÍNH người bấm khỏi danh sách nhận
   { const mine = _pushChanOfRole(currentRole, currentDept); targetRoles = targetRoles.filter(r=>mine.indexOf(r)<0); }
+  // ...và cũng không gửi riêng theo TÊN cho chính mình (người vừa đề xuất, vừa duyệt, vừa nhắc tên mình...)
+  if(Array.isArray(names)){ const me=_tagFold(getCurrentUserName()||''); names = names.filter(n=>n && _tagFold(n)!==me); }
   if(PUSH_TRIAL){
     // Giai đoạn thử: chỉ gửi về máy Dũng NHỮNG GÌ VỐN PHẢI BÁO CHO DŨNG (người khác lập phiếu, nhắc tên...), gắn "[Thử]".
     // Thao tác của chính Dũng (duyệt, ý kiến, chuyển hộ...) vốn báo cho người khác → trong lúc thử bỏ hẳn, không gửi ai.
