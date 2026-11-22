@@ -12,6 +12,9 @@
 //   - pva379/meta/accounts, accountsSeeded (danh sách tài khoản của PVA-379) và pva379/cashflow, bankBalance, advPeople, trash
 //     (sổ quỹ — app Duyệt Chi không có) → GIỮ NGUYÊN.
 // Đổi vai: userRoles role 'trang' → 'thuquy' (PVA-379 gọi thủ quỹ là 'thuquy').
+// userRoles: tài khoản ĐÃ CÓ bên PVA-379 thì GIỮ NGUYÊN (vai kế toán, phòng, quyền do Dũng cấp riêng trong PVA-379
+// không bị chép đè khi chạy lại); chỉ THÊM tài khoản chưa có. Phiếu tạo trong PVA-379 sau lần chép trước thì bị thay
+// bằng bản Duyệt Chi (giai đoạn thử chủ ý như vậy) — script in ra số lượng để biết.
 'use strict';
 const { execFileSync } = require('child_process');
 const fs = require('fs'), path = require('path'), os = require('os');
@@ -42,7 +45,7 @@ async function emuRest(method, duongDan, body) {
 function tmp(ten) { return path.join(os.tmpdir(), 'chep-pva379-' + process.pid + '-' + ten.replace(/[^a-zA-Z0-9]/g, '_') + '.json'); }
 // Đọc qua FILE (-o): firebase-tools in cảnh báo ra stdout trước JSON, đọc stdout sẽ hỏng.
 async function doc(duongDan) {
-  if (!duongDan.startsWith('/' + NGUON + '/')) throw new Error('Chỉ đọc /' + NGUON + '/ — bị chặn: ' + duongDan);
+  if (!duongDan.startsWith('/' + NGUON + '/') && !duongDan.startsWith('/' + DICH + '/')) throw new Error('Chỉ đọc /' + NGUON + '/ hoặc /' + DICH + '/ — bị chặn: ' + duongDan);
   if (EMU) return emuRest('GET', duongDan);
   const f = tmp('doc' + duongDan);
   try { fb(['database:get', duongDan, '-o', f]); const s = fs.readFileSync(f, 'utf8').trim(); return s && s !== 'null' ? JSON.parse(s) : null; }
@@ -89,8 +92,18 @@ function doiVai(userRoles) {
   if (EMU) console.log('  (đang trỏ vào emulator ' + EMU + ')');
   const tomTat = {}; let tongPhieu = 0;
   for (const ten of NHANH) {
-    const data = await doc('/' + NGUON + '/' + ten);
-    if (ten === 'userRoles') { const n = doiVai(data); if (n) console.log('  userRoles: đổi vai trang → thuquy cho ' + n + ' tài khoản'); }
+    let data = await doc('/' + NGUON + '/' + ten);
+    if (ten === 'userRoles') {
+      const n = doiVai(data); if (n) console.log('  userRoles: đổi vai trang → thuquy cho ' + n + ' tài khoản');
+      const cu = (await doc('/' + DICH + '/userRoles')) || {}; let giu = 0;
+      Object.keys(cu).forEach(uid => { if (cu[uid] && typeof cu[uid] === 'object' && cu[uid].role) { data = data || {}; data[uid] = Object.assign({}, data[uid] || {}, cu[uid]); giu++; } });
+      if (giu) console.log('  userRoles: giữ nguyên ' + giu + ' tài khoản đã có bên PVA-379 (vai / phòng / quyền do Dũng cấp)');
+    }
+    if (ten === 'proposals' || ten === 'khProposals') {
+      const cu = (await doc('/' + DICH + '/' + ten)) || {}, mocCu = ((await doc('/' + DICH + '/meta/copiedFrom')) || {}).ts || 0;
+      const moi = Object.keys(cu).filter(k => cu[k] && (cu[k].ts || 0) > mocCu && !(data && data[k]));
+      if (moi.length) console.log('  ' + ten + ': ' + moi.length + ' phiếu tạo trong PVA-379 sau lần chép trước sẽ bị thay bằng bản Duyệt Chi (giai đoạn thử)');
+    }
     const r = await chepNhanh(ten, data);
     if (ten === 'proposals') tongPhieu = r.so;
     tomTat[ten] = r.so;
