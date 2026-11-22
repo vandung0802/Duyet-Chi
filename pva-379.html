@@ -1929,7 +1929,9 @@ const firebaseConfig = {
 // Dữ liệu thử = bản chép từ app Duyệt Chi (workflow chep-du-lieu-pva379.yml), 2 app chạy song song, không ảnh hưởng nhau.
 // Khi D nói "phát hành" → đổi thành false (và chép dữ liệu lần cuối).
 const PUSH_TRIAL = true;
-const APP_VERSION = '20261122-v5';
+// Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
+const TRIAL_ROLES = ['dung','hien'];
+const APP_VERSION = '20261122-v6';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -2997,7 +2999,7 @@ function setRole(role, skipFcm){
 
 // Màn chặn giai đoạn thử: ai không phải Dũng (và không phải Dũng đang "xem thử vai") thì không dùng được app này.
 function _trialGate(role){
-  const block = PUSH_TRIAL && role!=='dung' && !(typeof _viewAs!=='undefined' && _viewAs);
+  const block = PUSH_TRIAL && TRIAL_ROLES.indexOf(role)<0 && !(typeof _viewAs!=='undefined' && _viewAs);
   let g = document.getElementById('trial-gate');
   if(!block){ if(g) g.style.display='none'; return false; }
   if(!g){
@@ -3166,10 +3168,11 @@ async function sendPushNotif(title, body, targetRoles, names) {   // v91: names 
   // ...và cũng không gửi riêng theo TÊN cho chính mình (người vừa đề xuất, vừa duyệt, vừa nhắc tên mình...)
   if(Array.isArray(names)){ const me=_tagFold(getCurrentUserName()||''); names = names.filter(n=>n && _tagFold(n)!==me); }
   if(PUSH_TRIAL){
-    // Giai đoạn thử: chỉ gửi về máy Dũng NHỮNG GÌ VỐN PHẢI BÁO CHO DŨNG (người khác lập phiếu, nhắc tên...), gắn "[Thử]".
-    // Thao tác của chính Dũng (duyệt, ý kiến, chuyển hộ...) vốn báo cho người khác → trong lúc thử bỏ hẳn, không gửi ai.
-    if(targetRoles.indexOf('dung') < 0) return;
-    title = '[Thử] ' + title; targetRoles = ['dung']; names = null;
+    // Giai đoạn thử: chỉ gửi tới người đang thử (TRIAL_ROLES) NHỮNG GÌ VỐN PHẢI BÁO CHO HỌ, gắn "[Thử]"; phần báo cho
+    // người khác (thủ quỹ, nhân viên...) bỏ hẳn, không gửi ai.
+    targetRoles = targetRoles.filter(r=>TRIAL_ROLES.indexOf(r)>=0);   // chỉ tới người đang thử (D, Hiền)
+    if(!targetRoles.length) return;
+    title = '[Thử] ' + title; names = null;
   }
   if(targetRoles.length === 0) return;
   // Dedup: không gửi lại cùng 1 nội dung trong vòng 10 giây
