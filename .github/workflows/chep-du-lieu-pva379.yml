@@ -30,7 +30,7 @@ jobs:
           node-version: 22
 
       - name: Cai firebase-tools
-        run: npm install -g firebase-tools
+        run: npm install -g firebase-tools@13
 
       - name: Kiem tra da co chia khoa chua
         env:

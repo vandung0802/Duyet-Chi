@@ -320,8 +320,6 @@
 
     // ══ PVA-379 (app pva-379.html, từ 19/11/2026): nhánh RIÊNG, chạy song song app Duyệt Chi (nhánh duyetchi).
     // Gốc: nhánh duyetchi của database-giabinh.rules.json (đổi gốc pva379/, vai toan→thuquy, tài khoản theo meta/accounts, sổ quỹ chỉ D/H/thủ quỹ/kế toán đọc).
-    // ══ PVA-379 (app pva-379.html, từ 19/11/2026): nhánh RIÊNG, chạy song song app Duyệt Chi (nhánh duyetchi).
-    // Gốc: nhánh duyetchi của database-giabinh.rules.json (đổi gốc pva379/, vai toan→thuquy, tài khoản theo meta/accounts, sổ quỹ chỉ D/H/thủ quỹ/kế toán đọc).
     "pva379": {
       // v79 BẢO MẬT: KHÔNG đặt ".read" ở cấp cha này. Trong Firebase RTDB, ".read" ở cha LAN XUỐNG mọi
       // con và con KHÔNG thu hồi được — nếu để ".read: auth != null" ở đây thì pendingOtp (mã OTP) sẽ bị
@@ -499,7 +497,7 @@
       "bankBalance": {
         // PVA-379: số dư ngân hàng THẬT của TỪNG tài khoản do thủ quỹ nhập để đối chiếu với sổ quỹ.
         ".read": "auth != null && ((root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true && (root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'thuquy' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'ketoan')) || auth.token.email === 'vandung0802@gmail.com')",
-        ".write": "auth != null && root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true && (root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'thuquy' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung')",
+        ".write": "auth != null && ((root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true && (root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'thuquy' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung')) || auth.token.email === 'vandung0802@gmail.com')",
         "$acct": {
           ".validate": "root.child('pva379/meta/accounts').child($acct).exists() && newData.hasChildren(['amount']) && newData.child('amount').isNumber() && newData.child('amount').val() >= 0 && newData.child('amount').val() <= 1000000000000",
           "amount": { ".validate": true },
@@ -544,9 +542,9 @@
           "principal":    { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000000" },
           "interest":     { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000000" },
           "lender":       { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (newData.val() === 'nh' || newData.val() === 'canhan')" },
-          "lenderName":   { ".validate": "!newData.isString() || newData.val().length <= 200" },
-          "rate":         { ".validate": "!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 1000)" },
-          "due":          { ".validate": "!newData.isString() || newData.val().length <= 10" },
+          "lenderName":   { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (!newData.isString() || newData.val().length <= 200)" },
+          "rate":         { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (!newData.isNumber() || (newData.val() >= 0 && newData.val() <= 1000))" },
+          "due":          { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (!newData.isString() || newData.val().length <= 10)" },
           "amount":       { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000000000" },
           "desc":         { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && (!newData.isString() || newData.val().length <= 2000)" },
           "date":         { ".validate": "root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
@@ -559,7 +557,7 @@
           "byName":       { ".validate": "root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()" },
           // ĐỀ NGHỊ XOÁ: ai đã duyệt cũng gửi được; từng phiếu đồng ý = uid của CHÍNH người bấm, đúng vai, ghi rồi không đổi.
           // (Xoá phiếu đồng ý / huỷ đề nghị thì luật không cản — chỉ làm CHẬM việc xoá, không làm mất tiền.)
-          "ts":       { ".validate": "newData.isNumber()" },
+          "ts":       { ".validate": "(root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || !data.exists() || newData.val() === data.val()) && newData.isNumber()" },
           "$other":   { ".validate": false },
           // v113 (D 31/10): TRẢ NỢ chờ duyệt — Toàn ghi pending=true lúc tạo; CHỈ Hiền/Lan (hoặc Dũng) gỡ được pending và ghi okH (= chính mình, bất biến).
           "pending":  { ".validate": "newData.val() === true && !data.exists()" },
@@ -571,7 +569,7 @@
             "names":  { "$u": { ".validate": "newData.isString() && newData.val().length <= 200" } },
             "ok": {
               "dung":  { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung')" },
-              "hien1": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'hien')" },
+              "hien1": { ".validate": "(data.exists() && newData.val() === data.val()) || (!data.exists() && newData.val() === auth.uid && root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'hien' && newData.val() !== newData.parent().parent().child('by').val())" },
               "hien2": { ".validate": false },
               "$o":    { ".validate": false }
             },
