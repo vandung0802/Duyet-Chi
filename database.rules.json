@@ -362,7 +362,9 @@
         // v81: chỉ tài khoản ĐÃ ĐƯỢC DUYỆT (approved) hoặc 3 email người nhà mới đọc được.
         ".read": "auth != null && (root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true || auth.token.email === 'vandung0802@gmail.com')",
         // Chỉ Dũng mới sửa được danh sách người/công trình
-        ".write": "auth != null && root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung'"
+        ".write": "auth != null && root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung'",
+        "cashStart": { ".write": "auth != null && root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true && (root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'thuquy' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'ketoan')", ".validate": "newData.isString() && newData.val().matches(/^20[0-9][0-9]-[01][0-9]-[0-3][0-9]$/)" },
+        "accounts": { "$k": { "open": { ".write": "auth != null && root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true && (root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'thuquy' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'ketoan')", ".validate": "newData.isNumber() && newData.val() >= -1000000000000 && newData.val() <= 1000000000000" } } }
       },
 
       "proposals": {
