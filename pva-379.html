@@ -1034,7 +1034,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card" id="acct-card" style="display:none">
     <div class="card-header">🏦 Tài khoản & nguồn tiền (sổ quỹ)</div>
     <div class="card-body">
-      <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Thủ quỹ chọn tài khoản này lúc chuyển tiền / ghi thu. Chỉ cần <b>tên gợi nhớ</b> (VD: TP, MSB), không cần số tài khoản. Tài khoản đã có giao dịch thì <b>ẩn</b> chứ không xoá.</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Thủ quỹ chọn tài khoản này lúc chuyển tiền / ghi thu. Chỉ cần <b>tên gợi nhớ</b> (VD: TP, MSB), không cần số tài khoản. Tài khoản đã có giao dịch thì <b>ẩn</b> chứ không xoá. Dũng thêm / sửa danh sách; <b>ngày đầu kỳ và số dư đầu kỳ</b> thì Dũng, thủ quỹ, kế toán đều nhập được.</div>
       <div id="acct-list"></div>
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
         <select class="add-input" id="acct-new-group" style="flex:1 1 120px"></select>
@@ -1930,8 +1930,8 @@ const firebaseConfig = {
 // Khi D nói "phát hành" → đổi thành false (và chép dữ liệu lần cuối).
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
-const TRIAL_ROLES = ['dung','hien'];
-const APP_VERSION = '20261124-v7';
+const TRIAL_ROLES = ['dung','hien','ketoan'];   // 24/11: thêm kế toán để nhập số dư đầu kỳ / khoản vay
+const APP_VERSION = '20261124-v8';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -8324,7 +8324,7 @@ function renderSettings(){
   if(selRole) selRole.innerHTML = '<option value="">-- Chọn tên của bạn --</option>'+persons.map(p=>`<option value="${esc(p.name)}">${esc(p.name)}${p.role?' — '+esc(p.role):''}</option>`).join('');
   // Mục chuyển ảnh cũ lên Kho ảnh — chỉ D thấy; hiện số phiếu còn ảnh trong database
   { const _sh=document.getElementById('sheet-connect-card'); if(_sh) _sh.style.display = currentRole==='dung' ? '' : 'none'; }
-  { const _ac=document.getElementById('acct-card'); if(_ac) _ac.style.display = currentRole==='dung' ? '' : 'none'; if(currentRole==='dung') try{ renderAccountsSettings(); }catch(e){} }   // v40: khối Kết nối Google Sheets chỉ D thấy
+  { const _ac=document.getElementById('acct-card'); if(_ac) _ac.style.display = _canSetOpening() ? '' : 'none'; if(_canSetOpening()) try{ renderAccountsSettings(); }catch(e){} }   // 24/11: thủ quỹ / kế toán cũng vào được để nhập đầu kỳ   // v40: khối Kết nối Google Sheets chỉ D thấy
   const migSec = document.getElementById('admin-migrate-section');
   if(migSec){
     migSec.style.display = currentRole==='dung' ? 'block' : 'none';
@@ -11981,16 +11981,18 @@ function _cashStartYmd(){ const m=(typeof _metaData!=='undefined' && _metaData)|
 function _cashStartTs(){ const y=_cashStartYmd(); if(!y) return 0; const t=new Date(y+'T00:00:00').getTime(); return isNaN(t)?0:t; }
 function _inLedgerTs(ts){ const st=_cashStartTs(); return !st || (+ts||0) >= st; }
 function _inLedgerRec(r){ const y=_cashStartYmd(); if(!y) return true; const d = r && r.date ? String(r.date) : ymdLocal((r && r.ts)||0); return d >= y; }
+// Ai được nhập ngày đầu kỳ + số dư đầu kỳ (D 24/11 "mở cho tôi"): Dũng, thủ quỹ, kế toán (luật meta/cashStart + meta/accounts/$k/open cho 3 vai này)
+function _canSetOpening(){ return currentRole==='dung' || currentRole==='thuquy' || currentRole==='ketoan'; }
 function _cashOpenTotal(){ return Object.keys(CASH_ACCT).reduce((a,k)=>a+(+(CASH_ACCT[k].open)||0),0); }
 function _cashHasOpening(){ return Object.keys(CASH_ACCT).some(k=>CASH_ACCT[k].open!==undefined && CASH_ACCT[k].open!==null && CASH_ACCT[k].open!==''); }
 async function saveCashStart(){
-  if(currentRole!=='dung') return;
+  if(!_canSetOpening()) return;
   const v=((document.getElementById('acct-start')||{}).value||'').trim();
   if(v && !/^\d{4}-\d{2}-\d{2}$/.test(v)){ showToast('⚠️ Ngày không đúng'); return; }
   try{ await db.ref('pva379/meta/cashStart').set(v||null); showToast(v ? '✅ Sổ quỹ tính từ '+v.split('-').reverse().join('/') : '✅ Đã bỏ mốc — sổ quỹ tính từ ngày chép dữ liệu'); }catch(e){ showToast('❌ '+(e.message||e.code||'')); }
 }
 async function saveAcctOpen(k, el){
-  if(currentRole!=='dung' || !CASH_ACCT[k] || !el) return;
+  if(!_canSetOpening() || !CASH_ACCT[k] || !el) return;
   const raw=String(el.value||'').replace(/[^\d-]/g,''); const v = raw==='' ? null : (parseInt(raw,10)||0);
   try{ await db.ref('pva379/meta/accounts/'+k+'/open').set(v); showToast('✅ Đầu kỳ '+CASH_ACCT[k].label+': '+(v===null?'bỏ':fmtVND(v))); }catch(e){ showToast('❌ '+(e.message||e.code||'')); }
 }
@@ -12005,6 +12007,9 @@ function renderAccountsSettings(){
   const el=document.getElementById('acct-list'); if(!el) return;
   const raw=(_metaData&&_metaData.accounts)||{};
   const gs=ACCT_GROUPS.slice();
+  const _isD = currentRole==='dung';
+  { const row=document.getElementById('acct-new-name'); const wrap=row && row.parentElement; if(wrap) wrap.style.display = _isD ? '' : 'none'; }   // thêm tài khoản: chỉ Dũng
+  if(!_isD && !Object.keys(raw).length){ el.innerHTML = '<div style="padding:10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12.5px">Chưa có danh sách tài khoản — chờ anh Dũng nạp.</div>'; return; }
   const gsel=document.getElementById('acct-new-group');
   if(gsel){ const cur=gsel.value; gsel.innerHTML = gs.map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('') + '<option value="__new">➕ Nhóm / công ty mới…</option>'; if(cur && (gs.indexOf(cur)>=0||cur==='__new')) gsel.value=cur; }
   if(!Object.keys(raw).length){
@@ -12022,9 +12027,9 @@ function renderAccountsSettings(){
       ${ks.map(k=>{ const a=CASH_ACCT[k]; return `<div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--gray-border);font-size:13px${a.off?';opacity:.5':''}">
         <span style="flex:1;min-width:0">${a.icon} ${esc(a.name)}${a.off?' <i style="font-size:11px">(đã ẩn)</i>':''}</span>
         <input inputmode="numeric" placeholder="Đầu kỳ" title="Số dư đầu kỳ" value="${a.open!==undefined?fmtVND(a.open).replace(/\s*đ\s*$/,''):''}" oninput="fmtAmountInput(this)" onchange="saveAcctOpen('${sid(k)}',this)" style="width:96px;font-size:12px;padding:3px 6px;border:1px solid var(--gray-border);border-radius:6px;text-align:right">
-        <button onclick="renameAccount('${sid(k)}')" style="font-size:11px;padding:2px 8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;border-radius:6px;cursor:pointer">✏️</button>
+        ${_isD ? `<button onclick="renameAccount('${sid(k)}')" style="font-size:11px;padding:2px 8px;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4ed8;border-radius:6px;cursor:pointer">✏️</button>
         <button onclick="toggleAccountOff('${sid(k)}')" style="font-size:11px;padding:2px 8px;border:1px solid #e5e7eb;background:#f8fafc;border-radius:6px;cursor:pointer">${a.off?'Hiện':'Ẩn'}</button>
-        <button onclick="deleteAccount('${sid(k)}')" style="font-size:11px;padding:2px 8px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);border-radius:6px;cursor:pointer">✕</button>
+        <button onclick="deleteAccount('${sid(k)}')" style="font-size:11px;padding:2px 8px;border:1px solid #fecaca;background:#fef2f2;color:var(--red);border-radius:6px;cursor:pointer">✕</button>` : ''}
       </div>`; }).join('')}</div>`;
   }).join('');
 }
@@ -12342,7 +12347,7 @@ function renderCashSummary(){
     ${t.camKetCuN ? row('Phiếu cũ (duyệt trước đầu kỳ) còn chưa chuyển — KHÔNG tính', -t.camKetCu, {color:'var(--text-sub)', sub:t.camKetCuN+' phiếu chép từ app Duyệt Chi. Cái nào không còn chi nữa thì Dũng từ chối / xoá cho sạch sổ; cái nào vẫn chi thì lúc chuyển tiền sổ vẫn trừ đúng tài khoản.'}) : ''}
     ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#dc2626', sub:'tab Tạm ứng → "Lập phiếu chi bù"'}) : ''}
     ${box('= CÒN ĐƯỢC TIÊU', t.conDuocTieu, neg?'#b91c1c':'#047857', neg?'#fef2f2':'#f0fdf4', neg?'#fecaca':'#86efac', 'còn duyệt chi thêm được mà quỹ không âm; phiếu chưa duyệt không tính')}
-    ${_cashHasOpening() ? '' : '<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e">⚠️ Chưa có số dư đầu kỳ — anh Dũng vào Cài đặt → Tài khoản & nguồn tiền, nhập số dư từng tài khoản tại ngày bắt đầu sổ quỹ'+(_cashStartYmd()?' ('+_cashStartYmd().split('-').reverse().join('/')+')':'')+'.</div>'}
+    ${_cashHasOpening() ? '' : '<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e">⚠️ Chưa có số dư đầu kỳ — Dũng / thủ quỹ / kế toán vào Cài đặt → Tài khoản & nguồn tiền, nhập số dư từng tài khoản tại ngày bắt đầu sổ quỹ'+(_cashStartYmd()?' ('+_cashStartYmd().split('-').reverse().join('/')+')':'')+'.</div>'}
     <div style="font-size:10.5px;color:var(--text-sub);margin:8px 4px 0;line-height:1.4">Số rút gọn (tỷ / tr) · chạm ô xem số đầy đủ${one?'':' · chạm tên công ty (379, PVA…) mở Sổ quỹ công ty đó'}.</div>
   </div></div>`;
 }
