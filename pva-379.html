@@ -1931,7 +1931,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien'];
-const APP_VERSION = '20261122-v6';
+const APP_VERSION = '20261124-v7';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12211,13 +12211,16 @@ function cashTotals(){
   const vay = loans.reduce((a,r)=>a+num(r.amount), 0);
   const traGoc = repays.reduce((a,r)=>a+num(r.principal), 0);
   const laiVay = repays.reduce((a,r)=>a+num(r.interest), 0);
-  const noVay = Math.max(0, vay - traGoc);
+  // Kế toán 24/11: khoản vay có TRƯỚC đầu kỳ vẫn là nợ → nợ vay tính trên MỌI khoản vay / trả nợ (không lọc mốc);
+  // riêng tiền vào/ra tài khoản (vay, traGoc, laiVay ở trên) vẫn chỉ từ mốc đầu kỳ, vì số dư đầu kỳ đã gồm tiền vay cũ.
+  const noVay = Math.max(0, cashflow.filter(r=>r.type==='loan').reduce((a,r)=>a+num(r.amount),0) - cashflow.filter(r=>r.type==='repay' && !r.pending).reduce((a,r)=>a+num(r.principal),0));
   loans.forEach(r=>add(r.acct, num(r.amount), 'vay'));
   repays.forEach(r=>add(r.acct, -(num(r.principal)+num(r.interest)), 'traNo'));
   xfers.forEach(r=>{ add(r.from, -num(r.amount), 'xfer'); add(r.to, num(r.amount), 'xfer'); });
 
   // Chi THẬT SỰ = tiền T đã chuyển đi (kể cả ứng lương), KHÔNG tính ký quỹ; TẠM ỨNG chỉ thành chi phí khi hoàn ứng (v41).
-  let daChi = 0, daDuyetChuaChuyen = 0, dangTamUng = 0, hoanUngChi = 0, noTamUng = 0; const advAcc = {};
+  let daChi = 0, daDuyetChuaChuyen = 0, dangTamUng = 0, hoanUngChi = 0, noTamUng = 0, camKetCu = 0, camKetCuN = 0; const advAcc = {};
+  const _lastApproveTs = p => { let t = 0; ['approvedDHistory','approvedHHistory'].forEach(k=>(Array.isArray(p[k])?p[k]:[]).forEach(x=>{ if(x && x.ts > t) t = x.ts; })); return t || p.ts || 0; };
   (proposals||[]).forEach(p=>{
     if(p.status==='rejected') return;   // rà soát 22/11: phiếu P.KH cũng là tiền thật ra khỏi tài khoản → tính vào sổ quỹ
     if(p.costType==='tamung' && !_inLedgerTs(p.ts)) return;   // sổ tạm ứng trước mốc: không tính
@@ -12234,7 +12237,11 @@ function cashTotals(){
       if(ret) add(_acctDefault(), ret, 'tamUng');   // tiền nộp lại về TIỀN MẶT (thủ quỹ giữ)
     }
     else daChi += tr;
-    if(off > trAll + 0.0001) daDuyetChuaChuyen += (off - trAll);   // phần đã hứa chi còn lại — tính cả phiếu cũ
+    if(off > trAll + 0.0001){   // phần đã hứa chi còn lại
+      // Kế toán 24/11: 1.740 phiếu cũ có cả trăm phiếu duyệt-chưa-chuyển bỏ dở → trừ hết làm "Còn được tiêu" âm 800 triệu dù
+      // nhập đủ số dư. Nay chỉ tính phiếu DUYỆT từ mốc đầu kỳ; phiếu cũ hiện riêng một dòng để Dũng dọn (từ chối / xoá).
+      if(_inLedgerTs(_lastApproveTs(p))) daDuyetChuaChuyen += (off - trAll); else { camKetCu += (off - trAll); camKetCuN++; }
+    }
   });
 
   Object.values(advAcc).forEach(v=>{ if(v>0) dangTamUng += v; else noTamUng += -v; });   // v43: dương = còn giữ tiền ứng; âm = công ty nợ (chưa trừ tài khoản)
@@ -12242,7 +12249,7 @@ function cashTotals(){
   const conDuocTieu = tienTrongTk - daDuyetChuaChuyen - noTamUng;   // còn nợ người tạm ứng = tiền đã hứa chi
   return {thu, thuBySrc, traLai, traLaiBySrc, daChi, dangGuiNgoai, kyQuyDaChi, kyQuyDaVe, dauKy,
           vay, traGoc, laiVay, noVay, dangTamUng, noTamUng, hoanUngChi, byAcct, byRow,
-          tienTrongTk, daDuyetChuaChuyen, conDuocTieu};
+          tienTrongTk, daDuyetChuaChuyen, conDuocTieu, camKetCu, camKetCuN};
 }
 
 // ── ĐIỀU HƯỚNG TAB CON ──
@@ -12331,7 +12338,8 @@ function renderCashSummary(){
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">${head}${body}</table></div>
     ${box('= Tiền trong tài khoản', t.tienTrongTk, 'var(--blue-dark)', '#eff6ff', '#bfdbfe', 'thủ quỹ đối chiếu sao kê từng tài khoản ở tab "Sổ quỹ"')}
     ${_siteTableHtml()}
-    ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, {color:'#dc2626'})}
+    ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, {color:'#dc2626', sub:'chỉ phiếu duyệt từ ngày đầu kỳ'})}
+    ${t.camKetCuN ? row('Phiếu cũ (duyệt trước đầu kỳ) còn chưa chuyển — KHÔNG tính', -t.camKetCu, {color:'var(--text-sub)', sub:t.camKetCuN+' phiếu chép từ app Duyệt Chi. Cái nào không còn chi nữa thì Dũng từ chối / xoá cho sạch sổ; cái nào vẫn chi thì lúc chuyển tiền sổ vẫn trừ đúng tài khoản.'}) : ''}
     ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#dc2626', sub:'tab Tạm ứng → "Lập phiếu chi bù"'}) : ''}
     ${box('= CÒN ĐƯỢC TIÊU', t.conDuocTieu, neg?'#b91c1c':'#047857', neg?'#fef2f2':'#f0fdf4', neg?'#fecaca':'#86efac', 'còn duyệt chi thêm được mà quỹ không âm; phiếu chưa duyệt không tính')}
     ${_cashHasOpening() ? '' : '<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e">⚠️ Chưa có số dư đầu kỳ — anh Dũng vào Cài đặt → Tài khoản & nguồn tiền, nhập số dư từng tài khoản tại ngày bắt đầu sổ quỹ'+(_cashStartYmd()?' ('+_cashStartYmd().split('-').reverse().join('/')+')':'')+'.</div>'}
