@@ -1950,7 +1950,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v14';
+const APP_VERSION = '20261126-v15';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12163,7 +12163,7 @@ function transferAcctChip(p,t,i){   // v119: chữ nguồn bấm được, nằm
 }   // v117: mã cũ cty/quy → Tiền mặt (trước trỏ CASH_ACCT.cty không còn → lỗi, dừng Đồng bộ lại / Sổ quỹ tháng)
 // v41: type 'loan' = VAY (lender nh/canhan), 'repay' = TRẢ NỢ (principal gốc + interest lãi, loanId), 'xfer' = CHUYỂN NỘI BỘ (from → to)
 const LOAN_FROM = { nh:{label:'Ngân hàng', icon:'🏦'}, canhan:{label:'Cá nhân', icon:'👤'} };
-function cashCanWriteIn(){ return currentRole==='thuquy' || currentRole==='dung'; }   // D chốt 26/09: Cân đối chỉ THỦ QUỸ (Thủ quỹ) nhập; dung = quản trị ngầm, không nêu trên app
+function cashCanWriteIn(){ return currentRole==='thuquy' || currentRole==='hien' || currentRole==='dung'; }   // v15 (D 26/11 "mở"): Hiền cũng ghi được thu / ký quỹ   // D chốt 26/09: Cân đối chỉ THỦ QUỸ (Thủ quỹ) nhập; dung = quản trị ngầm, không nêu trên app
 // v113 (D 31/10): TRẢ NỢ do Thủ quỹ ghi phải được Hiền DUYỆT mới tính (pending=true cho tới khi okH ghi). Chưa duyệt: không trừ số dư, không giảm nợ.
 function repayPending(r){ return !!(r && r.type==='repay' && r.pending===true); }
 function loanRepaid(l){ return cashflow.filter(r=>r.type==='repay' && !r.pending && r.loanId===l.id).reduce((a,r)=>({g:a.g+(parseFloat(r.principal)||0), l:a.l+(parseFloat(r.interest)||0)}), {g:0,l:0}); }
@@ -13028,7 +13028,7 @@ function openCashModal(type){
   _cashModalType = type;
   const isIn = type==='in', isRet = type==='ret';   // v40: 'ret' = trả lại vốn góp (chỉ Thủ quỹ)
   if(isRet && currentRole!=='thuquy'){ showToast('🔒 Chỉ thủ quỹ mới ghi được trả lại vốn góp'); return; }
-  if(!isRet && !cashCanWriteIn()){ showToast('🔒 Chỉ thủ quỹ mới ghi được khoản thu / ký quỹ'); return; }   // v41: D chốt 26/09
+  if(!isRet && !cashCanWriteIn()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được khoản thu / ký quỹ'); return; }   // v41: D chốt 26/09; v15: + Hiền
   try{ _refreshAcctSelects(false); }catch(e){} { const ac=document.getElementById('cash-inp-acct'); if(ac) ac.value=_acctDefault(); }
   document.getElementById('cash-modal-title').textContent = isIn ? '📥 Thêm khoản THU' : isRet ? '↩️ Trả lại vốn góp cho công ty' : '🔒 Thêm khoản KÝ QUỸ / CỌC';
   document.getElementById('cash-src-wrap').style.display    = (isIn||isRet) ? 'block' : 'none';
@@ -13061,7 +13061,7 @@ async function submitCash(){
     if(CASH_RET_TO.indexOf(rec.src) < 0){ showToast('⚠️ Chọn công ty nhận lại tiền (PVA / 134)'); return; }
   }
   else rec.holder = (document.getElementById('cash-inp-holder').value||'').trim();
-  if(_cashModalType!=='ret' && !cashCanWriteIn()){ showToast('🔒 Chỉ thủ quỹ mới ghi được khoản thu / ký quỹ'); return; }
+  if(_cashModalType!=='ret' && !cashCanWriteIn()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được khoản thu / ký quỹ'); return; }
   { const ac=document.getElementById('cash-inp-acct'); rec.acct = (ac && CASH_ACCT[ac.value]) ? ac.value : ''; }   // tài khoản nhận/chi
   if(!rec.acct){ showToast('⚠️ Chưa có tài khoản nào — nhờ anh Dũng khai danh sách tài khoản ở Cài đặt'); return; }
   { const st=document.getElementById('cash-inp-site'); if(st && st.value) rec.site = st.value; }   // PVA-379: công trình
