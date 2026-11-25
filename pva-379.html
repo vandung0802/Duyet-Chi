@@ -922,7 +922,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         📦 <b>Vật tư</b> — kế hoạch vật tư cần mua, nhắc trước ngày cần<br>
         💵 <b>Lương</b> — ứng lương nhân viên (duyệt y như phiếu chi)<br>
         📊 <b>Báo cáo</b> — thống kê chi theo người, công trường, thời gian<br>
-        ⚖️ <b>Cân đối</b> — tiền vào, tiền ra, ký quỹ, số dư từng tài khoản (chỉ D, Hiền, thủ quỹ, kế toán)<br>
+        ⚖️ <b>Cân đối</b> — tiền vào, tiền ra, ký quỹ, số dư từng tài khoản (chỉ D, Hiền, thủ quỹ)<br>
         ⚙️ <b>Cài đặt</b> — tài khoản, thông báo, kết nối Google Sheet
       </div>
       <div style="margin-top:8px;font-size:12px;color:var(--text-sub)">Người mới: bấm <b>Đăng ký</b> → báo anh Dũng để lấy <b>mã xác nhận</b> và được <b>cấp quyền</b>.</div>
@@ -1271,7 +1271,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div id="page-cash" class="main" style="display:none">
   <div class="card">
     <div class="card-header">⚖️ Cân đối quỹ công ty</div>
-    <div class="tab-desc" style="padding-top:8px">Tiền <b>vào</b> – tiền <b>ra</b> – tiền <b>còn</b> của cả công ty, theo từng tài khoản và từng công trình. Chỉ D, Hiền, thủ quỹ, kế toán xem được.</div>
+    <div class="tab-desc" style="padding-top:8px">Tiền <b>vào</b> – tiền <b>ra</b> – tiền <b>còn</b> của cả công ty, theo từng tài khoản và từng công trình. Chỉ D, Hiền, thủ quỹ xem được.</div>
     <div class="card-body" style="padding:0">
       <div class="report-subtabs" style="padding:0 12px 10px">
         <button class="report-subtab active" data-tab="sum" onclick="setCashTab('sum',this)">📊 Tổng quan</button>
@@ -1950,7 +1950,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v13';
+const APP_VERSION = '20261126-v14';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -5616,7 +5616,7 @@ function undoReject(id){
 function _tagFold(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/ +/g,' ').trim(); }
 function _canSeeP(p){
   if(!p) return false;
-  if(currentRole==='dung' || currentRole==='hien' || currentRole==='ketoan') return true;
+  if(currentRole==='dung' || currentRole==='hien') return true;   // v14 (D 26/11 "kế toán chưa cho xem"): kế toán chỉ thấy phiếu của mình như mọi người
   if(_isMyProposal(p)) return true;
   const me=getCurrentUserName();
   if(me && (_tagFold(p.person)===_tagFold(me) || _tagFold(p.createdBy)===_tagFold(me))) return true; // tên lệch dấu
@@ -10211,8 +10211,8 @@ function _isKehoachOnly(){
 }
 // v126: màn hình theo PHÒNG — người P.KH thuần chỉ thấy: P.KH · Thêm mới · Vật tư · Cài đặt (+ Chat Kế Hoạch).
 // 8 người kế toán + D/H/Trang: KHÔNG đổi gì (only=false → mọi nút hiện như cũ).
-// PVA-379 (D chốt 19/11): tab Cân đối (sổ quỹ, số dư tài khoản) chỉ D, Hiền, thủ quỹ, kế toán xem — luật máy chủ cũng chặn đọc.
-function _cashCanSee(){ return currentRole==='dung'||currentRole==='hien'||currentRole==='thuquy'||currentRole==='ketoan'; }
+// PVA-379 (D chốt 19/11): tab Cân đối (sổ quỹ, số dư tài khoản) chỉ D, Hiền, thủ quỹ xem (v14: bỏ kế toán) — luật máy chủ cũng chặn đọc.
+function _cashCanSee(){ return currentRole==='dung'||currentRole==='hien'||currentRole==='thuquy'; }   // v14: bỏ kế toán (D 26/11)
 function _applyCashView(){
   const full=_cashCanSee();
   const nb=document.getElementById('nav-cash'); if(nb) nb.style.display = full ? '' : 'none';
@@ -11994,15 +11994,15 @@ function _loadAccounts(raw){
 }
 function _acctList(){ return Object.keys(CASH_ACCT); }
 // ══ ĐẦU KỲ SỔ QUỸ (rà soát 22/11; D chốt 19/11 "sổ Cân đối bắt đầu từ số dư đầu kỳ tại một ngày anh chọn") ══
-// pva379/meta/cashStart = 'YYYY-MM-DD' (Dũng / thủ quỹ / kế toán đặt ở Cài đặt → Tài khoản). Chưa đặt → không có mốc, tính mọi khoản (sổ mới 25/11/2026).
+// pva379/meta/cashStart = 'YYYY-MM-DD' (Dũng / thủ quỹ đặt ở Cài đặt → Tài khoản). Chưa đặt → không có mốc, tính mọi khoản (sổ mới 25/11/2026).
 // Mọi khoản thu/chi/chuyển TRƯỚC mốc này KHÔNG vào sổ quỹ (1.740 phiếu cũ của Duyệt Chi không làm quỹ âm hàng chục tỷ).
 // Số dư đầu kỳ từng tài khoản: meta/accounts/<mã>/open (Dũng nhập).
 function _cashStartYmd(){ const m=(typeof _metaData!=='undefined' && _metaData)||{}; if(m.cashStart && /^\d{4}-\d{2}-\d{2}$/.test(m.cashStart)) return m.cashStart; return ''; }
 function _cashStartTs(){ const y=_cashStartYmd(); if(!y) return 0; const t=new Date(y+'T00:00:00').getTime(); return isNaN(t)?0:t; }
 function _inLedgerTs(ts){ const st=_cashStartTs(); return !st || (+ts||0) >= st; }
 function _inLedgerRec(r){ const y=_cashStartYmd(); if(!y) return true; const d = r && r.date ? String(r.date) : ymdLocal((r && r.ts)||0); return d >= y; }
-// Ai được nhập ngày đầu kỳ + số dư đầu kỳ (D 24/11 "mở cho tôi"): Dũng, thủ quỹ, kế toán (luật meta/cashStart + meta/accounts/$k/open cho 3 vai này)
-function _canSetOpening(){ return currentRole==='dung' || currentRole==='thuquy' || currentRole==='ketoan'; }
+// Ai được nhập ngày đầu kỳ + số dư đầu kỳ (D 24/11 "mở cho tôi"; 26/11 bỏ kế toán): Dũng, thủ quỹ (luật meta/cashStart + meta/accounts/$k/open cho 3 vai này)
+function _canSetOpening(){ return currentRole==='dung' || currentRole==='thuquy'; }   // v14: bỏ kế toán (D 26/11 "kế toán chưa cho xem")
 function _cashOpenTotal(){ return Object.keys(CASH_ACCT).reduce((a,k)=>a+(+(CASH_ACCT[k].open)||0),0); }
 function _cashHasOpening(){ return Object.keys(CASH_ACCT).some(k=>CASH_ACCT[k].open!==undefined && CASH_ACCT[k].open!==null && CASH_ACCT[k].open!==''); }
 async function saveCashStart(){
@@ -12117,8 +12117,8 @@ function _refreshAcctSelects(force){
     if(force || s.dataset.v!==_ACCT_OPTS.length+''){ const v=s.value; s.innerHTML=_ACCT_OPTS; s.dataset.v=_ACCT_OPTS.length+''; s.value = (CASH_ACCT[v] && !CASH_ACCT[v].off) ? v : _acctDefault(); }
   });
 }
-// Ai thấy từng tài khoản: D, Hiền, thủ quỹ, kế toán (= ai xem được Cân đối)
-function _oneAcct(){ return !(currentRole==='dung' || currentRole==='hien' || currentRole==='thuquy' || currentRole==='ketoan'); }
+// Ai thấy từng tài khoản: D, Hiền, thủ quỹ (= ai xem được Cân đối; v14 bỏ kế toán)
+function _oneAcct(){ return !(currentRole==='dung' || currentRole==='hien' || currentRole==='thuquy'); }
 function _applyOneAcct(){ try{ document.body.classList.toggle('one-acct', _oneAcct()); }catch(e){} }
 function acctLabel(a){ return CASH_ACCT[acctKey(a)].label; }
 // v118 (D 14/11): Thủ quỹ bấm nhầm nguồn tiền thì ĐỔI được — lần chuyển trên phiếu + mọi khoản sổ quỹ (thu/vay/trả nợ/ký quỹ/chuyển nội bộ)
@@ -12377,7 +12377,7 @@ function renderCashSummary(){
     ${t.camKetCuN ? row('Phiếu cũ (duyệt trước đầu kỳ) còn chưa chuyển — KHÔNG tính', -t.camKetCu, {color:'var(--text-sub)', sub:t.camKetCuN+' phiếu chép từ app Duyệt Chi. Cái nào không còn chi nữa thì Dũng từ chối / xoá cho sạch sổ; cái nào vẫn chi thì lúc chuyển tiền sổ vẫn trừ đúng tài khoản.'}) : ''}
     ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#dc2626', sub:'tab Tạm ứng → "Lập phiếu chi bù"'}) : ''}
     ${box('= CÒN ĐƯỢC TIÊU', t.conDuocTieu, neg?'#b91c1c':'#047857', neg?'#fef2f2':'#f0fdf4', neg?'#fecaca':'#86efac', 'còn duyệt chi thêm được mà quỹ không âm; phiếu chưa duyệt không tính')}
-    ${_cashHasOpening() ? '' : '<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e">⚠️ Chưa có số dư đầu kỳ — Dũng / thủ quỹ / kế toán vào Cài đặt → Tài khoản & nguồn tiền, nhập số dư từng tài khoản tại ngày bắt đầu sổ quỹ'+(_cashStartYmd()?' ('+_cashStartYmd().split('-').reverse().join('/')+')':'')+'.</div>'}
+    ${_cashHasOpening() ? '' : '<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e">⚠️ Chưa có số dư đầu kỳ — Dũng / thủ quỹ vào Cài đặt → Tài khoản & nguồn tiền, nhập số dư từng tài khoản tại ngày bắt đầu sổ quỹ'+(_cashStartYmd()?' ('+_cashStartYmd().split('-').reverse().join('/')+')':'')+'.</div>'}
     <div style="font-size:10.5px;color:var(--text-sub);margin:8px 4px 0;line-height:1.4">Số rút gọn (tỷ / tr) · chạm ô xem số đầy đủ${one?'':' · chạm tên công ty (379, PVA…) mở Sổ quỹ công ty đó'}.</div>
   </div></div>`;
 }
@@ -12418,7 +12418,7 @@ function renderReportSite(){
   const el=document.getElementById('report-site-content'); if(!el) return;
   const full=_fullView(), tbl=_siteTableHtml({total:full}), names=_siteNames();
   const old=document.getElementById('site-exp-sel'), keep = old ? old.value : '';
-  el.innerHTML = `<div style="font-size:11.5px;color:var(--text-sub);margin:10px 2px 0">Thu về và đã chi của từng công trình${full?'':' (số tổng cả công ty chỉ người duyệt và thủ quỹ xem)'}.</div>`
+  el.innerHTML = `<div style="font-size:11.5px;color:var(--text-sub);margin:10px 2px 0">Thu về và đã chi của từng công trình${full?'':' (số tổng cả công ty chỉ D, Hiền, thủ quỹ xem)'}.</div>`
     + (tbl || '<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:14px">Chưa có khoản thu / chi nào gắn công trình</div>')
     + `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px">
         <select id="site-exp-sel" class="form-input form-select" style="flex:1 1 160px;width:auto;margin:0;font-size:12px;padding:5px 8px;border-radius:20px"><option value="">— chọn công trình —</option>${full?'<option value="*">🏗 Tất cả công trình</option>':''}${names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>
@@ -12757,7 +12757,7 @@ function renderCashBook(){
         ${(b&&b.at) ? `<div style="font-size:10px;color:var(--text-sub);margin-top:4px">Cập nhật: ${fmtFull(b.at)}${b.by?' · '+esc(b.by):''}</div>` : ''}
       </div>`;
     };
-    elBal.innerHTML = one ? `<div class="card"><div class="card-body" style="padding:11px 13px;font-size:13px;color:var(--text-sub)">Chỉ D, Hiền, thủ quỹ, kế toán xem được số dư từng tài khoản.</div></div>` : `<div class="card"><div class="card-body" style="padding:11px 13px">
+    elBal.innerHTML = one ? `<div class="card"><div class="card-body" style="padding:11px 13px;font-size:13px;color:var(--text-sub)">Chỉ D, Hiền, thủ quỹ xem được số dư từng tài khoản.</div></div>` : `<div class="card"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
         <span style="font-size:13px;font-weight:700;color:var(--text-sub)">Sổ quỹ tính ra (mọi tài khoản)</span>
         <span style="font-size:17px;font-weight:900;color:var(--blue-dark);white-space:nowrap;word-break:normal">${fmtVND(t.tienTrongTk)}</span>
