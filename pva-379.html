@@ -1949,8 +1949,8 @@ const firebaseConfig = {
 // Khi D nói "phát hành" → đổi thành false.
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
-const TRIAL_ROLES = ['dung','hien','ketoan'];   // 24/11: thêm kế toán để nhập số dư đầu kỳ / khoản vay
-const APP_VERSION = '20261126-v12';
+const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
+const APP_VERSION = '20261126-v13';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
