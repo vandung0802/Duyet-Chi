@@ -1278,6 +1278,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button class="report-subtab" data-tab="in" onclick="setCashTab('in',this)">📥 Thu</button>
         <button class="report-subtab" data-tab="dep" onclick="setCashTab('dep',this)">🔒 Ký quỹ</button>
         <button class="report-subtab" data-tab="loan" onclick="setCashTab('loan',this)">💳 Vay</button>
+        <button class="report-subtab" data-tab="rieng" onclick="setCashTab('rieng',this)">👤 Chi riêng</button>
         <button class="report-subtab" data-tab="adv" onclick="setCashTab('adv',this)">👛 Tạm ứng</button>
         <button class="report-subtab" data-tab="book" onclick="setCashTab('book',this)">📒 Sổ quỹ</button>
       </div>
@@ -1347,7 +1348,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="cash-tab-loan" style="display:none">
     <div class="card"><div class="card-body" style="padding:12px">
       <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Tiền <b>vay ngân hàng, vay cá nhân</b> về tài khoản dự án và các lần <b>trả nợ</b> (tách gốc, lãi). Thủ quỹ ghi. Lãi vay tính là chi phí nội nghiệp. Sắp đến hạn trả thì nút Cân đối có chấm đỏ.</div>
-      <button onclick="openLoanModal()" class="btn-sm btn-primary-full">➕ Ghi khoản VAY</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><button onclick="openLoanModal()" class="btn-sm btn-primary-full" style="flex:1 1 auto">➕ Ghi khoản VAY</button><button onclick="openLoanModal(true)" class="btn-sm" style="flex:1 1 auto;background:#fff7ed;color:#9a3412;border:1.5px solid #fdba74;border-radius:10px;font-weight:700;cursor:pointer">📜 Ghi NỢ TỒN ĐỌNG CŨ</button></div>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:6px;line-height:1.4">v11 (D 25/11): <b>Nợ tồn đọng cũ</b> = khoản vay ngoài / vay cá nhân có từ trước sổ mới, tiền đã nhận từ trước nên <b>không cộng vào tài khoản</b>; trả nợ ghi như khoản vay thường (trừ tài khoản, Hiền duyệt). Có mục tổng riêng bên dưới và vẫn tính vào "Còn nợ vay" ở Cân đối.</div>
     </div></div>
     <div style="display:flex;gap:6px;margin:0 0 8px">
       <input id="loan-search" type="search" list="loan-name-list" placeholder="🔍 Tìm theo người cho vay / nội dung…" oninput="renderLoanList()" autocomplete="off" style="flex:1;min-width:0;padding:9px 12px;border-radius:10px;border:1.5px solid var(--gray-border);font-size:13px">
@@ -1361,6 +1363,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div id="loan-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
     <div id="cash-loan-list"></div>
+    <div id="cash-oldloan-wrap" style="display:none;margin-top:14px"><div style="font-size:13px;font-weight:900;color:#9a3412;margin:0 2px 6px">📜 NỢ TỒN ĐỌNG CŨ (trước sổ mới)</div><div id="oldloan-sum" style="font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div><div id="cash-oldloan-list"></div></div>
   </div>
 
   <!-- Tab con: TẠM ỨNG (v43) -->
@@ -1380,6 +1383,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 
   <!-- Tab con: SỔ QUỸ (thu + chi + ký quỹ theo ngày, có số dư chạy) -->
+  <!-- v11 (D 25/11): CHI RIÊNG của Dũng / Hiền — thủ quỹ ghi, KHÔNG qua duyệt, trừ thẳng tài khoản để cân quỹ; tổng hợp riêng -->
+  <div id="cash-tab-rieng" style="display:none">
+    <div class="card"><div class="card-body" style="padding:12px">
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Khoản <b>chi riêng của Dũng / Hiền</b> mà thủ quỹ đã chi từ tài khoản công ty. <b>Không cần D, H duyệt</b> — thủ quỹ kê để cân quỹ; tiền trừ thẳng tài khoản và có tổng riêng theo từng người. Không phải chi phí công trình.</div>
+      <button onclick="openRiengModal()" class="btn-sm btn-primary-full">➕ Ghi chi riêng</button>
+    </div></div>
+    <div id="rieng-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
+    <div id="cash-rieng-list"></div>
+  </div>
   <div id="cash-tab-book" style="display:none">
     <div class="tab-desc" style="padding:0 4px 8px">Mọi khoản vào / ra xếp theo ngày, kèm <b>số dư sau từng dòng</b> — giống sổ quỹ giấy. Thủ quỹ nhập số dư ngân hàng thật để app so: lệch ở đâu dò ra ngay dòng đó.</div>
     <div id="cash-book-bal"></div>
@@ -1938,7 +1950,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan'];   // 24/11: thêm kế toán để nhập số dư đầu kỳ / khoản vay
-const APP_VERSION = '20261125-v10';
+const APP_VERSION = '20261125-v11';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -8931,8 +8943,8 @@ async function downloadMonthExcel(){
   for(let r=r0-1; r<=r1+5; r++){ const c = ws['I'+r]; if(c && c.t==='n') c.z = '#,##0'; }
   const cash = (_cashCanSee() ? (cashflow||[]) : []).filter(r=>inMd(r.date) && !(_oneAcct() && r.type==='xfer') && !repayPending(r)).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));   // v113
   const aoa2 = [['THU / KÝ QUỸ / VAY / TRẢ LẠI — THÁNG '+mon.slice(5)+'/'+mon.slice(0,4)], [], ['Ngày','Loại','Nội dung','Nguồn / nơi giữ',_oneAcct()?'':'Tài khoản','Tiền vào','Tiền ra','Người ghi']];
-  cash.forEach(r=>{ const a = +r.amount||0, out = r.type==='ret'||r.type==='dep'||r.type==='repay', src = (r.type==='in'||r.type==='ret') ? (CASH_SRC[r.src]||CASH_SRC.other).label : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||'');
-    aoa2.push([r.date||'', cashKindLabel(r), r.desc||'', src, (r.type==='xfer'||_oneAcct()) ? '' : acctLabel(acctOf(r)), out||r.type==='xfer' ? '' : a, out ? a : '', r.byName||'']);
+  cash.forEach(r=>{ const a = +r.amount||0, out = r.type==='ret'||r.type==='dep'||r.type==='repay'||r.type==='rieng', oldLoan = r.type==='loan' && r.old, src = (r.type==='in'||r.type==='ret') ? (CASH_SRC[r.src]||CASH_SRC.other).label : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||'');
+    aoa2.push([r.date||'', cashKindLabel(r), r.desc||'', src, (r.type==='xfer'||_oneAcct()||oldLoan) ? '' : acctLabel(acctOf(r)), out||r.type==='xfer'||oldLoan ? '' : a, out ? a : '', r.byName||'']);
     (r.returned||[]).forEach(x=>{ if(inMd(x.date)) aoa2.push([x.date||'', 'lấy ký quỹ về', r.desc||'', r.holder||'', _oneAcct()?'':acctLabel(acctOf(r)), +x.amount||0, '', x.by||'']); }); });
   const n2 = aoa2.length; aoa2.push([], ['TỔNG','','','','', {t:'n', f:`SUM(F4:F${n2})`}, {t:'n', f:`SUM(G4:G${n2})`}]);
   const ws2 = XLSX.utils.aoa_to_sheet(aoa2); ws2['!cols'] = [{wch:11},{wch:16},{wch:34},{wch:24},{wch:14},{wch:15},{wch:15},{wch:14}];
@@ -10954,9 +10966,9 @@ function syncCashToSheet(r){
   const params = new URLSearchParams({
     action:'cash', id:r.id,
     date: r.date||'',
-    loai: r.type==='in' ? 'Thu' : r.type==='ret' ? 'Trả lại vốn góp' : r.type==='loan' ? 'Vay' : r.type==='repay' ? (r.pending ? 'Trả nợ vay (CHỜ DUYỆT)' : 'Trả nợ vay') : r.type==='xfer' ? 'Chuyển nội bộ' : 'Ký quỹ',   // v113
+    loai: r.type==='in' ? 'Thu' : r.type==='ret' ? 'Trả lại vốn góp' : r.type==='rieng' ? 'Chi riêng' : r.type==='loan' ? (r.old ? 'Nợ tồn đọng cũ' : 'Vay') : r.type==='repay' ? (r.pending ? 'Trả nợ vay (CHỜ DUYỆT)' : 'Trả nợ vay') : r.type==='xfer' ? 'Chuyển nội bộ' : 'Ký quỹ',   // v113
     desc: r.desc||'',
-    src:  (r.type==='in'||r.type==='ret') ? ((CASH_SRC[r.src]||CASH_SRC.other).label) : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='repay' ? ('gốc '+(parseFloat(r.principal)||0)+' + lãi '+(parseFloat(r.interest)||0)) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||''),
+    src:  (r.type==='in'||r.type==='ret') ? ((CASH_SRC[r.src]||CASH_SRC.other).label) : r.type==='rieng' ? (r.who==='hien'?'Hiền':'Dũng') : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='repay' ? ('gốc '+(parseFloat(r.principal)||0)+' + lãi '+(parseFloat(r.interest)||0)) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||''),
     acct: r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.acct ? acctLabel(r.acct) : ''),   // PVA-379: tên tài khoản (không gửi mã)
     site: r.site||'',
     amount: amt,
@@ -11946,7 +11958,7 @@ const CASH_SRC = {
 };
 // PVA-379: KHÔNG có "trả lại vốn góp" (chỉ liên danh Gia Bình có) — luật máy chủ cũng đã bỏ loại 'ret'
 const CASH_RET_TO = [];
-function cashKindLabel(r){ const t=r&&r.type; return t==='in' ? 'THU' : t==='ret' ? 'trả lại vốn góp' : t==='loan' ? 'VAY' : t==='repay' ? 'trả nợ vay' : t==='xfer' ? 'chuyển nội bộ' : 'ký quỹ'; }
+function cashKindLabel(r){ const t=r&&r.type; return t==='in' ? 'THU' : t==='ret' ? 'trả lại vốn góp' : t==='rieng' ? 'chi riêng '+(r.who==='hien'?'Hiền':'Dũng') : t==='loan' ? (r.old ? 'NỢ CŨ' : 'VAY') : t==='repay' ? 'trả nợ vay' : t==='xfer' ? 'chuyển nội bộ' : 'ký quỹ'; }
 // ══ TÀI KHOẢN / NGUỒN TIỀN (PVA-379, D chốt 19/11): DANH SÁCH TỰ KHAI ở pva379/meta/accounts (chỉ Dũng sửa, trong Cài đặt) ══
 // Mỗi tài khoản: {name, group, order, off}. group = công ty (CT 379, CT PVA, CT 279, CT THHD) hoặc 'Tiền mặt'.
 // Luật máy chủ: mọi acct/from/to/bankBalance phải là MÃ có trong danh sách này. 'off' = ẩn khỏi ô chọn (đã dùng thì không xoá được).
@@ -12100,7 +12112,7 @@ function _acctDefault(){
 function acctKey(a){ return (a && CASH_ACCT[a]) ? a : _acctDefault(); }
 function acctOf(x){ return acctKey(x && x.acct); }
 function _refreshAcctSelects(force){
-  ['ta-acct','cash-inp-acct','loan-inp-acct','repay-inp-acct','xfer-inp-from','xfer-inp-to'].forEach(id=>{
+  ['ta-acct','cash-inp-acct','loan-inp-acct','repay-inp-acct','xfer-inp-from','xfer-inp-to','rieng-inp-acct'].forEach(id=>{
     const s=document.getElementById(id); if(!s) return;
     if(force || s.dataset.v!==_ACCT_OPTS.length+''){ const v=s.value; s.innerHTML=_ACCT_OPTS; s.dataset.v=_ACCT_OPTS.length+''; s.value = (CASH_ACCT[v] && !CASH_ACCT[v].off) ? v : _acctDefault(); }
   });
@@ -12200,8 +12212,9 @@ function cashTotals(){
   const ins  = cf.filter(r=>r.type==='in');
   const deps = cf.filter(r=>r.type==='dep');
   const rets = cf.filter(r=>r.type==='ret');
-  const loans = cf.filter(r=>r.type==='loan');
+  const loans = cf.filter(r=>r.type==='loan' && !r.old);   // v11: nợ cũ (old) không phải tiền vào
   const repays = cf.filter(r=>r.type==='repay' && !r.pending);   // v113
+  const riengs = cf.filter(r=>r.type==='rieng');   // v11: chi riêng D/H — thủ quỹ kê, không duyệt, trừ thẳng tài khoản
   const xfers = cf.filter(r=>r.type==='xfer');
   const dauKy = _cashOpenTotal();
   const byAcct = {}; Object.keys(CASH_ACCT).forEach(k=>{ byAcct[k]=+(CASH_ACCT[k].open)||0; });
@@ -12227,6 +12240,11 @@ function cashTotals(){
   // Kế toán 24/11: khoản vay có TRƯỚC đầu kỳ vẫn là nợ → nợ vay tính trên MỌI khoản vay / trả nợ (không lọc mốc);
   // riêng tiền vào/ra tài khoản (vay, traGoc, laiVay ở trên) vẫn chỉ từ mốc đầu kỳ, vì số dư đầu kỳ đã gồm tiền vay cũ.
   const noVay = Math.max(0, cashflow.filter(r=>r.type==='loan').reduce((a,r)=>a+num(r.amount),0) - cashflow.filter(r=>r.type==='repay' && !r.pending).reduce((a,r)=>a+num(r.principal),0));
+  // v11: phần NỢ TỒN ĐỌNG CŨ (khoản vay có cờ old) trong noVay — tổng hợp riêng cho dễ thấy
+  const _oldIds = new Set(cashflow.filter(r=>r.type==='loan' && r.old).map(r=>r.id));
+  const noVayCu = Math.max(0, cashflow.filter(r=>r.type==='loan' && r.old).reduce((a,r)=>a+num(r.amount),0) - cashflow.filter(r=>r.type==='repay' && !r.pending && _oldIds.has(r.loanId)).reduce((a,r)=>a+num(r.principal),0));
+  const chiRieng = riengs.reduce((a,r)=>a+num(r.amount),0), chiRiengBy = {dung:0, hien:0};
+  riengs.forEach(r=>{ chiRiengBy[r.who==='hien'?'hien':'dung'] += num(r.amount); add(r.acct, -num(r.amount), 'chiRieng'); });
   loans.forEach(r=>add(r.acct, num(r.amount), 'vay'));
   repays.forEach(r=>add(r.acct, -(num(r.principal)+num(r.interest)), 'traNo'));
   xfers.forEach(r=>{ add(r.from, -num(r.amount), 'xfer'); add(r.to, num(r.amount), 'xfer'); });
@@ -12258,11 +12276,11 @@ function cashTotals(){
   });
 
   Object.values(advAcc).forEach(v=>{ if(v>0) dangTamUng += v; else noTamUng += -v; });   // v43: dương = còn giữ tiền ứng; âm = công ty nợ (chưa trừ tài khoản)
-  const tienTrongTk = dauKy + thu - daChi - dangGuiNgoai - traLai - dangTamUng + noTamUng + vay - traGoc - laiVay;   // v62: phần chi VƯỢT ứng đã nằm trong daChi nhưng tiền CHƯA ra khỏi tài khoản → cộng lại cho khớp ngân hàng (= TK cty + TK quỹ)
+  const tienTrongTk = dauKy + thu - daChi - dangGuiNgoai - traLai - dangTamUng + noTamUng + vay - traGoc - laiVay - chiRieng;   // v11: trừ chi riêng   // v62: phần chi VƯỢT ứng đã nằm trong daChi nhưng tiền CHƯA ra khỏi tài khoản → cộng lại cho khớp ngân hàng (= TK cty + TK quỹ)
   const conDuocTieu = tienTrongTk - daDuyetChuaChuyen - noTamUng;   // còn nợ người tạm ứng = tiền đã hứa chi
   return {thu, thuBySrc, traLai, traLaiBySrc, daChi, dangGuiNgoai, kyQuyDaChi, kyQuyDaVe, dauKy,
           vay, traGoc, laiVay, noVay, dangTamUng, noTamUng, hoanUngChi, byAcct, byRow,
-          tienTrongTk, daDuyetChuaChuyen, conDuocTieu, camKetCu, camKetCuN};
+          tienTrongTk, daDuyetChuaChuyen, conDuocTieu, camKetCu, camKetCuN, noVayCu, chiRieng, chiRiengBy};
 }
 
 // ── ĐIỀU HƯỚNG TAB CON ──
@@ -12271,7 +12289,7 @@ function setCashTab(tab, btn){
   _cashTab = tab;
   document.querySelectorAll('#page-cash .report-subtab').forEach(t=>t.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  ['sum','in','dep','loan','adv','book'].forEach(t=>{
+  ['sum','in','dep','loan','rieng','adv','book'].forEach(t=>{
     const el=document.getElementById('cash-tab-'+t);
     if(el) el.style.display = (t===tab)?'block':'none';
   });
@@ -12283,6 +12301,7 @@ function renderCashActive(){
   else if(_cashTab==='in')  { renderCashInSrc(); renderCashList('in'); }
   else if(_cashTab==='dep') { renderCashList('dep'); }
   else if(_cashTab==='loan'){ renderLoanList(); }
+  else if(_cashTab==='rieng'){ renderRiengList(); }   // v11
   else if(_cashTab==='adv'){ renderAdvLedger(); }
   else if(_cashTab==='book'){ renderCashBook(); }
 }
@@ -12339,6 +12358,7 @@ function renderCashSummary(){
     ${sec('▼ Tiền ra', '#dc2626')}
     ${trRow('Chi theo phiếu + lương', 'chi', '#dc2626', true)}
     ${trRow('Trả nợ vay', 'traNo', '#dc2626')}
+    ${trRow('Chi riêng D / Hiền', 'chiRieng', '#dc2626')}
     ${sec('◆ Đang treo (chưa mất)', '#b45309')}
     ${trRow('Tạm ứng đã chuyển', 'tamUng', '#b45309')}
     ${trRow('Ký quỹ / cọc gửi ngoài', 'kyQuy', '#b45309', true)}
@@ -12351,6 +12371,8 @@ function renderCashSummary(){
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">${head}${body}</table></div>
     ${box('= Tiền trong tài khoản', t.tienTrongTk, 'var(--blue-dark)', '#eff6ff', '#bfdbfe', 'thủ quỹ đối chiếu sao kê từng tài khoản ở tab "Sổ quỹ"')}
     ${_siteTableHtml()}
+    ${t.chiRieng ? row('Chi riêng (thủ quỹ kê, không qua duyệt)', -t.chiRieng, {color:'#dc2626', sub:'Dũng '+fmtShortMoney(t.chiRiengBy.dung)+' · Hiền '+fmtShortMoney(t.chiRiengBy.hien)+' — đã trừ trong "Tiền trong tài khoản"; tab Chi riêng'}) : ''}
+    ${t.noVayCu ? row('Trong đó nợ tồn đọng cũ (trước sổ mới)', t.noVayCu, {color:'#9a3412', sub:'đã tính trong "Còn nợ vay" '+fmtShortMoney(t.noVay)+'; tab Vay → Nợ tồn đọng cũ'}) : ''}
     ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, {color:'#dc2626', sub:'chỉ phiếu duyệt từ ngày đầu kỳ'})}
     ${t.camKetCuN ? row('Phiếu cũ (duyệt trước đầu kỳ) còn chưa chuyển — KHÔNG tính', -t.camKetCu, {color:'var(--text-sub)', sub:t.camKetCuN+' phiếu chép từ app Duyệt Chi. Cái nào không còn chi nữa thì Dũng từ chối / xoá cho sạch sổ; cái nào vẫn chi thì lúc chuyển tiền sổ vẫn trừ đúng tài khoản.'}) : ''}
     ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#dc2626', sub:'tab Tạm ứng → "Lập phiếu chi bù"'}) : ''}
@@ -12444,7 +12466,8 @@ function renderCashChart(){
     if(!m) return;
     if(r.type==='in') touch(m).in += parseFloat(r.amount)||0;
     else if(r.type==='ret') touch(m).out += parseFloat(r.amount)||0;   // v40: trả lại vốn góp = tiền ra
-    else if(r.type==='loan') touch(m).in += parseFloat(r.amount)||0;   // v41
+    else if(r.type==='loan'){ if(!r.old) touch(m).in += parseFloat(r.amount)||0; }   // v41; v11: nợ cũ không phải tiền vào
+    else if(r.type==='rieng') touch(m).out += parseFloat(r.amount)||0;   // v11
     else if(r.type==='repay'){ if(!r.pending) touch(m).out += (parseFloat(r.principal)||0)+(parseFloat(r.interest)||0); }   // v113: chờ duyệt chưa tính
     else if(r.type==='dep'){
       touch(m).out += parseFloat(r.amount)||0;                                  // đưa cọc đi = tiền ra
@@ -12666,6 +12689,8 @@ function cashBookRows(){
       (r.returned||[]).forEach(x=>rows.push({date:x.date, ts:x.ts, desc:'Lấy về: '+(r.desc||''), kind:'in',
                                              amount:N(x.amount), acct:a, tag:r.holder||'Ký quỹ'}));
     }
+    else if(r.type==='rieng') rows.push({date:r.date, ts:r.ts, desc:'Chi riêng '+(r.who==='hien'?'Hiền':'Dũng')+': '+(r.desc||''), kind:'out', amount:N(r.amount), acct:a, tag:'chi riêng'});   // v11
+    else if(r.type==='loan' && r.old){ /* v11: nợ cũ — tiền đã nhận trước sổ, không vào sổ quỹ */ }
     else if(r.type==='loan') rows.push({date:r.date, ts:r.ts, desc:'Vay: '+(r.desc||''), kind:'in', amount:N(r.amount), acct:a,
                                        tag:(LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')});   // v41
     else if(r.type==='repay') rows.push({date:r.date, ts:r.ts, desc:'Trả nợ vay: '+(r.desc||''), kind:'out', amount:N(r.principal)+N(r.interest), acct:a,
@@ -12781,7 +12806,9 @@ async function saveBankBalance(a){
 // ══ v41: VAY / TRẢ NỢ / CHUYỂN NỘI BỘ (D chốt 25/09/2026) ══
 function renderLoanList(){
   const el = document.getElementById('cash-loan-list'); if(!el) return;
-  const allLoans = cashflow.filter(r=>r.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
+  const allLoansEvery = cashflow.filter(r=>r.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
+  const allLoans = allLoansEvery.filter(l=>!l.old);   // v11: nợ cũ tách riêng (renderOldLoans)
+  try{ renderOldLoans(allLoansEvery.filter(l=>l.old)); }catch(e){ console.warn(e); }
   const sumEl = document.getElementById('loan-sum');
   // v103: tìm theo người cho vay / nội dung / người ghi (không dấu) + lọc tình trạng + tổng phần đang lọc
   try{ const dl=document.getElementById('loan-name-list'); if(dl){ const ns=[...new Set(allLoans.map(l=>String(l.lenderName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi')); dl.innerHTML=ns.map(n=>`<option value="${esc(n)}">`).join(''); } }catch(e){}
@@ -12803,9 +12830,12 @@ function renderLoanList(){
       sumEl.style.display='block'; }
     else sumEl.style.display='none';
   }
-  if(!allLoans.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có khoản vay nào</div></div>'; return; }
+  if(!allLoans.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có khoản vay nào trong sổ mới</div></div>'; return; }
   if(!loans.length){ el.innerHTML = '<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Không có khoản vay nào khớp — thử bỏ bớt chữ tìm hoặc chọn "Tất cả"</div></div>'; return; }
-  el.innerHTML = loans.map(l=>{
+  el.innerHTML = loans.map(_loanCardHtml).join('');
+}
+function _loanCardHtml(l){
+  {
     const rp = loanRepaid(l), left = loanLeft(l), amt = parseFloat(l.amount)||0, done = left <= 0.0001;
     const d = daysTo(l.due);
     const dueTxt = !l.due ? '' : done ? '' : d < 0 ? `<span style="color:#dc2626;font-weight:800">⏰ Quá hạn ${-d} ngày</span>` : d <= 7 ? `<span style="color:#b45309;font-weight:800">⏰ Còn ${d} ngày đến hạn</span>` : `<span style="color:var(--text-sub)">Hạn trả ${esc(l.due)}</span>`;
@@ -12816,28 +12846,48 @@ function renderLoanList(){
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div style="min-width:0;flex:1">
           <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${lf.icon} ${esc(l.desc||'Khoản vay')}</div>
-          <div style="font-size:11px;margin-top:3px"><span style="background:#fee2e2;color:#b91c1c;padding:1px 8px;border-radius:8px;font-weight:700">${lf.label}${l.lenderName?' · '+esc(l.lenderName):''}</span>
-            ${_oneAcct()?'':`<span style="color:${CASH_ACCT[acctOf(l)].color};margin-left:6px;font-weight:700">${CASH_ACCT[acctOf(l)].short}</span>`}
+          <div style="font-size:11px;margin-top:3px">${l.old?'<span style="background:#ffedd5;color:#9a3412;padding:1px 8px;border-radius:8px;font-weight:800;margin-right:4px">NỢ CŨ</span>':''}<span style="background:#fee2e2;color:#b91c1c;padding:1px 8px;border-radius:8px;font-weight:700">${lf.label}${l.lenderName?' · '+esc(l.lenderName):''}</span>
+            ${(_oneAcct()||l.old)?'':`<span style="color:${CASH_ACCT[acctOf(l)].color};margin-left:6px;font-weight:700">${CASH_ACCT[acctOf(l)].short}</span>`}
             <span style="color:var(--text-sub);margin-left:6px">${esc(l.date||'')}${l.rate?' · '+esc(String(l.rate))+'%/năm':''}</span></div>
         </div>
         <div style="text-align:right">
           <div style="font-size:16px;font-weight:900;color:${done?'var(--text-sub)':'#b91c1c'};white-space:nowrap;word-break:normal">${fmtVND(left)}</div>
-          <div style="font-size:10px;color:var(--text-sub);white-space:nowrap;word-break:normal">vay ${fmtShortMoney(amt)}${rp.g?` · đã trả gốc ${fmtShortMoney(rp.g)}`:''}${rp.l?` · lãi ${fmtShortMoney(rp.l)}`:''}</div>
+          <div style="font-size:10px;color:var(--text-sub);white-space:nowrap;word-break:normal">${l.old?'nợ cũ':'vay'} ${fmtShortMoney(amt)}${rp.g?` · đã trả gốc ${fmtShortMoney(rp.g)}`:''}${rp.l?` · lãi ${fmtShortMoney(rp.l)}`:''}</div>
         </div>
       </div>
       ${done ? '<div style="margin-top:6px;font-size:11px;font-weight:700;color:#047857">✅ Đã trả hết gốc</div>' : (dueTxt ? `<div style="margin-top:6px;font-size:12px">${dueTxt}</div>` : '')}
       ${hist}
       <div style="display:flex;gap:6px;margin-top:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">
         <span style="font-size:10px;color:var(--text-sub)">${l.byName?'✍️ '+esc(l.byName)+' ghi':''}</span>
-        <span style="display:flex;gap:6px">${done ? '' : `<button onclick="openRepayModal('${sid(l.id)}')" style="${_CASH_BTN}background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">💸 Trả nợ</button>`}${cashAcctBtn(l)}${cashDelBtn(l)}</span>
+        <span style="display:flex;gap:6px">${done ? '' : `<button onclick="openRepayModal('${sid(l.id)}')" style="${_CASH_BTN}background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">💸 Trả nợ</button>`}${l.old?'':cashAcctBtn(l)}${cashDelBtn(l)}</span>
       </div>
       ${cashDelReqBox(l)}
     </div></div>`;
-  }).join('');
+  }
 }
-function openLoanModal(){
+// v11 (D 25/11): NỢ TỒN ĐỌNG CŨ — mục riêng dưới danh sách vay, tổng riêng (còn nợ cũ · đã trả gốc · đang chờ H duyệt)
+function renderOldLoans(olds){
+  const wrap=document.getElementById('cash-oldloan-wrap'), el=document.getElementById('cash-oldloan-list'), sumEl=document.getElementById('oldloan-sum');
+  if(!wrap || !el) return;
+  if(!olds.length){ wrap.style.display='none'; return; }
+  wrap.style.display='block';
+  const q = _mnNorm((document.getElementById('loan-search')||{}).value||'').trim(), fl = (document.getElementById('loan-filter')||{}).value||'';
+  const shown = olds.filter(l=>{
+    if(q){ const lf=LOAN_FROM[l.lender]||LOAN_FROM.canhan; if(_mnNorm([l.lenderName,l.desc,lf.label,l.byName].join(' ')).indexOf(q)<0) return false; }
+    if(!fl) return true;
+    const left=loanLeft(l), done=left<=0.0001, d=daysTo(l.due);
+    return fl==='owe' ? !done : fl==='done' ? done : (!done && d!==null && d<=7);
+  });
+  const ids=new Set(shown.map(l=>l.id)), owe=shown.reduce((t,l)=>t+Math.max(0,loanLeft(l)),0), no=shown.reduce((t,l)=>t+(parseFloat(l.amount)||0),0), goc=shown.reduce((t,l)=>t+loanRepaid(l).g,0);
+  const pend=cashflow.filter(r=>repayPending(r) && ids.has(r.loanId)).reduce((t,r)=>t+(parseFloat(r.principal)||0),0);
+  if(sumEl) sumEl.innerHTML=`<div>${shown.length} khoản · nợ cũ ghi nhận ${fmtVND(no)} · đã trả gốc ${fmtVND(goc)}</div><div style="font-size:15px;font-weight:900;color:#9a3412;margin-top:2px">Còn nợ cũ ${fmtVND(owe)}</div>`+(pend>0?`<div style="font-size:11.5px;font-weight:700;color:#b45309;margin-top:2px">⏳ ${fmtVND(pend)} trả nợ đang chờ Hiền duyệt</div>`:'');
+  el.innerHTML = shown.length ? shown.map(_loanCardHtml).join('') : '<div class="card"><div class="card-body" style="padding:14px;text-align:center;color:var(--text-sub);font-size:13px">Không có khoản nợ cũ nào khớp bộ lọc</div></div>';
+}
+function _loanOldUi(){ const old=!!(document.getElementById('loan-inp-old')||{}).checked; const w=document.getElementById('loan-acct-wrap'); if(w) w.style.display = old?'none':''; const t=document.getElementById('loan-modal-title'); if(t) t.textContent = old ? '📜 Ghi NỢ TỒN ĐỌNG CŨ' : '💳 Ghi khoản VAY'; const a=document.getElementById('loan-amount-label'); if(a) a.innerHTML = old ? 'Số CÒN NỢ hiện tại <span class="req">*</span>' : 'Số tiền vay <span class="req">*</span>'; }
+function openLoanModal(old){
   if(currentRole!=='thuquy' && currentRole!=='dung'){ showToast('🔒 Chỉ thủ quỹ mới ghi được khoản vay'); return; }
   ['loan-inp-name','loan-inp-amount','loan-inp-rate','loan-inp-desc'].forEach(i=>{ document.getElementById(i).value=''; });
+  { const c=document.getElementById('loan-inp-old'); if(c) c.checked = old===true; } _loanOldUi();   // v11
   document.getElementById('loan-inp-lender').value='nh'; try{ _refreshAcctSelects(false); }catch(e){} document.getElementById('loan-inp-acct').value=_acctDefault();
   document.getElementById('loan-inp-date').value=ymdLocal(); document.getElementById('loan-inp-due').value='';
   document.getElementById('loan-modal-overlay').style.display='flex';
@@ -12850,14 +12900,15 @@ async function submitLoan(){
   if(amount<=0){ showToast('⚠️ Nhập số tiền vay'); return; }
   if(!desc){ showToast('⚠️ Nhập nội dung'); return; }
   const rate = parseFloat(String(document.getElementById('loan-inp-rate').value).replace(',', '.'))||0;
+  const old = !!(document.getElementById('loan-inp-old')||{}).checked;   // v11: nợ tồn đọng cũ — không có tài khoản nhận tiền
   const rec = { type:'loan', amount, desc, date: document.getElementById('loan-inp-date').value||ymdLocal(), due: document.getElementById('loan-inp-due').value||'',
     lender: document.getElementById('loan-inp-lender').value==='canhan'?'canhan':'nh', lenderName:(document.getElementById('loan-inp-name').value||'').trim(), rate,
-    acct: CASH_ACCT[document.getElementById('loan-inp-acct').value]?document.getElementById('loan-inp-acct').value:_acctDefault(),
     ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'' };
+  if(old) rec.old = true; else rec.acct = CASH_ACCT[document.getElementById('loan-inp-acct').value]?document.getElementById('loan-inp-acct').value:_acctDefault();
   try{
     const ref = await db.ref('pva379/cashflow').push(rec);
     try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
-    closeLoanModal(); showToast('✅ Đã ghi khoản vay');
+    closeLoanModal(); showToast(old ? '✅ Đã ghi nợ tồn đọng cũ (không cộng tài khoản)' : '✅ Đã ghi khoản vay');
   }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
 }
 function openRepayModal(loanId){
@@ -12899,6 +12950,54 @@ async function approveRepay(id){
     showToast('✅ Đã duyệt trả nợ');
     sendPushNotif('✅ '+(getCurrentUserName()||'H')+' đã duyệt trả nợ '+fmtVND((+r.principal||0)+(+r.interest||0)), (l&&l.desc||r.desc||''), ['dung','hien','thuquy']);
   }catch(e){ showToast('❌ Không duyệt được: '+(e.message||e.code||'')); }
+}
+// ── v11 (D 25/11): CHI RIÊNG của Dũng / Hiền — thủ quỹ ghi, không qua duyệt, trừ thẳng tài khoản (kê để cân quỹ), tổng hợp riêng ──
+const RIENG_WHO = { dung:'Dũng', hien:'Hiền' };
+function openRiengModal(){
+  if(currentRole!=='thuquy' && currentRole!=='dung'){ showToast('🔒 Chỉ thủ quỹ mới ghi được chi riêng'); return; }
+  document.getElementById('rieng-inp-amount').value=''; document.getElementById('rieng-inp-desc').value=''; document.getElementById('rieng-inp-who').value='dung';
+  document.getElementById('rieng-inp-date').value=ymdLocal(); try{ _refreshAcctSelects(false); }catch(e){} document.getElementById('rieng-inp-acct').value=_acctDefault();
+  document.getElementById('rieng-modal-overlay').style.display='flex';
+}
+function closeRiengModal(){ document.getElementById('rieng-modal-overlay').style.display='none'; }
+async function submitRieng(){
+  if(currentRole!=='thuquy' && currentRole!=='dung'){ showToast('🔒 Chỉ thủ quỹ mới ghi được chi riêng'); return; }
+  const amount = parseFloat(String(document.getElementById('rieng-inp-amount').value).replace(/[^\d]/g,''))||0;
+  const desc = (document.getElementById('rieng-inp-desc').value||'').trim();
+  const who = document.getElementById('rieng-inp-who').value==='hien' ? 'hien' : 'dung';
+  if(amount<=0){ showToast('⚠️ Nhập số tiền'); return; }
+  if(!desc){ showToast('⚠️ Nhập nội dung'); return; }
+  const rec = { type:'rieng', who, amount, desc, date: document.getElementById('rieng-inp-date').value||ymdLocal(),
+    acct: CASH_ACCT[document.getElementById('rieng-inp-acct').value]?document.getElementById('rieng-inp-acct').value:_acctDefault(),
+    ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'' };
+  try{
+    const ref = await db.ref('pva379/cashflow').push(rec);
+    try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
+    closeRiengModal(); showToast('✅ Đã ghi chi riêng '+RIENG_WHO[who]);
+  }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
+}
+function renderRiengList(){
+  const el=document.getElementById('cash-rieng-list'), sumEl=document.getElementById('rieng-sum'); if(!el) return;
+  const arr = cashflow.filter(r=>r.type==='rieng').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
+  if(!arr.length){ if(sumEl) sumEl.style.display='none'; el.innerHTML='<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có khoản chi riêng nào</div></div>'; return; }
+  const N=v=>parseFloat(v)||0, tot=arr.reduce((a,r)=>a+N(r.amount),0), byW={dung:0,hien:0}; arr.forEach(r=>{ byW[r.who==='hien'?'hien':'dung']+=N(r.amount); });
+  if(sumEl){ sumEl.style.display='block'; sumEl.innerHTML=`<div>${arr.length} khoản · Dũng ${fmtVND(byW.dung)} · Hiền ${fmtVND(byW.hien)}</div><div style="font-size:15px;font-weight:900;color:#b91c1c;margin-top:2px">Tổng chi riêng ${fmtVND(tot)}</div>`; }
+  el.innerHTML = arr.map(r=>`<div class="card"><div class="card-body" style="padding:11px 13px">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+        <div style="min-width:0;flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${esc(r.desc||'Chi riêng')}</div>
+          <div style="font-size:11px;margin-top:3px"><span style="background:#ede9fe;color:#5b21b6;padding:1px 8px;border-radius:8px;font-weight:800">${RIENG_WHO[r.who]||'Dũng'}</span>
+            ${_oneAcct()?'':`<span style="color:${CASH_ACCT[acctOf(r)].color};margin-left:6px;font-weight:700">${CASH_ACCT[acctOf(r)].short}</span>`}
+            <span style="color:var(--text-sub);margin-left:6px">${esc(r.date||'')}</span></div>
+        </div>
+        <div style="font-size:16px;font-weight:900;color:#b91c1c;white-space:nowrap;word-break:normal">−${fmtVND(N(r.amount))}</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-top:8px;justify-content:space-between;align-items:center;flex-wrap:wrap">
+        <span style="font-size:10px;color:var(--text-sub)">${r.byName?'✍️ '+esc(r.byName)+' ghi':''}</span>
+        <span style="display:flex;gap:6px">${cashAcctBtn(r)}${cashDelBtn(r)}</span>
+      </div>
+      ${cashDelReqBox(r)}
+    </div></div>`).join('');
 }
 function openXferModal(){
   if(currentRole!=='thuquy' && currentRole!=='dung'){ showToast('🔒 Chỉ thủ quỹ mới ghi chuyển tiền giữa các tài khoản'); return; }
@@ -13118,23 +13217,41 @@ function updateCashBadge(){
 </div>
 
 <!-- v41: MODAL VAY / TRẢ NỢ / CHUYỂN NỘI BỘ -->
+<div class="role-screen" id="rieng-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
+  <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:15px;font-weight:800;color:var(--text)">👤 Ghi chi riêng</div>
+      <button onclick="closeRiengModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
+    </div>
+    <div class="form-group"><label class="form-label">Chi riêng của <span class="req">*</span></label>
+      <select class="form-input form-select" id="rieng-inp-who"><option value="dung">Dũng</option><option value="hien">Hiền</option></select></div>
+    <div class="form-group"><label class="form-label">Số tiền <span class="req">*</span></label><input class="form-input" id="rieng-inp-amount" type="text" inputmode="numeric" placeholder="5.000.000" oninput="fmtAmountInput(this)"></div>
+    <div style="display:flex;gap:8px">
+      <div class="form-group" style="flex:1"><label class="form-label">Ngày chi</label><input class="form-input" id="rieng-inp-date" type="date"></div>
+      <div class="form-group acct-pick" style="flex:1"><label class="form-label">Chi từ tài khoản</label><select class="form-input form-select" id="rieng-inp-acct"></select></div>
+    </div>
+    <div class="form-group"><label class="form-label">Nội dung <span class="req">*</span></label><input class="form-input" id="rieng-inp-desc" type="text" placeholder="VD: Chuyển cho anh Dũng việc riêng"></div>
+    <button onclick="submitRieng()" class="btn-full btn-primary-full" style="font-size:15px;padding:13px">Lưu</button>
+  </div>
+</div>
 <div class="role-screen" id="loan-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
   <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)">💳 Ghi khoản VAY</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text)" id="loan-modal-title">💳 Ghi khoản VAY</div>
       <button onclick="closeLoanModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
     </div>
     <div class="form-group"><label class="form-label">Vay của <span class="req">*</span></label>
       <select class="form-input form-select" id="loan-inp-lender"><option value="nh">🏦 Ngân hàng</option><option value="canhan">👤 Cá nhân</option></select></div>
     <div class="form-group"><label class="form-label">Tên ngân hàng / người cho vay</label><input class="form-input" id="loan-inp-name" type="text" placeholder="VD: Vietcombank / anh Nam"></div>
-    <div class="form-group"><label class="form-label">Số tiền vay <span class="req">*</span></label><input class="form-input" id="loan-inp-amount" type="text" inputmode="numeric" placeholder="500.000.000" oninput="fmtAmountInput(this)"></div>
+    <label id="loan-old-wrap" style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;margin:0 0 10px;padding:8px 10px;background:#fff7ed;border:1px solid #fdba74;border-radius:8px;cursor:pointer"><input type="checkbox" id="loan-inp-old" onchange="_loanOldUi()" style="margin-top:2px"><span><b>Nợ tồn đọng cũ</b> — có từ trước sổ mới, tiền đã nhận rồi nên <b>không cộng vào tài khoản</b>; chỉ ghi số còn nợ để theo dõi trả.</span></label>
+    <div class="form-group"><label class="form-label" id="loan-amount-label">Số tiền vay <span class="req">*</span></label><input class="form-input" id="loan-inp-amount" type="text" inputmode="numeric" placeholder="500.000.000" oninput="fmtAmountInput(this)"></div>
     <div style="display:flex;gap:8px">
       <div class="form-group" style="flex:1"><label class="form-label">Ngày nhận tiền</label><input class="form-input" id="loan-inp-date" type="date"></div>
       <div class="form-group" style="flex:1"><label class="form-label">Hạn trả</label><input class="form-input" id="loan-inp-due" type="date"></div>
     </div>
     <div style="display:flex;gap:8px">
       <div class="form-group" style="flex:1"><label class="form-label">Lãi suất (%/năm)</label><input class="form-input" id="loan-inp-rate" type="text" inputmode="decimal" placeholder="VD: 9"></div>
-      <div class="form-group acct-pick" style="flex:1"><label class="form-label">Tiền về tài khoản</label>
+      <div class="form-group acct-pick" style="flex:1" id="loan-acct-wrap"><label class="form-label">Tiền về tài khoản</label>
         <select class="form-input form-select" id="loan-inp-acct"></select></div>
     </div>
     <div class="form-group"><label class="form-label">Nội dung <span class="req">*</span></label><input class="form-input" id="loan-inp-desc" type="text" placeholder="VD: Vay đợt 1 mua vật tư"></div>
