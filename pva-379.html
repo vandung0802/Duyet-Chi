@@ -1386,7 +1386,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- v11 (D 25/11): CHI RIÊNG của Dũng / Hiền — thủ quỹ ghi, KHÔNG qua duyệt, trừ thẳng tài khoản để cân quỹ; tổng hợp riêng -->
   <div id="cash-tab-rieng" style="display:none">
     <div class="card"><div class="card-body" style="padding:12px">
-      <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Khoản <b>chi riêng của Dũng / Hiền</b> mà thủ quỹ đã chi từ tài khoản công ty. <b>Không cần D, H duyệt</b> — thủ quỹ kê để cân quỹ; tiền trừ thẳng tài khoản và có tổng riêng theo từng người. Không phải chi phí công trình.</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Khoản <b>chi riêng của Dũng / Hiền</b> đã chi từ tài khoản công ty. <b>Không cần D, H duyệt</b> — thủ quỹ hoặc Hiền kê để cân quỹ; tiền trừ thẳng tài khoản và có tổng riêng theo từng người. Không phải chi phí công trình.</div>
       <button onclick="openRiengModal()" class="btn-sm btn-primary-full">➕ Ghi chi riêng</button>
     </div></div>
     <div id="rieng-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
@@ -1950,7 +1950,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan'];   // 24/11: thêm kế toán để nhập số dư đầu kỳ / khoản vay
-const APP_VERSION = '20261125-v11';
+const APP_VERSION = '20261126-v12';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12953,15 +12953,16 @@ async function approveRepay(id){
 }
 // ── v11 (D 25/11): CHI RIÊNG của Dũng / Hiền — thủ quỹ ghi, không qua duyệt, trừ thẳng tài khoản (kê để cân quỹ), tổng hợp riêng ──
 const RIENG_WHO = { dung:'Dũng', hien:'Hiền' };
+function _riengCanWrite(){ return currentRole==='thuquy' || currentRole==='hien' || currentRole==='dung'; }   // D 26/11: Hiền cũng ghi được, cùng thủ quỹ
 function openRiengModal(){
-  if(currentRole!=='thuquy' && currentRole!=='dung'){ showToast('🔒 Chỉ thủ quỹ mới ghi được chi riêng'); return; }
+  if(!_riengCanWrite()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được chi riêng'); return; }
   document.getElementById('rieng-inp-amount').value=''; document.getElementById('rieng-inp-desc').value=''; document.getElementById('rieng-inp-who').value='dung';
   document.getElementById('rieng-inp-date').value=ymdLocal(); try{ _refreshAcctSelects(false); }catch(e){} document.getElementById('rieng-inp-acct').value=_acctDefault();
   document.getElementById('rieng-modal-overlay').style.display='flex';
 }
 function closeRiengModal(){ document.getElementById('rieng-modal-overlay').style.display='none'; }
 async function submitRieng(){
-  if(currentRole!=='thuquy' && currentRole!=='dung'){ showToast('🔒 Chỉ thủ quỹ mới ghi được chi riêng'); return; }
+  if(!_riengCanWrite()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được chi riêng'); return; }
   const amount = parseFloat(String(document.getElementById('rieng-inp-amount').value).replace(/[^\d]/g,''))||0;
   const desc = (document.getElementById('rieng-inp-desc').value||'').trim();
   const who = document.getElementById('rieng-inp-who').value==='hien' ? 'hien' : 'dung';
