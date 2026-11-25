@@ -509,11 +509,13 @@
         }
       },
 
-      // ══ cashflow — THU + KÝ QUỸ của Gia Bình (app 379 không có nhánh này) ══
+      // ══ cashflow — THU + KÝ QUỸ + VAY + chuyển nội bộ của PVA-379 ══
+      // ĐỌC (v10, D 25/11/2026): mọi tài khoản đã duyệt (trừ P.KH thuần) — để ai cũng xem được thu/chi TỪNG công trình;
+      // app chỉ hiện số tổng cả công ty / Cân đối cho D, Hiền, thủ quỹ, kế toán. bankBalance vẫn chỉ 4 vai đó đọc.
       // Ai đã được duyệt đều GHI/SỬA được (sổ quỹ chung, không có luồng duyệt nhiều bước).
       // XÓA thì chỉ Dũng hoặc chính người đã ghi khoản đó — tiền chung 2 công ty, không để ai cũng xóa được.
       "cashflow": {
-        ".read": "auth != null && ((root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true && (root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'dung' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'hien' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'thuquy' || root.child('pva379/userRoles').child(auth.uid).child('role').val() === 'ketoan')) || auth.token.email === 'vandung0802@gmail.com')",
+        ".read": "auth != null && (root.child('pva379/userRoles').child(auth.uid).child('approved').val() === true && root.child('pva379/userRoles').child(auth.uid).child('dept').val() !== 'kehoach' || auth.token.email === 'vandung0802@gmail.com')",
         "$id": {
           // ── XOÁ KHOẢN (v25, D chốt 22/09/2026): "mọi nút xoá trong Cân đối phải được D, H, L đồng ý; riêng D xoá thẳng" ──
           //  • Dũng (quản trị): xoá thẳng.
