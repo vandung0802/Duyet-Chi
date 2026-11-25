@@ -820,7 +820,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">📊 Báo cáo
       <span style="display:flex;gap:6px;flex-wrap:wrap">
         <button id="btn-sheet-view" onclick="openSheetView()" style="display:none;padding:7px 10px;font-size:12px;font-weight:800;background:#0f9d58;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">📊 Mở bảng tính Google</button>
-        <button onclick="sendTelegramReport()" style="padding:7px 10px;font-size:12px;font-weight:800;background:#229ED9;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">📤 Gửi Telegram</button>
+        <button id="btn-tg-report" onclick="sendTelegramReport()" style="padding:7px 10px;font-size:12px;font-weight:800;background:#229ED9;color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">📤 Gửi Telegram</button>
       </span>
     </div>
     <div class="card-body" style="padding:10px 0 0">
@@ -830,6 +830,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button class="report-subtab" data-tab="done" onclick="setReportTab('done',this)">💸 Đã chuyển</button>
         <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">⏳ Chưa chuyển</button>
         <button class="report-subtab" data-tab="rejected" onclick="setReportTab('rejected',this)">❌ Từ chối</button>
+        <button class="report-subtab" data-tab="site" onclick="setReportTab('site',this)">🏗 Công trình</button>
         <button class="report-subtab" data-tab="kt" id="report-subtab-kt" onclick="setReportTab('kt',this)" style="display:none">📒 Kế toán</button>
       </div>
       <!-- Hàng lọc -->
@@ -882,6 +883,12 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </div>
 
   <!-- Tab con: Từ chối -->
+  <!-- v10 (D 25/11): THU / CHI TỪNG CÔNG TRÌNH — mọi người xem được; dòng TỔNG + xuất cả công ty chỉ người xem toàn bộ (_fullView) -->
+  <div class="card report-tab-panel" id="report-tab-site" style="display:none">
+    <div class="card-body" style="padding:0 12px 12px">
+      <div id="report-site-content"></div>
+    </div>
+  </div>
   <div class="card report-tab-panel" id="report-tab-rejected" style="display:none">
     <div class="card-body" style="padding:0">
       <div id="report-table-rejected" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
@@ -1894,8 +1901,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div class="more-group">GỬI RA NGOÀI</div>
     <div class="more-grid">
-      <button class="more-tile" onclick="closeMoreSheet();openSheetView()"><span class="ico">📊</span>Bảng tính Google</button>
-      <button class="more-tile" onclick="closeMoreSheet();sendTelegramReport()"><span class="ico">📤</span>Gửi Telegram</button>
+      <button class="more-tile" id="tile-sheet-view" onclick="closeMoreSheet();openSheetView()"><span class="ico">📊</span>Bảng tính Google</button>
+      <button class="more-tile" id="tile-tg" onclick="closeMoreSheet();sendTelegramReport()"><span class="ico">📤</span>Gửi Telegram</button>
       <button class="more-tile" onclick="closeMoreSheet();downloadExcelAuto()"><span class="ico">⬇️</span>Tải Excel</button>
     </div>
     <div class="more-group">KHÁC</div>
@@ -1931,7 +1938,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan'];   // 24/11: thêm kế toán để nhập số dư đầu kỳ / khoản vay
-const APP_VERSION = '20261125-v9';
+const APP_VERSION = '20261125-v10';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -3519,7 +3526,7 @@ function initFirebaseSync(){
     sites   = (Array.isArray(meta.sites)   ? meta.sites   : Object.values(meta.sites||{})).filter(Boolean);
     _tgToken = meta.telegramBotToken || ''; _tgChatId = meta.telegramChatId || ''; // v167: cấu hình bot Telegram (chỉ nằm trong Firebase, không nằm trong file)
     sheetViewUrl = sanitizeViewUrl(meta.sheetViewUrl);   // v41
-    { const _iv=document.getElementById('inp-sheet-view'); if(_iv && document.activeElement!==_iv) _iv.value = sheetViewUrl; const _bv=document.getElementById('btn-sheet-view'); if(_bv) _bv.style.display = sheetViewUrl ? '' : 'none'; }
+    { const _iv=document.getElementById('inp-sheet-view'); if(_iv && document.activeElement!==_iv) _iv.value = sheetViewUrl; const _bv=document.getElementById('btn-sheet-view'); if(_bv) _bv.style.display = (sheetViewUrl && _fullView()) ? '' : 'none'; }   // v10: bảng tính Google (số cả công ty) chỉ người xem toàn bộ
     if(('sheetUrl' in meta) && !(typeof _viewAs!=='undefined' && _viewAs)){   // v62: Dũng xoá link thì máy khác cũng xoá theo; đang xem thử không nạp lại link
       sheetUrl = sanitizeSheetUrl(meta.sheetUrl||'') || ''; // v78: chặn URL lạ từ Firebase
       localStorage.setItem('pv_sheetUrl', sheetUrl);
@@ -8396,7 +8403,7 @@ function delSite(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa
 function setReportTab(tab, btn){
   document.querySelectorAll('#page-report .report-subtab').forEach(t=>t.classList.remove('active'));   // v62: chỉ tab của Báo cáo
   btn.classList.add('active');
-  ['summary','list','done','pending','rejected','kt','contracts'].forEach(t=>{
+  ['summary','list','done','pending','rejected','site','kt','contracts'].forEach(t=>{
     const el = document.getElementById('report-tab-'+t); if(el) el.style.display = (t===tab) ? 'block' : 'none';
   });
   _renderReportTab(tab);
@@ -8421,6 +8428,7 @@ function _renderReportTab(tab){
   else if(tab==='list') requestAnimationFrame(renderReportList);
   else if(tab==='done'||tab==='pending') requestAnimationFrame(renderReportTables);
   else if(tab==='rejected') requestAnimationFrame(renderReportRejected);
+  else if(tab==='site') renderReportSite();   // v10: thu/chi từng công trình (mọi người)
   else if(tab==='kt') renderKtPanel();   // v41
   else if(tab==='contracts' && typeof renderContracts==='function') renderContracts();   // v41
 }
@@ -10199,6 +10207,8 @@ function _applyCashView(){
   document.querySelectorAll('#page-cash .report-subtab').forEach(b=>{ b.style.display = (full || b.dataset.tab==='adv') ? '' : 'none'; });
   const d=document.querySelector('#page-cash .tab-desc'); if(d) d.style.display = full ? '' : 'none';
   const h=document.querySelector('#page-cash .card-header'); if(h) h.textContent = full ? '⚖️ Cân đối quỹ công ty' : '👛 Sổ tạm ứng của tôi';
+  // v10 (D 25/11): báo cáo cả công ty (Telegram, bảng tính Google) chỉ người xem toàn bộ; nhân viên xuất Excel theo từng công trình ở tab Báo cáo → Công trình
+  ['btn-tg-report','tile-sheet-view','tile-tg'].forEach(id=>{ const b=document.getElementById(id); if(b) b.style.display = full ? '' : 'none'; });
 }
 function _applyDeptView(){
   _applyKhNav();
@@ -12359,7 +12369,8 @@ function cashBySite(){
   (proposals||[]).forEach(p=>{ if(p.status==='rejected' || p.costType==='kyquy') return; const tr = (p.transfers||[]).filter(t=>t && _inLedgerTs(t.ts)).reduce((a,t)=>a+N(t.amount),0); if(tr) row(p.site||'').chi += tr; });
   return M;
 }
-function _siteTableHtml(){
+function _siteTableHtml(opts){
+  const showTot = !(opts && opts.total===false);   // v10: nhân viên không thấy dòng TỔNG (số cả công ty)
   const M = cashBySite(), ks = Object.keys(M).filter(k=>M[k].thu||M[k].chi||M[k].kq).sort((a,b)=>(a?0:1)-(b?0:1) || (M[b].thu+M[b].chi)-(M[a].thu+M[a].chi));
   if(!ks.length) return '';
   const R = 'padding:6px 4px;text-align:right;white-space:nowrap;border-bottom:1px solid #f1f5f9';
@@ -12368,8 +12379,57 @@ function _siteTableHtml(){
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">
       <thead><tr style="background:var(--gray-light)"><th style="padding:6px 4px;text-align:left">Công trình</th><th style="padding:6px 4px;text-align:right">Thu về</th><th style="padding:6px 4px;text-align:right">Đã chi</th><th style="padding:6px 4px;text-align:right">Thu − chi</th><th style="padding:6px 4px;text-align:right">Ký quỹ treo</th></tr></thead>
       <tbody>${ks.map(k=>{ const o=M[k], d=o.thu-o.chi; return `<tr><td style="padding:6px 4px;font-weight:700;word-break:break-word;border-bottom:1px solid #f1f5f9">${k?esc(k):'<i style="color:var(--text-sub)">Chung công ty</i>'}</td><td style="${R};color:#047857" title="${fmtVND(o.thu)}">${o.thu?fmtShortMoney(o.thu):'—'}</td><td style="${R};color:#b91c1c" title="${fmtVND(o.chi)}">${o.chi?fmtShortMoney(o.chi):'—'}</td><td style="${R};font-weight:800;color:${d<0?'#b91c1c':'#047857'}" title="${fmtVND(d)}">${fmtShortMoney(d)}</td><td style="${R};color:#b45309" title="${fmtVND(o.kq)}">${o.kq?fmtShortMoney(o.kq):'—'}</td></tr>`; }).join('')}
-      <tr style="background:#f8fafc;font-weight:900"><td style="padding:6px 4px">TỔNG</td><td style="${R}">${fmtShortMoney(tot.thu)}</td><td style="${R}">${fmtShortMoney(tot.chi)}</td><td style="${R}">${fmtShortMoney(tot.thu-tot.chi)}</td><td style="${R}">${fmtShortMoney(tot.kq)}</td></tr></tbody>
+      ${showTot ? `<tr style="background:#f8fafc;font-weight:900"><td style="padding:6px 4px">TỔNG</td><td style="${R}">${fmtShortMoney(tot.thu)}</td><td style="${R}">${fmtShortMoney(tot.chi)}</td><td style="${R}">${fmtShortMoney(tot.thu-tot.chi)}</td><td style="${R}">${fmtShortMoney(tot.kq)}</td></tr>` : ''}</tbody>
     </table></div><div style="font-size:10px;color:var(--text-sub);margin:4px 2px 0">Đã chi = tiền thủ quỹ đã chuyển theo phiếu của công trình (không tính ký quỹ; tạm ứng tính khi chuyển).</div></div>`;
+}
+
+// ── v10 (D chốt 25/11/2026): "Tất cả mọi người nhìn được: đề xuất của chính mình, tổng thu chi của từng công trình, vật tư,
+//    thiết bị; xuất ra từng công trình, không xuất tổng của công ty. Không nhìn thấy Cân đối, tổng thu. Chỉ Dũng, Hiền, Trang
+//    thấy toàn bộ" (kế toán giữ quyền xem toàn bộ theo chốt 19/11 + 24/11 — D chưa nói bỏ). Luật máy chủ: cashflow cho người
+//    đã duyệt đọc (để tính thu theo công trình); bankBalance + Cân đối vẫn chỉ người xem toàn bộ.
+function _fullView(){ return _cashCanSee(); }
+function _siteNames(){
+  const M = cashBySite(), list = (typeof sites!=='undefined' && Array.isArray(sites)) ? sites : [];
+  return [...new Set(Object.keys(M).filter(k=>k && (M[k].thu||M[k].chi||M[k].kq)).concat(list.map(x=>typeof x==='string'?x:(x&&x.name)||'').filter(Boolean)))].sort();
+}
+function renderReportSite(){
+  const el=document.getElementById('report-site-content'); if(!el) return;
+  const full=_fullView(), tbl=_siteTableHtml({total:full}), names=_siteNames();
+  const old=document.getElementById('site-exp-sel'), keep = old ? old.value : '';
+  el.innerHTML = `<div style="font-size:11.5px;color:var(--text-sub);margin:10px 2px 0">Thu về và đã chi của từng công trình${full?'':' (số tổng cả công ty chỉ người duyệt và thủ quỹ xem)'}.</div>`
+    + (tbl || '<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:14px">Chưa có khoản thu / chi nào gắn công trình</div>')
+    + `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px">
+        <select id="site-exp-sel" class="form-input form-select" style="flex:1 1 160px;width:auto;margin:0;font-size:12px;padding:5px 8px;border-radius:20px"><option value="">— chọn công trình —</option>${full?'<option value="*">🏗 Tất cả công trình</option>':''}${names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>
+        <button class="btn-sm btn-xs2 btn-outline-full" onclick="exportSiteExcel()" style="margin:0;flex:0 1 auto;color:#16a34a;border-color:#16a34a">⬇️ Excel công trình</button>
+      </div>`;
+  const s2=document.getElementById('site-exp-sel'); if(s2 && keep && [...s2.options].some(o=>o.value===keep)) s2.value=keep;
+}
+// Dòng thu / chi của 1 công trình (site='*' = mọi công trình — chỉ người xem toàn bộ). Cột: Ngày, CT, Loại, Nội dung, Nguồn/loại CP, Người, Vào, Ra
+function _siteRows(site){
+  const N=v=>parseFloat(v)||0, all = site==='*', hit = k => all || (k||'')===site, rows=[];
+  (cashflow||[]).filter(_inLedgerRec).forEach(r=>{ if(!hit(r.site)) return;
+    if(r.type==='in') rows.push([r.date||ymdLocal(r.ts), r.site||'', 'THU', r.desc||'', (CASH_SRC[r.src]||CASH_SRC.other).label, r.byName||'', N(r.amount), '']);
+    else if(r.type==='dep'){ rows.push([r.date||ymdLocal(r.ts), r.site||'', 'KÝ QUỸ đưa đi', r.desc||'', r.holder||'', r.byName||'', '', N(r.amount)]);
+      (r.returned||[]).forEach(x=>rows.push([x.date||ymdLocal(x.ts), r.site||'', 'KÝ QUỸ lấy về', r.desc||'', r.holder||'', x.by||'', N(x.amount), ''])); } });
+  (proposals||[]).forEach(p=>{ if(p.status==='rejected' || p.costType==='kyquy' || !hit(p.site)) return;
+    (p.transfers||[]).filter(t=>t && _inLedgerTs(t.ts)).forEach(t=>rows.push([ymdLocal(t.ts), p.site||'', 'CHI', p.desc||'', p.kind==='salary'?'Ứng lương':((COST_TYPES[p.costType]||COST_TYPES.congtruong).label), p.person||'', '', N(t.amount)])); });
+  rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
+  return rows;
+}
+async function exportSiteExcel(){
+  const sel=document.getElementById('site-exp-sel'), site = sel ? sel.value : '';
+  if(!site){ showToast('Chọn công trình cần xuất'); return; }
+  if(site==='*' && !_fullView()){ showToast('Chỉ xuất được theo từng công trình'); return; }
+  let XLSX; try{ XLSX = await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
+  const rows=_siteRows(site);
+  const head=['Ngày','Công trình','Loại','Nội dung','Nguồn / loại chi phí','Người','Tiền vào','Tiền ra'];
+  const aoa=[['PVA-379 — THU / CHI CÔNG TRÌNH: '+(site==='*'?'TẤT CẢ':site)], ['Lập lúc '+fmtFull(Date.now())+' · '+(getCurrentUserName()||'')], [], head].concat(rows.length?rows:[['','','','(chưa có khoản nào)']]);
+  const r0=5, r1=r0+Math.max(rows.length,1)-1;
+  aoa.push([], ['TỔNG THU','','','','','',{t:'n',f:`SUMIF(C${r0}:C${r1},"THU",G${r0}:G${r1})`}], ['TỔNG CHI','','','','','','',{t:'n',f:`SUMIF(C${r0}:C${r1},"CHI",H${r0}:H${r1})`}], ['THU − CHI','','','','','',{t:'n',f:`G${r1+2}-H${r1+3}`}]);
+  const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=[{wch:11},{wch:18},{wch:14},{wch:40},{wch:20},{wch:14},{wch:15},{wch:15}];
+  for(let r=r0; r<=r1+4; r++){ ['G','H'].forEach(c=>{ const x=ws[c+r]; if(x && x.t==='n') x.z='#,##0'; }); }
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Cong trinh'); wb.Workbook={CalcPr:{fullCalcOnLoad:true}};
+  XLSX.writeFile(wb, 'PVA-379-cong-trinh-'+(site==='*'?'tat-ca':site.replace(/[^\p{L}\p{N}]+/gu,'-'))+'.xlsx');
 }
 
 // ── BIỂU ĐỒ tiền còn lại theo tháng (thanh ngang, không cần thư viện ngoài) ──
