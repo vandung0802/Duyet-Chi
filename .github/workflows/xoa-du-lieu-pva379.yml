@@ -1,23 +1,24 @@
-# CHÉP DỮ LIỆU app Duyệt Chi (/duyetchi) sang app PVA-379 (/pva379) — chạy TAY khi D bảo (tab Actions → Run workflow,
-# hoặc Claude gọi). Ô "xacnhan" phải gõ đúng CHEP mới chép thật; để trống = chạy thử (chỉ đọc, in số lượng).
-# Chạy lại bao nhiêu lần cũng được: nhánh đích xoá rồi chép lại y nguồn. KHÔNG đụng /duyetchi (chỉ đọc).
+# XOÁ DỮ LIỆU app PVA-379 (/pva379) → SỔ MỚI — chạy TAY khi D bảo (tab Actions → Run workflow, hoặc Claude gọi).
+# Ô "xacnhan" phải gõ đúng XOA mới xoá thật; để trống = chạy thử (chỉ đếm, in số lượng).
+# Xoá phần giao dịch (phiếu, ảnh, chat, sổ quỹ, tạm ứng, thùng rác, mốc + số dư đầu kỳ); GIỮ tài khoản đăng nhập/vai,
+# danh sách tài khoản ngân hàng, công trình, người đề xuất, nhân viên, cài đặt Sheet. KHÔNG đụng /duyetchi hay Gia Bình.
 # Chìa khoá: dùng lại FIREBASE_TOKEN (hoặc FIREBASE_SERVICE_ACCOUNT) đã có trong GitHub Secrets.
-name: Chep du lieu Duyet Chi sang PVA-379
+name: Xoa du lieu PVA-379 (so moi)
 
 on:
   workflow_dispatch:
     inputs:
       xacnhan:
-        description: 'Gõ CHEP để chép thật (ghi đè các nhánh dữ liệu của pva379). Để trống = chạy thử, chỉ đọc.'
+        description: 'Gõ XOA để xoá thật (phiếu, sổ quỹ, chat, ảnh… của pva379). Để trống = chạy thử, chỉ đếm.'
         required: false
         default: ''
 
 concurrency:
-  group: chep-du-lieu-pva379
+  group: xoa-du-lieu-pva379
   cancel-in-progress: false
 
 jobs:
-  chep:
+  xoa:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
@@ -41,7 +42,7 @@ jobs:
             exit 1
           fi
 
-      - name: Chep du lieu
+      - name: Xoa du lieu
         env:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
@@ -52,10 +53,10 @@ jobs:
             export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
             unset FIREBASE_TOKEN
           fi
-          if [ "$XACNHAN" = "CHEP" ]; then
-            node scripts/chep-duyetchi-sang-pva379.js
+          if [ "$XACNHAN" = "XOA" ]; then
+            node scripts/xoa-du-lieu-pva379.js --xoa
           else
-            echo "Chua go CHEP → chi chay thu (doc, khong ghi)."
-            node scripts/chep-duyetchi-sang-pva379.js --thu
+            echo "Chua go XOA → chi chay thu (dem, khong xoa)."
+            node scripts/xoa-du-lieu-pva379.js
           fi
           rm -f "$RUNNER_TEMP/sa.json"

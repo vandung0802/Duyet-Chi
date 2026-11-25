@@ -902,7 +902,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card">
     <div class="card-header">📖 Hướng dẫn nhanh — app này dùng để làm gì?</div>
     <div class="card-body" style="font-size:13px;line-height:1.6">
-      <div id="copied-info" style="display:none;margin-bottom:8px;padding:8px 10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:8px;font-size:12.5px;color:#3730a3"></div>
       <div style="margin-bottom:8px"><b>PVA-379</b> là app duyệt chi và sổ quỹ của công ty (PVA, 379, 279, THHD). Mọi khoản chi phải đi đủ 4 bước:</div>
       <div style="background:var(--gray-light);border-radius:8px;padding:8px 10px;margin-bottom:8px">
         <b>1.</b> Ai cũng <b>đề xuất</b> được (tab Đề xuất → ➕)<br>
@@ -1913,7 +1912,8 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 // ══════════════════════════════════════════
 // ── App PVA-379 — duyệt chi + sổ quỹ công ty (gốc: app Sổ Quỹ Gia Bình v121, bổ sung phần của app Duyệt Chi v188) ──
 // Firebase CHUNG project 379 (cùng tài khoản đăng nhập với app Duyệt Chi) nhưng dữ liệu ở NHÁNH RIÊNG 'pva379/'
-// — chạy song song không đụng nhánh 'pva379/' của app cũ. Khi D chốt chuyển hẳn: chép dữ liệu duyetchi → pva379.
+// — SỔ MỚI từ 25/11/2026 (D chốt): bắt đầu trống, KHÔNG chép / KHÔNG đọc gì từ nhánh 'duyetchi/' của app Duyệt Chi;
+//   app Duyệt Chi chỉ còn để quyết toán phiếu cũ. Tác vụ xoá sổ: .github/workflows/xoa-du-lieu-pva379.yml (gõ XOA).
 const firebaseConfig = {
   apiKey: "AIzaSyBUy3IMuyXZYN9dkyhrariRD-aPbC0HmT8",
   authDomain: "duyetchi-pva379.firebaseapp.com",
@@ -1926,12 +1926,12 @@ const firebaseConfig = {
 // GIAI ĐOẠN DÙNG THỬ (D chốt 22/11: "1 mình tôi làm app này ngon lành thì mới thông báo cho mọi người"):
 //  - CHỈ Dũng vào được app; người khác thấy màn "đang thử nghiệm", dùng app Duyệt Chi như cũ (_trialGate).
 //  - Mọi thông báo đẩy CHỈ gửi về máy Dũng (kênh 'dung'), tiêu đề gắn "[Thử]" — kênh thông báo dùng chung với app Duyệt Chi.
-// Dữ liệu thử = bản chép từ app Duyệt Chi (workflow chep-du-lieu-pva379.yml), 2 app chạy song song, không ảnh hưởng nhau.
-// Khi D nói "phát hành" → đổi thành false (và chép dữ liệu lần cuối).
+// Dữ liệu = SỔ MỚI (xoá sạch 25/11/2026), KHÔNG chép từ app Duyệt Chi nữa; 2 app chạy song song, không ảnh hưởng nhau.
+// Khi D nói "phát hành" → đổi thành false.
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan'];   // 24/11: thêm kế toán để nhập số dư đầu kỳ / khoản vay
-const APP_VERSION = '20261124-v8';
+const APP_VERSION = '20261125-v9';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -2898,13 +2898,12 @@ function initAuth(){
         // update() giữ nguyên role/name/approved. Lỗi (mạng) bỏ qua, không chặn vào app.
         // PVA-379: Dũng đăng nhập lần ĐẦU bằng tài khoản app Duyệt Chi → nhánh pva379 chưa có hồ sơ → luật máy chủ (xét
         // userRoles/<uid>/role) sẽ chặn MỌI lệnh ghi của Dũng. Tự tạo hồ sơ vai 'dung' (luật cho đúng email Dũng tự đặt),
-        // tên lấy từ hồ sơ app Duyệt Chi (duyetchi/userRoles/<uid>, chính chủ đọc được).
+        // tên lấy từ hồ sơ đã lưu trên máy, không có thì ghi tên mặc định (25/11: KHÔNG đọc nhánh duyetchi/ nữa).
         (async()=>{
           const upd = { email: user.email||'', lastLogin: Date.now() };
           if(role==='dung' && !(role_val && typeof role_val==='object' && role_val.role==='dung')){
             upd.role = 'dung';
             let nm = currentUserName;
-            if(!nm){ try{ const o=(await db.ref('duyetchi/userRoles/'+user.uid+'/name').get()).val(); if(typeof o==='string' && o.trim()) nm=o.trim(); }catch(e){} }
             upd.name = nm || 'Võ Văn Dũng';
             if(!currentUserName){ currentUserName = upd.name; try{ localStorage.setItem('pv_role_'+user.uid, JSON.stringify({ role, name: currentUserName, dept: currentDept })); }catch(e){} }
           }
@@ -3656,7 +3655,6 @@ function initFirebaseSync(){
     db.ref('pva379/meta').off('value');
     db.ref('pva379/meta').on('value', snap=>{
       _metaData = snap.val() || {};
-      try{ const ci=document.getElementById('copied-info'), c=_metaData.copiedFrom; if(ci){ ci.style.display = c ? '' : 'none'; if(c) ci.textContent = '📥 Dữ liệu đang xem là BẢN CHÉP từ app Duyệt Chi lúc '+fmtFull(c.ts)+' ('+(c.proposals||0)+' phiếu). Thao tác ở đây không ảnh hưởng app Duyệt Chi; muốn lấy số mới nhất thì bảo Claude chép lại.'; } }catch(e){}
       try{ _loadAccounts(_metaData.accounts); const _ps=document.getElementById('page-settings'); if(_ps && _ps.style.display!=='none' && currentRole==='dung') renderAccountsSettings(); }catch(e){ console.warn('accounts', e); }
       _metaLoaded = true;
       try{ _autoSeedAccounts(); }catch(e){}
@@ -11974,10 +11972,10 @@ function _loadAccounts(raw){
 }
 function _acctList(){ return Object.keys(CASH_ACCT); }
 // ══ ĐẦU KỲ SỔ QUỸ (rà soát 22/11; D chốt 19/11 "sổ Cân đối bắt đầu từ số dư đầu kỳ tại một ngày anh chọn") ══
-// pva379/meta/cashStart = 'YYYY-MM-DD' (Dũng đặt ở Cài đặt → Tài khoản). Chưa đặt → lấy ngày chép dữ liệu (meta/copiedFrom).
+// pva379/meta/cashStart = 'YYYY-MM-DD' (Dũng / thủ quỹ / kế toán đặt ở Cài đặt → Tài khoản). Chưa đặt → không có mốc, tính mọi khoản (sổ mới 25/11/2026).
 // Mọi khoản thu/chi/chuyển TRƯỚC mốc này KHÔNG vào sổ quỹ (1.740 phiếu cũ của Duyệt Chi không làm quỹ âm hàng chục tỷ).
 // Số dư đầu kỳ từng tài khoản: meta/accounts/<mã>/open (Dũng nhập).
-function _cashStartYmd(){ const m=(typeof _metaData!=='undefined' && _metaData)||{}; if(m.cashStart && /^\d{4}-\d{2}-\d{2}$/.test(m.cashStart)) return m.cashStart; if(m.copiedFrom && m.copiedFrom.ts) return ymdLocal(m.copiedFrom.ts); return ''; }
+function _cashStartYmd(){ const m=(typeof _metaData!=='undefined' && _metaData)||{}; if(m.cashStart && /^\d{4}-\d{2}-\d{2}$/.test(m.cashStart)) return m.cashStart; return ''; }
 function _cashStartTs(){ const y=_cashStartYmd(); if(!y) return 0; const t=new Date(y+'T00:00:00').getTime(); return isNaN(t)?0:t; }
 function _inLedgerTs(ts){ const st=_cashStartTs(); return !st || (+ts||0) >= st; }
 function _inLedgerRec(r){ const y=_cashStartYmd(); if(!y) return true; const d = r && r.date ? String(r.date) : ymdLocal((r && r.ts)||0); return d >= y; }
@@ -11989,7 +11987,7 @@ async function saveCashStart(){
   if(!_canSetOpening()) return;
   const v=((document.getElementById('acct-start')||{}).value||'').trim();
   if(v && !/^\d{4}-\d{2}-\d{2}$/.test(v)){ showToast('⚠️ Ngày không đúng'); return; }
-  try{ await db.ref('pva379/meta/cashStart').set(v||null); showToast(v ? '✅ Sổ quỹ tính từ '+v.split('-').reverse().join('/') : '✅ Đã bỏ mốc — sổ quỹ tính từ ngày chép dữ liệu'); }catch(e){ showToast('❌ '+(e.message||e.code||'')); }
+  try{ await db.ref('pva379/meta/cashStart').set(v||null); showToast(v ? '✅ Sổ quỹ tính từ '+v.split('-').reverse().join('/') : '✅ Đã bỏ mốc — sổ quỹ tính mọi khoản'); }catch(e){ showToast('❌ '+(e.message||e.code||'')); }
 }
 async function saveAcctOpen(k, el){
   if(!_canSetOpening() || !CASH_ACCT[k] || !el) return;
