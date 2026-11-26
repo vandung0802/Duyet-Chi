@@ -18,10 +18,10 @@ const argv = process.argv.slice(2);
 const arg = k => { const i = argv.indexOf(k); return i >= 0 ? (argv[i + 1] || '') : ''; };
 const XOA_KHOAN = arg('--xoa-khoan').split(',').map(s => s.trim()).filter(Boolean);
 const BO_LAN = arg('--bo-lan-chuyen').split(',').map(s => s.trim()).filter(Boolean);
-const GHI = XOA_KHOAN.length > 0 || BO_LAN.length > 0 || XOA_PHIEU.length > 0;
 const SO_TIEN = parseFloat(arg('--so-tien')) || 0;
 const LIET_KE_LUONG = argv.includes('--liet-ke-luong');   // liệt kê phiếu ứng lương (kind salary): ai lập (vai), lúc nào, đã duyệt chưa
 const XOA_PHIEU = arg('--xoa-phieu').split(',').map(s => s.trim()).filter(Boolean);   // xoá phiếu theo mã → thùng rác proposals   // rà theo số tiền: mọi khoản sổ quỹ + mọi lần chuyển trên phiếu đúng số tiền này
+const GHI = XOA_KHOAN.length > 0 || BO_LAN.length > 0 || XOA_PHIEU.length > 0;
 
 function fb(args) {
   const a = args.concat(['--project', DU_AN]);
