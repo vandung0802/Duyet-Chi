@@ -18,8 +18,10 @@ const argv = process.argv.slice(2);
 const arg = k => { const i = argv.indexOf(k); return i >= 0 ? (argv[i + 1] || '') : ''; };
 const XOA_KHOAN = arg('--xoa-khoan').split(',').map(s => s.trim()).filter(Boolean);
 const BO_LAN = arg('--bo-lan-chuyen').split(',').map(s => s.trim()).filter(Boolean);
-const GHI = XOA_KHOAN.length > 0 || BO_LAN.length > 0;
-const SO_TIEN = parseFloat(arg('--so-tien')) || 0;   // rà theo số tiền: mọi khoản sổ quỹ + mọi lần chuyển trên phiếu đúng số tiền này
+const GHI = XOA_KHOAN.length > 0 || BO_LAN.length > 0 || XOA_PHIEU.length > 0;
+const SO_TIEN = parseFloat(arg('--so-tien')) || 0;
+const LIET_KE_LUONG = argv.includes('--liet-ke-luong');   // liệt kê phiếu ứng lương (kind salary): ai lập (vai), lúc nào, đã duyệt chưa
+const XOA_PHIEU = arg('--xoa-phieu').split(',').map(s => s.trim()).filter(Boolean);   // xoá phiếu theo mã → thùng rác proposals   // rà theo số tiền: mọi khoản sổ quỹ + mọi lần chuyển trên phiếu đúng số tiền này
 
 function fb(args) {
   const a = args.concat(['--project', DU_AN]);
@@ -31,7 +33,7 @@ async function emuRest(method, p, body) {
   if (!r.ok) throw new Error('emulator ' + method + ' ' + p + ' → ' + r.status);
   return r.json();
 }
-function kiem(p) { if (!/^\/pva379\/(cashflow|proposals|meta\/accounts|trash\/(cashflow|transfer))(\/|$)/.test(p) || /duyetchi|giabinh|gb-|push-/.test(p)) throw new Error('Đường dẫn bị chặn: ' + p); }
+function kiem(p) { if (!/^\/pva379\/(cashflow|proposals|userRoles|meta\/accounts|trash\/(cashflow|transfer|proposals))(\/|$)/.test(p) || /duyetchi|giabinh|gb-|push-/.test(p)) throw new Error('Đường dẫn bị chặn: ' + p); }
 function tmp(t) { return path.join(os.tmpdir(), 'ratrung-' + process.pid + '-' + t.replace(/[^a-zA-Z0-9]/g, '_') + '.json'); }
 async function doc(p) {
   kiem(p); if (EMU) return emuRest('GET', p);
@@ -55,6 +57,17 @@ const tr = v => (Math.round((+v || 0) / 100000) / 10) + 'tr';
   const cf = (await doc('/pva379/cashflow')) || {};
   const pr = (await doc('/pva379/proposals')) || {};
 
+  if (LIET_KE_LUONG) {
+    const ur = (await doc('/pva379/userRoles')) || {};
+    const vai = uid => (ur[uid] && ur[uid].role) || '?';
+    const ds = Object.keys(pr).filter(k => pr[k] && pr[k].kind === 'salary').sort((a, b) => (pr[a].ts || 0) - (pr[b].ts || 0));
+    console.log('E. Phiếu ỨNG LƯƠNG (kind salary): ' + ds.length);
+    ds.forEach(k => { const p = pr[k]; const da = !!(p.approvedD || p.approvedH || (p.approvedDHistory && Object.keys(p.approvedDHistory).length) || (p.approvedHHistory && Object.keys(p.approvedHHistory).length));
+      const tr_ = p.transfers ? (Array.isArray(p.transfers) ? p.transfers.length : Object.keys(p.transfers).length) : 0;
+      console.log('   • ' + k + ' · tạo ' + new Date(p.ts || 0).toISOString().replace('T', ' ').slice(0, 16) + 'Z · vai người lập: ' + vai(p.createdByUid) + ' · tháng ' + (p.month || '?') + ' · ' + tr(p.amount) + ' · ' + (p.status || '?') + (da ? ' · ĐÃ CÓ DUYỆT' : ' · chưa duyệt') + (tr_ ? ' · đã chuyển ' + tr_ + ' lần' : '')); });
+    console.log('Rà xong — KHÔNG ghi gì. Xoá: --xoa-phieu ID1,ID2');
+    return;
+  }
   if (SO_TIEN > 0) {
     console.log('C. Mọi khoản sổ quỹ đúng ' + tr(SO_TIEN) + ':');
     Object.keys(cf).sort((a, b) => (cf[a].ts || 0) - (cf[b].ts || 0)).forEach(k => { const r = cf[k]; if (!r || Math.abs((+r.amount || 0) - SO_TIEN) > 0.5) return;
@@ -95,6 +108,12 @@ const tr = v => (Math.round((+v || 0) / 100000) / 10) + 'tr';
     await ghi('/pva379/trash/cashflow/' + id, { rec: r, kind: 'cashflow', deletedBy: 'github-actions', deletedByName: 'Tác vụ rà trùng sổ quỹ (D bảo 26/11/2026)', deletedAt: Date.now() });
     await xoa('/pva379/cashflow/' + id);
     console.log('  ✓ đã xoá khoản ' + id + ' (' + r.type + ' · ' + tr(r.amount) + ' · ' + (r.date || '') + ') → thùng rác');
+  }
+  for (const id of XOA_PHIEU) {
+    const p = pr[id]; if (!p) { console.log('  ! Không thấy phiếu ' + id + ' — bỏ qua'); continue; }
+    await ghi('/pva379/trash/proposals/' + id, { rec: p, kind: 'proposals', deletedBy: 'github-actions', deletedByName: 'Tác vụ dọn sổ (D bảo 26/11/2026)', deletedAt: Date.now() });
+    await xoa('/pva379/proposals/' + id);
+    console.log('  ✓ đã xoá phiếu ' + id + ' (' + (p.kind || 'chi') + ' · ' + tr(p.amount) + ' · ' + (p.status || '') + ') → thùng rác');
   }
   for (const spec of BO_LAN) {
     const [pid, idxS] = spec.split(':'); const idx = parseInt(idxS, 10);
