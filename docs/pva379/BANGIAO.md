@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v24 (D 26/11/2026): rà khoản ghi trùng + xoá chuyển nội bộ trong Sổ quỹ
+- Sự cố: Trang ghi trùng cặp "TM nộp Vietin 379 40tr (chuyển nội bộ) → Vietin 379 chuyển cào bóc (lần chuyển trên phiếu)".
+- Kịch bản `scripts/ra-trung-so-quy.js` + tác vụ **"Ra trung so quy PVA-379"** (`ra-trung-so-quy.yml`, `lenh` = ra | xoa-khoan | bo-lan-chuyen, `ids`): rà nhóm khoản sổ quỹ giống hệt (loại, số tiền, TK, ngày) và phiếu có ≥2 lần chuyển cùng số cùng ngày; xoá khoản theo mã (vào thùng rác); bỏ lần chuyển trên phiếu (bản sao vào `trash/transfer`, tính lại `status` như nút Hoàn tác; từ chối phiếu ký quỹ). Nhật ký in mã + ngày + loại + tên TK + số tiền làm tròn triệu, không in nội dung / người.
+- App: dòng chuyển nội bộ trong Sổ quỹ có nút 🗑 (Dũng xoá thẳng / người khác đề nghị xoá) — trước v24 không có chỗ nào xoá được xfer. Tổng quan gom thêm "N đề nghị xoá khoản đang chờ" (`_pendingDelsHtml`) để Hiền duyệt xoá cả xfer.
+- Thử: emulator `ratrung-test` 7/7.
+
 ## v21 (D 26/11/2026): Trả gốc / trả phí + lãi vay ngân hàng cho khoản vay cũ KHÔNG nhập sổ
 Nguyên văn D: "thêm 1 mục trả phí và lãi vay ngân hàng, 1 mục trả gốc vay ngân hàng. Cái này dùng cho những khoản cũ không nhập lại trên sổ".
 - `cashflow` type **`bankpay`** `{kind:'goc'|'laiphi', bank, amount, acct, date, desc}`. Thủ quỹ / Hiền ghi (tab Vay: 2 nút 🏦), trừ tài khoản ngay, **không qua duyệt**, **không đụng "Còn nợ vay"** (vì khoản vay không có trong sổ). Sửa sai → đề nghị sửa (v19; trường `bank` thêm vào `changes`).
