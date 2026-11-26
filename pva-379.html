@@ -1975,7 +1975,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v27';
+const APP_VERSION = '20261126-v28';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12403,10 +12403,10 @@ function renderCashSummary(){
   const line = '<div style="border-top:1px solid var(--gray-border);margin:4px 0"></div>';
   const srcLine = Object.keys(CASH_SRC)
     .filter(k=>t.thuBySrc[k] > 0)
-    .map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtShortMoney(t.thuBySrc[k])}`)
+    .map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtVND(t.thuBySrc[k])}`)
     .join(' · ');
   const retLine = Object.keys(CASH_SRC).filter(k=>t.traLaiBySrc[k] > 0)
-    .map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtShortMoney(t.traLaiBySrc[k])}`).join(' · ');
+    .map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtVND(t.traLaiBySrc[k])}`).join(' · ');
 
   // v116: BẢN GHÉP (D chốt 14/11) = PA2 (3 nhóm Vào · Ra · Treo, 2 ô tổng đóng khung) + Ý 3 (cột = 4 nguồn tiền).
   // Người không phải D / Hiền / Thủ quỹ (_oneAcct) chỉ thấy cột Tổng.
@@ -12414,12 +12414,12 @@ function renderCashSummary(){
   const gsum = (r, g) => _acctsOfGroup(g).reduce((a,k)=>a+((r||{})[k]||0), 0);   // cộng các tài khoản của 1 nhóm
   const hero = `<div style="background:linear-gradient(135deg,#3730a3,#4f46e5);color:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)">
     <div style="font-size:12px;opacity:.9;font-weight:600">💰 CÒN ĐƯỢC TIÊU</div>
-    <div style="font-size:30px;font-weight:900;letter-spacing:-.5px;margin:2px 0 8px;${neg?'color:#fecaca':''}" title="${fmtVND(t.conDuocTieu)}">${fmtShortMoney(t.conDuocTieu)}</div>
-    <div style="display:flex;gap:8px">${[['Tiền trong TK',t.tienTrongTk],['Đã hứa chi',-t.daDuyetChuaChuyen],['Còn nợ vay',t.noVay]].map(([k,v])=>`<div style="flex:1;background:rgba(255,255,255,.16);border-radius:10px;padding:7px 9px"><div style="font-size:10.5px;opacity:.9">${k}</div><div style="font-size:14px;font-weight:800;white-space:nowrap" title="${fmtVND(v)}">${fmtShortMoney(v)}</div></div>`).join('')}</div>
+    <div style="font-size:24px;font-weight:900;letter-spacing:-.5px;margin:2px 0 8px;white-space:nowrap;${neg?'color:#fecaca':''}" title="${fmtVND(t.conDuocTieu)}">${fmtVND(t.conDuocTieu)}</div>
+    <div style="display:flex;gap:8px">${[['Tiền trong TK',t.tienTrongTk],['Đã hứa chi',-t.daDuyetChuaChuyen],['Còn nợ vay',t.noVay]].map(([k,v])=>`<div style="flex:1;background:rgba(255,255,255,.16);border-radius:10px;padding:7px 9px"><div style="font-size:10.5px;opacity:.9">${k}</div><div style="font-size:14px;font-weight:800;white-space:nowrap" title="${fmtVND(v)}">${fmtVND(v)}</div></div>`).join('')}</div>
     ${neg?'<div style="margin-top:8px;font-size:12px;font-weight:700">⚠️ Quỹ đang âm — đã duyệt chi nhiều hơn tiền có</div>':''}
   </div>`;
   const br = t.byRow || {};
-  const cell = (v, extra) => `<td style="text-align:right;white-space:nowrap;padding:6px 3px;border-bottom:1px solid #f1f5f9;${extra||''}" title="${fmtVND(v||0)}">${Math.abs(v||0)<1 ? '<span style="color:#cbd5e1">—</span>' : fmtShortMoney(v)}</td>`;
+  const cell = (v, extra) => `<td style="text-align:right;white-space:nowrap;padding:6px 3px;border-bottom:1px solid #f1f5f9;${extra||''}" title="${fmtVND(v||0)}">${Math.abs(v||0)<1 ? '<span style="color:#cbd5e1">—</span>' : fmtVND(v)}</td>`;
   const trRow = (label, key, color, keep) => {
     const r = br[key] || {}; const total = keys.reduce((s,k)=>s+(r[k]||0), 0);
     if(!keep && Math.abs(total) < 1) return '';
@@ -12428,7 +12428,7 @@ function renderCashSummary(){
   const sec = (label, color) => `<tr><td colspan="${cols.length+2}" style="padding:9px 3px 3px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:${color}"><span style="border-bottom:1px solid ${color};padding-bottom:1px">${label}</span></td></tr>`;
   const bankCell = g => { const ks=_acctsOfGroup(g), have=ks.filter(k=>bankOf(k)); if(!have.length) return '<td style="text-align:right;padding:5px 3px;color:var(--text-sub);font-size:10px">chưa nhập</td>';
     const real=have.reduce((a,k)=>a+(parseFloat(bankOf(k).amount)||0),0), calc=have.reduce((a,k)=>a+(t.byAcct[k]||0),0), d=real-calc, part=have.length<ks.length?`<div style="font-size:9px;color:var(--text-sub)">${have.length}/${ks.length} TK</div>`:'';
-    return Math.abs(d)<1 ? `<td style="text-align:right;padding:5px 3px;color:#047857;font-size:10.5px;font-weight:700">✅ khớp${part}</td>` : `<td style="text-align:right;padding:5px 3px;color:#b91c1c;font-size:10.5px;font-weight:700" title="Ngân hàng ${fmtVND(real)} · sổ ${fmtVND(calc)}">lệch ${fmtShortMoney(d)}${part}</td>`; };
+    return Math.abs(d)<1 ? `<td style="text-align:right;padding:5px 3px;color:#047857;font-size:10.5px;font-weight:700">✅ khớp${part}</td>` : `<td style="text-align:right;padding:5px 3px;color:#b91c1c;font-size:10.5px;font-weight:700" title="Ngân hàng ${fmtVND(real)} · sổ ${fmtVND(calc)}">lệch ${fmtVND(d)}${part}</td>`; };
   const head = `<thead><tr><th style="text-align:left;padding:0 3px 7px;border-bottom:2px solid #e5e7eb"></th>${cols.map(g=>`<th onclick="setCashTab('book',document.querySelector('#page-cash .report-subtab[data-tab=\\'book\\']'));setBookAcct('g:${esc(g)}')" title="Mở Sổ quỹ ${esc(g)}" style="text-align:right;padding:0 3px 7px;border-bottom:2px solid #e5e7eb;cursor:pointer;color:${CASH_ACCT[_acctsOfGroup(g)[0]]?CASH_ACCT[_acctsOfGroup(g)[0]].color:'var(--text)'};white-space:nowrap">${esc(_grpShort(g))}</th>`).join('')}<th style="text-align:right;padding:0 3px 7px;border-bottom:2px solid #e5e7eb">Tổng</th></tr></thead>`;
   const body = `<tbody>
     ${sec('▲ Tiền vào', '#047857')}
@@ -12450,17 +12450,17 @@ function renderCashSummary(){
   </tbody>`;
   const box = (label, val, color, bg, bd, sub) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:${bg};border:1.5px solid ${bd};border-radius:10px;padding:9px 12px;margin:8px 2px 0"><div><b style="font-size:14px">${label}</b>${sub?'<div style="font-size:11px;color:var(--text-sub);font-weight:400">'+sub+'</div>':''}</div><span style="font-size:19px;font-weight:900;color:${color};white-space:nowrap;word-break:normal">${fmtVND(val)}</span></div>`;
   el.innerHTML = _pendingEditsHtml() + _pendingDelsHtml() + _orphanWarnHtml() + hero + `<div class="card"><div class="card-body" style="padding:10px 8px 12px">
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">${head}${body}</table></div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:10.5px">${head}${body}</table></div>
     ${box('= Tiền trong tài khoản', t.tienTrongTk, 'var(--blue-dark)', '#eff6ff', '#bfdbfe', 'thủ quỹ đối chiếu sao kê từng tài khoản ở tab "Sổ quỹ"')}
     ${_siteTableHtml()}
-    ${t.chiRieng ? row('Chi riêng (thủ quỹ kê, không qua duyệt)', -t.chiRieng, {color:'#dc2626', sub:'Dũng '+fmtShortMoney(t.chiRiengBy.dung)+' · Hiền '+fmtShortMoney(t.chiRiengBy.hien)+(t.chiRiengBy.trang?' · Trang '+fmtShortMoney(t.chiRiengBy.trang):'')+' — đã trừ trong "Tiền trong tài khoản"; tab Chi riêng'}) : ''}
-    ${t.noVayCu ? row('Trong đó nợ tồn đọng cũ (trước sổ mới)', t.noVayCu, {color:'#9a3412', sub:'đã tính trong "Còn nợ vay" '+fmtShortMoney(t.noVay)+'; tab Vay → Nợ tồn đọng cũ'}) : ''}
+    ${t.chiRieng ? row('Chi riêng (thủ quỹ kê, không qua duyệt)', -t.chiRieng, {color:'#dc2626', sub:'Dũng '+fmtVND(t.chiRiengBy.dung)+' · Hiền '+fmtVND(t.chiRiengBy.hien)+(t.chiRiengBy.trang?' · Trang '+fmtVND(t.chiRiengBy.trang):'')+' — đã trừ trong "Tiền trong tài khoản"; tab Chi riêng'}) : ''}
+    ${t.noVayCu ? row('Trong đó nợ tồn đọng cũ (trước sổ mới)', t.noVayCu, {color:'#9a3412', sub:'đã tính trong "Còn nợ vay" '+fmtVND(t.noVay)+'; tab Vay → Nợ tồn đọng cũ'}) : ''}
     ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, {color:'#dc2626', sub:'chỉ phiếu duyệt từ ngày đầu kỳ'})}
     ${t.camKetCuN ? row('Phiếu cũ (duyệt trước đầu kỳ) còn chưa chuyển — KHÔNG tính', -t.camKetCu, {color:'var(--text-sub)', sub:t.camKetCuN+' phiếu chép từ app Duyệt Chi. Cái nào không còn chi nữa thì Dũng từ chối / xoá cho sạch sổ; cái nào vẫn chi thì lúc chuyển tiền sổ vẫn trừ đúng tài khoản.'}) : ''}
     ${t.noTamUng>0 ? row('Còn nợ người tạm ứng (chi vượt ứng)', -t.noTamUng, {color:'#dc2626', sub:'tab Tạm ứng → "Lập phiếu chi bù"'}) : ''}
     ${box('= CÒN ĐƯỢC TIÊU', t.conDuocTieu, neg?'#b91c1c':'#047857', neg?'#fef2f2':'#f0fdf4', neg?'#fecaca':'#86efac', 'còn duyệt chi thêm được mà quỹ không âm; phiếu chưa duyệt không tính')}
     ${_cashHasOpening() ? '' : '<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e">⚠️ Chưa có số dư đầu kỳ — Dũng / thủ quỹ vào Cài đặt → Tài khoản & nguồn tiền, nhập số dư từng tài khoản tại ngày bắt đầu sổ quỹ'+(_cashStartYmd()?' ('+_cashStartYmd().split('-').reverse().join('/')+')':'')+'.</div>'}
-    <div style="font-size:10.5px;color:var(--text-sub);margin:8px 4px 0;line-height:1.4">Số rút gọn (tỷ / tr) · chạm ô xem số đầy đủ${one?'':' · chạm tên công ty (379, PVA…) mở Sổ quỹ công ty đó'}.</div>
+    <div style="font-size:10.5px;color:var(--text-sub);margin:8px 4px 0;line-height:1.4">Số ghi đủ đơn vị đồng (v28, D 26/11)${one?'':' · chạm tên công ty (379, PVA…) mở Sổ quỹ công ty đó'}.</div>
   </div></div>`;
 }
 
@@ -12482,8 +12482,8 @@ function _siteTableHtml(opts){
   return `<div style="margin-top:12px"><div style="font-size:12px;font-weight:800;color:var(--text);margin:0 2px 4px">🏗 Theo công trình</div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">
       <thead><tr style="background:var(--gray-light)"><th style="padding:6px 4px;text-align:left">Công trình</th><th style="padding:6px 4px;text-align:right">Thu về</th><th style="padding:6px 4px;text-align:right">Đã chi</th><th style="padding:6px 4px;text-align:right">Thu − chi</th><th style="padding:6px 4px;text-align:right">Ký quỹ treo</th></tr></thead>
-      <tbody>${ks.map(k=>{ const o=M[k], d=o.thu-o.chi; return `<tr><td style="padding:6px 4px;font-weight:700;word-break:break-word;border-bottom:1px solid #f1f5f9">${k?esc(k):'<i style="color:var(--text-sub)">Chung công ty</i>'}</td><td style="${R};color:#047857" title="${fmtVND(o.thu)}">${o.thu?fmtShortMoney(o.thu):'—'}</td><td style="${R};color:#b91c1c" title="${fmtVND(o.chi)}">${o.chi?fmtShortMoney(o.chi):'—'}</td><td style="${R};font-weight:800;color:${d<0?'#b91c1c':'#047857'}" title="${fmtVND(d)}">${fmtShortMoney(d)}</td><td style="${R};color:#b45309" title="${fmtVND(o.kq)}">${o.kq?fmtShortMoney(o.kq):'—'}</td></tr>`; }).join('')}
-      ${showTot ? `<tr style="background:#f8fafc;font-weight:900"><td style="padding:6px 4px">TỔNG</td><td style="${R}">${fmtShortMoney(tot.thu)}</td><td style="${R}">${fmtShortMoney(tot.chi)}</td><td style="${R}">${fmtShortMoney(tot.thu-tot.chi)}</td><td style="${R}">${fmtShortMoney(tot.kq)}</td></tr>` : ''}</tbody>
+      <tbody>${ks.map(k=>{ const o=M[k], d=o.thu-o.chi; return `<tr><td style="padding:6px 4px;font-weight:700;word-break:break-word;border-bottom:1px solid #f1f5f9">${k?esc(k):'<i style="color:var(--text-sub)">Chung công ty</i>'}</td><td style="${R};color:#047857" title="${fmtVND(o.thu)}">${o.thu?fmtVND(o.thu):'—'}</td><td style="${R};color:#b91c1c" title="${fmtVND(o.chi)}">${o.chi?fmtVND(o.chi):'—'}</td><td style="${R};font-weight:800;color:${d<0?'#b91c1c':'#047857'}" title="${fmtVND(d)}">${fmtVND(d)}</td><td style="${R};color:#b45309" title="${fmtVND(o.kq)}">${o.kq?fmtVND(o.kq):'—'}</td></tr>`; }).join('')}
+      ${showTot ? `<tr style="background:#f8fafc;font-weight:900"><td style="padding:6px 4px">TỔNG</td><td style="${R}">${fmtVND(tot.thu)}</td><td style="${R}">${fmtVND(tot.chi)}</td><td style="${R}">${fmtVND(tot.thu-tot.chi)}</td><td style="${R}">${fmtVND(tot.kq)}</td></tr>` : ''}</tbody>
     </table></div><div style="font-size:10px;color:var(--text-sub);margin:4px 2px 0">Đã chi = tiền thủ quỹ đã chuyển theo phiếu của công trình (không tính ký quỹ; tạm ứng tính khi chuyển).</div></div>`;
 }
 
@@ -12606,12 +12606,12 @@ function renderCashChart(){
     return `<div style="margin-bottom:9px">
       <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
         <span style="font-weight:700;color:var(--text)">T${parseInt(mm,10)}/${y}</span>
-        <span style="font-weight:800;color:${neg?'#b91c1c':'#047857'};white-space:nowrap;word-break:normal">${fmtShortMoney(p.bal)}</span>
+        <span style="font-weight:800;color:${neg?'#b91c1c':'#047857'};white-space:nowrap;word-break:normal">${fmtVND(p.bal)}</span>
       </div>
       <div style="height:9px;background:var(--gray-light);border-radius:5px;overflow:hidden">
         <div style="height:100%;width:${pct}%;background:${neg?'#dc2626':'#059669'};border-radius:5px"></div>
       </div>
-      <div style="font-size:10px;color:var(--text-sub);margin-top:2px">vào ${fmtShortMoney(p.in)} · ra ${fmtShortMoney(p.out)}</div>
+      <div style="font-size:10px;color:var(--text-sub);margin-top:2px">vào ${fmtVND(p.in)} · ra ${fmtVND(p.out)}</div>
     </div>`;
   }).join('');
 }
@@ -12620,7 +12620,7 @@ function renderCashChart(){
 function renderCashInSrc(){
   const el = document.getElementById('cash-in-src'); if(!el) return;
   const t = cashTotals();
-  const srcLine = Object.keys(CASH_SRC).filter(k=>t.thuBySrc[k] > 0).map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtShortMoney(t.thuBySrc[k])}`).join(' · ');
+  const srcLine = Object.keys(CASH_SRC).filter(k=>t.thuBySrc[k] > 0).map(k=>`<span style="color:${CASH_SRC[k].color};font-weight:700">${CASH_SRC[k].label}</span> ${fmtVND(t.thuBySrc[k])}`).join(' · ');
   el.innerHTML = `<div class="card"><div class="card-body" style="padding:10px 10px 12px">
     <div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:13px">📥 Tổng đã thu</b><b style="font-size:16px;color:#047857">${fmtVND(t.thu)}</b></div>
     ${srcLine?`<div style="font-size:11.5px;margin-top:3px">${srcLine}</div>`:''}
@@ -12721,7 +12721,7 @@ function _orphanRepayHtml(){
     <div style="font-size:11.5px;color:var(--text-sub);margin:3px 0 6px;line-height:1.45">Khoản vay của các lần trả này đã bị xoá hoặc ghi lại, nhưng tiền vẫn đang bị trừ trong Sổ quỹ. Nếu là bản ghi trùng → xoá; nếu là tiền thật → Dũng gắn lại vào đúng khoản vay.</div>
     ${list.map(r=>`<div style="padding:7px 0;border-top:1px solid #f1f5f9;font-size:12px">
       <div style="display:flex;justify-content:space-between;gap:8px"><span><b>${esc(r.date||'')}</b> · ${esc(r.desc||'Trả nợ')}${r.pending?' · <b style="color:#b45309">chờ H duyệt</b>':''}</span><b style="color:#b91c1c;white-space:nowrap">−${fmtVND((parseFloat(r.principal)||0)+(parseFloat(r.interest)||0))}</b></div>
-      <div style="color:var(--text-sub);font-size:11px">gốc ${fmtShortMoney(parseFloat(r.principal)||0)} · lãi ${fmtShortMoney(parseFloat(r.interest)||0)}${_oneAcct()?'':' · '+esc(acctLabel(acctOf(r)))}${r.byName?' · '+esc(r.byName)+' ghi':''}${r.ts?' · '+fmtFull(r.ts):''}</div>
+      <div style="color:var(--text-sub);font-size:11px">gốc ${fmtVND(parseFloat(r.principal)||0)} · lãi ${fmtVND(parseFloat(r.interest)||0)}${_oneAcct()?'':' · '+esc(acctLabel(acctOf(r)))}${r.byName?' · '+esc(r.byName)+' ghi':''}${r.ts?' · '+fmtFull(r.ts):''}</div>
       <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">${_isApprover()?`<button onclick="relinkRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">🔗 Gắn vào khoản vay…</button>`:''}${cashDelBtn(r)}</div>${cashDelReqBox(r)}
     </div>`).join('')}
   </div></div>`;
@@ -12941,7 +12941,7 @@ function cashCardDep(r){
       </div>
       <div style="text-align:right">
         <div style="font-size:16px;font-weight:900;color:${done?'var(--text-sub)':'#b45309'};white-space:nowrap;word-break:normal">${fmtVND(left)}</div>
-        <div style="font-size:10px;color:var(--text-sub);white-space:nowrap;word-break:normal">đưa ${fmtShortMoney(amt)}${back?` · về ${fmtShortMoney(back)}`:''}</div>
+        <div style="font-size:10px;color:var(--text-sub);white-space:nowrap;word-break:normal">đưa ${fmtVND(amt)}${back?` · về ${fmtVND(back)}`:''}</div>
       </div>
     </div>
     ${done ? '<div style="margin-top:6px;font-size:11px;font-weight:700;color:#047857">✅ Đã lấy về đủ</div>' : ''}
@@ -12979,7 +12979,7 @@ function cashBookRows(){
     else if(r.type==='loan') rows.push({date:r.date, ts:r.ts, desc:'Vay: '+(r.desc||''), kind:'in', amount:N(r.amount), acct:a,
                                        tag:(LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')});   // v41
     else if(r.type==='repay') rows.push({date:r.date, ts:r.ts, desc:'Trả nợ vay: '+(r.desc||''), kind:'out', amount:N(r.principal)+N(r.interest), acct:a,
-                                        tag:'gốc '+fmtShortMoney(N(r.principal))+' · lãi '+fmtShortMoney(N(r.interest))+(_loanOf(r)?' · vay: '+((_loanOf(r).desc||'')+(_loanOf(r).lenderName?' ('+_loanOf(r).lenderName+')':'')):' · ⚠️ KHÔNG gắn khoản vay nào (xem tab Vay)')});   // v20
+                                        tag:'gốc '+fmtVND(N(r.principal))+' · lãi '+fmtVND(N(r.interest))+(_loanOf(r)?' · vay: '+((_loanOf(r).desc||'')+(_loanOf(r).lenderName?' ('+_loanOf(r).lenderName+')':'')):' · ⚠️ KHÔNG gắn khoản vay nào (xem tab Vay)')});   // v20
     else if(r.type==='xfer'){
       rows.push({xfer:1, xid:r.id, date:r.date, ts:r.ts, desc:'Chuyển nội bộ → '+acctLabel(r.to)+(r.desc?': '+r.desc:''), kind:'out', amount:N(r.amount), acct:acctKey(r.from), tag:'từ '+acctLabel(r.from)});
       rows.push({xfer:1, xid:r.id, date:r.date, ts:r.ts, desc:'Chuyển nội bộ từ '+acctLabel(r.from)+(r.desc?': '+r.desc:''), kind:'in', amount:N(r.amount), acct:acctKey(r.to), tag:'vào '+acctLabel(r.to)});
@@ -13063,8 +13063,8 @@ function renderCashBook(){
   const body = rows.slice().reverse().map(r=>`<tr style="border-bottom:1px solid var(--gray-border)">
     <td style="padding:7px 6px;font-size:11px;color:var(--text-sub);white-space:nowrap">${esc(r.date||'')}</td>
     <td style="padding:7px 6px;font-size:12px;word-break:break-word">${esc(r.desc)}${r.tag?`<div style="font-size:10px;color:var(--text-sub)">${esc(r.tag)}${r.xid&&canChangeAcct()?` <button onclick="changeCashAcct('${sid(r.xid)}','${r.kind==='out'?'from':'to'}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✎ đổi</button>`:''}${r.xid&&_cashWriter()?` <button onclick="openCashEdit('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✏️ sửa</button>`:''}${r.xid&&_cashWriter()?` <button onclick="${_isApprover()?'deleteCashRec':'requestCashDelete'}('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#b91c1c;cursor:pointer">🗑 ${_isApprover()?'xoá':'đề nghị xoá'}</button>`:''}${r.xid&&cashflow.find(x=>x.id===r.xid)&&(cashDelReq(cashflow.find(x=>x.id===r.xid))||cashEditReq(cashflow.find(x=>x.id===r.xid)))?`<div style="font-size:10px;color:#b45309;font-weight:700">⏳ đang có đề nghị sửa / xoá — xem Tổng quan</div>`:''}</div>`:''}${(one||_bookAcct)?'':`<div style="font-size:10px;font-weight:700;color:${CASH_ACCT[r.acct].color}">${CASH_ACCT[r.acct].short}</div>`}</td>
-    <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:800;color:${r.kind==='in'?'#047857':'#b91c1c'};white-space:nowrap;word-break:normal">${r.kind==='in'?'+':'−'}${fmtShortMoney(r.amount)}</td>
-    <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${r.bal<0?'#b91c1c':'var(--text)'};white-space:nowrap;word-break:normal">${fmtShortMoney(r.bal)}</td>
+    <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:800;color:${r.kind==='in'?'#047857':'#b91c1c'};white-space:nowrap;word-break:normal">${r.kind==='in'?'+':'−'}${fmtVND(r.amount)}</td>
+    <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${r.bal<0?'#b91c1c':'var(--text)'};white-space:nowrap;word-break:normal">${fmtVND(r.bal)}</td>
   </tr>`).join('');
   elList.innerHTML = `<div class="card"><div class="card-header">📒 Sổ quỹ (mới nhất trước)</div>${filterBar}
     <div class="card-body" style="padding:0 6px 10px"><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">
@@ -13128,7 +13128,7 @@ function _loanCardHtml(l){
     const dueTxt = !l.due ? '' : done ? '' : d < 0 ? `<span style="color:#dc2626;font-weight:800">⏰ Quá hạn ${-d} ngày</span>` : d <= 7 ? `<span style="color:#b45309;font-weight:800">⏰ Còn ${d} ngày đến hạn</span>` : `<span style="color:var(--text-sub)">Hạn trả ${esc(l.due)}</span>`;
     const lf = LOAN_FROM[l.lender] || LOAN_FROM.canhan;
     const repays = cashflow.filter(r=>r.type==='repay' && r.loanId===l.id).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
-    const hist = repays.map(r=>`<div style="display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-sub);margin-top:3px"><span>${r.pending ? '<b style="color:#b45309">⏳ CHỜ H DUYỆT</b> · ' : (r.okH ? '✅ '+esc(shortName(r.okH.name||'')||'H')+' duyệt · ' : '')}↩️ ${esc(r.date||'')} · gốc ${fmtShortMoney(parseFloat(r.principal)||0)} · lãi ${fmtShortMoney(parseFloat(r.interest)||0)}${r.desc?' · '+esc(r.desc):''}${r.byName?' · '+esc(r.byName):''}</span><span>${r.pending && (currentRole==='hien'||currentRole==='dung') ? `<button onclick="approveRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt</button> ` : ''}${cashAcctBtn(r)}${cashEditBtn(r)}${cashDelBtn(r)}</span></div>${cashEditReqBox(r)}${cashDelReqBox(r)}`).join('');
+    const hist = repays.map(r=>`<div style="display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--text-sub);margin-top:3px"><span>${r.pending ? '<b style="color:#b45309">⏳ CHỜ H DUYỆT</b> · ' : (r.okH ? '✅ '+esc(shortName(r.okH.name||'')||'H')+' duyệt · ' : '')}↩️ ${esc(r.date||'')} · gốc ${fmtVND(parseFloat(r.principal)||0)} · lãi ${fmtVND(parseFloat(r.interest)||0)}${r.desc?' · '+esc(r.desc):''}${r.byName?' · '+esc(r.byName):''}</span><span>${r.pending && (currentRole==='hien'||currentRole==='dung') ? `<button onclick="approveRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt</button> ` : ''}${cashAcctBtn(r)}${cashEditBtn(r)}${cashDelBtn(r)}</span></div>${cashEditReqBox(r)}${cashDelReqBox(r)}`).join('');
     return `<div class="card" id="loan-card-${sid(l.id)}" style="${d!==null && d<=7 && !done ? 'border-left:4px solid #dc2626' : ''}"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div style="min-width:0;flex:1">
@@ -13139,7 +13139,7 @@ function _loanCardHtml(l){
         </div>
         <div style="text-align:right">
           <div style="font-size:16px;font-weight:900;color:${done?'var(--text-sub)':'#b91c1c'};white-space:nowrap;word-break:normal">${fmtVND(left)}</div>
-          <div style="font-size:10px;color:var(--text-sub);white-space:nowrap;word-break:normal">${l.old?'nợ cũ':'vay'} ${fmtShortMoney(amt)}${rp.g?` · đã trả gốc ${fmtShortMoney(rp.g)}`:''}${rp.l?` · lãi ${fmtShortMoney(rp.l)}`:''}</div>
+          <div style="font-size:10px;color:var(--text-sub);white-space:nowrap;word-break:normal">${l.old?'nợ cũ':'vay'} ${fmtVND(amt)}${rp.g?` · đã trả gốc ${fmtVND(rp.g)}`:''}${rp.l?` · lãi ${fmtVND(rp.l)}`:''}</div>
         </div>
       </div>
       ${done ? '<div style="margin-top:6px;font-size:11px;font-weight:700;color:#047857">✅ Đã trả hết gốc</div>' : (dueTxt ? `<div style="margin-top:6px;font-size:12px">${dueTxt}</div>` : '')}
@@ -13287,7 +13287,7 @@ function renderBankPays(){
   const N=v=>parseFloat(v)||0, goc=arr.filter(r=>r.kind!=='laiphi').reduce((a,r)=>a+N(r.amount),0), lai=arr.filter(r=>r.kind==='laiphi').reduce((a,r)=>a+N(r.amount),0);
   const byBank={}; arr.forEach(r=>{ const k=r.bank||'(chưa ghi NH)'; const o=byBank[k]||(byBank[k]={goc:0,lai:0}); if(r.kind==='laiphi') o.lai+=N(r.amount); else o.goc+=N(r.amount); });
   if(sumEl) sumEl.innerHTML = `<div>${arr.length} lần · <span style="color:#0369a1">gốc ${fmtVND(goc)}</span> · <span style="color:#b45309">phí + lãi ${fmtVND(lai)}</span></div>`
-    + `<div style="font-size:11.5px;color:var(--text-sub);margin-top:3px">${Object.keys(byBank).sort().map(k=>`<b>${esc(k)}</b>: gốc ${fmtShortMoney(byBank[k].goc)} · lãi+phí ${fmtShortMoney(byBank[k].lai)}`).join(' · ')}</div>`;
+    + `<div style="font-size:11.5px;color:var(--text-sub);margin-top:3px">${Object.keys(byBank).sort().map(k=>`<b>${esc(k)}</b>: gốc ${fmtVND(byBank[k].goc)} · lãi+phí ${fmtVND(byBank[k].lai)}`).join(' · ')}</div>`;
   el.innerHTML = arr.map(r=>`<div class="card"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div style="min-width:0;flex:1">
