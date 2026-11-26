@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       lenh:
-        description: 'ra = rà trùng; so-tien = liệt kê mọi khoản/lần chuyển đúng số tiền (ids = số tiền); xoa-khoan = xoá khoản theo mã; bo-lan-chuyen = bỏ lần chuyển trên phiếu (PID:IDX)'
+        description: 'ra = rà trùng; so-tien = liệt kê mọi khoản/lần chuyển đúng số tiền (ids = số tiền); xoa-khoan = xoá khoản theo mã; bo-lan-chuyen = bỏ lần chuyển trên phiếu (PID:IDX); liet-ke-luong = liệt kê phiếu ứng lương; xoa-phieu = xoá phiếu theo mã (vào thùng rác)'
         required: true
         default: 'ra'
       ids:
@@ -48,6 +48,8 @@ jobs:
             xoa-khoan) node scripts/ra-trung-so-quy.js --xoa-khoan "$IDS" ;;
             bo-lan-chuyen) node scripts/ra-trung-so-quy.js --bo-lan-chuyen "$IDS" ;;
             so-tien) node scripts/ra-trung-so-quy.js --so-tien "$IDS" ;;
+            liet-ke-luong) node scripts/ra-trung-so-quy.js --liet-ke-luong ;;
+            xoa-phieu) node scripts/ra-trung-so-quy.js --xoa-phieu "$IDS" ;;
             *) node scripts/ra-trung-so-quy.js ;;
           esac
           rm -f "$RUNNER_TEMP/sa.json"
