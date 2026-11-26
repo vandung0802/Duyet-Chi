@@ -55,6 +55,11 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v30 (D 26/11/2026 "3 người Trang, Hiền, Dũng thấy toàn bộ sổ; người khác chỉ phiếu mình + từng công trình, không thấy mục khác")
+- Rà lại quyền xem: nhân viên vẫn thấy phiếu của mình, Báo cáo → Công trình (thu/chi từng CT, Excel từng CT, không dòng TỔNG — D xác nhận lại 26/11 "từng công trình được, tổng quan toàn bộ không"), Vật tư (D: "vật tư nhìn thấy được"). Các tab Tóm tắt / Danh sách / Đã chuyển / Chưa chuyển / Từ chối / Người nhận và Excel đều đi qua `getFilteredProposals()` → chỉ phiếu `_canSeeP`.
+- Lỗ hổng vá: **Thùng rác** (thẻ `#trash-card` ở Cài đặt + ô `#tile-trash` trong menu Thêm) trước đây ai đã duyệt cũng xem, liệt kê phiếu / khoản đã xoá của cả công ty → nay chỉ `_fullView()` (Dũng, Hiền, thủ quỹ); `moreGo('trash')` chặn có báo; `renderTrash()` ngoài nhóm chỉ ra mục chính mình đã xoá (phòng gọi thẳng hàm). Luật `pva379/trash` không đổi (đọc vẫn mở cho người đã duyệt — chỉ là ẩn giao diện, như `cashflow`).
+- Thử: Chromium `smoke15` (NV vai other: thẻ + ô Thùng rác ẩn, bấm bị chặn, Cân đối / Telegram / Bảng tính ẩn, Báo cáo → Công trình hiện không TỔNG, Vật tư + Cài đặt vẫn trong menu Thêm; D thấy đủ 2 mục rác). Luật 93/93.
+
 ## v29 (D 26/11/2026 "duyệt 1 phần thì số còn lại vẫn ở Chờ duyệt để duyệt tiếp hoặc từ chối")
 - `_remainOpen(p)` = còn phần đề xuất chưa duyệt (`remainUnapproved`) và chưa bị đóng. Ô **Chờ duyệt** (`_expenseMatch pending`) gồm cả phiếu duyệt 1 phần (dù đã chuyển phần duyệt); số tiền ô này cộng **phần còn lại** với phiếu đã có duyệt. Ô "Chờ duyệt thêm" (v111) bỏ.
 - Người duyệt đã duyệt 1 phần thấy nút **✕ Không duyệt X còn lại** (`rejectRemain` → `p.remainRej {ts, amount, reason, by, name, role}`, bắt buộc lý do, báo người đề xuất). Đóng rồi thì phiếu rời Chờ duyệt / chuông / nhắc việc; thẻ hiện badge đỏ. Người đề xuất "xin duyệt thêm" (askMore mới hơn) hoặc người duyệt duyệt thêm → mở lại (`remainClosed` so ts).
