@@ -55,6 +55,14 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v19 (D 26/11/2026): Sửa khoản sổ quỹ nhập sai — Trang bấm sửa, Hiền duyệt
+Nguyên văn D: "Các khoản nhập sai phải cho sửa, ví dụ Trang đang nhập sai số tiền cần sửa, Trang bấm sửa Hiền duyệt là được".
+- Nút **✏️ Sửa** trên mọi thẻ khoản sổ quỹ (thu, ký quỹ, vay / nợ cũ, từng lần trả nợ, chi riêng) và dòng chuyển nội bộ trong Sổ quỹ. Modal `#cash-edit-modal-overlay` (`openCashEdit`) hiện đúng các trường theo loại khoản (`_ceFields`): số tiền (gốc / lãi với trả nợ), nội dung, ngày, nguồn, nơi giữ, người cho vay, lãi suất, hạn trả, của ai, đơn vị nhận. Tài khoản / công trình vẫn đổi thẳng bằng nút trên thẻ như cũ.
+- Thủ quỹ / Hiền gửi **`editReq {by, byName, ts, note, changes}`** (chỉ các trường có đổi). Hộp "✏️ Đề nghị sửa" trên thẻ (`cashEditReqBox`) hiện cũ → mới; **Hiền (không phải người đề nghị) hoặc Dũng** bấm Duyệt sửa (`approveCashEdit`: ghi đè đúng các trường + gỡ `editReq` + ghi `edited {by, byName, ts, okBy, okName, fields}` trong một lần `update`) hoặc Từ chối; người đề nghị tự hủy được. Hiền tự đề nghị → chờ Dũng. Dũng mở modal thì sửa thẳng.
+- Tổng quan có hộp gom "N đề nghị sửa khoản đang chờ duyệt" (`_pendingEditsHtml`) để Hiền thấy một chỗ. Sau duyệt gọi `syncCashToSheet` với bản mới.
+- Luật: từng trường (amount, desc, date, principal, interest, lenderName, rate, due, holder, src, who, payee, lender) chỉ đổi được khi (a) Dũng, hoặc (b) Hiền/Dũng không phải người đề nghị, giá trị mới **bằng đúng** `editReq/changes/<trường>` và `editReq` bị gỡ trong cùng lần ghi; `editReq` chỉ thủ quỹ / Hiền / Dũng tạo, `changes` chỉ nhận đúng các trường trên; gỡ `editReq` chỉ người đề nghị / Hiền / Dũng. Khoản gắn phiếu chi (`fromProposal`) không sửa ở đây (sửa ở phiếu).
+- Thử: luật 86/86 (+13), Chromium `smoke10` (Trang đề nghị 5tr→6tr, Hiền duyệt, Cân đối đổi theo; Hiền tự đề nghị không tự duyệt).
+
 ## v18 (D 26/11/2026): Đơn vị / người nhận tiền trên mọi mục chi
 Nguyên văn D: "ở tất cả các mục chi có thêm tên đơn vị nhận tiền — mục đích là để lọc, ví dụ lọc được trả cho công ty thép bao nhiêu tiền, trả cho cá nhân ai bao nhiêu tiền, người đề xuất sẽ ghi".
 - Trường **`payee`** (chuỗi ≤200, không bắt buộc) trên: phiếu chi (form lập `#inp-payee`, modal sửa `#edit-payee`, đóng băng sau duyệt như `site`), phiếu P.KH (`#kh-inp-payee`), chi riêng (`#rieng-inp-payee`, cashflow). Gợi ý tự động từ các tên đã dùng (`<datalist id="payee-list">`, `_fillPayeeList`). `contentSnapshot` có payee.
