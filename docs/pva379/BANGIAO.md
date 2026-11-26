@@ -55,6 +55,13 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v21 (D 26/11/2026): Trả gốc / trả phí + lãi vay ngân hàng cho khoản vay cũ KHÔNG nhập sổ
+Nguyên văn D: "thêm 1 mục trả phí và lãi vay ngân hàng, 1 mục trả gốc vay ngân hàng. Cái này dùng cho những khoản cũ không nhập lại trên sổ".
+- `cashflow` type **`bankpay`** `{kind:'goc'|'laiphi', bank, amount, acct, date, desc}`. Thủ quỹ / Hiền ghi (tab Vay: 2 nút 🏦), trừ tài khoản ngay, **không qua duyệt**, **không đụng "Còn nợ vay"** (vì khoản vay không có trong sổ). Sửa sai → đề nghị sửa (v19; trường `bank` thêm vào `changes`).
+- `cashTotals`: `bankGoc`, `bankLaiPhi`, `byRow.gocNH` / `laiPhiNH`; `tienTrongTk` trừ cả hai. Tổng quan: 2 hàng trong Tiền ra. Tab Vay: mục "TRẢ NGÂN HÀNG — KHOẢN VAY CŨ KHÔNG NHẬP SỔ" (`renderBankPays`): tổng gốc / phí+lãi, tổng theo từng ngân hàng, danh sách thẻ (đổi TK, sửa, xoá). Sổ quỹ / biểu đồ / Excel tháng / Sheet (`loai`, `src` = ngân hàng) tính là tiền ra.
+- Luật: `type` thêm `bankpay`; `kind` ∈ {goc, laiphi} đóng băng; `bank` ≤200 đóng băng (mở qua editReq).
+- Thử: luật 92/92 (+6), Chromium `smoke12` 7/7.
+
 ## v20 (D 26/11/2026): trả nợ "mồ côi" + chặn ghi trùng
 Sự cố: D ghi khoản vay nhập sai, Trang ghi trả nợ 696,9tr cho nó, D xoá khoản vay → lần trả nợ còn lại (không có khoản vay) vẫn nằm trong Sổ quỹ và trừ tiền; thẻ nợ cũ (khoản vay ghi lại) chỉ có 1 lần trả → "sổ Trang 2 món, nợ cũ 1 món".
 - App: `_orphanRepays()` = repay có `loanId` không còn khoản vay. Tab Vay hiện khung đỏ **"N lần trả nợ KHÔNG gắn với khoản vay nào"** (`#cash-orphan-wrap`, `_orphanRepayHtml`) với nút 🔗 Gắn vào khoản vay… (chỉ Dũng — `relinkRepay`, luật `loanId` chỉ Dũng đổi) và 🗑 Xoá / Đề nghị xoá. Tổng quan có dòng cảnh báo đỏ (`_orphanWarnHtml`). Sổ quỹ: dòng trả nợ ghi rõ "vay: …" hoặc "⚠️ KHÔNG gắn khoản vay nào".
