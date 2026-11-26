@@ -55,6 +55,11 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v31 (D 26/11/2026 "Cân đối: tiền mặt đang còn nhìn thấy ngay trên Còn được tiêu; form chuyển tiền hiện số dư TK đi / đến")
+- Tổng quan Cân đối: ô xanh lá **💵 TIỀN MẶT ĐANG CÒN** đặt trên ô Còn được tiêu = tổng `byAcct` các tài khoản nhóm Tiền mặt (`icon==='💵'`, bỏ TK đã tắt số dư 0), kèm từng tài khoản (bấm → Sổ quỹ TK đó). Người `_oneAcct()` không thấy.
+- Form 🔁 Chuyển tiền: dưới ô Từ / Sang có dòng `Đang có: X` của tài khoản vừa chọn (`_xferBal()` gọi khi mở form, đổi TK, gõ số tiền); đã gõ số tiền thì thêm `Sau khi chuyển: Y` (đỏ + ⚠️ âm nếu < 0); chọn cùng TK → báo đỏ. Chỉ hiển thị, không chặn lưu (giữ kiểm tra cũ trong `submitXfer`).
+- Thử: Chromium `smoke16` (Trang: hero 70tr = 50 + 20, thứ tự trước Còn được tiêu; form: Đang có / Sau khi chuyển đúng, báo âm, cùng TK; lưu 30tr rồi mở lại số dư đổi; NV không thấy ô tiền mặt). Luật không đổi.
+
 ## v30 (D 26/11/2026 "3 người Trang, Hiền, Dũng thấy toàn bộ sổ; người khác chỉ phiếu mình + từng công trình, không thấy mục khác")
 - Rà lại quyền xem: nhân viên vẫn thấy phiếu của mình, Báo cáo → Công trình (thu/chi từng CT, Excel từng CT, không dòng TỔNG — D xác nhận lại 26/11 "từng công trình được, tổng quan toàn bộ không"), Vật tư (D: "vật tư nhìn thấy được"). Các tab Tóm tắt / Danh sách / Đã chuyển / Chưa chuyển / Từ chối / Người nhận và Excel đều đi qua `getFilteredProposals()` → chỉ phiếu `_canSeeP`.
 - Lỗ hổng vá: **Thùng rác** (thẻ `#trash-card` ở Cài đặt + ô `#tile-trash` trong menu Thêm) trước đây ai đã duyệt cũng xem, liệt kê phiếu / khoản đã xoá của cả công ty → nay chỉ `_fullView()` (Dũng, Hiền, thủ quỹ); `moreGo('trash')` chặn có báo; `renderTrash()` ngoài nhóm chỉ ra mục chính mình đã xoá (phòng gọi thẳng hàm). Luật `pva379/trash` không đổi (đọc vẫn mở cho người đã duyệt — chỉ là ẩn giao diện, như `cashflow`).
