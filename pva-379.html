@@ -1407,7 +1407,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <!-- v11 (D 25/11): CHI RIÊNG của Dũng / Hiền — thủ quỹ ghi, KHÔNG qua duyệt, trừ thẳng tài khoản để cân quỹ; tổng hợp riêng -->
   <div id="cash-tab-rieng" style="display:none">
     <div class="card"><div class="card-body" style="padding:12px">
-      <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Khoản <b>chi riêng của Dũng / Hiền</b> đã chi từ tài khoản công ty. <b>Không cần D, H duyệt</b> — thủ quỹ hoặc Hiền kê để cân quỹ; tiền trừ thẳng tài khoản và có tổng riêng theo từng người. Không phải chi phí công trình.</div>
+      <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px;line-height:1.45">Khoản <b>chi riêng của Dũng / Hiền / Trang</b> đã chi từ tài khoản công ty. <b>Không cần D, H duyệt</b> — thủ quỹ hoặc Hiền kê để cân quỹ; tiền trừ thẳng tài khoản và có tổng riêng theo từng người. Không phải chi phí công trình.</div>
       <button onclick="openRiengModal()" class="btn-sm btn-primary-full">➕ Ghi chi riêng</button>
     </div></div>
     <div id="rieng-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
@@ -1975,7 +1975,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v24';
+const APP_VERSION = '20261126-v25';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -11003,7 +11003,7 @@ function syncCashToSheet(r){
     date: r.date||'',
     loai: r.type==='in' ? 'Thu' : r.type==='ret' ? 'Trả lại vốn góp' : r.type==='rieng' ? 'Chi riêng' : r.type==='bankpay' ? (r.kind==='laiphi' ? 'Trả phí + lãi NH (khoản cũ)' : 'Trả gốc NH (khoản cũ)') : r.type==='loan' ? (r.old ? 'Nợ tồn đọng cũ' : 'Vay') : r.type==='repay' ? (r.pending ? 'Trả nợ vay (CHỜ DUYỆT)' : 'Trả nợ vay') : r.type==='xfer' ? 'Chuyển nội bộ' : 'Ký quỹ',   // v113
     desc: r.desc||'',
-    src:  (r.type==='in'||r.type==='ret') ? ((CASH_SRC[r.src]||CASH_SRC.other).label) : r.type==='rieng' ? (r.who==='hien'?'Hiền':'Dũng') : r.type==='bankpay' ? (r.bank||'') : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='repay' ? ('gốc '+(parseFloat(r.principal)||0)+' + lãi '+(parseFloat(r.interest)||0)) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||''),
+    src:  (r.type==='in'||r.type==='ret') ? ((CASH_SRC[r.src]||CASH_SRC.other).label) : r.type==='rieng' ? (RIENG_WHO[r.who]||'Dũng') : r.type==='bankpay' ? (r.bank||'') : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='repay' ? ('gốc '+(parseFloat(r.principal)||0)+' + lãi '+(parseFloat(r.interest)||0)) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||''),
     acct: r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.acct ? acctLabel(r.acct) : ''),   // PVA-379: tên tài khoản (không gửi mã)
     site: r.site||'',
     amount: amt,
@@ -11993,7 +11993,7 @@ const CASH_SRC = {
 };
 // PVA-379: KHÔNG có "trả lại vốn góp" (chỉ liên danh Gia Bình có) — luật máy chủ cũng đã bỏ loại 'ret'
 const CASH_RET_TO = [];
-function cashKindLabel(r){ const t=r&&r.type; return t==='in' ? 'THU' : t==='ret' ? 'trả lại vốn góp' : t==='rieng' ? 'chi riêng '+(r.who==='hien'?'Hiền':'Dũng') : t==='bankpay' ? (r.kind==='laiphi' ? 'trả phí + lãi NH' : 'trả gốc NH') : t==='loan' ? (r.old ? 'NỢ CŨ' : 'VAY') : t==='repay' ? 'trả nợ vay' : t==='xfer' ? 'chuyển nội bộ' : 'ký quỹ'; }
+function cashKindLabel(r){ const t=r&&r.type; return t==='in' ? 'THU' : t==='ret' ? 'trả lại vốn góp' : t==='rieng' ? 'chi riêng '+(RIENG_WHO[r.who]||'Dũng') : t==='bankpay' ? (r.kind==='laiphi' ? 'trả phí + lãi NH' : 'trả gốc NH') : t==='loan' ? (r.old ? 'NỢ CŨ' : 'VAY') : t==='repay' ? 'trả nợ vay' : t==='xfer' ? 'chuyển nội bộ' : 'ký quỹ'; }
 // ══ TÀI KHOẢN / NGUỒN TIỀN (PVA-379, D chốt 19/11): DANH SÁCH TỰ KHAI ở pva379/meta/accounts (chỉ Dũng sửa, trong Cài đặt) ══
 // Mỗi tài khoản: {name, group, order, off}. group = công ty (CT 379, CT PVA, CT 279, CT THHD) hoặc 'Tiền mặt'.
 // Luật máy chủ: mọi acct/from/to/bankBalance phải là MÃ có trong danh sách này. 'off' = ẩn khỏi ô chọn (đã dùng thì không xoá được).
@@ -12284,9 +12284,9 @@ function cashTotals(){
   // v11: phần NỢ TỒN ĐỌNG CŨ (khoản vay có cờ old) trong noVay — tổng hợp riêng cho dễ thấy
   const _oldIds = new Set(cashflow.filter(r=>r.type==='loan' && r.old).map(r=>r.id));
   const noVayCu = Math.max(0, cashflow.filter(r=>r.type==='loan' && r.old).reduce((a,r)=>a+num(r.amount),0) - cashflow.filter(r=>r.type==='repay' && !r.pending && _oldIds.has(r.loanId)).reduce((a,r)=>a+num(r.principal),0));
-  const chiRieng = riengs.reduce((a,r)=>a+num(r.amount),0), chiRiengBy = {dung:0, hien:0};
+  const chiRieng = riengs.reduce((a,r)=>a+num(r.amount),0), chiRiengBy = {dung:0, hien:0, trang:0};
   let bankGoc = 0, bankLaiPhi = 0; bankpays.forEach(r=>{ const v=num(r.amount); if(r.kind==='laiphi'){ bankLaiPhi += v; add(r.acct, -v, 'laiPhiNH'); } else { bankGoc += v; add(r.acct, -v, 'gocNH'); } });
-  riengs.forEach(r=>{ chiRiengBy[r.who==='hien'?'hien':'dung'] += num(r.amount); add(r.acct, -num(r.amount), 'chiRieng'); });
+  riengs.forEach(r=>{ chiRiengBy[chiRiengBy[r.who]!==undefined?r.who:'dung'] += num(r.amount); add(r.acct, -num(r.amount), 'chiRieng'); });
   loans.forEach(r=>add(r.acct, num(r.amount), 'vay'));
   repays.forEach(r=>add(r.acct, -(num(r.principal)+num(r.interest)), 'traNo'));
   xfers.forEach(r=>{ add(r.from, -num(r.amount), 'xfer'); add(r.to, num(r.amount), 'xfer'); });
@@ -12415,7 +12415,7 @@ function renderCashSummary(){
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">${head}${body}</table></div>
     ${box('= Tiền trong tài khoản', t.tienTrongTk, 'var(--blue-dark)', '#eff6ff', '#bfdbfe', 'thủ quỹ đối chiếu sao kê từng tài khoản ở tab "Sổ quỹ"')}
     ${_siteTableHtml()}
-    ${t.chiRieng ? row('Chi riêng (thủ quỹ kê, không qua duyệt)', -t.chiRieng, {color:'#dc2626', sub:'Dũng '+fmtShortMoney(t.chiRiengBy.dung)+' · Hiền '+fmtShortMoney(t.chiRiengBy.hien)+' — đã trừ trong "Tiền trong tài khoản"; tab Chi riêng'}) : ''}
+    ${t.chiRieng ? row('Chi riêng (thủ quỹ kê, không qua duyệt)', -t.chiRieng, {color:'#dc2626', sub:'Dũng '+fmtShortMoney(t.chiRiengBy.dung)+' · Hiền '+fmtShortMoney(t.chiRiengBy.hien)+(t.chiRiengBy.trang?' · Trang '+fmtShortMoney(t.chiRiengBy.trang):'')+' — đã trừ trong "Tiền trong tài khoản"; tab Chi riêng'}) : ''}
     ${t.noVayCu ? row('Trong đó nợ tồn đọng cũ (trước sổ mới)', t.noVayCu, {color:'#9a3412', sub:'đã tính trong "Còn nợ vay" '+fmtShortMoney(t.noVay)+'; tab Vay → Nợ tồn đọng cũ'}) : ''}
     ${row('Phiếu đã duyệt, chưa chuyển', -t.daDuyetChuaChuyen, {color:'#dc2626', sub:'chỉ phiếu duyệt từ ngày đầu kỳ'})}
     ${t.camKetCuN ? row('Phiếu cũ (duyệt trước đầu kỳ) còn chưa chuyển — KHÔNG tính', -t.camKetCu, {color:'var(--text-sub)', sub:t.camKetCuN+' phiếu chép từ app Duyệt Chi. Cái nào không còn chi nữa thì Dũng từ chối / xoá cho sạch sổ; cái nào vẫn chi thì lúc chuyển tiền sổ vẫn trừ đúng tài khoản.'}) : ''}
@@ -12718,7 +12718,7 @@ function openCashEdit(id){
     if(kind==='date') return `<input class="form-input" id="ce-${f}" type="date" value="${esc(v||'')}">`;
     if(kind==='num') return `<input class="form-input" id="ce-${f}" type="text" inputmode="decimal" value="${esc(v!=null?String(v):'')}">`;
     if(kind==='src') return `<select class="form-input form-select" id="ce-${f}">${Object.keys(CASH_SRC).map(k=>`<option value="${k}"${(r.src||'other')===k?' selected':''}>${esc(CASH_SRC[k].label)}</option>`).join('')}</select>`;
-    if(kind==='who') return `<select class="form-input form-select" id="ce-${f}"><option value="dung"${r.who!=='hien'?' selected':''}>Dũng</option><option value="hien"${r.who==='hien'?' selected':''}>Hiền</option></select>`;
+    if(kind==='who') return `<select class="form-input form-select" id="ce-${f}">${Object.keys(RIENG_WHO).map(k=>`<option value="${k}"${(RIENG_WHO[r.who]?r.who:'dung')===k?' selected':''}>${RIENG_WHO[k]}</option>`).join('')}</select>`;
     if(kind==='lender') return `<select class="form-input form-select" id="ce-${f}"><option value="nh"${r.lender!=='canhan'?' selected':''}>🏦 Ngân hàng</option><option value="canhan"${r.lender==='canhan'?' selected':''}>👤 Cá nhân</option></select>`;
     return `<input class="form-input" id="ce-${f}" type="text" value="${esc(v!=null?String(v):'')}"${f==='payee'?' list="payee-list"':''}>`;
   };
@@ -12833,7 +12833,7 @@ function cashDelReqBox(r){
   const canCancel = currentRole==='dung' || (!!uid && q.by===uid);
   let btns = '';
   if(full && (currentRole==='dung' || currentRole==='hien')) btns += `<button onclick="finishCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:var(--red);color:#fff;border:none">🗑 Hiền đã đồng ý — Xóa</button>`;
-  else if(canOk) btns += `<button onclick="approveCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Tôi đồng ý xóa</button>`;
+  else if(canOk) btns += `<button onclick="approveCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Tôi đồng ý xóa</button> <button onclick="rejectCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">✖ Không đồng ý</button>`;   // v25 (D 26/11): có nút không duyệt
   if(currentRole==='dung' && !full) btns += `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa ngay (quản trị)</button>`;
   if(canCancel) btns += `<button onclick="cancelCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">✕ Hủy đề nghị</button>`;
   return `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px">
@@ -12936,7 +12936,7 @@ function cashBookRows(){
                                              amount:N(x.amount), acct:a, tag:r.holder||'Ký quỹ'}));
     }
     else if(r.type==='bankpay') rows.push({date:r.date, ts:r.ts, desc:(r.kind==='laiphi'?'Trả phí + lãi NH: ':'Trả gốc vay NH: ')+(r.bank||'')+(r.desc?' — '+r.desc:''), kind:'out', amount:N(r.amount), acct:a, tag:'khoản vay cũ không nhập sổ'});   // v21
-    else if(r.type==='rieng') rows.push({date:r.date, ts:r.ts, desc:'Chi riêng '+(r.who==='hien'?'Hiền':'Dũng')+': '+(r.desc||''), kind:'out', amount:N(r.amount), acct:a, tag:'chi riêng'});   // v11
+    else if(r.type==='rieng') rows.push({date:r.date, ts:r.ts, desc:'Chi riêng '+(RIENG_WHO[r.who]||'Dũng')+': '+(r.desc||''), kind:'out', amount:N(r.amount), acct:a, tag:'chi riêng'});   // v11
     else if(r.type==='loan' && r.old){ /* v11: nợ cũ — tiền đã nhận trước sổ, không vào sổ quỹ */ }
     else if(r.type==='loan') rows.push({date:r.date, ts:r.ts, desc:'Vay: '+(r.desc||''), kind:'in', amount:N(r.amount), acct:a,
                                        tag:(LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')});   // v41
@@ -13203,7 +13203,7 @@ async function approveRepay(id){
   }catch(e){ showToast('❌ Không duyệt được: '+(e.message||e.code||'')); }
 }
 // ── v11 (D 25/11): CHI RIÊNG của Dũng / Hiền — thủ quỹ ghi, không qua duyệt, trừ thẳng tài khoản (kê để cân quỹ), tổng hợp riêng ──
-const RIENG_WHO = { dung:'Dũng', hien:'Hiền' };
+const RIENG_WHO = { dung:'Dũng', hien:'Hiền', trang:'Trang' };   // v25 (D 26/11): thêm Trang
 // ── v21 (D 26/11/2026): "thêm 1 mục trả phí và lãi vay ngân hàng, 1 mục trả gốc vay ngân hàng — dùng cho những khoản cũ không nhập lại trên sổ" ──
 // type 'bankpay' {kind:'goc'|'laiphi', bank, amount, acct, date, desc}. Trừ tài khoản ngay, không qua duyệt, KHÔNG đụng "Còn nợ vay". Sửa sai → đề nghị sửa (v19).
 const BANKPAY_KIND = { goc:'Trả GỐC vay NH', laiphi:'Trả PHÍ + LÃI vay NH' };
@@ -13280,7 +13280,7 @@ async function submitRieng(){
   if(!_riengCanWrite()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được chi riêng'); return; }
   const amount = parseFloat(String(document.getElementById('rieng-inp-amount').value).replace(/[^\d]/g,''))||0;
   const desc = (document.getElementById('rieng-inp-desc').value||'').trim();
-  const who = document.getElementById('rieng-inp-who').value==='hien' ? 'hien' : 'dung';
+  const who = RIENG_WHO[document.getElementById('rieng-inp-who').value] ? document.getElementById('rieng-inp-who').value : 'dung';
   if(amount<=0){ showToast('⚠️ Nhập số tiền'); return; }
   if(!desc){ showToast('⚠️ Nhập nội dung'); return; }
   const rec = { type:'rieng', who, amount, desc, payee: _payeeVal('rieng-inp-payee'), date: document.getElementById('rieng-inp-date').value||ymdLocal(),
@@ -13296,8 +13296,8 @@ function renderRiengList(){
   const el=document.getElementById('cash-rieng-list'), sumEl=document.getElementById('rieng-sum'); if(!el) return;
   const arr = cashflow.filter(r=>r.type==='rieng').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
   if(!arr.length){ if(sumEl) sumEl.style.display='none'; el.innerHTML='<div class="card"><div class="card-body" style="padding:20px;text-align:center;color:var(--text-sub);font-size:13px">Chưa có khoản chi riêng nào</div></div>'; return; }
-  const N=v=>parseFloat(v)||0, tot=arr.reduce((a,r)=>a+N(r.amount),0), byW={dung:0,hien:0}; arr.forEach(r=>{ byW[r.who==='hien'?'hien':'dung']+=N(r.amount); });
-  if(sumEl){ sumEl.style.display='block'; sumEl.innerHTML=`<div>${arr.length} khoản · Dũng ${fmtVND(byW.dung)} · Hiền ${fmtVND(byW.hien)}</div><div style="font-size:15px;font-weight:900;color:#b91c1c;margin-top:2px">Tổng chi riêng ${fmtVND(tot)}</div>`; }
+  const N=v=>parseFloat(v)||0, tot=arr.reduce((a,r)=>a+N(r.amount),0), byW={dung:0,hien:0,trang:0}; arr.forEach(r=>{ byW[byW[r.who]!==undefined?r.who:'dung']+=N(r.amount); });
+  if(sumEl){ sumEl.style.display='block'; sumEl.innerHTML=`<div>${arr.length} khoản · Dũng ${fmtVND(byW.dung)} · Hiền ${fmtVND(byW.hien)}${byW.trang?' · Trang '+fmtVND(byW.trang):''}</div><div style="font-size:15px;font-weight:900;color:#b91c1c;margin-top:2px">Tổng chi riêng ${fmtVND(tot)}</div>`; }
   el.innerHTML = arr.map(r=>`<div class="card"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div style="min-width:0;flex:1">
@@ -13475,6 +13475,14 @@ async function finishCashDelete(id, silent){
     sendPushNotif('🗑 Đã xóa khoản '+cashKindLabel(r), '"'+(r.desc||'')+'" '+fmtVND(r.amount)+' — Hiền đã đồng ý', ['dung','hien','thuquy']);
   }catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
 }
+// v25 (D 26/11 "chỉ có nút duyệt mà không có không duyệt"): Hiền / Dũng từ chối đề nghị xoá → gỡ deleteReq, báo người đề nghị
+async function rejectCashDelete(id){
+  const r = cashflow.find(x=>x.id===id), q = cashDelReq(r); if(!r || !q) return;
+  if(!(currentRole==='hien' || currentRole==='dung')){ showToast('🔒 Chỉ Hiền / Dũng từ chối được'); return; }
+  if(!confirm('KHÔNG đồng ý xoá khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')? Khoản giữ nguyên, đề nghị bị gỡ.')) return;
+  try{ await db.ref('pva379/cashflow/'+id+'/deleteReq').remove(); showToast('✖ Đã từ chối đề nghị xoá'); sendPushNotif('✖ Đề nghị xoá khoản bị từ chối', (getCurrentUserName()||'')+' không đồng ý xoá "'+(r.desc||'')+'" '+fmtVND(r.amount), ['dung','hien','thuquy']); }
+  catch(e){ showToast('❌ Không được: '+(e.message||e.code||'')); }
+}
 async function cancelCashDelete(id){
   const r = cashflow.find(x=>x.id===id), q = cashDelReq(r); if(!r || !q) return;
   if(!confirm('Hủy đề nghị xóa khoản "'+(r.desc||'')+'"? (khoản vẫn giữ nguyên)')) return;
@@ -13575,7 +13583,7 @@ function updateCashBadge(){
       <button onclick="closeRiengModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
     </div>
     <div class="form-group"><label class="form-label">Chi riêng của <span class="req">*</span></label>
-      <select class="form-input form-select" id="rieng-inp-who"><option value="dung">Dũng</option><option value="hien">Hiền</option></select></div>
+      <select class="form-input form-select" id="rieng-inp-who"><option value="dung">Dũng</option><option value="hien">Hiền</option><option value="trang">Trang</option></select></div>
     <div class="form-group"><label class="form-label">Số tiền <span class="req">*</span></label><input class="form-input" id="rieng-inp-amount" type="text" inputmode="numeric" placeholder="5.000.000" oninput="fmtAmountInput(this)"></div>
     <div style="display:flex;gap:8px">
       <div class="form-group" style="flex:1"><label class="form-label">Ngày chi</label><input class="form-input" id="rieng-inp-date" type="date"></div>

@@ -55,6 +55,10 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v25 (D 26/11/2026)
+- Hộp đề nghị xoá khoản sổ quỹ: Hiền (không phải người đề nghị) / Dũng có thêm nút **✖ Không đồng ý** (`rejectCashDelete`: gỡ deleteReq, báo thủ quỹ). Trước chỉ có "Tôi đồng ý xóa".
+- Chi riêng thêm **Trang** (`RIENG_WHO.trang`, luật `who` nhận 'trang'); tổng theo người ở Tổng quan / tab Chi riêng có dòng Trang; nhãn `who` dùng `RIENG_WHO` ở mọi chỗ (sổ quỹ, Sheet, nhãn khoản, form sửa).
+
 ## v24 (D 26/11/2026): rà khoản ghi trùng + xoá chuyển nội bộ trong Sổ quỹ
 - Sự cố: Trang ghi trùng cặp "TM nộp Vietin 379 40tr (chuyển nội bộ) → Vietin 379 chuyển cào bóc (lần chuyển trên phiếu)".
 - Kịch bản `scripts/ra-trung-so-quy.js` + tác vụ **"Ra trung so quy PVA-379"** (`ra-trung-so-quy.yml`, `lenh` = ra | xoa-khoan | bo-lan-chuyen, `ids`): rà nhóm khoản sổ quỹ giống hệt (loại, số tiền, TK, ngày) và phiếu có ≥2 lần chuyển cùng số cùng ngày; xoá khoản theo mã (vào thùng rác); bỏ lần chuyển trên phiếu (bản sao vào `trash/transfer`, tính lại `status` như nút Hoàn tác; từ chối phiếu ký quỹ). Nhật ký in mã + ngày + loại + tên TK + số tiền làm tròn triệu, không in nội dung / người.
