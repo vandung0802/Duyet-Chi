@@ -55,6 +55,16 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v18 (D 26/11/2026): Đơn vị / người nhận tiền trên mọi mục chi
+Nguyên văn D: "ở tất cả các mục chi có thêm tên đơn vị nhận tiền — mục đích là để lọc, ví dụ lọc được trả cho công ty thép bao nhiêu tiền, trả cho cá nhân ai bao nhiêu tiền, người đề xuất sẽ ghi".
+- Trường **`payee`** (chuỗi ≤200, không bắt buộc) trên: phiếu chi (form lập `#inp-payee`, modal sửa `#edit-payee`, đóng băng sau duyệt như `site`), phiếu P.KH (`#kh-inp-payee`), chi riêng (`#rieng-inp-payee`, cashflow). Gợi ý tự động từ các tên đã dùng (`<datalist id="payee-list">`, `_fillPayeeList`). `contentSnapshot` có payee.
+- Hiển thị: chip 🏢 trên thẻ phiếu + thẻ P.KH + thẻ chi riêng; tìm kiếm trang Đề xuất bắt cả payee.
+- Báo cáo: ô lọc **🏢 Tất cả đơn vị nhận** (`#filter-payee`, `getFilteredProposals`) áp cho Tóm tắt / Danh sách / Đã chuyển / Chưa chuyển / Từ chối / Excel; tab con mới **🏢 Người nhận** (`renderReportPayee`): gộp theo đơn vị — số phiếu, đề xuất, đã duyệt, đã chuyển, dòng TỔNG, chạm dòng → lọc danh sách (`_payeeJump`). Chỉ phiếu chi; ứng lương / P.KH / chi riêng không gộp vào.
+- Excel: Excel tháng thêm cột cuối "Đơn vị nhận" (không đụng cột I công thức); CSV tổng hợp thêm cột sau Công trình.
+- Luật: `payee` ở `proposals/$id`, `khProposals/$id` (cùng điều kiện `site`), `cashflow/$id` (đóng băng như `desc`).
+- Chưa làm: Google Sheet chưa có cột đơn vị nhận (mẫu Apps Script cố định cột) — làm khi D nối Sheet.
+- Thử: luật 73/73 (+5), Chromium `smoke9` (form lưu payee, chip, tìm kiếm, bảng Người nhận, lọc, modal sửa).
+
 ## v17 (D 26/11/2026 "Cho H đủ các quyền như thủ quỹ")
 - Phần còn lại: **chuyển tiền theo phiếu**. `_isTreasurer()` = thuquy | hien: nút 💸 chuyển / hoàn tác / đính ảnh chuyển khoản trên thẻ phiếu (Hiền thấy nút chuyển sau khi chính mình đã duyệt H), mục "Chờ chuyển tiền" trong nhắc việc + chuông, nhắc thiếu ảnh Zalo. Luật: `transfers` tạo / đổi tài khoản cho hien (proposals, khProposals, salary), `transferred`.
 - Vẫn giữ: Hiền chỉ chuyển được khi phiếu đã có duyệt H (như thủ quỹ); kênh thông báo của Hiền vẫn là `hien`.
