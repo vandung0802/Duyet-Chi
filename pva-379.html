@@ -1950,7 +1950,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v16';
+const APP_VERSION = '20261126-v17';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4249,7 +4249,8 @@ function getMyPendingItems(){
       const _hd=_payDueInfo(p), _den=!!(_hd && _hd.unap && _hd.left<=0);   // v102
       if(hAmt < total - 0.0001 && (p.status!=='transferred' || _ask || _den))
         items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : _den ? 'Đến hẹn: duyệt nốt phần còn lại' : 'Chờ H duyệt', person:p.person, id:p.id});
-    } else if(currentRole==='thuquy'){
+    }
+    if(currentRole==='thuquy' || currentRole==='hien'){   // v17: Hiền cũng chuyển tiền
       const official = getOfficialApprovedAmount(p)||0;
       if(official > 0 && approvedAmtOf(p,'H') > 0 && transferred < official - 0.0001 && !_payDueLater(p))   // v98; rà soát 22/11: phải có H duyệt mới chuyển được
         items.push({desc:p.desc, note:(p.payDue?'Đến hẹn chuyển nốt':'Chờ chuyển tiền'), person:p.person, id:p.id});
@@ -4722,7 +4723,7 @@ function renderApproveBox(){ return ''; }
 function renderApproveRow(p){
   const parts=[];
   if(currentRole==='dung'){ parts.push(renderBtnD(p)); parts.push(renderBtnReject(p)); }
-  else if(currentRole==='hien'){ parts.push(renderBtnH(p)); parts.push(renderBtnReject(p)); }
+  else if(currentRole==='hien'){ parts.push(renderBtnH(p)); parts.push(renderBtnReject(p)); if(approvedAmtOf(p,'H')>0){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShare(p)); } }   // v17: Hiền chuyển tiền được sau khi đã duyệt H
   else if(currentRole==='thuquy'){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShare(p)); }
   else {
     // v39 (D yêu cầu 24/09): người đề xuất / phụ trách vật tư thấy HẾT nút ngay trên thẻ, không phải mở menu ⋯
@@ -4859,9 +4860,9 @@ function renderBtnTransfer(p){
   // Gia Bình: quy trình D chốt là Dũng → Hiền → Thủ quỹ. Lan đại diện cty 134, nên tiền chung
   // CHỈ được đi khi bước duyệt 2 đã xong — mới có Dũng duyệt thì thủ quỹ CHƯA chuyển được.
   const hDone = approvedAmtOf(p,'H') > 0;
-  const canPress = currentRole==='thuquy' && hDone && approvedAmt>0 && transferred < approvedAmt - 0.0001 && p.status!=='rejected';
-  const canUndo = currentRole==='thuquy' && transferred>0;
-  if(currentRole==='thuquy' && !hDone && approvedAmt>0 && p.status!=='rejected' && transferred<=0)
+  const canPress = _isTreasurer() && hDone && approvedAmt>0 && transferred < approvedAmt - 0.0001 && p.status!=='rejected';   // v17: + Hiền
+  const canUndo = _isTreasurer() && transferred>0;
+  if(_isTreasurer() && !hDone && approvedAmt>0 && p.status!=='rejected' && transferred<=0)
     return `<div class="approve-box"><div class="ab-flat-locked" title="Dũng đã duyệt — còn chờ Hiền duyệt mới chuyển được">🔒 Chờ H duyệt</div></div>`;
   if(canPress){
     const mainLabel = transferred>0 ? `${fmt(transferred)}/${fmtVND(approvedAmt)}` : 'Bấm để chuyển';
@@ -4880,7 +4881,7 @@ function renderBtnShare(p){
   const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64 ? [p.proofB64] : []);
   const hasProof=proofImages.length>0;
   const done=p.status==='transferred';
-  const canUpload=currentRole==='thuquy'&&(done||p.status==='approved');
+  const canUpload=_isTreasurer()&&(done||p.status==='approved');   // v17: + Hiền
   if(hasProof && canUpload) return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)">
     <div class="ab-share-stack">
       <button class="ab-btn" style="background:var(--blue);color:#fff" onclick="shareProof('${sid(p.id)}')">📤 ${proofImages.length} ảnh</button>
@@ -9808,7 +9809,7 @@ function _zaloDoneForMe(){
 // ⚠️ Ảnh được tải TRỄ sau khi mở app (_imagesLoaded) — chưa tải xong mà đã so proofImages sẽ báo
 // "thiếu ảnh" SAI hàng loạt trong vài giây đầu → chờ kho ảnh tải xong mới tính.
 function _zaloTMissing(){
-  if(currentRole!=='thuquy') return [];
+  if(!_isTreasurer()) return [];
   if(typeof _imagesLoaded!=='undefined' && !_imagesLoaded) return [];
   return proposals.filter(p=>p.status!=='rejected' && getTotalTransferred(p)>0 && _zaloLastTransferTs(p)>=ZALO_REMIND_SINCE && _zaloProofs(p).length===0);
 }
@@ -9956,7 +9957,7 @@ function _navPendingIds(kindSalary){
     if(p.status==='rejected') return;
     const total=parseFloat(p.amount)||0;
     if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
-    else if(currentRole==='hien'){ if(approvedAmtOf(p,'H') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
+    else if(currentRole==='hien'){ const off=getOfficialApprovedAmount(p)||0; if((approvedAmtOf(p,'H') < total-0.0001 && p.status!=='transferred') || (off>0 && approvedAmtOf(p,'H') > 0 && getTotalTransferred(p) < off-0.0001 && !_payDueLater(p))) ids.push(p.id); }   // v17: Hiền cũng thấy việc chuyển tiền
     else if(currentRole==='thuquy'){ const off=getOfficialApprovedAmount(p)||0; if(off>0 && approvedAmtOf(p,'H') > 0 && getTotalTransferred(p) < off-0.0001 && !_payDueLater(p)) ids.push(p.id); }   // v98
   });
   return ids;
@@ -12166,6 +12167,8 @@ const LOAN_FROM = { nh:{label:'Ngân hàng', icon:'🏦'}, canhan:{label:'Cá nh
 // v16 (D 26/11 "mở hết các quyền cho H"): trong SỔ QUỸ, Hiền = thủ quỹ (ghi mọi khoản, lấy ký quỹ về, đổi tài khoản, số dư NH, đầu kỳ,
 // xác nhận nộp lại tạm ứng). Chuyển tiền theo PHIẾU vẫn chỉ thủ quỹ. Hiền ghi trả nợ thì tự duyệt được (D chấp nhận, cách 1).
 function _cashWriter(){ return currentRole==='thuquy' || currentRole==='hien' || currentRole==='dung'; }
+// v17 (D 26/11 "Cho H đủ các quyền như thủ quỹ"): Hiền cũng CHUYỂN TIỀN theo phiếu, hoàn tác, đính ảnh chuyển khoản như thủ quỹ.
+function _isTreasurer(){ return currentRole==='thuquy' || currentRole==='hien'; }
 function cashCanWriteIn(){ return _cashWriter(); }   // v15 (D 26/11 "mở"): Hiền cũng ghi được thu / ký quỹ   // D chốt 26/09: Cân đối chỉ THỦ QUỸ (Thủ quỹ) nhập; dung = quản trị ngầm, không nêu trên app
 // v113 (D 31/10): TRẢ NỢ do Thủ quỹ ghi phải được Hiền DUYỆT mới tính (pending=true cho tới khi okH ghi). Chưa duyệt: không trừ số dư, không giảm nợ.
 function repayPending(r){ return !!(r && r.type==='repay' && r.pending===true); }
