@@ -1,0 +1,55 @@
+# XOÁ LẦN TRẢ NỢ "MỒ CÔI" trong sổ quỹ PVA-379 (trả nợ mà khoản vay đã bị xoá / ghi lại) — chạy TAY khi D bảo.
+# Ô "xacnhan" gõ XOA mới xoá thật (bỏ vào thùng rác rồi xoá); để trống = chạy thử, chỉ đếm. Nhật ký không in số tiền / nội dung.
+name: Xoa tra no mo coi PVA-379
+
+on:
+  workflow_dispatch:
+    inputs:
+      xacnhan:
+        description: 'Gõ XOA để xoá thật các lần trả nợ không còn khoản vay. Để trống = chạy thử, chỉ đếm.'
+        required: false
+        default: ''
+
+concurrency:
+  group: xoa-tra-no-mo-coi
+  cancel-in-progress: false
+
+jobs:
+  xoa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cai firebase-tools
+        run: npm install -g firebase-tools@13
+      - name: Kiem tra da co chia khoa chua
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ] && [ "$HAS_SA" != "true" ]; then
+            echo "::error::Chua co chia khoa FIREBASE_TOKEN (lay bang LAY-KHOA-TU-DONG.bat) trong GitHub → Settings → Secrets → Actions."
+            exit 1
+          fi
+      - name: Xoa tra no mo coi
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          XACNHAN: ${{ github.event.inputs.xacnhan }}
+        run: |
+          if [ "$HAS_SA" = "true" ]; then
+            printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+            unset FIREBASE_TOKEN
+          fi
+          if [ "$XACNHAN" = "XOA" ]; then
+            node scripts/xoa-tra-no-mo-coi.js --xoa
+          else
+            echo "Chua go XOA → chi chay thu (dem, khong xoa)."
+            node scripts/xoa-tra-no-mo-coi.js
+          fi
+          rm -f "$RUNNER_TEMP/sa.json"

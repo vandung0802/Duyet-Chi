@@ -55,6 +55,14 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v20 (D 26/11/2026): trả nợ "mồ côi" + chặn ghi trùng
+Sự cố: D ghi khoản vay nhập sai, Trang ghi trả nợ 696,9tr cho nó, D xoá khoản vay → lần trả nợ còn lại (không có khoản vay) vẫn nằm trong Sổ quỹ và trừ tiền; thẻ nợ cũ (khoản vay ghi lại) chỉ có 1 lần trả → "sổ Trang 2 món, nợ cũ 1 món".
+- App: `_orphanRepays()` = repay có `loanId` không còn khoản vay. Tab Vay hiện khung đỏ **"N lần trả nợ KHÔNG gắn với khoản vay nào"** (`#cash-orphan-wrap`, `_orphanRepayHtml`) với nút 🔗 Gắn vào khoản vay… (chỉ Dũng — `relinkRepay`, luật `loanId` chỉ Dũng đổi) và 🗑 Xoá / Đề nghị xoá. Tổng quan có dòng cảnh báo đỏ (`_orphanWarnHtml`). Sổ quỹ: dòng trả nợ ghi rõ "vay: …" hoặc "⚠️ KHÔNG gắn khoản vay nào".
+- Xoá khoản vay (`deleteCashRec`, Dũng) có lần trả nợ → hỏi: OK = xoá luôn các lần trả nợ (vào thùng rác), Huỷ = giữ (hiện ở khung mồ côi).
+- **Chặn bấm đúp**: `_cashBusy()` / `_cashBusySet()` — 5 hàm lưu khoản (thu/ký quỹ, vay, trả nợ, chuyển nội bộ, chi riêng) bỏ qua lần bấm thứ hai trong lúc đang ghi / 2 giây.
+- Kịch bản máy chủ `scripts/xoa-tra-no-mo-coi.js` + tác vụ **"Xoa tra no mo coi PVA-379"** (`xoa-tra-no-mo-coi.yml`, gõ `XOA`; trống = đếm): bỏ các repay mồ côi vào `pva379/trash/cashflow/<id>` rồi xoá. Nhật ký chỉ in mã bản ghi + ngày (repo công khai, không in số tiền / nội dung). Đã chạy 26/11 theo yêu cầu D.
+- Thử: emulator `mocoi-test` 14/14 (bảng đỏ, kịch bản đếm/xoá, thùng rác, chặn bấm đúp, xoá vay kèm trả nợ). Luật không đổi.
+
 ## v19 (D 26/11/2026): Sửa khoản sổ quỹ nhập sai — Trang bấm sửa, Hiền duyệt
 Nguyên văn D: "Các khoản nhập sai phải cho sửa, ví dụ Trang đang nhập sai số tiền cần sửa, Trang bấm sửa Hiền duyệt là được".
 - Nút **✏️ Sửa** trên mọi thẻ khoản sổ quỹ (thu, ký quỹ, vay / nợ cũ, từng lần trả nợ, chi riêng) và dòng chuyển nội bộ trong Sổ quỹ. Modal `#cash-edit-modal-overlay` (`openCashEdit`) hiện đúng các trường theo loại khoản (`_ceFields`): số tiền (gốc / lãi với trả nợ), nội dung, ngày, nguồn, nơi giữ, người cho vay, lãi suất, hạn trả, của ai, đơn vị nhận. Tài khoản / công trình vẫn đổi thẳng bằng nút trên thẻ như cũ.
