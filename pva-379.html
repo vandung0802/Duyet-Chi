@@ -1975,7 +1975,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v21';
+const APP_VERSION = '20261126-v22';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12147,7 +12147,7 @@ function _acctDefault(){
 function acctKey(a){ return (a && CASH_ACCT[a]) ? a : _acctDefault(); }
 function acctOf(x){ return acctKey(x && x.acct); }
 function _refreshAcctSelects(force){
-  ['ta-acct','cash-inp-acct','loan-inp-acct','repay-inp-acct','xfer-inp-from','xfer-inp-to','rieng-inp-acct'].forEach(id=>{
+  ['ta-acct','cash-inp-acct','loan-inp-acct','repay-inp-acct','xfer-inp-from','xfer-inp-to','rieng-inp-acct','bankpay-inp-acct'].forEach(id=>{   // v22: thêm ô tài khoản của form trả NH (v21 quên → ô trống, luôn trừ TK mặc định)
     const s=document.getElementById(id); if(!s) return;
     if(force || s.dataset.v!==_ACCT_OPTS.length+''){ const v=s.value; s.innerHTML=_ACCT_OPTS; s.dataset.v=_ACCT_OPTS.length+''; s.value = (CASH_ACCT[v] && !CASH_ACCT[v].off) ? v : _acctDefault(); }
   });
@@ -13541,7 +13541,7 @@ function updateCashBadge(){
     <div class="form-group"><label class="form-label">Số tiền <span class="req">*</span></label><input class="form-input" id="bankpay-inp-amount" type="text" inputmode="numeric" placeholder="50.000.000" oninput="fmtAmountInput(this)"></div>
     <div style="display:flex;gap:8px">
       <div class="form-group" style="flex:1"><label class="form-label">Ngày trả</label><input class="form-input" id="bankpay-inp-date" type="date"></div>
-      <div class="form-group acct-pick" style="flex:1"><label class="form-label">Trả từ tài khoản</label><select class="form-input form-select" id="bankpay-inp-acct"></select></div>
+      <div class="form-group acct-pick" style="flex:1"><label class="form-label">Trả từ tài khoản (công ty · ngân hàng) <span class="req">*</span></label><select class="form-input form-select" id="bankpay-inp-acct"></select></div>
     </div>
     <div class="form-group"><label class="form-label">Nội dung</label><input class="form-input" id="bankpay-inp-desc" type="text" placeholder="VD: Kỳ 11/2026 khế ước 123"></div>
     <button onclick="submitBankPay()" class="btn-full btn-primary-full" style="font-size:15px;padding:13px">Lưu</button>
