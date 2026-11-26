@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v27 (D 26/11/2026 "Bỏ các yêu cầu phải Dũng duyệt khi thay đổi, sửa, xoá — mình Hiền duyệt là được")
+- `_isApprover()` = dung | hien. Hiền: **xoá thẳng** khoản sổ quỹ (kể cả chuyển nội bộ, khoản vay kèm trả nợ), **sửa thẳng** mọi trường (modal Sửa khoản lưu ngay, không editReq), duyệt đề nghị sửa / xoá của thủ quỹ (đồng ý xoá = xoá ngay), gắn lại trả nợ mồ côi, xoá phiếu chi / P.KH / ứng lương đã duyệt. Không còn trạng thái "chờ Dũng" ở đâu trong sổ quỹ.
+- Thủ quỹ vẫn đi đường đề nghị → Hiền duyệt. Luật: cashflow `.write` xoá cho hien; 16 trường (amount, desc, date, principal, interest, lenderName, rate, due, holder, src, who, payee, lender, bank, kind, loanId) cho hien đổi thẳng; `.write` xoá phiếu đã duyệt ở proposals / khProposals / salaryAdvances cho hien.
+- Giữ cho Dũng: khôi phục Thùng rác, danh sách tài khoản / người / công trình, cấp vai, hoàn tác lượt duyệt của chính Dũng.
+- Thử: luật 93/93 (bỏ 2 mục lỗi thời), smoke10 + smoke8 hồi quy.
+
 ## v26 (D 26/11/2026 "khi ấn đổi nên hiện cả nguồn đi và nguồn đến")
 - Chuyển nội bộ: nút ✎ đổi (thẻ `cashAcctBtn` và dòng Sổ quỹ) mở `fixXferAccts(id, focus)` — một hộp hiện **cả tài khoản đi và tài khoản đến** (select theo công ty · ngân hàng), dòng tóm tắt A → B, chặn trùng nhau, nút Lưu chỉ sáng khi có đổi; ghi `update({from,to})` một lần. Khoản khác vẫn dùng `pickAcct` một đầu.
 
