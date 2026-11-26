@@ -463,6 +463,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <label class="form-label">Công trường <span class="req">*</span></label>
       <select class="form-input form-select" id="edit-site"><option value="">— Chọn công trường —</option></select>
     </div>
+    <div class="form-group">
+        <label class="form-label">Đơn vị / người nhận tiền <span style="font-weight:400;color:var(--text-sub)">(để lọc: trả cho ai bao nhiêu)</span></label>
+        <input class="form-input" id="edit-payee" type="text" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+    </div>
     <div class="form-group" id="edit-costtype-wrap">
       <label class="form-label">Loại chi phí</label>
       <select class="form-input form-select" id="edit-costtype" onchange="editTaxToggle()">
@@ -736,6 +740,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <option value="">— Chọn công trường —</option>
         </select>
       </div>
+      <div class="form-group">
+        <label class="form-label">Đơn vị / người nhận tiền <span style="font-weight:400;color:var(--text-sub)">(để lọc: trả cho ai bao nhiêu)</span></label>
+        <input class="form-input" id="inp-payee" type="text" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+      </div>
+      <datalist id="payee-list"></datalist>
 
       <div class="form-group">
         <label class="form-label">Loại chi phí <span class="req">*</span></label>
@@ -831,6 +840,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         <button class="report-subtab" data-tab="pending" onclick="setReportTab('pending',this)">⏳ Chưa chuyển</button>
         <button class="report-subtab" data-tab="rejected" onclick="setReportTab('rejected',this)">❌ Từ chối</button>
         <button class="report-subtab" data-tab="site" onclick="setReportTab('site',this)">🏗 Công trình</button>
+        <button class="report-subtab" data-tab="payee" onclick="setReportTab('payee',this)">🏢 Người nhận</button>
         <button class="report-subtab" data-tab="kt" id="report-subtab-kt" onclick="setReportTab('kt',this)" style="display:none">📒 Kế toán</button>
       </div>
       <!-- Hàng lọc -->
@@ -840,6 +850,9 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
         </select>
         <select id="filter-site" onchange="applyReportFilter()" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
           <option value="">🏗 Tất cả CT</option>
+        </select>
+        <select id="filter-payee" onchange="applyReportFilter()" title="Lọc theo đơn vị / người nhận tiền" style="flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid var(--gray-border);font-size:12px;font-weight:600;color:var(--text);background:#fff">
+          <option value="">🏢 Tất cả đơn vị nhận</option>
         </select>
       </div>
     </div>
@@ -884,6 +897,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 
   <!-- Tab con: Từ chối -->
   <!-- v10 (D 25/11): THU / CHI TỪNG CÔNG TRÌNH — mọi người xem được; dòng TỔNG + xuất cả công ty chỉ người xem toàn bộ (_fullView) -->
+  <!-- v18 (D 26/11): TRẢ CHO AI BAO NHIÊU — gộp theo đơn vị / người nhận tiền (ô "payee" do người đề xuất ghi) -->
+  <div class="card report-tab-panel" id="report-tab-payee" style="display:none">
+    <div class="card-body" style="padding:0 12px 12px"><div id="report-payee-content"></div></div>
+  </div>
   <div class="card report-tab-panel" id="report-tab-site" style="display:none">
     <div class="card-body" style="padding:0 12px 12px">
       <div id="report-site-content"></div>
@@ -1833,6 +1850,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chi cho công trình cụ thể thì chọn tên công trình; còn lại để "Chi phí chung".</div>
     </div>
     <div class="form-group">
+        <label class="form-label">Đơn vị / người nhận tiền <span style="font-weight:400;color:var(--text-sub)">(để lọc: trả cho ai bao nhiêu)</span></label>
+        <input class="form-input" id="kh-inp-payee" type="text" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+    </div>
+    <div class="form-group">
       <label class="form-label">Nội dung <span class="req">*</span></label>
       <textarea class="form-input" id="kh-inp-desc" rows="2" placeholder="VD: Công tác Hà Nội — vé tàu xe, khách sạn"></textarea>
     </div>
@@ -1950,7 +1971,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v17';
+const APP_VERSION = '20261126-v18';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4164,7 +4185,7 @@ function showPage(pg, btn){
   if(btn) btn.classList.add('active');
   { const more=document.getElementById('nav-more'); if(more && ['plan','luong','settings'].includes(pg)){ document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); more.classList.add('active'); } try{ closeMoreSheet(); }catch(e){} }   // v79: trang trong menu → sáng nút Khác
   if(pg==='contracts'){ try{ renderContracts(); }catch(e){} }   // v79
-  if(pg==='add') populateSelects();
+  if(pg==='add'){ populateSelects(); try{ _fillPayeeList(); }catch(e){} }
   if(pg==='settings') renderSettings();
   if(pg==='plan'){
     const activePlanTab = document.querySelector('#page-plan .report-subtab.active')?.dataset.tab || 'list';
@@ -4469,7 +4490,7 @@ function renderProposals(){
   }
   const q = (_si?.value||'').trim().toLowerCase();
   let items = proposals.filter(p=>matchFilter(p,filter));
-  if(q) items = items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q)||(p.site||'').toLowerCase().includes(q));
+  if(q) items = items.filter(p=>(p.desc||'').toLowerCase().includes(q)||(p.person||'').toLowerCase().includes(q)||(p.site||'').toLowerCase().includes(q)||(p.payee||'').toLowerCase().includes(q));   // v18: + đơn vị nhận
   // Phiếu vừa được giục duyệt (lastRemindAt mới) nổi lên đầu cho mọi người thấy
   items.sort((a,b)=> Math.max(b.ts||0, b.lastRemindAt||0) - Math.max(a.ts||0, a.lastRemindAt||0));
   if(!items.length){
@@ -4689,6 +4710,7 @@ function _buildCard(p){
             <span>👤 ${esc(p.person||'—')}</span>
             ${_salPos?`<span>💼 ${esc(_salPos)}</span>`:''}
             ${p.site?`<span>📍 ${esc(p.site)}</span>`:''}
+            ${p.payee?`<span title="Đơn vị / người nhận tiền">🏢 ${esc(p.payee)}</span>`:''}
             ${_costChip(p)}
             <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
@@ -5245,7 +5267,7 @@ function confirmApproveAmount(){
   // v77 BẢO MẬT: chụp "ảnh nội dung" tại thời điểm duyệt — Trang sẽ đối chiếu trước khi chuyển tiền,
   // nếu nội dung/số tài khoản bị sửa sau duyệt (dù bằng cách nào) sẽ bị phát hiện và CHẶN chuyển.
   // Máy chủ chỉ cho D/H ghi/đổi snapshot này (kẻ khác không thể sửa cho khớp nội dung giả).
-  p.contentSnapshot = { desc: p.desc||'', note: p.note||'', amount: p.amount||0, person: p.person||'', site: p.site||'' };
+  p.contentSnapshot = { desc: p.desc||'', note: p.note||'', amount: p.amount||0, person: p.person||'', site: p.site||'', payee: p.payee||'' };
 
   save();
   // Vẽ lại NGAY thẻ vừa duyệt (không chờ debounce) → tránh thẻ còn hiện "Chờ duyệt"
@@ -6310,6 +6332,7 @@ function openEditProposal(id){
 
   document.getElementById('edit-person').value = p.person||'';
   document.getElementById('edit-site').value = p.site||'';
+  { const _pe=document.getElementById('edit-payee'); if(_pe) _pe.value = p.payee||''; } try{ _fillPayeeList(); }catch(e){}   // v18
   document.getElementById('edit-desc').value = p.desc||'';
   {
     const _ctW=document.getElementById('edit-costtype-wrap'), _ct=document.getElementById('edit-costtype'), _ctH=document.getElementById('edit-costtype-hint');
@@ -6356,7 +6379,7 @@ function openEditProposal(id){
   // v41 (D chốt 25/09): NỘI DUNG chỉ NGƯỜI LẬP PHIẾU sửa. Dũng / H mở khung này chỉ ghi ý kiến (+ thuế).
   {
     const mine = _isMyProposal(p);
-    ['edit-person','edit-site','edit-desc','edit-amount','edit-note','edit-adv-person','edit-adv-position'].forEach(i=>{ const el=document.getElementById(i); if(el && !mine) el.disabled = true; });
+    ['edit-person','edit-site','edit-payee','edit-desc','edit-amount','edit-note','edit-adv-person','edit-adv-position'].forEach(i=>{ const el=document.getElementById(i); if(el && !mine) el.disabled = true; });
     { const _ct=document.getElementById('edit-costtype'); if(_ct && !mine && currentRole!=='hien' && currentRole!=='dung') _ct.disabled = true; }
     { const _cc=document.getElementById('edit-contract'); if(_cc) _cc.disabled = !(mine || currentRole==='dung' || currentRole==='hien'); }   // v41: hợp đồng = người lập / D / H (Kế toán ở khung Rà soát)
     document.querySelectorAll('input[name="edit-priority"]').forEach(r=>{ r.disabled = !mine; });
@@ -6493,6 +6516,7 @@ function saveEditProposal(){
   const desc = document.getElementById('edit-desc').value.trim();
   const amountRaw = parseAmountInput(document.getElementById('edit-amount'));
   const note = document.getElementById('edit-note').value.trim();
+  const payee = _payeeVal('edit-payee');   // v18
 
   if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
   if(!desc){ showToast('Vui lòng nhập nội dung'); return; }
@@ -6506,7 +6530,7 @@ function saveEditProposal(){
   // khoản/số tiền sau duyệt). Chặn ngay tại đây cho rõ ràng — nếu để lọt, máy chủ cũng sẽ từ chối
   // và thiết bị này bị kẹt đồng bộ. Vẫn cho sửa ý kiến/mức ưu tiên/ảnh (không thuộc phần đóng băng).
   const _frozen = !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
-  const _contentChanged = desc !== (p.desc||'') || note !== (p.note||'') || amountRaw !== (p.amount||0) || person !== (p.person||'') || site !== (p.site||'');
+  const _contentChanged = desc !== (p.desc||'') || note !== (p.note||'') || amountRaw !== (p.amount||0) || person !== (p.person||'') || site !== (p.site||'') || payee !== (p.payee||'');
   const _apEl = document.getElementById('edit-adv-person');
   const _apChanged = !!(_apEl && p.costType==='tamung' && (_apEl.value||'').trim() !== (p.advPerson||''));   // v62: người nhận tạm ứng cũng đóng băng sau duyệt
   if(_frozen && (_contentChanged || _apChanged)){
@@ -6521,11 +6545,13 @@ function saveEditProposal(){
     if(amountRaw !== (p.amount||0)) _chg.push('số tiền '+fmtVND(p.amount||0)+' → '+fmtVND(amountRaw));
     if(person !== (p.person||'')) _chg.push('người đề xuất');
     if(site !== (p.site||'')) _chg.push('công trường');
+    if(payee !== (p.payee||'')) _chg.push('đơn vị nhận');
     if(note !== (p.note||'')) _chg.push('ghi chú');
     { const _ap=document.getElementById('edit-adv-person'); const _ct2=document.getElementById('edit-costtype'); const _ctv=(_ct2&&!_ct2.disabled)?(_ct2.value||p.costType):p.costType; if(_ap && _ctv==='tamung'){ const v=(_ap.value||'').trim(); if(!v){ showToast('Vui lòng ghi NGƯỜI NHẬN TẠM ỨNG'); return; } if(v!==(p.advPerson||'')){ _chg.push('người nhận tạm ứng → '+v); p.advPerson = v; } const _po=((document.getElementById('edit-adv-position')||{}).value||'').trim(); if(_po!==(p.advPosition||'')){ p.advPosition=_po; _chg.push('chức vụ → '+_po); } saveAdvPerson(v, _po); } }   // v51/v53
     if(editingImages.length !== ((Array.isArray(p.imgImages)&&p.imgImages.length) ? p.imgImages.length : (p.imgB64?1:0))) _chg.push('ảnh đính kèm');
     p.person = person;
     p.site = site;
+    p.payee = payee;
     p.desc = desc;
     p.amount = amountRaw;
     p.amountUnit = 'dong';
@@ -7043,7 +7069,7 @@ function submitProposal(){
 
     const p={
       id: Date.now().toString(),
-      desc, person, site,
+      desc, person, site, payee: _payeeVal('inp-payee'),   // v18: đơn vị / người nhận tiền (để lọc)
       // Gia Bình: loại chi phí — 'kyquy' sẽ tự ghi sang tab Cân đối khi Thủ quỹ chuyển tiền
       costType: (document.getElementById('inp-costtype')||{}).value || 'congtruong',
       tax: (document.getElementById('inp-tax')||{}).value || '',   // v40: chi phí thuế
@@ -7791,7 +7817,7 @@ function buildPlanCard(p){
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
           <div class="proposal-desc">${esc(p.material)}${p.quantity?' · '+esc(p.quantity):''}</div>
-          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${esc(p.site)}${p.assignee?' · 👤 phụ trách: '+esc(p.assignee):''}</div>
+          <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📍 ${esc(p.site)}${p.payee?' · 🏢 '+esc(p.payee):''}${p.assignee?' · 👤 phụ trách: '+esc(p.assignee):''}</div>
           <div style="font-size:12px;color:var(--text-sub);margin-top:2px">🙋 Người đề xuất: ${esc(p.createdBy||'—')}</div>
           <div style="font-size:12px;color:var(--text-sub);margin-top:2px">📆 Cần có: ${fmtDateOnly(p.neededDate)}</div>
           ${p.estimatedAmount>0?`<div style="font-size:14px;font-weight:700;color:var(--blue);margin-top:4px">${fmtVND(p.estimatedAmount)}</div>`:''}
@@ -8416,7 +8442,7 @@ function delSite(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa
 function setReportTab(tab, btn){
   document.querySelectorAll('#page-report .report-subtab').forEach(t=>t.classList.remove('active'));   // v62: chỉ tab của Báo cáo
   btn.classList.add('active');
-  ['summary','list','done','pending','rejected','site','kt','contracts'].forEach(t=>{
+  ['summary','list','done','pending','rejected','site','payee','kt','contracts'].forEach(t=>{
     const el = document.getElementById('report-tab-'+t); if(el) el.style.display = (t===tab) ? 'block' : 'none';
   });
   _renderReportTab(tab);
@@ -8442,6 +8468,7 @@ function _renderReportTab(tab){
   else if(tab==='done'||tab==='pending') requestAnimationFrame(renderReportTables);
   else if(tab==='rejected') requestAnimationFrame(renderReportRejected);
   else if(tab==='site') renderReportSite();   // v10: thu/chi từng công trình (mọi người)
+  else if(tab==='payee') renderReportPayee();   // v18: trả cho ai bao nhiêu
   else if(tab==='kt') renderKtPanel();   // v41
   else if(tab==='contracts' && typeof renderContracts==='function') renderContracts();   // v41
 }
@@ -8502,6 +8529,7 @@ function renderReportFilters(){
   const selS = document.getElementById('filter-site');
   if(!selP || !selS) return;
   const curP = selP.value, curS = selS.value;
+  { const selY = document.getElementById('filter-payee'); if(selY){ const curY = selY.value; const ys = _payeeNames(); selY.innerHTML = '<option value="">🏢 Tất cả đơn vị nhận</option>' + ys.map(n=>`<option value="${esc(n)}"${curY===n?' selected':''}>${esc(n)}</option>`).join(''); } }   // v18
   const _exp = proposals.filter(p=>p.kind!=='salary' && _canSeeP(p)); // báo cáo chi không lấy tên/nhóm của ứng lương
   const names = [...new Set(_exp.map(p=>p.person||'').filter(Boolean).concat((persons||[]).map(x=>x&&x.name||'').filter(Boolean)))].sort(_cmpTen); // v160: A→Z theo TÊN (v57: + cả danh sách người đề xuất, D: "sao ít người thế")
   const siteList = [...new Set(_exp.map(p=>p.site||'').filter(Boolean))].sort();
@@ -8514,8 +8542,9 @@ function renderReportFilters(){
 function getFilteredProposals(){
   const p = (document.getElementById('filter-person')||{}).value||'';
   const s = (document.getElementById('filter-site')||{}).value||'';
+  const y = (document.getElementById('filter-payee')||{}).value||'';   // v18: đơn vị / người nhận
   // Loại phiếu ỨNG LƯƠNG + P.KẾ HOẠCH khỏi mọi báo cáo/CSV chi phí (chúng có tab riêng)
-  return proposals.filter(x=>x.kind!=='salary' && x.kind!=='kh' && _canSeeP(x) && (!p||(x.person||'')===p)&&(!s||(x.site||'')===s));
+  return proposals.filter(x=>x.kind!=='salary' && x.kind!=='kh' && _canSeeP(x) && (!p||(x.person||'')===p)&&(!s||(x.site||'')===s)&&(!y||_payeeKey(x.payee)===y));
 }
 
 function applyReportFilter(){
@@ -8926,11 +8955,11 @@ async function downloadMonthExcel(){
     if(p.kind==='kh' || p.status==='rejected') return;
     if(!_canSeeP(p)) return;   // rà soát 22/11: Excel tháng cũng chỉ phiếu mình được thấy
     if(p.costType!=='tamung') (p.transfers||[]).forEach(t=>{ if(!inM(t.ts)) return;   // v62: tiền ỨNG chưa phải chi phí — chỉ các khoản KÊ đã duyệt (bên dưới) mới tính, tránh cộng 2 lần
-      rows.push([ymdLocal(t.ts), p.desc||'', p.person||'', p.site||'', p.kind==='salary'?'Ứng lương':ctName(p.costType), p.kind==='salary'?'':txName(p.tax), _oneAcct()?'':((t&&t.acct)?acctLabel(t.acct):''), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.kind==='salary'?'—':(p.review?'Có':'Chưa')]); });
-    if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || !x.ok || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', hdName(p), +x.amount||0, '', p.review?'Có':'Chưa']); });   // v43
+      rows.push([ymdLocal(t.ts), p.desc||'', p.person||'', p.site||'', p.kind==='salary'?'Ứng lương':ctName(p.costType), p.kind==='salary'?'':txName(p.tax), _oneAcct()?'':((t&&t.acct)?acctLabel(t.acct):''), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.kind==='salary'?'—':(p.review?'Có':'Chưa'), p.payee||'']); });
+    if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || !x.ok || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', hdName(p), +x.amount||0, '', p.review?'Có':'Chưa', p.payee||'']); });   // v43
   });
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-  const head = ['Ngày','Nội dung','Người','Công trường','Loại chi phí','Thuế',_oneAcct()?'':'Tài khoản','Hợp đồng','Số tiền','Hóa đơn','KT rà soát'];
+  const head = ['Ngày','Nội dung','Người','Công trường','Loại chi phí','Thuế',_oneAcct()?'':'Tài khoản','Hợp đồng','Số tiền','Hóa đơn','KT rà soát','Đơn vị nhận'];   // v18: thêm cột cuối (không đụng cột I công thức)
   const aoa = [['PVA-379 — BÁO CÁO CHI THÁNG '+mon.slice(5)+'/'+mon.slice(0,4)], ['Lập lúc '+fmtFull(Date.now())+' · '+(getCurrentUserName()||'')], [], head].concat(rows.length ? rows : [['','(không có khoản chi trong tháng)']]);
   const r0 = 5, r1 = r0 + Math.max(rows.length,1) - 1;
   const sumF = (cond) => ({ t:'n', f: cond ? `SUMIF(F${r0}:F${r1},"${cond}",I${r0}:I${r1})` : `SUM(I${r0}:I${r1})` });
@@ -8977,7 +9006,7 @@ function downloadSummaryExcel(){
     return '"' + v.replace(/"/g,'""') + '"';
   };
 
-  const header = ['#','Nội dung','Người','Công trình','Ưu tiên','Số tiền đề xuất','Số tiền duyệt','Đã chuyển','Còn lại','Trạng thái','Ghi chú'].map(esc).join(',');
+  const header = ['#','Nội dung','Người','Công trình','Đơn vị nhận','Ưu tiên','Số tiền đề xuất','Số tiền duyệt','Đã chuyển','Còn lại','Trạng thái','Ghi chú'].map(esc).join(',');   // v18
 
   const toRows = (list, groupLabel) => list.map((p,i)=>{
     const trans = getTotalTransferred(p);
@@ -8990,6 +9019,7 @@ function downloadSummaryExcel(){
       p.desc||'',
       p.person||'',
       p.site||'',
+      p.payee||'',
       priLabel(p.priority||'normal'),
       parseFloat(p.amount)||0,
       official||'',
@@ -10167,7 +10197,7 @@ function openKhModal(){
     const nm=typeof s==='string'?s:(s&&s.name)||'';
     return nm?`<option value="${esc(nm)}">🏗 ${esc(nm)}</option>`:'';
   }).join('');
-  document.getElementById('kh-inp-desc').value='';
+  document.getElementById('kh-inp-desc').value=''; { const _pe=document.getElementById('kh-inp-payee'); if(_pe) _pe.value=''; } try{ _fillPayeeList(); }catch(e){}
   document.getElementById('kh-inp-amount').value='';
   document.getElementById('kh-inp-note').value='';
   document.getElementById('kh-modal-overlay').style.display='flex';
@@ -10185,7 +10215,7 @@ function saveKhFromModal(){
   const p={
     id: 'kh'+Date.now(),
     kind: 'kh', createdBy: me, createdByUid: (currentUser&&currentUser.uid)||'', // v135: khóa chủ phiếu theo uid
-    desc, person: me, site,
+    desc, person: me, site, payee: _payeeVal('kh-inp-payee'),   // v18
     amount, amountUnit:'dong', note,
     priority:'normal', status:'pending', ts: Date.now(),
     createdByUid: (currentUser&&currentUser.uid)||'', imgB64: uploadedImages[0]||null, imgImages: uploadedImages.slice(), proofImages: [],
@@ -12420,6 +12450,35 @@ function _siteNames(){
   const M = cashBySite(), list = (typeof sites!=='undefined' && Array.isArray(sites)) ? sites : [];
   return [...new Set(Object.keys(M).filter(k=>k && (M[k].thu||M[k].chi||M[k].kq)).concat(list.map(x=>typeof x==='string'?x:(x&&x.name)||'').filter(Boolean)))].sort();
 }
+// ── v18 (D 26/11/2026): "ở tất cả các mục chi có thêm tên đơn vị nhận tiền — để lọc trả cho công ty thép bao nhiêu, cá nhân ai bao nhiêu; người đề xuất ghi"
+function _payeeVal(id){ const el=document.getElementById(id); return el ? String(el.value||'').trim().slice(0,200) : ''; }
+function _payeeKey(v){ return String(v||'').trim(); }
+function _payeeNames(){
+  const set=new Set();
+  (proposals||[]).forEach(p=>{ if(_canSeeP(p) && _payeeKey(p.payee)) set.add(_payeeKey(p.payee)); });
+  (cashflow||[]).forEach(r=>{ if(_payeeKey(r.payee)) set.add(_payeeKey(r.payee)); });
+  return [...set].sort((a,b)=>a.localeCompare(b,'vi'));
+}
+function _fillPayeeList(){ const dl=document.getElementById('payee-list'); if(!dl) return; dl.innerHTML=_payeeNames().map(n=>`<option value="${esc(n)}">`).join(''); }
+function renderReportPayee(){
+  const el=document.getElementById('report-payee-content'); if(!el) return;
+  const pf=(document.getElementById('filter-person')||{}).value||'', sf=(document.getElementById('filter-site')||{}).value||'';
+  const list=(proposals||[]).filter(x=>x.kind!=='salary' && x.kind!=='kh' && x.status!=='rejected' && _canSeeP(x) && (!pf||(x.person||'')===pf) && (!sf||(x.site||'')===sf));
+  const M={}; let none=0;
+  list.forEach(p=>{ const k=_payeeKey(p.payee); if(!k){ none++; } const o=M[k]||(M[k]={n:0,dx:0,duyet:0,chuyen:0}); const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p)||0; o.n++; o.dx+=parseFloat(p.amount)||0; o.duyet+=off; o.chuyen+=tr; });
+  const ks=Object.keys(M).sort((a,b)=>(a?0:1)-(b?0:1) || M[b].chuyen-M[a].chuyen || M[b].dx-M[a].dx);
+  if(!ks.length){ el.innerHTML='<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:14px">Chưa có phiếu nào</div>'; return; }
+  const R='padding:6px 4px;text-align:right;white-space:nowrap;border-bottom:1px solid #f1f5f9';
+  const tot=ks.reduce((a,k)=>({n:a.n+M[k].n,dx:a.dx+M[k].dx,duyet:a.duyet+M[k].duyet,chuyen:a.chuyen+M[k].chuyen}),{n:0,dx:0,duyet:0,chuyen:0});
+  el.innerHTML=`<div style="font-size:11.5px;color:var(--text-sub);margin:10px 2px 6px">Gộp theo <b>đơn vị / người nhận tiền</b> ghi trên phiếu${pf||sf?' (đang lọc '+esc([pf,sf].filter(Boolean).join(' · '))+')':''}. Chạm một dòng để xem danh sách phiếu của đơn vị đó.</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">
+      <thead><tr style="background:var(--gray-light)"><th style="padding:6px 4px;text-align:left">Đơn vị / người nhận</th><th style="padding:6px 4px;text-align:right">Phiếu</th><th style="padding:6px 4px;text-align:right">Đề xuất</th><th style="padding:6px 4px;text-align:right">Đã duyệt</th><th style="padding:6px 4px;text-align:right">Đã chuyển</th></tr></thead>
+      <tbody>${ks.map(k=>{ const o=M[k]; return `<tr onclick="_payeeJump('${esc(k).replace(/'/g,'&#39;')}')" style="cursor:pointer"><td style="padding:6px 4px;font-weight:700;word-break:break-word;border-bottom:1px solid #f1f5f9">${k?esc(k):'<i style=\"color:var(--text-sub)\">(chưa ghi đơn vị nhận)</i>'}</td><td style="${R}">${o.n}</td><td style="${R}" title="${fmtVND(o.dx)}">${fmtShortMoney(o.dx)}</td><td style="${R};color:#1d4ed8" title="${fmtVND(o.duyet)}">${o.duyet?fmtShortMoney(o.duyet):'—'}</td><td style="${R};color:#b91c1c;font-weight:800" title="${fmtVND(o.chuyen)}">${o.chuyen?fmtShortMoney(o.chuyen):'—'}</td></tr>`; }).join('')}
+      <tr style="background:#f8fafc;font-weight:900"><td style="padding:6px 4px">TỔNG</td><td style="${R}">${tot.n}</td><td style="${R}">${fmtShortMoney(tot.dx)}</td><td style="${R}">${fmtShortMoney(tot.duyet)}</td><td style="${R}">${fmtShortMoney(tot.chuyen)}</td></tr></tbody>
+    </table></div>
+    <div style="font-size:10px;color:var(--text-sub);margin:4px 2px 0">Chỉ tính phiếu chi (không gồm ứng lương, P.KH, chi riêng). Số rút gọn, chạm ô xem số đầy đủ.${none?' · '+none+' phiếu chưa ghi đơn vị nhận — sửa phiếu để bổ sung.':''}</div>`;
+}
+function _payeeJump(k){ const sel=document.getElementById('filter-payee'); if(sel){ if(![...sel.options].some(o=>o.value===k)) sel.add(new Option(k,k)); sel.value=k; } setReportTab('list', document.querySelector('#page-report .report-subtab[data-tab="list"]')); }
 function renderReportSite(){
   const el=document.getElementById('report-site-content'); if(!el) return;
   const full=_fullView(), tbl=_siteTableHtml({total:full}), names=_siteNames();
@@ -12962,7 +13021,7 @@ const RIENG_WHO = { dung:'Dũng', hien:'Hiền' };
 function _riengCanWrite(){ return currentRole==='thuquy' || currentRole==='hien' || currentRole==='dung'; }   // D 26/11: Hiền cũng ghi được, cùng thủ quỹ
 function openRiengModal(){
   if(!_riengCanWrite()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được chi riêng'); return; }
-  document.getElementById('rieng-inp-amount').value=''; document.getElementById('rieng-inp-desc').value=''; document.getElementById('rieng-inp-who').value='dung';
+  document.getElementById('rieng-inp-amount').value=''; document.getElementById('rieng-inp-desc').value=''; document.getElementById('rieng-inp-who').value='dung'; { const _pe=document.getElementById('rieng-inp-payee'); if(_pe) _pe.value=''; } try{ _fillPayeeList(); }catch(e){}
   document.getElementById('rieng-inp-date').value=ymdLocal(); try{ _refreshAcctSelects(false); }catch(e){} document.getElementById('rieng-inp-acct').value=_acctDefault();
   document.getElementById('rieng-modal-overlay').style.display='flex';
 }
@@ -12974,7 +13033,7 @@ async function submitRieng(){
   const who = document.getElementById('rieng-inp-who').value==='hien' ? 'hien' : 'dung';
   if(amount<=0){ showToast('⚠️ Nhập số tiền'); return; }
   if(!desc){ showToast('⚠️ Nhập nội dung'); return; }
-  const rec = { type:'rieng', who, amount, desc, date: document.getElementById('rieng-inp-date').value||ymdLocal(),
+  const rec = { type:'rieng', who, amount, desc, payee: _payeeVal('rieng-inp-payee'), date: document.getElementById('rieng-inp-date').value||ymdLocal(),
     acct: CASH_ACCT[document.getElementById('rieng-inp-acct').value]?document.getElementById('rieng-inp-acct').value:_acctDefault(),
     ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'' };
   try{
@@ -12992,7 +13051,7 @@ function renderRiengList(){
   el.innerHTML = arr.map(r=>`<div class="card"><div class="card-body" style="padding:11px 13px">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
         <div style="min-width:0;flex:1">
-          <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${esc(r.desc||'Chi riêng')}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);word-break:break-word">${esc(r.desc||'Chi riêng')}${r.payee?` <span style="font-size:11px;font-weight:600;color:var(--text-sub)">· 🏢 ${esc(r.payee)}</span>`:''}</div>
           <div style="font-size:11px;margin-top:3px"><span style="background:#ede9fe;color:#5b21b6;padding:1px 8px;border-radius:8px;font-weight:800">${RIENG_WHO[r.who]||'Dũng'}</span>
             ${_oneAcct()?'':`<span style="color:${CASH_ACCT[acctOf(r)].color};margin-left:6px;font-weight:700">${CASH_ACCT[acctOf(r)].short}</span>`}
             <span style="color:var(--text-sub);margin-left:6px">${esc(r.date||'')}</span></div>
@@ -13238,6 +13297,7 @@ function updateCashBadge(){
       <div class="form-group acct-pick" style="flex:1"><label class="form-label">Chi từ tài khoản</label><select class="form-input form-select" id="rieng-inp-acct"></select></div>
     </div>
     <div class="form-group"><label class="form-label">Nội dung <span class="req">*</span></label><input class="form-input" id="rieng-inp-desc" type="text" placeholder="VD: Chuyển cho anh Dũng việc riêng"></div>
+    <div class="form-group"><label class="form-label">Đơn vị / người nhận tiền</label><input class="form-input" id="rieng-inp-payee" type="text" list="payee-list" autocomplete="off" placeholder="VD: anh Nam / Cty X"></div>
     <button onclick="submitRieng()" class="btn-full btn-primary-full" style="font-size:15px;padding:13px">Lưu</button>
   </div>
 </div>
