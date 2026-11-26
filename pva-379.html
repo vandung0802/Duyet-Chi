@@ -1975,7 +1975,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v23';
+const APP_VERSION = '20261126-v24';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12411,7 +12411,7 @@ function renderCashSummary(){
     ${one ? '' : `<tr><td style="text-align:left;font-size:10.5px;color:var(--text-sub);padding:5px 3px">Ngân hàng thật</td>${cols.map(bankCell).join('')}<td style="background:#f8fafc"></td></tr>`}
   </tbody>`;
   const box = (label, val, color, bg, bd, sub) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:${bg};border:1.5px solid ${bd};border-radius:10px;padding:9px 12px;margin:8px 2px 0"><div><b style="font-size:14px">${label}</b>${sub?'<div style="font-size:11px;color:var(--text-sub);font-weight:400">'+sub+'</div>':''}</div><span style="font-size:19px;font-weight:900;color:${color};white-space:nowrap;word-break:normal">${fmtVND(val)}</span></div>`;
-  el.innerHTML = _pendingEditsHtml() + _orphanWarnHtml() + hero + `<div class="card"><div class="card-body" style="padding:10px 8px 12px">
+  el.innerHTML = _pendingEditsHtml() + _pendingDelsHtml() + _orphanWarnHtml() + hero + `<div class="card"><div class="card-body" style="padding:10px 8px 12px">
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">${head}${body}</table></div>
     ${box('= Tiền trong tài khoản', t.tienTrongTk, 'var(--blue-dark)', '#eff6ff', '#bfdbfe', 'thủ quỹ đối chiếu sao kê từng tài khoản ở tab "Sổ quỹ"')}
     ${_siteTableHtml()}
@@ -12809,6 +12809,11 @@ async function rejectCashEdit(id){
   catch(e){ showToast('❌ Không được: '+(e.message||e.code||'')); }
 }
 // Tổng quan: gom mọi đề nghị sửa đang chờ (kể cả chuyển nội bộ không có thẻ riêng) để Hiền thấy một chỗ
+function _pendingDelsHtml(){
+  const list = cashflow.filter(r=>cashDelReq(r)); if(!list.length) return '';
+  return `<div class="card" style="border-left:4px solid #dc2626"><div class="card-body" style="padding:10px 12px"><div style="font-size:13px;font-weight:800;color:#b91c1c">🗑 ${list.length} đề nghị xoá khoản đang chờ</div>
+    ${list.map(r=>`<div style="margin-top:6px;font-size:12px"><b>${esc(cashKindLabel(r))}</b> · ${esc(r.desc||'')} · ${esc(r.date||'')} · ${fmtVND(+r.amount||0)}${r.type==='xfer'?' · '+esc(acctLabel(r.from))+' → '+esc(acctLabel(r.to)):''}${cashDelReqBox(r)}</div>`).join('')}</div></div>`;
+}
 function _orphanWarnHtml(){ const n=_orphanRepays().length; if(!n) return ''; return `<div class="card" style="border-left:4px solid #dc2626"><div class="card-body" style="padding:9px 12px;font-size:12.5px"><b style="color:#b91c1c">⚠️ ${n} lần trả nợ không gắn khoản vay nào</b> — đang trừ tiền trong sổ. <a href="#" onclick="setCashTab('loan',document.querySelector('#page-cash .report-subtab[data-tab=\\'loan\\']'));return false" style="color:#1d4ed8;font-weight:700">Mở tab Vay để xử lý →</a></div></div>`; }
 function _pendingEditsHtml(){
   const list = cashflow.filter(r=>cashEditReq(r)); if(!list.length) return '';
@@ -13019,7 +13024,7 @@ function renderCashBook(){
   }
   const body = rows.slice().reverse().map(r=>`<tr style="border-bottom:1px solid var(--gray-border)">
     <td style="padding:7px 6px;font-size:11px;color:var(--text-sub);white-space:nowrap">${esc(r.date||'')}</td>
-    <td style="padding:7px 6px;font-size:12px;word-break:break-word">${esc(r.desc)}${r.tag?`<div style="font-size:10px;color:var(--text-sub)">${esc(r.tag)}${r.xid&&canChangeAcct()?` <button onclick="changeCashAcct('${sid(r.xid)}','${r.kind==='out'?'from':'to'}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✎ đổi</button>`:''}${r.xid&&_cashWriter()?` <button onclick="openCashEdit('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✏️ sửa</button>`:''}</div>`:''}${(one||_bookAcct)?'':`<div style="font-size:10px;font-weight:700;color:${CASH_ACCT[r.acct].color}">${CASH_ACCT[r.acct].short}</div>`}</td>
+    <td style="padding:7px 6px;font-size:12px;word-break:break-word">${esc(r.desc)}${r.tag?`<div style="font-size:10px;color:var(--text-sub)">${esc(r.tag)}${r.xid&&canChangeAcct()?` <button onclick="changeCashAcct('${sid(r.xid)}','${r.kind==='out'?'from':'to'}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✎ đổi</button>`:''}${r.xid&&_cashWriter()?` <button onclick="openCashEdit('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✏️ sửa</button>`:''}${r.xid&&_cashWriter()?` <button onclick="${currentRole==='dung'?'deleteCashRec':'requestCashDelete'}('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#b91c1c;cursor:pointer">🗑 ${currentRole==='dung'?'xoá':'đề nghị xoá'}</button>`:''}${r.xid&&cashflow.find(x=>x.id===r.xid)&&(cashDelReq(cashflow.find(x=>x.id===r.xid))||cashEditReq(cashflow.find(x=>x.id===r.xid)))?`<div style="font-size:10px;color:#b45309;font-weight:700">⏳ đang có đề nghị sửa / xoá — xem Tổng quan</div>`:''}</div>`:''}${(one||_bookAcct)?'':`<div style="font-size:10px;font-weight:700;color:${CASH_ACCT[r.acct].color}">${CASH_ACCT[r.acct].short}</div>`}</td>
     <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:800;color:${r.kind==='in'?'#047857':'#b91c1c'};white-space:nowrap;word-break:normal">${r.kind==='in'?'+':'−'}${fmtShortMoney(r.amount)}</td>
     <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${r.bal<0?'#b91c1c':'var(--text)'};white-space:nowrap;word-break:normal">${fmtShortMoney(r.bal)}</td>
   </tr>`).join('');
