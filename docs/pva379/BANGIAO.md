@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v29 (D 26/11/2026 "duyệt 1 phần thì số còn lại vẫn ở Chờ duyệt để duyệt tiếp hoặc từ chối")
+- `_remainOpen(p)` = còn phần đề xuất chưa duyệt (`remainUnapproved`) và chưa bị đóng. Ô **Chờ duyệt** (`_expenseMatch pending`) gồm cả phiếu duyệt 1 phần (dù đã chuyển phần duyệt); số tiền ô này cộng **phần còn lại** với phiếu đã có duyệt. Ô "Chờ duyệt thêm" (v111) bỏ.
+- Người duyệt đã duyệt 1 phần thấy nút **✕ Không duyệt X còn lại** (`rejectRemain` → `p.remainRej {ts, amount, reason, by, name, role}`, bắt buộc lý do, báo người đề xuất). Đóng rồi thì phiếu rời Chờ duyệt / chuông / nhắc việc; thẻ hiện badge đỏ. Người đề xuất "xin duyệt thêm" (askMore mới hơn) hoặc người duyệt duyệt thêm → mở lại (`remainClosed` so ts).
+- Nút từ chối lời xin thêm hiện ở mọi trạng thái (trước chỉ khi đã chuyển đủ). Nhắc việc ghi "Duyệt tiếp X còn lại". Luật không đổi (`remainRej` là trường tự do trong proposals pva379).
+- Thử: Chromium `smoke14` (H duyệt 6/10tr → ô Chờ duyệt vẫn có, số 4tr; H đóng → rời; NV xin thêm → quay lại).
+
 ## v28 (D 26/11/2026 "Tổng quan, Sổ quỹ ghi đúng số tiền, cùng một đơn vị, không làm tròn tr / tỷ")
 - Toàn bộ trang Cân đối (Tổng quan: ô lớn, bảng theo công ty, bảng theo công trình, dòng tổng; biểu đồ tháng; Thu / Ký quỹ / Vay / Nợ cũ / Trả NH / Chi riêng / Sổ quỹ) đổi `fmtShortMoney` → `fmtVND` (đủ đơn vị đồng). Bảng công ty hạ cỡ chữ 10.5px, ô lớn 24px, cuộn ngang. Giữ số rút gọn ở trang Đề xuất (ô thống kê) và Báo cáo → Người nhận.
 

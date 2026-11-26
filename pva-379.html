@@ -690,11 +690,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div class="stat-row"><div class="stat-val" style="color:var(--green)" id="st-done">0</div><div class="stat-lbl">Đã chuyển xong</div></div>
       <div class="stat-row stat-amt" id="st-done-amt">—</div>
     </div>
-    <!-- v111 (D 31/10): phiếu duyệt 1 phần — đã chuyển đủ số duyệt nhưng ĐỀ XUẤT CÒN PHẦN CHƯA DUYỆT, trước lẫn trong "Đã chuyển xong" không ai thấy -->
-    <div class="stat-box" data-f="remain" onclick="setFilter('remain',this)">
-      <div class="stat-row"><div class="stat-val" style="color:#ea580c" id="st-remain">0</div><div class="stat-lbl">Chờ duyệt thêm</div></div>
-      <div class="stat-row stat-amt" id="st-remain-amt">—</div>
-    </div>
+    <!-- v29 (D 26/11): ô "Chờ duyệt thêm" (v111) bỏ — phần còn lại của phiếu duyệt 1 phần nay nằm luôn trong ô Chờ duyệt -->
   </div>
 
   <!-- v142: nút Thêm mới đưa vào trong tab (bỏ nút Thêm mới ở thanh dưới) -->
@@ -1975,7 +1971,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v28';
+const APP_VERSION = '20261126-v29';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4268,12 +4264,12 @@ function getMyPendingItems(){
     const _ask = askMorePending(p);   // v96: phiếu đã chuyển đủ nhưng có người xin duyệt thêm → vẫn vào chuông D / H
     if(currentRole==='dung'){
       const _hd=_payDueInfo(p), _den=!!(_hd && _hd.unap && _hd.left<=0);   // v102: đến hẹn thanh toán nốt mà phần còn lại chưa duyệt
-      if(dAmt < total - 0.0001 && (p.status!=='transferred' || _ask || _den))
-        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : _den ? 'Đến hẹn: duyệt nốt phần còn lại' : 'Chờ D duyệt', person:p.person, id:p.id});
+      if(dAmt < total - 0.0001 && (_remainOpen(p) || _ask || _den))   // v29
+        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : _den ? 'Đến hẹn: duyệt nốt phần còn lại' : (dAmt>0 ? 'Duyệt tiếp '+fmtVND(remainUnapproved(p))+' còn lại' : 'Chờ D duyệt'), person:p.person, id:p.id});
     } else if(currentRole==='hien'){
       const _hd=_payDueInfo(p), _den=!!(_hd && _hd.unap && _hd.left<=0);   // v102
-      if(hAmt < total - 0.0001 && (p.status!=='transferred' || _ask || _den))
-        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : _den ? 'Đến hẹn: duyệt nốt phần còn lại' : 'Chờ H duyệt', person:p.person, id:p.id});
+      if(hAmt < total - 0.0001 && (_remainOpen(p) || _ask || _den))   // v29
+        items.push({desc:p.desc, note:_ask ? ('Xin duyệt thêm '+fmtVND(p.askMore.amount)) : _den ? 'Đến hẹn: duyệt nốt phần còn lại' : (hAmt>0 ? 'Duyệt tiếp '+fmtVND(remainUnapproved(p))+' còn lại' : 'Chờ H duyệt'), person:p.person, id:p.id});
     }
     if(currentRole==='thuquy' || currentRole==='hien'){   // v17: Hiền cũng chuyển tiền
       const official = getOfficialApprovedAmount(p)||0;
@@ -4388,11 +4384,11 @@ function _expenseMatch(p, f){
   switch(f){
     case 'all': return true;
     // 4 Ô PHÂN CHIA RÕ (cộng lại = Tất cả): Chờ duyệt + Đã duyệt-chưa chuyển + Đã duyệt-đã chuyển + Từ chối
-    case 'pending':     return p.status!=='rejected' && !p.approvedH && !_full;            // H CHƯA chốt + chưa chuyển đủ
+    case 'pending':     return p.status!=='rejected' && ((!p.approvedH && !_full) || _remainOpen(p));   // H CHƯA chốt + chưa chuyển đủ; v29: HOẶC còn phần đề xuất chưa duyệt (duyệt 1 phần) chưa bị đóng
     case 'approved':    return p.status!=='rejected' && !!p.approvedH && !_full;            // v143: CHỈ CẦN H duyệt (bất kể D), CHƯA chuyển đủ
     case 'transferred': return p.status!=='rejected' && _full;                              // đã chuyển đủ số duyệt
     case 'rejected':    return p.status==='rejected';
-    case 'remain':      return p.status!=='rejected' && _full && remainUnapproved(p) > 0;   // v111: duyệt 1 phần, phần còn lại chưa ai duyệt
+    case 'remain':      return _remainOpen(p) && (approvedAmtOf(p,'D')>0 || approvedAmtOf(p,'H')>0);   // v111; v29: gộp vào Chờ duyệt (ô riêng đã bỏ)
     // 2 Ô THÔNG TIN (đếm chữ ký, có thể trùng với 4 ô trên): D đã ký / H đã ký — GỒM cả phiếu D+H
     case 'd_only':      return !!p.approvedD && p.status!=='rejected';                      // v143: mọi phiếu D đã ký
     case 'h_only':      return !!p.approvedH && p.status!=='rejected';                      // v143: mọi phiếu H đã ký
@@ -4402,6 +4398,7 @@ function _expenseMatch(p, f){
 function _expenseAmt(p, f){
   return f==='transferred' ? getTotalTransferred(p)      // đã chuyển → số THỰC chuyển
     : f==='remain'         ? remainUnapproved(p)           // v111: phần đề xuất chưa duyệt
+    : (f==='pending' && (approvedAmtOf(p,'D')>0 || approvedAmtOf(p,'H')>0)) ? remainUnapproved(p)   // v29: duyệt 1 phần → ô Chờ duyệt cộng PHẦN CÒN LẠI
     : f==='d_only'         ? approvedAmtOf(p,'D')          // D duyệt → số D duyệt
     : (f==='h_only'||f==='approved') ? getOfficialApprovedAmount(p) // H/đã duyệt → số duyệt chính thức
     : (parseFloat(p.amount)||0);                           // còn lại → số đề xuất
@@ -4415,7 +4412,7 @@ function matchFilter(p, f){
 }
 
 function renderStats(){
-  const IDMAP={all:'all',pending:'pending',approved:'approved',rejected:'rejected',transferred:'done',remain:'remain'};   // v111 // v153: bo 2 o "D duyet"/"H duyet"
+  const IDMAP={all:'all',pending:'pending',approved:'approved',rejected:'rejected',transferred:'done'};   // v153; v29: bỏ ô remain (gộp vào pending)
   Object.keys(IDMAP).forEach(f=>{
     const items = proposals.filter(p=>matchFilter(p,f));
     const sum = items.reduce((a,p)=>a+_expenseAmt(p,f),0);
@@ -4632,7 +4629,7 @@ function _buildCard(p){
     // có người xin duyệt thêm (Giục kèm lý do) thì hiện tên + số + lý do cho D và H.
     let remainRow = '', askRow = '';
     const _remain = remainUnapproved(p);
-    if(isClosed && _remain > 0) remainRow = `<span class="badge badge-wait">⏳ Còn lại ${fmtVND(_remain)} chưa duyệt</span>`;
+    if(_remain > 0){ if(remainClosed(p)) remainRow = `<span class="badge badge-reject">✕ ${esc(p.remainRej.name||'')} không duyệt ${fmtVND(_remain)} còn lại</span><div class="badge-history" style="color:#c81e1e;font-style:italic">${esc(p.remainRej.reason||'')} · ${fmtFull(p.remainRej.ts)}</div>`; else remainRow = `<span class="badge badge-wait">⏳ Còn lại ${fmtVND(_remain)} chờ duyệt</span>`; }   // v29
     if(askMorePending(p)) askRow = `<span class="badge" style="background:#fdecea;color:#dc0000;font-weight:800">🔁 ${esc(p.askMore.by||'')} xin duyệt thêm ${fmtVND(p.askMore.amount)}</span><div class="badge-history" style="color:#dc0000">Lý do: ${esc(p.askMore.reason||'')} · ${fmtFull(p.askMore.ts)}</div>`;
     else if(askMoreRejected(p)) askRow = `<span class="badge badge-reject">❌ ${esc(p.askMore.rej.name||'')} từ chối duyệt thêm ${fmtVND(p.askMore.amount)}</span><div class="badge-history" style="color:#c81e1e;font-style:italic">${esc(p.askMore.by||'')} xin: "${esc(p.askMore.reason||'')}" · ${esc(p.askMore.rej.name||'')}: "${esc(p.askMore.rej.reason||'')}" · ${fmtFull(p.askMore.rej.ts)}</div>`;   // v97
     badgeHtml = `<div class="badge-stack">
@@ -4850,9 +4847,12 @@ function renderBtnReject(p){
   const canRejectH = currentRole==='hien' && p.status!=='transferred';
   // v97 (D 14/10): phiếu ĐÃ CHUYỂN ĐỦ nhưng có người XIN DUYỆT THÊM → D / H từ chối lời xin đó (kèm lý do),
   // KHÔNG đổi trạng thái phiếu (tiền đã chuyển vẫn nguyên), chỉ đóng lời xin; người đề xuất giục lại được với lý do mới.
-  if(p.status==='transferred' && askMorePending(p) && (currentRole==='dung' || currentRole==='hien'))
+  if(askMorePending(p) && (currentRole==='dung' || currentRole==='hien'))   // v29: mọi trạng thái (trước chỉ khi đã chuyển đủ)
     return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectAskMore('${sid(p.id)}')" title="Từ chối lời xin duyệt thêm ${fmtVND(p.askMore.amount)}"><div class="ab-row-top"><span class="ab-mid-label" style="color:var(--red)">✕ Từ chối xin thêm</span></div></button></div>`;
 
+  // v29: đã duyệt 1 phần, phần còn lại đang chờ → người duyệt đó có thể đóng: "Không duyệt phần còn lại" (phiếu giữ nguyên phần đã duyệt / đã chuyển)
+  if(_remainOpen(p) && (currentRole==='dung' || currentRole==='hien') && approvedAmtOf(p, currentRole==='dung'?'D':'H') > 0)
+    return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectRemain('${sid(p.id)}')" title="Không duyệt ${fmtVND(remainUnapproved(p))} còn lại của đề xuất"><div class="ab-row-top"><span class="ab-mid-label" style="color:var(--red)">✕ Không duyệt ${fmtVND(remainUnapproved(p))} còn lại</span></div></button></div>`;
   if(isRejected){
     const officialAmt = getOfficialApprovedAmount(p);
     const transferred = getTotalTransferred(p);
@@ -4928,12 +4928,17 @@ function renderBtnShare(p){
 // số duyệt mà vẫn còn phần này thì KHÔNG mất — người đề xuất bấm Giục (kèm lý do) để xin duyệt thêm,
 // rồi quy trình D → H → Thủ quỹ lặp lại cho phần đó (chia nhỏ bao nhiêu lần cũng vậy).
 function remainUnapproved(p){ const total=parseFloat(p.amount)||0; const off=getOfficialApprovedAmount(p)||0; return (total-off) > 0.0001 ? total-off : 0; }
+// v29 (D 26/11/2026): "đề xuất duyệt 1 phần thì số còn lại vẫn xuất hiện ở Chờ duyệt để người duyệt duyệt tiếp hoặc từ chối".
+// Phần còn lại coi là ĐÓNG khi người duyệt bấm "Không duyệt phần còn lại" (remainRej) và sau đó không có lượt duyệt / lời xin thêm nào mới hơn.
+function _lastApproveTsP(p){ let t=0; ['approvedDHistory','approvedHHistory'].forEach(k=>{ const a=p[k]; (Array.isArray(a)?a:Object.values(a||{})).forEach(x=>{ if(x && x.ts>t) t=x.ts; }); }); return t; }
+function remainClosed(p){ const r=p&&p.remainRej; if(!r||!r.ts) return false; const last=Math.max(_lastApproveTsP(p), (p.askMore&&p.askMore.ts)||0); return r.ts >= last; }
+function _remainOpen(p){ return !!p && p.status!=='rejected' && remainUnapproved(p) > 0 && !remainClosed(p); }
 function lastTransferTs(p){ return (Array.isArray(p.transfers)?p.transfers:[]).reduce((m,t)=>Math.max(m, parseFloat(t&&t.ts)||0), 0); }
 function askMorePending(p){ return !!(p && p.askMore && !p.askMore.rej && p.askMore.ts > lastTransferTs(p) && remainUnapproved(p) > 0); }   // v97: đã bị từ chối (rej) thì hết chờ
 function askMoreRejected(p){ return !!(p && p.askMore && p.askMore.rej && p.askMore.ts > lastTransferTs(p)); }   // v97: lời xin thêm gần nhất đã bị D / H từ chối
 function canRemind(p){
   if(p.status==='rejected') return false;
-  if(p.status==='transferred' && !(remainUnapproved(p) > 0)) return false;   // v96: đã chuyển đủ nhưng còn phần chưa duyệt → vẫn giục được
+  if(p.status==='transferred' && !_remainOpen(p)) return false;   // v96; v29: phần còn lại đã bị đóng thì thôi
   // v136: chỉ CHỦ phiếu (hoặc D/H/T) mới giục được — chống bấm giục đề xuất của người khác (user báo).
   if(!_canEditDelete(p)) return false;
   // Chưa duyệt xong → giục duyệt (như cũ). ĐÃ duyệt xong cả D,H nhưng CHƯA chuyển → vẫn cho bấm 🔁
@@ -5583,6 +5588,26 @@ function rejectAskMore(id){
   sendPushNotif(`✕ ${getCurrentUserName()||name} từ chối duyệt thêm ${fmtVND(p.askMore.amount)}`, `${p.desc} — ${reason}`, ['dung','hien','thuquy'], [p.askMore.by||p.person||'']);
 }
 
+// v29: người duyệt ĐÓNG phần còn lại chưa duyệt của phiếu duyệt 1 phần — phiếu rời ô Chờ duyệt; người đề xuất xin thêm thì mở lại
+function rejectRemain(id){
+  const p = proposals.find(x=>x.id===id);
+  if(!p || !_remainOpen(p)) return;
+  if(currentRole!=='dung' && currentRole!=='hien'){ showToast('🔒 Chỉ Dũng hoặc Hiền'); return; }
+  const name = getCurrentUserName() || (currentRole==='dung' ? 'Dũng' : hlMe());
+  const rem = remainUnapproved(p);
+  const r = prompt(`${name} KHÔNG duyệt ${fmtVND(rem)} còn lại của đề xuất "${p.desc||''}" (phần đã duyệt ${fmtVND(getOfficialApprovedAmount(p)||0)} giữ nguyên).\nLý do (bắt buộc):`);
+  if(r === null) return;
+  const reason = String(r).trim().replace(/\s+/g,' ').slice(0, 500);
+  if(!reason){ showToast('⚠️ Phải ghi lý do'); return; }
+  p.remainRej = { ts: Date.now(), amount: rem, reason, by: (currentUser&&currentUser.uid)||'', name, role: currentRole };
+  if(askMorePending(p)) p.askMore = Object.assign({}, p.askMore, { rej: { ts: Date.now(), reason, by: (currentUser&&currentUser.uid)||'', name, role: currentRole } });
+  logEdit(p, `${name} không duyệt ${fmtVND(rem)} còn lại: ${reason}`);
+  save();
+  _cardCache.delete(id);
+  renderAll();
+  showToast(`✕ Đã đóng phần còn lại ${fmtVND(rem)}`);
+  sendPushNotif(`✕ ${name} không duyệt ${fmtVND(rem)} còn lại`, `${p.desc} — ${reason}`, ['dung','hien','thuquy'], [p.person||'']);
+}
 // Bỏ từ chối (undo) — riêng cho D hoặc H
 function undoRejectBy(id, who){
   const p = proposals.find(x=>x.id===id);
@@ -9990,8 +10015,8 @@ function _navPendingIds(kindSalary){
     if(k !== want) return;
     if(p.status==='rejected') return;
     const total=parseFloat(p.amount)||0;
-    if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && p.status!=='transferred') ids.push(p.id); }
-    else if(currentRole==='hien'){ const off=getOfficialApprovedAmount(p)||0; if((approvedAmtOf(p,'H') < total-0.0001 && p.status!=='transferred') || (off>0 && approvedAmtOf(p,'H') > 0 && getTotalTransferred(p) < off-0.0001 && !_payDueLater(p))) ids.push(p.id); }   // v17: Hiền cũng thấy việc chuyển tiền
+    if(currentRole==='dung'){ if(approvedAmtOf(p,'D') < total-0.0001 && _remainOpen(p)) ids.push(p.id); }   // v29
+    else if(currentRole==='hien'){ const off=getOfficialApprovedAmount(p)||0; if((approvedAmtOf(p,'H') < total-0.0001 && _remainOpen(p)) || (off>0 && approvedAmtOf(p,'H') > 0 && getTotalTransferred(p) < off-0.0001 && !_payDueLater(p))) ids.push(p.id); }   // v17: Hiền cũng thấy việc chuyển tiền
     else if(currentRole==='thuquy'){ const off=getOfficialApprovedAmount(p)||0; if(off>0 && approvedAmtOf(p,'H') > 0 && getTotalTransferred(p) < off-0.0001 && !_payDueLater(p)) ids.push(p.id); }   // v98
   });
   return ids;
