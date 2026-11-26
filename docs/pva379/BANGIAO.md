@@ -55,6 +55,9 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v26 (D 26/11/2026 "khi ấn đổi nên hiện cả nguồn đi và nguồn đến")
+- Chuyển nội bộ: nút ✎ đổi (thẻ `cashAcctBtn` và dòng Sổ quỹ) mở `fixXferAccts(id, focus)` — một hộp hiện **cả tài khoản đi và tài khoản đến** (select theo công ty · ngân hàng), dòng tóm tắt A → B, chặn trùng nhau, nút Lưu chỉ sáng khi có đổi; ghi `update({from,to})` một lần. Khoản khác vẫn dùng `pickAcct` một đầu.
+
 ## v25 (D 26/11/2026)
 - Hộp đề nghị xoá khoản sổ quỹ: Hiền (không phải người đề nghị) / Dũng có thêm nút **✖ Không đồng ý** (`rejectCashDelete`: gỡ deleteReq, báo thủ quỹ). Trước chỉ có "Tôi đồng ý xóa".
 - Chi riêng thêm **Trang** (`RIENG_WHO.trang`, luật `who` nhận 'trang'); tổng theo người ở Tổng quan / tab Chi riêng có dòng Trang; nhãn `who` dùng `RIENG_WHO` ở mọi chỗ (sổ quỹ, Sheet, nhãn khoản, form sửa).

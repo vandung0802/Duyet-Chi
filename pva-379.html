@@ -1975,7 +1975,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v25';
+const APP_VERSION = '20261126-v26';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12177,9 +12177,45 @@ function changeTransferAcct(pid, i){
     showToast('✅ Lần chuyển '+(i+1)+' → '+acctLabel(k));
   });
 }
+// v26 (D 26/11 "khi ấn đổi nên hiện cả nguồn đi và nguồn đến"): chuyển nội bộ → một hộp hiện CẢ HAI đầu, sửa đầu nào cũng được, lưu một lần
+function fixXferAccts(id, focus){
+  if(!canChangeAcct()) return;
+  const r = cashflow.find(x=>x.id===id); if(!r || r.type!=='xfer') return;
+  const old = document.getElementById('acct-pick-ov'); if(old) old.remove();
+  const opts = sel => Object.keys(CASH_ACCT).filter(k=>!CASH_ACCT[k].off || k===sel).map(k=>`<option value="${k}"${k===acctKey(sel)?' selected':''}>${esc((CASH_ACCT[k].group?CASH_ACCT[k].group+' · ':'')+CASH_ACCT[k].name)}</option>`).join('');
+  const ov = document.createElement('div'); ov.id='acct-pick-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  ov.innerHTML = `<div style="background:#fff;border-radius:14px;padding:14px;width:100%;max-width:360px;max-height:85vh;overflow:auto">
+    <div style="font-weight:800;font-size:14px">🔁 Sửa chuyển nội bộ</div>
+    <div style="font-size:12px;color:var(--text-sub);margin:4px 0 10px">${fmtVND(+r.amount||0)} · ${esc(r.date||'')}${r.desc?' · '+esc(r.desc):''}</div>
+    <div class="form-group"><label class="form-label" style="color:#b91c1c">Tiền ĐI từ tài khoản</label><select class="form-input form-select" id="xf-from" style="margin:0">${opts(r.from)}</select></div>
+    <div style="text-align:center;font-size:18px;margin:-4px 0 2px">⬇️</div>
+    <div class="form-group"><label class="form-label" style="color:#047857">Tiền ĐẾN tài khoản</label><select class="form-input form-select" id="xf-to" style="margin:0">${opts(r.to)}</select></div>
+    <div id="xf-sum" style="font-size:12.5px;font-weight:700;margin:6px 0 10px;padding:8px 10px;background:#f8fafc;border-radius:8px"></div>
+    <div style="display:flex;gap:8px"><button id="xf-save" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-weight:800;cursor:pointer">Lưu</button><button id="xf-cancel" style="padding:10px 14px;border-radius:10px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✕ Thôi</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  const f=ov.querySelector('#xf-from'), t=ov.querySelector('#xf-to'), sum=ov.querySelector('#xf-sum'), save=ov.querySelector('#xf-save');
+  const upd=()=>{ const same=f.value===t.value, changed = f.value!==acctKey(r.from) || t.value!==acctKey(r.to);
+    sum.innerHTML = same ? '<span style="color:#b91c1c">⚠️ Hai tài khoản đang trùng nhau — phải khác nhau</span>'
+      : `<span style="color:#b91c1c">${esc(acctLabel(f.value))}</span> → <span style="color:#047857">${esc(acctLabel(t.value))}</span>${changed?'':' <span style="color:var(--text-sub);font-weight:400">(chưa đổi gì)</span>'}`;
+    save.disabled = same || !changed; save.style.opacity = save.disabled ? '.5' : '1'; };
+  f.onchange = upd; t.onchange = upd; upd();
+  (focus==='to' ? t : f).focus();
+  ov.querySelector('#xf-cancel').onclick = ()=>ov.remove();
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  save.onclick = async ()=>{
+    if(f.value===t.value){ showToast('⚠️ Hai tài khoản phải khác nhau'); return; }
+    const up = {}; if(f.value!==acctKey(r.from)) up.from=f.value; if(t.value!==acctKey(r.to)) up.to=t.value;
+    if(!Object.keys(up).length){ ov.remove(); return; }
+    try{ await db.ref('pva379/cashflow/'+id).update(up); Object.assign(r, up); ov.remove(); try{ syncCashToSheet(r); }catch(e){} renderCashActive(); showToast('✅ Đã sửa: '+acctLabel(r.from)+' → '+acctLabel(r.to)); }
+    catch(e){ showToast('❌ Không đổi được: '+(e.message||e.code||'')); }
+  };
+}
 function changeCashAcct(id, field){
   if(!canChangeAcct()) return;
   const r = cashflow.find(x=>x.id===id); if(!r) return;
+  if(r.type==='xfer'){ fixXferAccts(id, field); return; }   // v26: chuyển nội bộ → hộp 2 đầu
   pickAcct(r[field], k=>{
     db.ref('pva379/cashflow/'+id+'/'+field).set(k)
       .then(()=>{ r[field]=k; try{ syncCashToSheet(r); }catch(e){} renderCashActive(); showToast('✅ Đã đổi sang '+acctLabel(k)); })
