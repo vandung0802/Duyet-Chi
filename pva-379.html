@@ -1975,7 +1975,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v26';
+const APP_VERSION = '20261126-v27';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -5658,7 +5658,7 @@ function _isMyProposal(p){
 }
 // v41 (D chốt 25/09/2026): SỬA nội dung + XOÁ phiếu = CHỈ NGƯỜI LẬP PHIẾU. Dũng giữ quyền xoá quản trị (KHÔNG nêu trên app — D dặn 26/09)
 // (phiếu đã duyệt/đã chuyển vẫn chỉ Dũng xoá). D/H mở khung Sửa chỉ để GHI Ý KIẾN, không đổi nội dung.
-function _canEditDelete(p){ return (_isMyProposal(p) && !!p.createdByUid) || currentRole==='dung'; }   // rà soát 22/11: phiếu cũ (không createdByUid) luật chỉ cho Dũng
+function _canEditDelete(p){ return (_isMyProposal(p) && !!p.createdByUid) || _isApprover(); }   // v27: + Hiền   // rà soát 22/11: phiếu cũ (không createdByUid) luật chỉ cho Dũng
 function _canOpenEdit(p){ return (_isMyProposal(p) && !!p.createdByUid) || currentRole==='dung' || currentRole==='hien'; }
 // Nhật ký sửa trên từng phiếu / vật tư / hợp đồng: {ts, by, byName, what} — thêm vào, không sửa không xoá (luật máy chủ khoá).
 function logEdit(rec, what){
@@ -5679,7 +5679,7 @@ function del(id){
   if(p && p.status==='transferred' && currentRole!=='dung'){ showToast('🔒 Không thể xóa phiếu đã chuyển tiền'); return; }
   // v77 BẢO MẬT: phiếu ĐÃ có D/H duyệt → chỉ Dũng xóa được (máy chủ cũng chặn — khớp luật mới)
   const _frozenDel = p && !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
-  if(_frozenDel && currentRole!=='dung'){ showToast('🔒 Phiếu đã được duyệt — chỉ Dũng mới xóa được'); return; }
+  if(_frozenDel && !_isApprover()){ showToast('🔒 Phiếu đã được duyệt — chỉ Dũng / Hiền mới xóa được'); return; }   // v27
   const _kq = (p && p.costType==='kyquy' && typeof cashflow!=='undefined') ? cashflow.filter(r=>r.fromProposal===id) : [];
   if(!confirm(_kq.length
       ? 'Xóa đề xuất này? — LƯU Ý: phiếu này là KÝ QUỸ đã chuyển tiền. Khoản ký quỹ bên tab Cân đối VẪN ĐƯỢC GIỮ (vì tiền đã đi thật). Nếu nhập nhầm hoàn toàn, vào Cân đối → Ký quỹ xóa thêm khoản đó.'
@@ -12239,6 +12239,8 @@ const LOAN_FROM = { nh:{label:'Ngân hàng', icon:'🏦'}, canhan:{label:'Cá nh
 function _cashWriter(){ return currentRole==='thuquy' || currentRole==='hien' || currentRole==='dung'; }
 // v17 (D 26/11 "Cho H đủ các quyền như thủ quỹ"): Hiền cũng CHUYỂN TIỀN theo phiếu, hoàn tác, đính ảnh chuyển khoản như thủ quỹ.
 function _isTreasurer(){ return currentRole==='thuquy' || currentRole==='hien'; }
+// v27 (D 26/11 "bỏ yêu cầu Dũng duyệt khi thay đổi, sửa, xoá — Hiền duyệt là được"): Hiền sửa thẳng / xoá thẳng như Dũng, duyệt đề nghị của thủ quỹ
+function _isApprover(){ return currentRole==='dung' || currentRole==='hien'; }
 function cashCanWriteIn(){ return _cashWriter(); }   // v15 (D 26/11 "mở"): Hiền cũng ghi được thu / ký quỹ   // D chốt 26/09: Cân đối chỉ THỦ QUỸ (Thủ quỹ) nhập; dung = quản trị ngầm, không nêu trên app
 // v113 (D 31/10): TRẢ NỢ do Thủ quỹ ghi phải được Hiền DUYỆT mới tính (pending=true cho tới khi okH ghi). Chưa duyệt: không trừ số dư, không giảm nợ.
 function repayPending(r){ return !!(r && r.type==='repay' && r.pending===true); }
@@ -12674,12 +12676,12 @@ function renderCashList(type){
 // (xóa tay sẽ làm tiền "biến mất" khỏi sổ). Ngoại lệ: phiếu gốc đã bị xóa → cho dọn.
 function cashDelReq(r){ return (r && r.deleteReq && typeof r.deleteReq==='object') ? r.deleteReq : null; }
 function cashLinkedToProposal(r){ return !!(r.fromProposal && (proposals||[]).some(p=>p.id===r.fromProposal)); }
-function cashCanDelete(r){ return currentRole==='dung' && !cashLinkedToProposal(r); }
+function cashCanDelete(r){ return _isApprover() && !cashLinkedToProposal(r); }   // v27: Hiền xoá thẳng
 const _CASH_BTN = 'padding:3px 10px;font-size:11px;font-weight:700;border-radius:8px;cursor:pointer;';
 function cashDelBtn(r){
   if(cashLinkedToProposal(r)) return '<span style="font-size:10px;color:var(--text-sub)">🔗 Tự ghi từ phiếu chi — muốn gỡ thì hoàn tác chuyển tiền ở phiếu</span>';
   if(cashDelReq(r)) return '';   // đang có đề nghị xoá → hộp bên dưới lo
-  if(currentRole==='dung') return `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>`;
+  if(_isApprover()) return `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa</button>`;
   return `<button onclick="requestCashDelete('${sid(r.id)}')" title="Khoản chỉ bị xóa khi Hiền đồng ý" style="${_CASH_BTN}background:#fff7ed;color:#c2410c;border:1px solid #fed7aa">🗑 Đề nghị xóa</button>`;
 }
 // Hộp "đang có đề nghị xoá": ai đã đồng ý, còn thiếu ai, nút cho đúng người
@@ -12720,13 +12722,13 @@ function _orphanRepayHtml(){
     ${list.map(r=>`<div style="padding:7px 0;border-top:1px solid #f1f5f9;font-size:12px">
       <div style="display:flex;justify-content:space-between;gap:8px"><span><b>${esc(r.date||'')}</b> · ${esc(r.desc||'Trả nợ')}${r.pending?' · <b style="color:#b45309">chờ H duyệt</b>':''}</span><b style="color:#b91c1c;white-space:nowrap">−${fmtVND((parseFloat(r.principal)||0)+(parseFloat(r.interest)||0))}</b></div>
       <div style="color:var(--text-sub);font-size:11px">gốc ${fmtShortMoney(parseFloat(r.principal)||0)} · lãi ${fmtShortMoney(parseFloat(r.interest)||0)}${_oneAcct()?'':' · '+esc(acctLabel(acctOf(r)))}${r.byName?' · '+esc(r.byName)+' ghi':''}${r.ts?' · '+fmtFull(r.ts):''}</div>
-      <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">${currentRole==='dung'?`<button onclick="relinkRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">🔗 Gắn vào khoản vay…</button>`:''}${cashDelBtn(r)}</div>${cashDelReqBox(r)}
+      <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">${_isApprover()?`<button onclick="relinkRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">🔗 Gắn vào khoản vay…</button>`:''}${cashDelBtn(r)}</div>${cashDelReqBox(r)}
     </div>`).join('')}
   </div></div>`;
 }
 // Dũng gắn lại lần trả nợ mồ côi vào đúng khoản vay (luật: loanId chỉ Dũng đổi)
 async function relinkRepay(id){
-  if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng gắn lại được'); return; }
+  if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền gắn lại được'); return; }
   const r = cashflow.find(x=>x.id===id); if(!r) return;
   const loans = cashflow.filter(x=>x.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
   if(!loans.length){ showToast('Chưa có khoản vay nào để gắn'); return; }
@@ -12737,17 +12739,17 @@ async function relinkRepay(id){
 }
 function cashEditBtn(r){
   if(!_cashWriter() || cashLinkedToProposal(r) || cashEditReq(r)) return '';
-  return `<button onclick="openCashEdit('${sid(r.id)}')" title="${currentRole==='dung'?'Sửa thẳng (quản trị)':'Đề nghị sửa — Hiền duyệt mới đổi'}" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">✏️ Sửa</button>`;
+  return `<button onclick="openCashEdit('${sid(r.id)}')" title="${_isApprover()?'Sửa thẳng':'Đề nghị sửa — Hiền duyệt mới đổi'}" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">✏️ Sửa</button>`;
 }
 let _ceId = null;
 function openCashEdit(id){
   const r = cashflow.find(x=>x.id===id); if(!r) return;
-  if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền đề nghị sửa được'); return; }
+  if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền sửa được'); return; }
   if(cashLinkedToProposal(r)){ showToast('🔗 Khoản này gắn với phiếu chi — sửa ở phiếu (hoàn tác chuyển tiền rồi chuyển lại)'); return; }
   if(cashEditReq(r)){ showToast('Đang có đề nghị sửa chờ duyệt'); return; }
   _ceId = id;
-  document.getElementById('cash-edit-title').textContent = (currentRole==='dung' ? '✏️ Sửa khoản ' : '✏️ Đề nghị sửa khoản ') + cashKindLabel(r);
-  document.getElementById('cash-edit-sub').innerHTML = esc(r.desc||'') + ' · ' + esc(r.date||'') + (r.byName?' · '+esc(r.byName)+' ghi':'') + (currentRole==='dung' ? '' : '<br><b>Sửa xong Hiền duyệt mới đổi sổ.</b> Tài khoản / công trình thì đổi thẳng bằng nút trên thẻ, không cần qua đây.');
+  document.getElementById('cash-edit-title').textContent = (_isApprover() ? '✏️ Sửa khoản ' : '✏️ Đề nghị sửa khoản ') + cashKindLabel(r);
+  document.getElementById('cash-edit-sub').innerHTML = esc(r.desc||'') + ' · ' + esc(r.date||'') + (r.byName?' · '+esc(r.byName)+' ghi':'') + (_isApprover() ? '' : '<br><b>Sửa xong Hiền duyệt mới đổi sổ.</b> Tài khoản / công trình thì đổi thẳng bằng nút trên thẻ, không cần qua đây.');
   const inp = (f, kind) => {
     const v = r[f];
     if(kind==='money') return `<input class="form-input" id="ce-${f}" type="text" inputmode="numeric" value="${v!=null?fmtVND(+v||0).replace(/\s*đ\s*$/,''):''}" oninput="fmtAmountInput(this)">`;
@@ -12760,7 +12762,7 @@ function openCashEdit(id){
   };
   document.getElementById('cash-edit-fields').innerHTML = _ceFields(r).map(([f,k])=>`<div class="form-group"><label class="form-label">${CE_LBL[f]||f}</label>${inp(f,k)}</div>`).join('');
   document.getElementById('ce-note').value='';
-  document.getElementById('cash-edit-submit').textContent = currentRole==='dung' ? 'Lưu (sửa thẳng)' : 'Gửi đề nghị sửa — Hiền duyệt';
+  document.getElementById('cash-edit-submit').textContent = _isApprover() ? 'Lưu (sửa thẳng)' : 'Gửi đề nghị sửa — Hiền duyệt';
   try{ _fillPayeeList(); }catch(e){}
   document.getElementById('cash-edit-modal-overlay').style.display='flex';
 }
@@ -12793,7 +12795,7 @@ async function submitCashEdit(){
   const uid=(currentUser&&currentUser.uid)||'', name=getCurrentUserName()||'';
   const sum = Object.keys(ch).filter(f=>f!=='amount'||r.type!=='repay').map(f=>(CE_LBL[f]||f)+': '+_ceFmt(f,r[f])+' → '+_ceFmt(f,ch[f])).join('; ');
   try{
-    if(currentRole==='dung'){
+    if(_isApprover()){   // v27: Hiền sửa thẳng
       const up = Object.assign({}, ch, { edited:{ by:uid, byName:name, ts:Date.now(), okBy:uid, okName:name, fields:Object.keys(ch).join(',') } });
       await db.ref('pva379/cashflow/'+r.id).update(up);
       try{ syncCashToSheet(Object.assign({}, r, ch)); }catch(e){}
@@ -12810,12 +12812,12 @@ function cashEditReqBox(r){
   const q = cashEditReq(r); if(!q) return '';
   const uid=(currentUser&&currentUser.uid)||'';
   const rows = Object.keys(q.changes).filter(f=>!(f==='amount' && r.type==='repay')).map(f=>`<div>• <b>${esc(CE_LBL[f]||f)}</b>: <s style="color:var(--text-sub)">${esc(_ceFmt(f,r[f]))}</s> → <b style="color:#1d4ed8">${esc(_ceFmt(f,q.changes[f]))}</b></div>`).join('');
-  const canOk = (currentRole==='hien' && q.by!==uid) || currentRole==='dung';
-  const canCancel = currentRole==='dung' || (!!uid && q.by===uid);
+  const canOk = _isApprover();   // v27
+  const canCancel = _isApprover() || (!!uid && q.by===uid);
   let btns='';
   if(canOk) btns += `<button onclick="approveCashEdit('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Duyệt sửa</button> <button onclick="rejectCashEdit('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">✖ Từ chối</button> `;
   else if(canCancel) btns += `<button onclick="rejectCashEdit('${sid(r.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">✕ Hủy đề nghị</button>`;
-  const who = (_knownUsers()[q.byName||'']==='hien' || (currentRole==='hien' && q.by===uid)) ? 'Dũng' : 'Hiền';
+  const who = 'Hiền';   // v27
   return `<div style="margin-top:8px;padding:8px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:12px">
     <div style="font-weight:800;color:#1e40af">✏️ Đề nghị sửa — ${esc(q.byName||'')} · ${fmtFull(q.ts)} · chờ ${who} duyệt</div>
     <div style="margin-top:3px;line-height:1.5">${rows}${q.note?`<div style="color:var(--text-sub)">Lý do: ${esc(q.note)}</div>`:''}</div>
@@ -12825,7 +12827,7 @@ function cashEditReqBox(r){
 async function approveCashEdit(id){
   const r = cashflow.find(x=>x.id===id), q = cashEditReq(r); if(!r || !q) return;
   const uid=(currentUser&&currentUser.uid)||'', name=getCurrentUserName()||'';
-  if(!(currentRole==='dung' || (currentRole==='hien' && q.by!==uid))){ showToast('🔒 Chỉ Hiền (không phải người đề nghị) hoặc Dũng duyệt được'); return; }
+  if(!_isApprover()){ showToast('🔒 Chỉ Hiền / Dũng duyệt được'); return; }
   if(!confirm('Duyệt sửa khoản "'+(r.desc||'')+'"?\n'+Object.keys(q.changes).map(f=>(CE_LBL[f]||f)+': '+_ceFmt(f,r[f])+' → '+_ceFmt(f,q.changes[f])).join('\n'))) return;
   const up = Object.assign({}, q.changes, { editReq:null, edited:{ by:q.by||'', byName:q.byName||'', ts:Date.now(), okBy:uid, okName:name, fields:Object.keys(q.changes).join(',') } });
   try{
@@ -12839,7 +12841,7 @@ async function rejectCashEdit(id){
   const r = cashflow.find(x=>x.id===id), q = cashEditReq(r); if(!r || !q) return;
   const uid=(currentUser&&currentUser.uid)||'';
   const mine = q.by===uid;
-  if(!(mine || currentRole==='dung' || currentRole==='hien')){ showToast('🔒 Không có quyền'); return; }
+  if(!(mine || _isApprover())){ showToast('🔒 Không có quyền'); return; }
   if(!confirm((mine?'Hủy':'Từ chối')+' đề nghị sửa khoản "'+(r.desc||'')+'"? (khoản giữ nguyên)')) return;
   try{ await db.ref('pva379/cashflow/'+id+'/editReq').remove(); showToast(mine?'✕ Đã hủy đề nghị sửa':'✖ Đã từ chối đề nghị sửa'); if(!mine) sendPushNotif('✖ Đề nghị sửa khoản bị từ chối', (getCurrentUserName()||'')+' từ chối sửa "'+(r.desc||'')+'"', ['dung','hien','thuquy']); }
   catch(e){ showToast('❌ Không được: '+(e.message||e.code||'')); }
@@ -12864,17 +12866,17 @@ function cashDelReqBox(r){
   // PVA-379: Hiền đồng ý đề nghị của NGƯỜI KHÁC là xoá được; Hiền tự đề nghị thì chờ Dũng xoá (luật máy chủ khoá y vậy)
   const full = !!ok.hien1;
   const hienAsked = (_knownUsers()[q.byName||'']==='hien') || (currentRole==='hien' && q.by===uid);   // rà soát 22/11: deleteReq không lưu vai → suy từ tên đã biết
-  const parts = [full ? '✅ ' + nm(ok.hien1) : (hienAsked ? '⏳ Dũng xóa' : '⏳ Hiền')];
-  const canOk = !full && currentRole==='hien' && q.by!==uid;
+  const parts = [full ? '✅ ' + nm(ok.hien1) : '⏳ Hiền'];   // v27: không còn 'chờ Dũng'
+  const canOk = !full && currentRole==='hien';   // v27: Hiền duyệt là xoá ngay (approveCashDelete → deleteCashRec)
   const canCancel = currentRole==='dung' || (!!uid && q.by===uid);
   let btns = '';
   if(full && (currentRole==='dung' || currentRole==='hien')) btns += `<button onclick="finishCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:var(--red);color:#fff;border:none">🗑 Hiền đã đồng ý — Xóa</button>`;
   else if(canOk) btns += `<button onclick="approveCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ Tôi đồng ý xóa</button> <button onclick="rejectCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">✖ Không đồng ý</button>`;   // v25 (D 26/11): có nút không duyệt
-  if(currentRole==='dung' && !full) btns += `<button onclick="deleteCashRec('${sid(r.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">🗑 Xóa ngay (quản trị)</button>`;
+
   if(canCancel) btns += `<button onclick="cancelCashDelete('${sid(r.id)}')" style="${_CASH_BTN}background:#fff;color:var(--text-sub);border:1px solid #d1d5db">✕ Hủy đề nghị</button>`;
   return `<div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px">
     <div style="font-weight:700;color:#92400e">🗑 ${esc(q.byName||'?')} đề nghị XÓA khoản này${q.ts?' · '+fmtFull(q.ts):''}</div>
-    <div style="color:#78350f;margin-top:3px">${full ? 'Hiền đã đồng ý' : hienAsked ? 'Hiền đề nghị — cần anh Dũng xóa' : 'Cần Hiền đồng ý'}: ${parts.join(' · ')}</div>
+    <div style="color:#78350f;margin-top:3px">${full ? 'Hiền đã đồng ý' : 'Cần Hiền đồng ý'}: ${parts.join(' · ')}</div>
     ${btns ? `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;justify-content:flex-end">${btns}</div>` : ''}
   </div>`;
 }
@@ -13060,7 +13062,7 @@ function renderCashBook(){
   }
   const body = rows.slice().reverse().map(r=>`<tr style="border-bottom:1px solid var(--gray-border)">
     <td style="padding:7px 6px;font-size:11px;color:var(--text-sub);white-space:nowrap">${esc(r.date||'')}</td>
-    <td style="padding:7px 6px;font-size:12px;word-break:break-word">${esc(r.desc)}${r.tag?`<div style="font-size:10px;color:var(--text-sub)">${esc(r.tag)}${r.xid&&canChangeAcct()?` <button onclick="changeCashAcct('${sid(r.xid)}','${r.kind==='out'?'from':'to'}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✎ đổi</button>`:''}${r.xid&&_cashWriter()?` <button onclick="openCashEdit('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✏️ sửa</button>`:''}${r.xid&&_cashWriter()?` <button onclick="${currentRole==='dung'?'deleteCashRec':'requestCashDelete'}('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#b91c1c;cursor:pointer">🗑 ${currentRole==='dung'?'xoá':'đề nghị xoá'}</button>`:''}${r.xid&&cashflow.find(x=>x.id===r.xid)&&(cashDelReq(cashflow.find(x=>x.id===r.xid))||cashEditReq(cashflow.find(x=>x.id===r.xid)))?`<div style="font-size:10px;color:#b45309;font-weight:700">⏳ đang có đề nghị sửa / xoá — xem Tổng quan</div>`:''}</div>`:''}${(one||_bookAcct)?'':`<div style="font-size:10px;font-weight:700;color:${CASH_ACCT[r.acct].color}">${CASH_ACCT[r.acct].short}</div>`}</td>
+    <td style="padding:7px 6px;font-size:12px;word-break:break-word">${esc(r.desc)}${r.tag?`<div style="font-size:10px;color:var(--text-sub)">${esc(r.tag)}${r.xid&&canChangeAcct()?` <button onclick="changeCashAcct('${sid(r.xid)}','${r.kind==='out'?'from':'to'}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✎ đổi</button>`:''}${r.xid&&_cashWriter()?` <button onclick="openCashEdit('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #d1d5db;background:#fff;cursor:pointer">✏️ sửa</button>`:''}${r.xid&&_cashWriter()?` <button onclick="${_isApprover()?'deleteCashRec':'requestCashDelete'}('${sid(r.xid)}')" style="font-size:10px;padding:0 6px;border-radius:6px;border:1px solid #fecaca;background:#fff;color:#b91c1c;cursor:pointer">🗑 ${_isApprover()?'xoá':'đề nghị xoá'}</button>`:''}${r.xid&&cashflow.find(x=>x.id===r.xid)&&(cashDelReq(cashflow.find(x=>x.id===r.xid))||cashEditReq(cashflow.find(x=>x.id===r.xid)))?`<div style="font-size:10px;color:#b45309;font-weight:700">⏳ đang có đề nghị sửa / xoá — xem Tổng quan</div>`:''}</div>`:''}${(one||_bookAcct)?'':`<div style="font-size:10px;font-weight:700;color:${CASH_ACCT[r.acct].color}">${CASH_ACCT[r.acct].short}</div>`}</td>
     <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:800;color:${r.kind==='in'?'#047857':'#b91c1c'};white-space:nowrap;word-break:normal">${r.kind==='in'?'+':'−'}${fmtShortMoney(r.amount)}</td>
     <td style="padding:7px 6px;text-align:right;font-size:12px;font-weight:700;color:${r.bal<0?'#b91c1c':'var(--text)'};white-space:nowrap;word-break:normal">${fmtShortMoney(r.bal)}</td>
   </tr>`).join('');
@@ -13447,8 +13449,8 @@ async function returnDeposit(id){
 
 async function deleteCashRec(id){
   const r = cashflow.find(x=>x.id===id); if(!r) return;
-  if(!cashCanDelete(r)){ showToast('🔒 Chỉ Dũng xóa thẳng được — bấm "Đề nghị xóa" để Hiền duyệt'); return; }
-  if(!confirm('Xóa khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?\n\nKhoản sẽ vào Thùng rác (Cài đặt), chỉ Dũng khôi phục được.')) return;
+  if(!cashCanDelete(r)){ showToast('🔒 Chỉ Dũng / Hiền xóa thẳng được — bấm "Đề nghị xóa" để Hiền duyệt'); return; }
+  if(!confirm('Xóa khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?\n\nKhoản sẽ vào Thùng rác (Cài đặt), Dũng khôi phục được.')) return;
   const kids = r.type==='loan' ? cashflow.filter(x=>x.type==='repay' && x.loanId===id) : [];   // v20: xoá khoản vay thì hỏi xoá luôn các lần trả nợ
   let delKids = false;
   if(kids.length) delKids = confirm('Khoản vay này có '+kids.length+' lần trả nợ ('+fmtVND(kids.reduce((a,x)=>a+(+x.principal||0)+(+x.interest||0),0))+').\n\nOK = xoá luôn các lần trả nợ đó (tiền KHÔNG còn bị trừ).\nHuỷ = chỉ xoá khoản vay, giữ các lần trả nợ (chúng sẽ hiện ở mục "không gắn khoản vay" để xử lý sau).');
@@ -13464,7 +13466,7 @@ async function deleteCashRec(id){
 // ── ĐỀ NGHỊ XOÁ (người không phải Dũng). Ghi deleteReq lên khoản; Dũng + Hiền mỗi người bấm "đồng ý" 1 lần.
 async function requestCashDelete(id){
   const r = cashflow.find(x=>x.id===id); if(!r) return;
-  if(currentRole==='dung') return deleteCashRec(id);
+  if(_isApprover()) return deleteCashRec(id);   // v27: Hiền xoá thẳng như Dũng
   if(cashLinkedToProposal(r)){ showToast('🔗 Khoản này gắn với phiếu chi — hoàn tác chuyển tiền ở phiếu thì nó tự gỡ'); return; }
   if(cashDelReq(r)){ showToast('Đã có đề nghị xóa rồi — chờ đủ người đồng ý'); return; }
   if(!confirm('Đề nghị XÓA khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?\n\nKhoản chỉ bị xóa khi Hiền đồng ý.')) return;
@@ -13482,7 +13484,7 @@ async function approveCashDelete(id){
   const r = cashflow.find(x=>x.id===id), q = cashDelReq(r); if(!r || !q) return;
   const uid = (currentUser && currentUser.uid) || '', name = getCurrentUserName() || '';
   const ok = q.ok || {};
-  if(currentRole==='dung') return deleteCashRec(id);   // v41: Dũng không cần đồng ý — xóa thẳng (quản trị)
+  if(_isApprover()) return deleteCashRec(id);   // v27: Hiền xoá thẳng như Dũng   // v41: Dũng không cần đồng ý — xóa thẳng (quản trị)
   if(ok.hien1){ showToast('Đã có đồng ý rồi'); return; }
   if(q.by===uid){ showToast('🔒 Đề nghị của chính bạn — cần anh Dũng xóa'); return; }
   let slot = null;
