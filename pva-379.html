@@ -1380,6 +1380,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div id="loan-sum" style="display:none;font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div>
     <div id="cash-loan-list"></div>
+    <div id="cash-orphan-wrap" style="display:none;margin:0 0 10px"></div>
     <div id="cash-oldloan-wrap" style="display:none;margin-top:14px"><div style="font-size:13px;font-weight:900;color:#9a3412;margin:0 2px 6px">📜 NỢ TỒN ĐỌNG CŨ (trước sổ mới)</div><div id="oldloan-sum" style="font-size:12.5px;font-weight:700;color:var(--text);margin:0 2px 8px"></div><div id="cash-oldloan-list"></div></div>
   </div>
 
@@ -1971,7 +1972,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v19';
+const APP_VERSION = '20261126-v20';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12403,7 +12404,7 @@ function renderCashSummary(){
     ${one ? '' : `<tr><td style="text-align:left;font-size:10.5px;color:var(--text-sub);padding:5px 3px">Ngân hàng thật</td>${cols.map(bankCell).join('')}<td style="background:#f8fafc"></td></tr>`}
   </tbody>`;
   const box = (label, val, color, bg, bd, sub) => `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:${bg};border:1.5px solid ${bd};border-radius:10px;padding:9px 12px;margin:8px 2px 0"><div><b style="font-size:14px">${label}</b>${sub?'<div style="font-size:11px;color:var(--text-sub);font-weight:400">'+sub+'</div>':''}</div><span style="font-size:19px;font-weight:900;color:${color};white-space:nowrap;word-break:normal">${fmtVND(val)}</span></div>`;
-  el.innerHTML = _pendingEditsHtml() + hero + `<div class="card"><div class="card-body" style="padding:10px 8px 12px">
+  el.innerHTML = _pendingEditsHtml() + _orphanWarnHtml() + hero + `<div class="card"><div class="card-body" style="padding:10px 8px 12px">
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">${head}${body}</table></div>
     ${box('= Tiền trong tài khoản', t.tienTrongTk, 'var(--blue-dark)', '#eff6ff', '#bfdbfe', 'thủ quỹ đối chiếu sao kê từng tài khoản ở tab "Sổ quỹ"')}
     ${_siteTableHtml()}
@@ -12656,6 +12657,40 @@ function _ceFields(r){
   if(t==='rieng') F.push(['who','who'],['payee','text']);
   return F;
 }
+// v20: khoá ghi trùng — trong 2 giây sau khi bấm Lưu (hoặc tới khi ghi xong) không nhận lần bấm thứ hai
+let _cashBusyTs = 0;
+function _cashBusy(){ if(Date.now() - _cashBusyTs < 2000){ showToast('⏳ Đang lưu…'); return true; } _cashBusyTs = Date.now(); return false; }
+function _cashBusySet(on){ _cashBusyTs = on ? Date.now() : 0; }
+// v20 (D 26/11 "món 696,9tr trả nợ Hoa bị trùng — tồn nợ cũ 1 món, sổ Trang 2 món"): lần trả nợ KHÔNG còn khoản vay (vay bị xoá / ghi lại)
+// vẫn nằm trong Sổ quỹ và vẫn trừ tiền → hiện riêng để Dũng xoá hoặc gắn lại đúng khoản vay.
+function _orphanRepays(){ const ids = new Set(cashflow.filter(r=>r.type==='loan').map(r=>r.id)); return cashflow.filter(r=>r.type==='repay' && !ids.has(r.loanId)); }
+function _loanOf(r){ return cashflow.find(x=>x.type==='loan' && x.id===r.loanId) || null; }
+function _orphanRepayHtml(){
+  const list = _orphanRepays(); const el = document.getElementById('cash-orphan-wrap'); if(!el) return;
+  if(!list.length){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='block';
+  const tot = list.reduce((a,r)=>a+(parseFloat(r.principal)||0)+(parseFloat(r.interest)||0),0);
+  el.innerHTML = `<div class="card" style="border-left:4px solid #dc2626"><div class="card-body" style="padding:11px 13px">
+    <div style="font-size:13px;font-weight:900;color:#b91c1c">⚠️ ${list.length} lần trả nợ KHÔNG gắn với khoản vay nào — tổng ${fmtVND(tot)}</div>
+    <div style="font-size:11.5px;color:var(--text-sub);margin:3px 0 6px;line-height:1.45">Khoản vay của các lần trả này đã bị xoá hoặc ghi lại, nhưng tiền vẫn đang bị trừ trong Sổ quỹ. Nếu là bản ghi trùng → xoá; nếu là tiền thật → Dũng gắn lại vào đúng khoản vay.</div>
+    ${list.map(r=>`<div style="padding:7px 0;border-top:1px solid #f1f5f9;font-size:12px">
+      <div style="display:flex;justify-content:space-between;gap:8px"><span><b>${esc(r.date||'')}</b> · ${esc(r.desc||'Trả nợ')}${r.pending?' · <b style="color:#b45309">chờ H duyệt</b>':''}</span><b style="color:#b91c1c;white-space:nowrap">−${fmtVND((parseFloat(r.principal)||0)+(parseFloat(r.interest)||0))}</b></div>
+      <div style="color:var(--text-sub);font-size:11px">gốc ${fmtShortMoney(parseFloat(r.principal)||0)} · lãi ${fmtShortMoney(parseFloat(r.interest)||0)}${_oneAcct()?'':' · '+esc(acctLabel(acctOf(r)))}${r.byName?' · '+esc(r.byName)+' ghi':''}${r.ts?' · '+fmtFull(r.ts):''}</div>
+      <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">${currentRole==='dung'?`<button onclick="relinkRepay('${sid(r.id)}')" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">🔗 Gắn vào khoản vay…</button>`:''}${cashDelBtn(r)}</div>${cashDelReqBox(r)}
+    </div>`).join('')}
+  </div></div>`;
+}
+// Dũng gắn lại lần trả nợ mồ côi vào đúng khoản vay (luật: loanId chỉ Dũng đổi)
+async function relinkRepay(id){
+  if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng gắn lại được'); return; }
+  const r = cashflow.find(x=>x.id===id); if(!r) return;
+  const loans = cashflow.filter(x=>x.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  if(!loans.length){ showToast('Chưa có khoản vay nào để gắn'); return; }
+  const pick = prompt('Gắn lần trả nợ '+fmtVND((+r.principal||0)+(+r.interest||0))+' ('+(r.desc||'')+') vào khoản vay số mấy?\n\n'+loans.map((l,i)=>(i+1)+'. '+(l.old?'[NỢ CŨ] ':'')+(l.desc||'')+' — '+(l.lenderName||'')+' — còn nợ '+fmtVND(loanLeft(l))).join('\n'));
+  const k = parseInt(pick,10); if(!k || !loans[k-1]) return;
+  try{ await db.ref('pva379/cashflow/'+id).update({loanId: loans[k-1].id}); showToast('🔗 Đã gắn vào "'+(loans[k-1].desc||'')+'"'); }
+  catch(e){ showToast('❌ Không gắn được: '+(e.message||e.code||'')); }
+}
 function cashEditBtn(r){
   if(!_cashWriter() || cashLinkedToProposal(r) || cashEditReq(r)) return '';
   return `<button onclick="openCashEdit('${sid(r.id)}')" title="${currentRole==='dung'?'Sửa thẳng (quản trị)':'Đề nghị sửa — Hiền duyệt mới đổi'}" style="${_CASH_BTN}background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">✏️ Sửa</button>`;
@@ -12766,6 +12801,7 @@ async function rejectCashEdit(id){
   catch(e){ showToast('❌ Không được: '+(e.message||e.code||'')); }
 }
 // Tổng quan: gom mọi đề nghị sửa đang chờ (kể cả chuyển nội bộ không có thẻ riêng) để Hiền thấy một chỗ
+function _orphanWarnHtml(){ const n=_orphanRepays().length; if(!n) return ''; return `<div class="card" style="border-left:4px solid #dc2626"><div class="card-body" style="padding:9px 12px;font-size:12.5px"><b style="color:#b91c1c">⚠️ ${n} lần trả nợ không gắn khoản vay nào</b> — đang trừ tiền trong sổ. <a href="#" onclick="setCashTab('loan',document.querySelector('#page-cash .report-subtab[data-tab=\\'loan\\']'));return false" style="color:#1d4ed8;font-weight:700">Mở tab Vay để xử lý →</a></div></div>`; }
 function _pendingEditsHtml(){
   const list = cashflow.filter(r=>cashEditReq(r)); if(!list.length) return '';
   return `<div class="card" style="border-left:4px solid #1d4ed8"><div class="card-body" style="padding:10px 12px"><div style="font-size:13px;font-weight:800;color:#1e40af">✏️ ${list.length} đề nghị sửa khoản đang chờ duyệt</div>
@@ -12891,7 +12927,7 @@ function cashBookRows(){
     else if(r.type==='loan') rows.push({date:r.date, ts:r.ts, desc:'Vay: '+(r.desc||''), kind:'in', amount:N(r.amount), acct:a,
                                        tag:(LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')});   // v41
     else if(r.type==='repay') rows.push({date:r.date, ts:r.ts, desc:'Trả nợ vay: '+(r.desc||''), kind:'out', amount:N(r.principal)+N(r.interest), acct:a,
-                                        tag:'gốc '+fmtShortMoney(N(r.principal))+' · lãi '+fmtShortMoney(N(r.interest))});
+                                        tag:'gốc '+fmtShortMoney(N(r.principal))+' · lãi '+fmtShortMoney(N(r.interest))+(_loanOf(r)?' · vay: '+((_loanOf(r).desc||'')+(_loanOf(r).lenderName?' ('+_loanOf(r).lenderName+')':'')):' · ⚠️ KHÔNG gắn khoản vay nào (xem tab Vay)')});   // v20
     else if(r.type==='xfer'){
       rows.push({xfer:1, xid:r.id, date:r.date, ts:r.ts, desc:'Chuyển nội bộ → '+acctLabel(r.to)+(r.desc?': '+r.desc:''), kind:'out', amount:N(r.amount), acct:acctKey(r.from), tag:'từ '+acctLabel(r.from)});
       rows.push({xfer:1, xid:r.id, date:r.date, ts:r.ts, desc:'Chuyển nội bộ từ '+acctLabel(r.from)+(r.desc?': '+r.desc:''), kind:'in', amount:N(r.amount), acct:acctKey(r.to), tag:'vào '+acctLabel(r.to)});
@@ -13006,6 +13042,7 @@ function renderLoanList(){
   const allLoansEvery = cashflow.filter(r=>r.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
   const allLoans = allLoansEvery.filter(l=>!l.old);   // v11: nợ cũ tách riêng (renderOldLoans)
   try{ renderOldLoans(allLoansEvery.filter(l=>l.old)); }catch(e){ console.warn(e); }
+  try{ _orphanRepayHtml(); }catch(e){ console.warn(e); }   // v20
   const sumEl = document.getElementById('loan-sum');
   // v103: tìm theo người cho vay / nội dung / người ghi (không dấu) + lọc tình trạng + tổng phần đang lọc
   try{ const dl=document.getElementById('loan-name-list'); if(dl){ const ns=[...new Set(allLoans.map(l=>String(l.lenderName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi')); dl.innerHTML=ns.map(n=>`<option value="${esc(n)}">`).join(''); } }catch(e){}
@@ -13091,6 +13128,7 @@ function openLoanModal(old){
 }
 function closeLoanModal(){ document.getElementById('loan-modal-overlay').style.display='none'; }
 async function submitLoan(){
+  if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền mới ghi được khoản vay'); return; }
   const amount = parseFloat(String(document.getElementById('loan-inp-amount').value).replace(/[^\d]/g,''))||0;
   const desc = (document.getElementById('loan-inp-desc').value||'').trim();
@@ -13103,7 +13141,7 @@ async function submitLoan(){
     ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'' };
   if(old) rec.old = true; else rec.acct = CASH_ACCT[document.getElementById('loan-inp-acct').value]?document.getElementById('loan-inp-acct').value:_acctDefault();
   try{
-    const ref = await db.ref('pva379/cashflow').push(rec);
+    _cashBusySet(true); let ref; try{ ref = await db.ref('pva379/cashflow').push(rec); } finally { _cashBusySet(false); }
     try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
     closeLoanModal(); showToast(old ? '✅ Đã ghi nợ tồn đọng cũ (không cộng tài khoản)' : '✅ Đã ghi khoản vay');
   }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
@@ -13119,6 +13157,7 @@ function openRepayModal(loanId){
 }
 function closeRepayModal(){ document.getElementById('repay-modal-overlay').style.display='none'; }
 async function submitRepay(){
+  if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền mới ghi được trả nợ'); return; }
   const loanId = document.getElementById('repay-inp-loan').value; const l = cashflow.find(x=>x.id===loanId); if(!l){ showToast('Không thấy khoản vay'); return; }
   const principal = parseFloat(String(document.getElementById('repay-inp-principal').value).replace(/[^\d]/g,''))||0;
@@ -13129,7 +13168,7 @@ async function submitRepay(){
     date: document.getElementById('repay-inp-date').value||ymdLocal(), acct: CASH_ACCT[document.getElementById('repay-inp-acct').value]?document.getElementById('repay-inp-acct').value:_acctDefault(),
     ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'', pending:true };   // v113: chờ H duyệt
   try{
-    const ref = await db.ref('pva379/cashflow').push(rec);
+    _cashBusySet(true); let ref; try{ ref = await db.ref('pva379/cashflow').push(rec); } finally { _cashBusySet(false); }
     try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
     closeRepayModal(); showToast('✅ Đã ghi trả nợ — chờ Hiền duyệt mới trừ sổ');
     sendPushNotif('💸 '+(getCurrentUserName()||'Thủ quỹ')+' ghi trả nợ '+fmtVND(principal+interest), (l.desc||'')+' — gốc '+fmtVND(principal)+', lãi '+fmtVND(interest)+' · chờ Hiền duyệt', ['dung','hien']);
@@ -13159,6 +13198,7 @@ function openRiengModal(){
 }
 function closeRiengModal(){ document.getElementById('rieng-modal-overlay').style.display='none'; }
 async function submitRieng(){
+  if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_riengCanWrite()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được chi riêng'); return; }
   const amount = parseFloat(String(document.getElementById('rieng-inp-amount').value).replace(/[^\d]/g,''))||0;
   const desc = (document.getElementById('rieng-inp-desc').value||'').trim();
@@ -13169,7 +13209,7 @@ async function submitRieng(){
     acct: CASH_ACCT[document.getElementById('rieng-inp-acct').value]?document.getElementById('rieng-inp-acct').value:_acctDefault(),
     ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'' };
   try{
-    const ref = await db.ref('pva379/cashflow').push(rec);
+    _cashBusySet(true); let ref; try{ ref = await db.ref('pva379/cashflow').push(rec); } finally { _cashBusySet(false); }
     try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
     closeRiengModal(); showToast('✅ Đã ghi chi riêng '+RIENG_WHO[who]);
   }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
@@ -13205,6 +13245,7 @@ function openXferModal(){
 }
 function closeXferModal(){ document.getElementById('xfer-modal-overlay').style.display='none'; }
 async function submitXfer(){
+  if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền mới ghi chuyển tiền giữa các tài khoản'); return; }
   const from = document.getElementById('xfer-inp-from').value, to = document.getElementById('xfer-inp-to').value;
   const amount = parseFloat(String(document.getElementById('xfer-inp-amount').value).replace(/[^\d]/g,''))||0;
@@ -13213,7 +13254,7 @@ async function submitXfer(){
   const rec = { type:'xfer', from, to, amount, desc:(document.getElementById('xfer-inp-desc').value||'').trim(), date: document.getElementById('xfer-inp-date').value||ymdLocal(),
     ts:Date.now(), by:(currentUser&&currentUser.uid)||'', byName:getCurrentUserName()||'' };
   try{
-    const ref = await db.ref('pva379/cashflow').push(rec);
+    _cashBusySet(true); let ref; try{ ref = await db.ref('pva379/cashflow').push(rec); } finally { _cashBusySet(false); }
     try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
     closeXferModal(); showToast('✅ Đã ghi chuyển nội bộ');
   }catch(e){ showToast('❌ Không lưu được: '+(e.message||e.code||'')); }
@@ -13244,6 +13285,7 @@ function openCashModal(type){
 function closeCashModal(){ document.getElementById('cash-modal-overlay').style.display = 'none'; }
 
 async function submitCash(){
+  if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   const amount = parseFloat(String(document.getElementById('cash-inp-amount').value).replace(/[^\d]/g,''))||0;
   const desc   = (document.getElementById('cash-inp-desc').value||'').trim();
   const date   = document.getElementById('cash-inp-date').value || ymdLocal();
@@ -13263,7 +13305,7 @@ async function submitCash(){
   if(!rec.acct){ showToast('⚠️ Chưa có tài khoản nào — nhờ anh Dũng khai danh sách tài khoản ở Cài đặt'); return; }
   { const st=document.getElementById('cash-inp-site'); if(st && st.value) rec.site = st.value; }   // PVA-379: công trình
   try{
-    const ref = await db.ref('pva379/cashflow').push(rec);
+    _cashBusySet(true); let ref; try{ ref = await db.ref('pva379/cashflow').push(rec); } finally { _cashBusySet(false); }
     try{ syncCashToSheet({id:ref.key, ...rec}); }catch(e){}
     closeCashModal();
     showToast(_cashModalType==='in' ? '✅ Đã ghi khoản thu' : _cashModalType==='ret' ? '✅ Đã ghi trả lại vốn góp' : '✅ Đã ghi khoản ký quỹ');
@@ -13293,11 +13335,15 @@ async function deleteCashRec(id){
   const r = cashflow.find(x=>x.id===id); if(!r) return;
   if(!cashCanDelete(r)){ showToast('🔒 Chỉ Dũng xóa thẳng được — bấm "Đề nghị xóa" để Hiền duyệt'); return; }
   if(!confirm('Xóa khoản "'+(r.desc||'')+'" ('+fmtVND(r.amount)+')?\n\nKhoản sẽ vào Thùng rác (Cài đặt), chỉ Dũng khôi phục được.')) return;
+  const kids = r.type==='loan' ? cashflow.filter(x=>x.type==='repay' && x.loanId===id) : [];   // v20: xoá khoản vay thì hỏi xoá luôn các lần trả nợ
+  let delKids = false;
+  if(kids.length) delKids = confirm('Khoản vay này có '+kids.length+' lần trả nợ ('+fmtVND(kids.reduce((a,x)=>a+(+x.principal||0)+(+x.interest||0),0))+').\n\nOK = xoá luôn các lần trả nợ đó (tiền KHÔNG còn bị trừ).\nHuỷ = chỉ xoá khoản vay, giữ các lần trả nợ (chúng sẽ hiện ở mục "không gắn khoản vay" để xử lý sau).');
   try{
     await moveToTrash('cashflow', id, r);
     await db.ref('pva379/cashflow/'+id).remove();
     try{ syncCashDeleteToSheet(id); }catch(e){}
-    showToast('🗑 Đã xóa');
+    if(delKids){ for(const x of kids){ try{ await moveToTrash('cashflow', x.id, x); await db.ref('pva379/cashflow/'+x.id).remove(); try{ syncCashDeleteToSheet(x.id); }catch(e){} }catch(e){} } }
+    showToast('🗑 Đã xóa'+(delKids?' (kèm '+kids.length+' lần trả nợ)':''));
   }catch(e){ showToast('❌ Không xóa được: '+(e.message||e.code||'')); }
 }
 
