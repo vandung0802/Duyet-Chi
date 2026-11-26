@@ -19,6 +19,7 @@ const arg = k => { const i = argv.indexOf(k); return i >= 0 ? (argv[i + 1] || ''
 const XOA_KHOAN = arg('--xoa-khoan').split(',').map(s => s.trim()).filter(Boolean);
 const BO_LAN = arg('--bo-lan-chuyen').split(',').map(s => s.trim()).filter(Boolean);
 const GHI = XOA_KHOAN.length > 0 || BO_LAN.length > 0;
+const SO_TIEN = parseFloat(arg('--so-tien')) || 0;   // rà theo số tiền: mọi khoản sổ quỹ + mọi lần chuyển trên phiếu đúng số tiền này
 
 function fb(args) {
   const a = args.concat(['--project', DU_AN]);
@@ -54,6 +55,18 @@ const tr = v => (Math.round((+v || 0) / 100000) / 10) + 'tr';
   const cf = (await doc('/pva379/cashflow')) || {};
   const pr = (await doc('/pva379/proposals')) || {};
 
+  if (SO_TIEN > 0) {
+    console.log('C. Mọi khoản sổ quỹ đúng ' + tr(SO_TIEN) + ':');
+    Object.keys(cf).sort((a, b) => (cf[a].ts || 0) - (cf[b].ts || 0)).forEach(k => { const r = cf[k]; if (!r || Math.abs((+r.amount || 0) - SO_TIEN) > 0.5) return;
+      console.log('   • ' + k + ' · ' + r.type + (r.kind ? '/' + r.kind : '') + ' · ' + (r.date || '?') + ' · ' + (r.type === 'xfer' ? ten(r.from) + ' → ' + ten(r.to) : 'TK ' + ten(r.acct)) + (r.pending ? ' · chờ H' : '') + ' · ghi ' + new Date(r.ts || 0).toISOString().replace('T', ' ').slice(0, 16) + 'Z'); });
+    console.log('D. Mọi lần chuyển trên phiếu đúng ' + tr(SO_TIEN) + ':');
+    Object.keys(pr).forEach(pid => { const p = pr[pid]; const t = p && p.transfers; if (!t) return;
+      const arr = Array.isArray(t) ? t : Object.keys(t).map(k => t[k]);
+      arr.forEach((x, i) => { if (!x || Math.abs((+x.amount || 0) - SO_TIEN) > 0.5) return;
+        console.log('   • phiếu ' + pid + ' · lần #' + i + ' · ' + new Date(x.ts || 0).toISOString().replace('T', ' ').slice(0, 16) + 'Z · TK ' + ten(x.acct) + ' · phiếu đề xuất ' + tr(p.amount) + ' · duyệt ' + tr(p.approvedHAmount || 0) + ' · đã chuyển ' + tr(arr.reduce((a, y) => a + (+y.amount || 0), 0)) + ' · ' + arr.length + ' lần · trạng thái ' + p.status); }); });
+    console.log('Rà xong — KHÔNG ghi gì.');
+    return;
+  }
   if (!GHI) {
     // A. khoản sổ quỹ giống hệt nhau
     const nhom = {};
