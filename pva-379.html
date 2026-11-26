@@ -1121,7 +1121,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div class="card" id="trash-card">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">🗑 Thùng rác <span id="trash-count" style="font-size:11px;color:var(--text-sub);font-weight:600"></span></div>
     <div class="card-body" style="padding:10px 12px">
-      <div style="font-size:11.5px;color:var(--text-sub);margin-bottom:8px">Phiếu, khoản Cân đối đã xóa nằm ở đây (ai cũng xem được). Chỉ Dũng khôi phục hoặc xóa hẳn.</div>
+      <div style="font-size:11.5px;color:var(--text-sub);margin-bottom:8px">Phiếu, khoản Cân đối đã xóa nằm ở đây (chỉ Dũng, Hiền, thủ quỹ xem). Chỉ Dũng khôi phục hoặc xóa hẳn.</div>
       <div id="trash-list"></div>
     </div>
   </div>
@@ -1940,7 +1940,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div class="more-group">KHÁC</div>
     <div class="more-grid">
-      <button class="more-tile" onclick="moreGo('trash')"><span class="ico">🗑</span>Thùng rác</button>
+      <button class="more-tile" id="tile-trash" onclick="moreGo('trash')"><span class="ico">🗑</span>Thùng rác</button>
       <button class="more-tile" onclick="moreGo('settings')"><span class="ico">⚙️</span>Cài đặt</button>
     </div>
   </div>
@@ -1971,7 +1971,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v29';
+const APP_VERSION = '20261126-v30';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4165,7 +4165,7 @@ function moreGo(k){
   else if(k==='adv'){ showPage('cash', g('nav-cash')); setCashTab('adv', q('#page-cash .report-subtab[data-tab="adv"]')); }
   else if(k==='kt'){ showPage('report', g('nav-report')); setReportTab('kt', g('report-subtab-kt')); }
   else if(k==='settings') showPage('settings', g('nav-settings'));
-  else if(k==='trash'){ showPage('settings', g('nav-settings')); setTimeout(()=>{ const t=g('trash-card'); if(t) t.scrollIntoView(); },60); }
+  else if(k==='trash'){ if(!_fullView()){ showToast('🔒 Chỉ Dũng, Hiền, thủ quỹ xem thùng rác'); return; } showPage('settings', g('nav-settings')); setTimeout(()=>{ const t=g('trash-card'); if(t) t.scrollIntoView(); },60); }
 }
 // Chấm đỏ của các nút ẩn (Vật tư, Ứng lương, P.KH) gộp lên nút Khác + từng ô trong menu
 function _syncMoreBadges(){
@@ -8313,15 +8313,17 @@ function _trashTitle(t){
 }
 function renderTrash(){
   const el = document.getElementById('trash-list'), c = document.getElementById('trash-count'); if(!el) return;
-  if(c) c.textContent = trashItems.length ? trashItems.length+' mục' : '';
-  if(!trashItems.length){ el.innerHTML = '<div style="font-size:12px;color:var(--text-sub);text-align:center;padding:8px">Trống</div>'; return; }
-  el.innerHTML = trashItems.slice(0,100).map(t=>{ const K = TRASH_KIND[t.kind]||{label:t.kind, icon:'📦'}; return `<div style="border-top:1px solid var(--gray-border);padding:7px 0">
+  // v30: ngoài nhóm xem toàn bộ chỉ thấy mục CHÍNH MÌNH đã xoá (thẻ vốn đã ẩn — phòng khi gọi thẳng hàm)
+  const items = _fullView() ? trashItems : trashItems.filter(t=>t.deletedBy && currentUser && t.deletedBy===currentUser.uid);
+  if(c) c.textContent = items.length ? items.length+' mục' : '';
+  if(!items.length){ el.innerHTML = '<div style="font-size:12px;color:var(--text-sub);text-align:center;padding:8px">Trống</div>'; return; }
+  el.innerHTML = items.slice(0,100).map(t=>{ const K = TRASH_KIND[t.kind]||{label:t.kind, icon:'📦'}; return `<div style="border-top:1px solid var(--gray-border);padding:7px 0">
     <div style="font-size:12.5px;font-weight:700;color:var(--text);word-break:break-word">${K.icon} ${esc(_trashTitle(t))}</div>
     <div style="font-size:10.5px;color:var(--text-sub)">${K.label} · xóa bởi <b>${esc(t.deletedByName||'?')}</b> · ${fmtFull(t.deletedAt||0)}</div>
     ${currentRole==='dung' ? `<div style="display:flex;gap:6px;margin-top:5px;justify-content:flex-end">
       <button onclick="restoreTrash('${sid(t.kind)}','${sid(t.id)}')" style="${_CASH_BTN}background:#ecfdf5;color:#047857;border:1px solid #a7f3d0">↩️ Khôi phục</button>
       <button onclick="purgeTrash('${sid(t.kind)}','${sid(t.id)}')" style="${_CASH_BTN}background:#fef2f2;color:var(--red);border:1px solid #fecaca">✕ Xóa hẳn</button></div>` : ''}
-  </div>`; }).join('') + (trashItems.length>100 ? '<div style="font-size:11px;color:var(--text-sub);text-align:center">… và '+(trashItems.length-100)+' mục cũ hơn</div>' : '');
+  </div>`; }).join('') + (items.length>100 ? '<div style="font-size:11px;color:var(--text-sub);text-align:center">… và '+(items.length-100)+' mục cũ hơn</div>' : '');
 }
 async function restoreTrash(kind, id){
   if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng khôi phục được'); return; }
@@ -10281,6 +10283,8 @@ function _applyCashView(){
   const h=document.querySelector('#page-cash .card-header'); if(h) h.textContent = full ? '⚖️ Cân đối quỹ công ty' : '👛 Sổ tạm ứng của tôi';
   // v10 (D 25/11): báo cáo cả công ty (Telegram, bảng tính Google) chỉ người xem toàn bộ; nhân viên xuất Excel theo từng công trình ở tab Báo cáo → Công trình
   ['btn-tg-report','tile-sheet-view','tile-tg'].forEach(id=>{ const b=document.getElementById(id); if(b) b.style.display = full ? '' : 'none'; });
+  // v30 (D 26/11): Thùng rác liệt kê phiếu / khoản đã xoá của CẢ công ty → chỉ nhóm xem toàn bộ (Dũng, Hiền, thủ quỹ) thấy
+  ['trash-card','tile-trash'].forEach(id=>{ const b=document.getElementById(id); if(b) b.style.display = full ? '' : 'none'; });
 }
 function _applyDeptView(){
   _applyKhNav();
