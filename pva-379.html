@@ -1975,7 +1975,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261126-v22';
+const APP_VERSION = '20261126-v23';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -13202,7 +13202,12 @@ const RIENG_WHO = { dung:'Dũng', hien:'Hiền' };
 // ── v21 (D 26/11/2026): "thêm 1 mục trả phí và lãi vay ngân hàng, 1 mục trả gốc vay ngân hàng — dùng cho những khoản cũ không nhập lại trên sổ" ──
 // type 'bankpay' {kind:'goc'|'laiphi', bank, amount, acct, date, desc}. Trừ tài khoản ngay, không qua duyệt, KHÔNG đụng "Còn nợ vay". Sửa sai → đề nghị sửa (v19).
 const BANKPAY_KIND = { goc:'Trả GỐC vay NH', laiphi:'Trả PHÍ + LÃI vay NH' };
-function _bankNames(){ return [...new Set((cashflow||[]).map(r=>String(r.bank||r.lenderName||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi')); }
+function _bankNames(){
+  const used = (cashflow||[]).map(r=>String(r.bank||r.lenderName||'').trim()).filter(Boolean);
+  // v23 (D 26/11): gợi ý sẵn các ngân hàng công ty đang có tài khoản (tên TK, bỏ nhóm 'Tiền mặt' và tên người giữ)
+  const fromAcct = Object.keys(CASH_ACCT).filter(k=>!CASH_ACCT[k].off && CASH_ACCT[k].group!=='Tiền mặt').map(k=>String(CASH_ACCT[k].name||'').replace(/\s+(Trang|Toàn|Hiền|Dũng)$/i,'').trim()).filter(Boolean);
+  return [...new Set(used.concat(fromAcct))].sort((a,b)=>a.localeCompare(b,'vi'));
+}
 function openBankPayModal(kind){
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được'); return; }
   document.getElementById('bankpay-inp-kind').value = kind==='laiphi' ? 'laiphi' : 'goc';
@@ -13537,12 +13542,11 @@ function updateCashBadge(){
     </div>
     <div class="form-group"><label class="form-label">Loại <span class="req">*</span></label>
       <select class="form-input form-select" id="bankpay-inp-kind"><option value="goc">Trả GỐC vay ngân hàng</option><option value="laiphi">Trả PHÍ + LÃI vay ngân hàng</option></select></div>
-    <div class="form-group"><label class="form-label">Ngân hàng <span class="req">*</span></label><input class="form-input" id="bankpay-inp-bank" type="text" list="bank-list" autocomplete="off" placeholder="VD: Vietinbank / MB / BIDV"><datalist id="bank-list"></datalist></div>
+    <div class="form-group acct-pick"><label class="form-label">Trả từ tài khoản công ty <span class="req">*</span></label><select class="form-input form-select" id="bankpay-inp-acct"></select>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Chọn đúng công ty · ngân hàng thì tiền trừ đúng tài khoản đó.</div></div>
+    <div class="form-group"><label class="form-label">Trả cho ngân hàng nào (ngân hàng cho vay) <span class="req">*</span></label><input class="form-input" id="bankpay-inp-bank" type="text" list="bank-list" autocomplete="off" placeholder="Gõ hoặc chọn: Vietinbank, MB, BIDV…"><datalist id="bank-list"></datalist></div>
     <div class="form-group"><label class="form-label">Số tiền <span class="req">*</span></label><input class="form-input" id="bankpay-inp-amount" type="text" inputmode="numeric" placeholder="50.000.000" oninput="fmtAmountInput(this)"></div>
-    <div style="display:flex;gap:8px">
-      <div class="form-group" style="flex:1"><label class="form-label">Ngày trả</label><input class="form-input" id="bankpay-inp-date" type="date"></div>
-      <div class="form-group acct-pick" style="flex:1"><label class="form-label">Trả từ tài khoản (công ty · ngân hàng) <span class="req">*</span></label><select class="form-input form-select" id="bankpay-inp-acct"></select></div>
-    </div>
+    <div class="form-group"><label class="form-label">Ngày trả</label><input class="form-input" id="bankpay-inp-date" type="date"></div>
     <div class="form-group"><label class="form-label">Nội dung</label><input class="form-input" id="bankpay-inp-desc" type="text" placeholder="VD: Kỳ 11/2026 khế ước 123"></div>
     <button onclick="submitBankPay()" class="btn-full btn-primary-full" style="font-size:15px;padding:13px">Lưu</button>
   </div>

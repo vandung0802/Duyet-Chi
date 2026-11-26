@@ -62,6 +62,7 @@ Nguyên văn D: "thêm 1 mục trả phí và lãi vay ngân hàng, 1 mục tr�
 - Luật: `type` thêm `bankpay`; `kind` ∈ {goc, laiphi} đóng băng; `bank` ≤200 đóng băng (mở qua editReq).
 - Thử: luật 92/92 (+6), Chromium `smoke12` 7/7.
 - **v22 (D 26/11 "phải chọn đúng ngân hàng công ty thì mới trừ đúng TK")**: lỗi v21 — ô "Trả từ tài khoản" của form trả NH không nằm trong `_refreshAcctSelects` nên TRỐNG, mọi khoản bị trừ vào TK mặc định. Đã thêm `bankpay-inp-acct` vào danh sách; nhãn đổi "Trả từ tài khoản (công ty · ngân hàng)". smoke12 9/9 (chọn TK CT PVA · MSB → trừ đúng TK đó).
+- **v23 (D 26/11 "bấm mũi tên ở mục ngân hàng không thấy tài khoản công ty")**: form trả NH đưa ô **Trả từ tài khoản công ty** lên đầu (kèm chú thích), ô "Trả cho ngân hàng nào" xuống dưới và gợi ý sẵn tên các ngân hàng công ty đang có tài khoản (`_bankNames` lấy từ `CASH_ACCT`, bỏ nhóm Tiền mặt) cộng tên đã gõ. smoke12 10/10.
 
 ## v20 (D 26/11/2026): trả nợ "mồ côi" + chặn ghi trùng
 Sự cố: D ghi khoản vay nhập sai, Trang ghi trả nợ 696,9tr cho nó, D xoá khoản vay → lần trả nợ còn lại (không có khoản vay) vẫn nằm trong Sổ quỹ và trừ tiền; thẻ nợ cũ (khoản vay ghi lại) chỉ có 1 lần trả → "sổ Trang 2 món, nợ cũ 1 món".
