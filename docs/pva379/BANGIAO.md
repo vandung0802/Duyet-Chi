@@ -55,6 +55,9 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v35 (D 27/11/2026 "phần vay xếp khoản chưa trả xong trước, khoản đã trả sau")
+- `renderLoanList`: khoản còn nợ gốc lên trước (mới → cũ theo ngày), khoản đã trả hết gốc xuống dưới; áp dụng cả mục Nợ tồn đọng cũ (dùng chung danh sách đã xếp). Thử: `smoke18`.
+
 ## v34 (D 27/11/2026 "thêm cả ứng lương đã duyệt — giải ngân cũng có thể dùng để trả lương")
 - `_allocProps` gồm cả phiếu ỨNG LƯƠNG (kind salary, nằm trong `pva379/proposals`, cùng luồng duyệt / chuyển) đã duyệt còn phải chuyển; nhãn "Lương · tên NV · nhóm · Ứng lương tháng …"; xếp sau phiếu chi. Vẫn bỏ ký quỹ, tạm ứng.
 - Nút **➕ Ứng lương cả đợt** (`loanAllocAddSalary`): kê một lúc mọi phiếu ứng lương đã duyệt còn phải chuyển (bỏ phiếu đã có dòng), số tiền = phần còn lại — giải ngân trả lương cả đợt không phải chọn từng người.
