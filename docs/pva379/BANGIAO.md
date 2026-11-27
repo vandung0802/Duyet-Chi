@@ -55,6 +55,11 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v40 (D 27/11/2026 "thêm công trình thấy rồi, quay ra lại mất")
+- Lỗi do v39: `pushToFirebase` chỉ ghi gói meta (persons + sites + sheetUrl) khi `currentRole==='dung'` → Hiền thêm công trình chỉ nằm trên máy, tải lại là mất. Nay Hiền ghi RIÊNG `pva379/meta/sites` khi danh sách đổi (luật v39 cho), không kèm persons / sheetUrl.
+- `addSite` / `delSite` chặn khi dữ liệu chưa tải xong (`_chuaTaiXong`) — trước đó thêm sớm quá cũng chỉ nằm trên máy.
+- Thử: `smoke20` (Hiền thêm → máy chủ có, tải lại còn; Dũng thêm đủ gói; hai bên không ghi đè nhau). Thử luật trực tiếp: Dũng ghi cả gói OK, Hiền cả gói bị chặn, Hiền chỉ sites OK.
+
 ## v39 (D 27/11/2026 "cho Hiền quyền giống Dũng để thêm công trình")
 - `addSite` / `delSite`: `_isApprover()` (Dũng, Hiền); xoá công trình hỏi trước (phiếu đã ghi công trình đó giữ nguyên). Luật: `pva379/meta/sites` `.write` dung | hien (+ validate tên ≤ 200 ký tự); danh sách người đề xuất (`meta/persons`) vẫn chỉ Dũng. Luật 118/118.
 

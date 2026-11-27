@@ -1972,7 +1972,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v39';
+const APP_VERSION = '20261127-v40';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -3310,6 +3310,12 @@ function pushToFirebase(){
     updates['pva379/meta/sheetUrl'] = sheetUrl;
     updates['pva379/meta/updatedAt'] = Date.now();
     hasChange = true;
+  }
+  // v40 (D 27/11 "thêm công trình thấy rồi quay ra lại mất"): v39 cho Hiền thêm / xoá công trình nhưng gói meta ở trên chỉ Dũng ghi
+  // → Hiền thêm xong chỉ nằm trên máy, tải lại là mất. Hiền ghi RIÊNG khoá sites (luật cho), không kèm persons / sheetUrl.
+  else if(currentRole==='hien' && (!lastPushedSnapshot || lastPushedSnapshot.meta !== metaNow)){
+    const sitesNow = JSON.stringify(sites);
+    if(!lastPushedSnapshot || JSON.stringify((JSON.parse(lastPushedSnapshot.meta||'{}')||{}).sites||[]) !== sitesNow){ updates['pva379/meta/sites'] = sites; hasChange = true; }
   }
 
   // 2) Ảnh — tách hẳn node riêng theo từng phiếu, CHỈ ghi khi nội dung ảnh thực sự đổi
@@ -8463,13 +8469,14 @@ function addPerson(){
 function delPerson(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa được danh sách này'); return; } persons.splice(i,1); save(); renderSettings(); }   // v62
 
 function addSite(){
+  if(_chuaTaiXong()) return;   // v40: chưa tải xong mà thêm thì chỉ nằm trên máy (pushToFirebase bỏ qua) → tải lại là mất
   if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền sửa được danh sách này — nhắn Dũng hoặc Hiền thêm giúp'); return; }   // v62; v39 (D 27/11): Hiền như Dũng
   const s=document.getElementById('new-site').value.trim();
   if(!s){ showToast('Vui lòng nhập tên công trình'); return; }
   sites.push(s); save(); renderSettings(); showToast('Đã thêm: '+s);
   document.getElementById('new-site').value='';
 }
-function delSite(i){ if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền sửa được danh sách này'); return; } if(!confirm('Xoá công trình "'+(sites[i]||'')+'" khỏi danh sách? Phiếu đã ghi công trình này vẫn giữ nguyên.')) return; sites.splice(i,1); save(); renderSettings(); }   // v62; v39: Hiền như Dũng, hỏi trước khi xoá
+function delSite(i){ if(_chuaTaiXong()) return; if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền sửa được danh sách này'); return; } if(!confirm('Xoá công trình "'+(sites[i]||'')+'" khỏi danh sách? Phiếu đã ghi công trình này vẫn giữ nguyên.')) return; sites.splice(i,1); save(); renderSettings(); }   // v62; v39: Hiền như Dũng, hỏi trước khi xoá
 
 // ── REPORT SUB-TABS ──
 function setReportTab(tab, btn){
