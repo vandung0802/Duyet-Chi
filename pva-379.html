@@ -1967,11 +1967,11 @@ const firebaseConfig = {
 //  - CHỈ Dũng vào được app; người khác thấy màn "đang thử nghiệm", dùng app Duyệt Chi như cũ (_trialGate).
 //  - Mọi thông báo đẩy CHỈ gửi về máy Dũng (kênh 'dung'), tiêu đề gắn "[Thử]" — kênh thông báo dùng chung với app Duyệt Chi.
 // Dữ liệu = SỔ MỚI (xoá sạch 25/11/2026), KHÔNG chép từ app Duyệt Chi nữa; 2 app chạy song song, không ảnh hưởng nhau.
-// Khi D nói "phát hành" → đổi thành false.
-const PUSH_TRIAL = true;
+// Khi D nói "phát hành" → đổi thành false. ĐÃ PHÁT HÀNH 27/11/2026 (D: "giữ nguyên không thay đổi gì nhé. phát hành") — v36.
+const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v35';
+const APP_VERSION = '20261127-v36';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
