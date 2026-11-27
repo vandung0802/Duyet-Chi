@@ -1,0 +1,58 @@
+# KIỂM / THÊM một công trình vào danh sách app PVA-379 từ máy chủ — chạy TAY khi D bảo (27/11/2026: "thêm CT Cầu xã ĐA").
+# Ô "ten" = tên công trình; ô "xacnhan" gõ THEM mới ghi thêm (không đè, không xoá); để trống = chỉ kiểm có hay chưa. Nhật ký không in tên công trình khác.
+name: Cong trinh PVA-379 (kiem / them)
+
+on:
+  workflow_dispatch:
+    inputs:
+      ten:
+        description: 'Tên công trình (đúng như muốn hiện trong app)'
+        required: true
+      xacnhan:
+        description: 'Gõ THEM để thêm vào danh sách nếu chưa có. Để trống = chỉ kiểm.'
+        required: false
+        default: ''
+
+concurrency:
+  group: cong-trinh-pva379
+  cancel-in-progress: false
+
+jobs:
+  ct:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      HAS_SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Cai firebase-tools
+        run: npm install -g firebase-tools@13
+      - name: Kiem tra da co chia khoa chua
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        run: |
+          if [ -z "$FIREBASE_TOKEN" ] && [ "$HAS_SA" != "true" ]; then
+            echo "::error::Chua co chia khoa FIREBASE_TOKEN (lay bang LAY-KHOA-TU-DONG.bat) trong GitHub → Settings → Secrets → Actions."
+            exit 1
+          fi
+      - name: Kiem / them cong trinh
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          TEN: ${{ github.event.inputs.ten }}
+          XACNHAN: ${{ github.event.inputs.xacnhan }}
+        run: |
+          if [ "$HAS_SA" = "true" ]; then
+            printf '%s' "$SA_JSON" > "$RUNNER_TEMP/sa.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+            unset FIREBASE_TOKEN
+          fi
+          if [ "$XACNHAN" = "THEM" ]; then
+            node scripts/cong-trinh.js --them "$TEN"
+          else
+            node scripts/cong-trinh.js --kiem "$TEN"
+          fi
+          rm -f "$RUNNER_TEMP/sa.json"
