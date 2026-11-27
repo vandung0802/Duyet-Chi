@@ -55,6 +55,16 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v43 (D 27/11/2026 "nút sửa bố trí xấu; tất cả nút xoá khi 1 ai đó xoá phải được sự đồng ý của tôi")
+- **Thay quyết định v27** (Hiền xoá thẳng): nay MỌI người không phải Dũng, kể cả Hiền, bấm xoá → thành ĐỀ NGHỊ XOÁ, Dũng đồng ý mới xoá thật.
+  - Phiếu chi / P.KH / ứng lương (`del`), công trình (`delSite`), đề xuất vật tư (`deletePlan`), nhân viên (`deleteEmp`): đề nghị ghi ở `pva379/delReqs/<loại>_<mã>` {kind p|s|k|n, id, label, amount, by, byName, ts}; `requestDelete` / `approveDelReq` (Dũng, gọi lại hàm xoá với `{force:true}` → không hỏi lại) / `rejectDelReq` (Dũng từ chối hoặc người gửi huỷ). Báo đẩy tới Dũng khi có đề nghị, báo người gửi khi Dũng đồng ý / từ chối.
+  - Khoản sổ quỹ: giữ cơ chế `deleteReq` trên khoản, nay chỉ Dũng đồng ý / không đồng ý (bỏ đường "Hiền đồng ý là xoá").
+  - Khung "🗑 N đề nghị xoá chờ Dũng duyệt" (`#delreq-panel`) đầu trang Đề xuất: Dũng thấy tất cả (kèm số khoản sổ quỹ chờ xoá, bấm sang Cân đối), người gửi thấy đề nghị của mình + nút huỷ. Công trình đang chờ xoá hiện "⏳ chờ xoá" thay cho nút ×.
+  - Không áp: thu hồi tin nhắn của chính mình, bỏ ảnh / dòng kê tạm ứng khi đang soạn, vật tư luân chuyển (đã Dũng duyệt từ v69), các mục vốn chỉ Dũng xoá (tài khoản, người dùng, người đề xuất, thùng rác).
+- Luật: xoá `proposals/$id`, `khProposals/$id`, `cashflow/$id` chỉ Dũng (giữ đường thủ quỹ — nay cả Hiền — gỡ khoản ký quỹ tự sinh `p_*` khi hoàn tác chuyển tiền); `plans/$id`, `employees/$id` xoá chỉ Dũng (vẫn sửa được như cũ); xoá node không tồn tại không bị chặn (để lần ghi gộp không vỡ); thêm `delReqs`. Dũng được gỡ lần chuyển trên phiếu (cần khi xoá khoản vay giải ngân thẳng). Danh sách công trình (`meta/sites`) Hiền vẫn ghi được (thêm / sửa tên) — việc chặn Hiền xoá công trình nằm ở app.
+- Nút ✏️ và × trong Danh sách công trình gom thành cụm bên phải, cùng cỡ 34px, tên công trình chiếm phần còn lại.
+- Thử: luật 141/141 (đổi 3 ca cũ "Hiền xoá thẳng" thành bị chặn, thêm 19 ca); `smoke22` (NV / Hiền đề nghị, Dũng đồng ý / từ chối, thùng rác, khung đề nghị); `smoke17` sửa phần xoá khoản vay sang Dũng; hồi quy smoke7, 8, 14, 20, 21.
+
 ## v42 (D 27/11/2026 "mục công trình phải sửa tên được")
 - Nút ✏️ cạnh mỗi công trình (Dũng, Hiền) → `renameSite(i)`: hỏi tên mới, chặn trống / trùng (không phân biệt hoa thường), đếm và hỏi xác nhận số phiếu / khoản sổ quỹ / kế hoạch vật tư đang ghi tên cũ, rồi ghi MỘT lần (`db.ref().update`, cả hoặc không): `meta/sites`, `site` của mọi phiếu (`proposals` + `khProposals`, kể cả ứng lương), `contentSnapshot/site` cùng giá trị cho phiếu đã duyệt, `cashflow/*/site`, `plans/*/site`. Báo cáo theo công trình không bị tách hai tên; phiếu đã duyệt vẫn chuyển tiền được (không vấp cảnh báo sửa sau duyệt).
 - Luật: `proposals/$id/site` và `khProposals/$id/site` thêm vế Dũng / Hiền đổi được kể cả phiếu đã duyệt, CHỈ khi `contentSnapshot/site` mới = giá trị mới (hoặc phiếu chưa có snapshot) — giữ lớp chống sửa sau duyệt. Hàng Google Sheet đã đồng bộ trước đó vẫn ghi tên cũ (không sửa ngược).
