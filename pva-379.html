@@ -1972,7 +1972,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v40';
+const APP_VERSION = '20261127-v41';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -8448,12 +8448,13 @@ function renderSettings(){
     : '<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chưa có người nào. Thêm bên dưới.</p>') + _accHtml;
 
   const sl=document.getElementById('site-list');
-  sl.innerHTML=sites.length
+  const _srvN = (typeof _metaData!=='undefined' && _metaData && _metaData.sites) ? (Array.isArray(_metaData.sites)?_metaData.sites:Object.values(_metaData.sites)).filter(Boolean).length : null;   // v41: đối chiếu máy chủ
+  sl.innerHTML=(_srvN!==null && _srvN!==sites.length ? `<div style="font-size:11px;color:#b91c1c;margin-bottom:6px">⚠️ Trên máy ${sites.length} công trình, máy chủ ${_srvN} — tải lại trang để lấy bản máy chủ</div>` : (_srvN!==null ? `<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px">Máy chủ đang có ${_srvN} công trình</div>` : ''))+(sites.length
     ? sites.map((s,i)=>`<div class="site-item">
         <div class="site-name">🏗️ ${esc(s)}</div>
         <button class="delete-btn" onclick="delSite(${i})">×</button>
       </div>`).join('')
-    : '<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chưa có công trình. Thêm bên dưới.</p>';
+    : '<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chưa có công trình. Thêm bên dưới.</p>');
 }
 
 function addPerson(){
@@ -8468,15 +8469,27 @@ function addPerson(){
 }
 function delPerson(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa được danh sách này'); return; } persons.splice(i,1); save(); renderSettings(); }   // v62
 
+// v41 (D 27/11 "thêm CT Cầu xã ĐA vẫn chưa được"): ghi THẲNG danh sách công trình lên máy chủ và báo rõ kết quả
+// (thành công / lỗi gì), không trông vào gói đẩy chung nữa; đang "xem thử vai" thì báo thoát ra.
+async function _saveSites(label){
+  if(typeof _viewAs!=='undefined' && _viewAs){ showToast('👁 Đang XEM THỬ vai khác — bấm thoát xem thử rồi mới thêm / xoá công trình được'); return false; }
+  try{
+    await db.ref('pva379/meta/sites').set(sites.slice());
+    try{ localStorage.setItem('pv_sites', JSON.stringify(sites)); }catch(e){}
+    showToast('✅ '+label+' — đã lưu lên máy chủ ('+sites.length+' công trình)'); return true;
+  }catch(e){ showToast('❌ Không lưu được lên máy chủ: '+(e.code||e.message||'lỗi không rõ')+' — chụp màn hình báo Dũng'); return false; }
+}
 function addSite(){
   if(_chuaTaiXong()) return;   // v40: chưa tải xong mà thêm thì chỉ nằm trên máy (pushToFirebase bỏ qua) → tải lại là mất
   if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền sửa được danh sách này — nhắn Dũng hoặc Hiền thêm giúp'); return; }   // v62; v39 (D 27/11): Hiền như Dũng
   const s=document.getElementById('new-site').value.trim();
   if(!s){ showToast('Vui lòng nhập tên công trình'); return; }
-  sites.push(s); save(); renderSettings(); showToast('Đã thêm: '+s);
+  if(sites.some(x=>String(x).trim().toLowerCase()===s.toLowerCase())){ showToast('Công trình này đã có trong danh sách'); return; }
+  sites.push(s); renderSettings();
+  _saveSites('Đã thêm: '+s).then(ok=>{ if(!ok){ const i=sites.indexOf(s); if(i>=0) sites.splice(i,1); renderSettings(); } else save(); });
   document.getElementById('new-site').value='';
 }
-function delSite(i){ if(_chuaTaiXong()) return; if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền sửa được danh sách này'); return; } if(!confirm('Xoá công trình "'+(sites[i]||'')+'" khỏi danh sách? Phiếu đã ghi công trình này vẫn giữ nguyên.')) return; sites.splice(i,1); save(); renderSettings(); }   // v62; v39: Hiền như Dũng, hỏi trước khi xoá
+function delSite(i){ if(_chuaTaiXong()) return; if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền sửa được danh sách này'); return; } const nm=sites[i]||''; if(!confirm('Xoá công trình "'+nm+'" khỏi danh sách? Phiếu đã ghi công trình này vẫn giữ nguyên.')) return; const bak=sites.slice(); sites.splice(i,1); renderSettings(); _saveSites('Đã xoá: '+nm).then(ok=>{ if(!ok){ sites=bak; renderSettings(); } else save(); }); }   // v62; v39: Hiền như Dũng; v41: ghi thẳng + báo kết quả
 
 // ── REPORT SUB-TABS ──
 function setReportTab(tab, btn){
