@@ -55,6 +55,9 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v37 (D 27/11/2026 "đổi màu thành cam đỏ")
+- Màu chủ đạo chàm → CAM ĐỎ: `--blue:#c2410c`, `--blue-light:#ffedd5`, `--blue-dark:#9a3412` (mọi chỗ dùng biến tự đổi); `theme-color` + `manifest-pva379.json` = `#c2410c`; màn vai / màn chặn, ô "Còn được tiêu" (gradient #9a3412→#ea580c), ô "= Trong TK" / "= Tiền trong tài khoản" nền cam nhạt, tiêu đề Sheet Apps Script. Giữ nguyên: ô Tiền mặt (xanh lá), nhãn "NH giải ngân thẳng" (chàm, để phân biệt), nút Sửa (xanh dương), màu trạng thái. Biểu tượng PWA (file ảnh) chưa đổi.
+
 ## v36 (27/11/2026) — PHÁT HÀNH (D: "giữ nguyên không thay đổi gì nhé. phát hành")
 - `PUSH_TRIAL = false`: bỏ màn chặn thử → 12 nhân viên (vai other, đã có hồ sơ + đã duyệt sẵn bên `pva379/userRoles`) vào được; thông báo đẩy gửi đúng vai, không còn "[Thử]". Không đổi gì khác (D dặn giữ nguyên; lô 40 phiếu ứng lương giữ). `version-pva379.txt` + `sw-pva379.js` = v36.
 - Người mới (D nêu 1 nhân viên 27/11): tự Đăng ký trong app → D đọc mã 6 số → D bấm "Cho xem dữ liệu" ở Cài đặt → Duyệt tài khoản.
