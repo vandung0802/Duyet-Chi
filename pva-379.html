@@ -1971,7 +1971,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v34';
+const APP_VERSION = '20261127-v35';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -13137,7 +13137,9 @@ async function saveBankBalance(a){
 // ══ v41: VAY / TRẢ NỢ / CHUYỂN NỘI BỘ (D chốt 25/09/2026) ══
 function renderLoanList(){
   const el = document.getElementById('cash-loan-list'); if(!el) return;
-  const allLoansEvery = cashflow.filter(r=>r.type==='loan').sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
+  // v35 (D 27/11): khoản CHƯA trả xong lên trước (mới → cũ), khoản đã trả hết gốc xuống dưới — cho dễ tìm
+  const _doneL = l => loanLeft(l) <= 0.0001 ? 1 : 0;
+  const allLoansEvery = cashflow.filter(r=>r.type==='loan').sort((a,b)=>_doneL(a)-_doneL(b) || String(b.date||'').localeCompare(String(a.date||'')) || (b.ts||0)-(a.ts||0));
   const allLoans = allLoansEvery.filter(l=>!l.old);   // v11: nợ cũ tách riêng (renderOldLoans)
   try{ renderOldLoans(allLoansEvery.filter(l=>l.old)); }catch(e){ console.warn(e); }
   try{ _orphanRepayHtml(); }catch(e){ console.warn(e); }   // v20
