@@ -55,6 +55,11 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## 27/11/2026 — chuẩn bị cho mọi người Duyệt Chi vào PVA-379 (D hỏi "cho toàn bộ những người đã vào được sổ DC cũng đăng nhập vào sổ này")
+- `scripts/chep-vai-tu-duyet-chi.js` + tác vụ `chep-vai-tu-duyet-chi.yml` (gõ `CHEP`; trống = chạy thử đếm): chép HỒ SƠ TÀI KHOẢN `duyetchi/userRoles` → `pva379/userRoles` cho uid chưa có (không đè ai đã có), chỉ tài khoản đã duyệt bên DC; vai trang→thuquy, dung/hien/ketoan giữ, còn lại other; dept kehoach/both giữ. KHÔNG chép phiếu / sổ quỹ (sổ mới). Nhật ký chỉ đếm theo vai, không in tên / email. Cùng project nên uid trùng → đăng nhập Google như cũ là vào.
+- `functions/push379.js`: người nhận / tên người nhận được kiểm thêm ở `pva379/userRoles` (trước chỉ `duyetchi/userRoles` → người chỉ có hồ sơ PVA-379 không nhận thông báo). **Cần D deploy functions** (`firebase deploy --only functions` trên máy D) — repo không có tác vụ tự deploy functions.
+- Chưa đổi `PUSH_TRIAL` — vai `other` vẫn bị chặn tới khi D nói "phát hành" (= `PUSH_TRIAL=false`).
+
 ## v35 (D 27/11/2026 "phần vay xếp khoản chưa trả xong trước, khoản đã trả sau")
 - `renderLoanList`: khoản còn nợ gốc lên trước (mới → cũ theo ngày), khoản đã trả hết gốc xuống dưới; áp dụng cả mục Nợ tồn đọng cũ (dùng chung danh sách đã xếp). Thử: `smoke18`.
 

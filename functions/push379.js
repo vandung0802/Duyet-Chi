@@ -55,11 +55,15 @@ async function ensureVapid() {
 async function recipientAllowed(uid, cache) {
   if (cache.has(uid)) return cache.get(uid);
   const db = rtdb379();
-  const [a, r] = await Promise.all([
+  // 27/11/2026: app PVA-379 có danh sách vai riêng (pva379/userRoles) — người chỉ có hồ sơ bên đó cũng phải nhận được thông báo.
+  const [a, r, a2, r2] = await Promise.all([
     db.ref('duyetchi/userRoles/' + uid + '/approved').once('value'),
     db.ref('duyetchi/userRoles/' + uid + '/role').once('value'),
+    db.ref('pva379/userRoles/' + uid + '/approved').once('value'),
+    db.ref('pva379/userRoles/' + uid + '/role').once('value'),
   ]);
-  const ok = a.val() === true || ['dung', 'hien', 'trang'].indexOf(r.val()) >= 0;
+  const ok = a.val() === true || ['dung', 'hien', 'trang'].indexOf(r.val()) >= 0
+    || a2.val() === true || ['dung', 'hien', 'thuquy'].indexOf(r2.val()) >= 0;
   cache.set(uid, ok);
   return ok;
 }
@@ -103,7 +107,8 @@ async function sendToRoles(title, body, roles, names, senderUid) {
     Object.values(byCh).forEach((m) => Object.values(m).forEach((s) => { if (s && typeof s.uid === 'string' && UID_RE.test(s.uid)) uids.add(s.uid); }));
     const nameOfUid = new Map();
     await Promise.all(Array.from(uids).slice(0, 300).map(async (u) => {
-      const v = (await db.ref('duyetchi/userRoles/' + u + '/name').once('value')).val();
+      let v = (await db.ref('duyetchi/userRoles/' + u + '/name').once('value')).val();
+      if (typeof v !== 'string') v = (await db.ref('pva379/userRoles/' + u + '/name').once('value')).val();   // 27/11: người chỉ có hồ sơ PVA-379
       if (typeof v === 'string') nameOfUid.set(u, v);
     }));
     const skip = subs.map((x) => x.key).concat(subs.map((x) => x.sub && x.sub.endpoint).filter(Boolean));
