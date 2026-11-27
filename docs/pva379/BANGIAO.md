@@ -55,6 +55,10 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v48 (D 27/11/2026 "nhập tài khoản vào thì tự hiện ra QR chưa")
+- Trước: mã QR chỉ hiện khi bấm nút 📲. Nay hộp **Xác nhận chuyển tiền** của phiếu có tài khoản nhận **hiện sẵn mã QR** (`_taQrDraw`), kèm ngân hàng · số TK (nút chép), tên trên phiếu, cảnh báo nếu TK khác lần chi trước; mã tự vẽ lại theo số tiền đang gõ (kể cả nút "Chuyển toàn bộ"); bấm vào mã → hộp phóng to (`openPayQr`); nút "Lưu ảnh QR" (`_qrSave` dùng chung cho cả hai hộp). Nút 📲 QR trên thẻ phiếu giữ nguyên.
+- Thử: `smoke23` thêm 2 ca (mã tự hiện, giải mã ra đúng TK + số tiền; đổi số tiền → mã đổi); hồi quy smoke7, 14, 17, 24.
+
 ## v47 (D 27/11/2026, ảnh chụp màn hình: QR Techcombank ra tên "TCB" thay vì "NGUYEN THI BAI")
 - Nguyên nhân: mã QR Techcombank có thẻ 59 (tên đơn vị) = "TCB"; v46 tin thẻ đó làm tên nên không đọc chữ nữa. Nay thẻ 59 chỉ nhận khi ≥ 2 từ, ≥ 5 ký tự, không phải tên / từ khoá ngân hàng.
 - Có mã QR mà chưa có tên (và tài khoản chưa từng chi) → **cắt vùng quanh mã** (2 mức nới: gần rồi rộng), phóng to tới 1800 điểm ảnh (tối đa ×4), che mã, đọc riêng vùng đó (`_scanCropCanvas`; `_scanOcr` nhận thẳng canvas). Ảnh chụp màn hình có thẻ QR nhỏ, chữ tên rất nhỏ vẫn đọc được. Không ra thì mới đọc cả ảnh như cũ.
