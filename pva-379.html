@@ -1971,7 +1971,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v32';
+const APP_VERSION = '20261127-v33';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -13252,15 +13252,17 @@ function _loanDirectUi(){
   _loanAllocSum();
 }
 function _allocArr(l){ const a=l&&l.alloc; return Array.isArray(a) ? a.filter(Boolean) : Object.values(a||{}).filter(Boolean); }
-// phiếu được NH trả thẳng: đã duyệt (H) còn phải chuyển; không ký quỹ / tạm ứng / ứng lương / P.KH
+// phiếu được NH trả thẳng: đã duyệt (D hoặc H) còn phải chuyển, gồm cả phiếu P.KH (v33 — D 27/11 "bấm Trả phiếu không hiện phiếu nào": trả nhà cung cấp phần lớn là phiếu P.KH); không ký quỹ / tạm ứng / ứng lương
 function _allocProps(){
-  return (proposals||[]).filter(p=>p.status!=='rejected' && p.kind!=='salary' && p.kind!=='kh' && p.costType!=='kyquy' && p.costType!=='tamung' && (getOfficialApprovedAmount(p)||0) - getTotalTransferred(p) > 0.5)
+  return (proposals||[]).filter(p=>p.status!=='rejected' && p.kind!=='salary' && p.costType!=='kyquy' && p.costType!=='tamung' && (getOfficialApprovedAmount(p)||0) - getTotalTransferred(p) > 0.5)
     .map(p=>({p, remain:(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)}))
     .sort((a,b)=>String(a.p.site||'').localeCompare(String(b.p.site||''),'vi') || (b.p.ts||0)-(a.p.ts||0));
 }
 function _allocPropOpts(sel){
-  const L=_allocProps(); if(!L.length) return '<option value="">— Không có phiếu đã duyệt còn phải chuyển —</option>';
-  return '<option value="">— Chọn phiếu đã duyệt —</option>' + L.map(({p,remain})=>`<option value="${esc(p.id)}" data-remain="${Math.round(remain)}"${p.id===sel?' selected':''}>${esc((p.site||'Chung')+' · '+(p.desc||'')+(p.payee?' · '+p.payee:'')+' · còn '+fmtVND(remain))}</option>`).join('');
+  const L=_allocProps();
+  if(!L.length){ const cho=(proposals||[]).filter(p=>p.status==='pending' && p.kind!=='salary' && !(getOfficialApprovedAmount(p)>0)).length;
+    return '<option value="">— Chưa có phiếu nào ĐÃ DUYỆT còn phải chuyển'+(cho?' ('+cho+' phiếu đang chờ duyệt — duyệt xong mới chọn được)':'')+' —</option>'; }
+  return '<option value="">— Chọn phiếu đã duyệt ('+L.length+') —</option>' + L.map(({p,remain})=>`<option value="${esc(p.id)}" data-remain="${Math.round(remain)}"${p.id===sel?' selected':''}>${esc((p.kind==='kh'?'P.KH · ':'')+(p.site||'Chung')+' · '+(p.desc||'')+(p.payee?' · '+p.payee:'')+' · còn '+fmtVND(remain))}</option>`).join('');
 }
 let _allocSeq = 0;
 function loanAllocAdd(kind, pre){
