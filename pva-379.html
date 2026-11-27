@@ -1972,7 +1972,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v41';
+const APP_VERSION = '20261127-v42';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -5391,7 +5391,7 @@ function doTransfer(id){
     const last = (p.transfers||[]).slice(-1)[0];
     try{ _refreshAcctSelects(false); }catch(e){}
     if(sel) sel.value = (last && CASH_ACCT[last.acct] && !CASH_ACCT[last.acct].off) ? last.acct : _acctDefault();   // mặc định = tài khoản lần chuyển trước
-    if(hint) hint.textContent = p.tax==='khonghl' ? 'Phiếu Không HL → thường chi từ TK tiền mặt / thủ quỹ.' : p.tax ? 'Phiếu '+TAX_TYPES[p.tax].label+' → thường chi từ TK công ty.' : 'Chọn đúng tài khoản đã chuyển để Sổ quỹ khớp ngân hàng.';
+    if(hint) hint.textContent = p.tax==='khonghl' ? 'Phiếu Không HL → thường chi từ TK tiền mặt / thủ quỹ.' : (p.tax && TAX_TYPES[p.tax]) ? 'Phiếu '+TAX_TYPES[p.tax].label+' → thường chi từ TK công ty.' : 'Chọn đúng tài khoản đã chuyển để Sổ quỹ khớp ngân hàng.';
   }
   { const d=document.getElementById('ta-due'); if(d) d.value = p.payDue || ''; _taDueToggle(); }   // v98
   document.getElementById('transfer-amount-modal').style.display='flex';
@@ -8452,6 +8452,7 @@ function renderSettings(){
   sl.innerHTML=(_srvN!==null && _srvN!==sites.length ? `<div style="font-size:11px;color:#b91c1c;margin-bottom:6px">⚠️ Trên máy ${sites.length} công trình, máy chủ ${_srvN} — tải lại trang để lấy bản máy chủ</div>` : (_srvN!==null ? `<div style="font-size:11px;color:var(--text-sub);margin-bottom:6px">Máy chủ đang có ${_srvN} công trình</div>` : ''))+(sites.length
     ? sites.map((s,i)=>`<div class="site-item">
         <div class="site-name">🏗️ ${esc(s)}</div>
+        ${_isApprover() ? `<button onclick="renameSite(${i})" title="Sửa tên công trình" style="border:none;background:none;font-size:16px;cursor:pointer;padding:2px 8px">✏️</button>` : ''}
         <button class="delete-btn" onclick="delSite(${i})">×</button>
       </div>`).join('')
     : '<p style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Chưa có công trình. Thêm bên dưới.</p>');
@@ -8478,6 +8479,38 @@ async function _saveSites(label){
     try{ localStorage.setItem('pv_sites', JSON.stringify(sites)); }catch(e){}
     showToast('✅ '+label+' — đã lưu lên máy chủ ('+sites.length+' công trình)'); return true;
   }catch(e){ showToast('❌ Không lưu được lên máy chủ: '+(e.code||e.message||'lỗi không rõ')+' — chụp màn hình báo Dũng'); return false; }
+}
+// v42 (D 27/11/2026 "mục công trình phải sửa tên được"): đổi tên trong danh sách VÀ trên mọi phiếu / P.KH / khoản sổ quỹ / kế hoạch
+// vật tư đang ghi tên cũ — một lần ghi duy nhất (cả hoặc không), để báo cáo theo công trình không bị tách làm hai tên.
+// Phiếu đã duyệt: đổi kèm contentSnapshot.site cùng giá trị (luật chỉ cho Dũng / Hiền, đúng cặp) → không vấp lớp chống sửa sau duyệt.
+async function renameSite(i){
+  if(_chuaTaiXong()) return;
+  if(!_isApprover()){ showToast('🔒 Chỉ Dũng / Hiền sửa được tên công trình'); return; }
+  if(typeof _viewAs!=='undefined' && _viewAs){ showToast('👁 Đang XEM THỬ vai khác — thoát xem thử rồi mới sửa được'); return; }
+  const old = sites[i]; if(old===undefined) return;
+  let nw = prompt('Sửa tên công trình:', old); if(nw===null) return;
+  nw = String(nw).normalize('NFC').trim().replace(/\s+/g,' ');
+  if(!nw){ showToast('Tên không được để trống'); return; }
+  if(nw===old){ return; }
+  if(nw.length>200){ showToast('Tên quá dài (tối đa 200 ký tự)'); return; }
+  if(sites.some((x,k)=>k!==i && String(x).trim().toLowerCase()===nw.toLowerCase())){ showToast('Đã có công trình tên "'+nw+'" — đổi tên khác hoặc xoá bớt một cái'); return; }
+  const up = {}, cnt = {p:0, c:0, k:0};
+  (proposals||[]).forEach(p=>{ if((p.site||'')!==old) return; const base=_propNodeFor(p.id)+p.id; up[base+'/site']=nw; if(p.contentSnapshot) up[base+'/contentSnapshot/site']=nw; cnt.p++; });
+  (cashflow||[]).forEach(r=>{ if((r.site||'')!==old) return; up['pva379/cashflow/'+r.id+'/site']=nw; cnt.c++; });
+  (plans||[]).forEach(x=>{ if((x.site||'')!==old || !x.id) return; up['pva379/plans/'+x.id+'/site']=nw; cnt.k++; });
+  const list = sites.slice(); list[i] = nw; up['pva379/meta/sites'] = list;
+  const kem = [cnt.p?cnt.p+' phiếu':'', cnt.c?cnt.c+' khoản sổ quỹ':'', cnt.k?cnt.k+' kế hoạch vật tư':''].filter(Boolean).join(', ');
+  if(!confirm('Đổi tên công trình:\n"'+old+'"\n→ "'+nw+'"'+(kem?'\n\nKèm theo '+kem+' đang ghi tên cũ cũng đổi sang tên mới.':'\n\nChưa có phiếu / khoản nào ghi tên này.'))) return;
+  try{
+    await db.ref().update(up);
+    sites[i] = nw;
+    (proposals||[]).forEach(p=>{ if((p.site||'')===old){ p.site=nw; if(p.contentSnapshot) p.contentSnapshot.site=nw; _cardCache.delete(p.id); } });
+    (cashflow||[]).forEach(r=>{ if((r.site||'')===old) r.site=nw; });
+    (plans||[]).forEach(x=>{ if((x.site||'')===old) x.site=nw; });
+    try{ localStorage.setItem('pv_sites', JSON.stringify(sites)); }catch(e){}
+    save(); renderSettings(); try{ renderAll(); }catch(e){}
+    showToast('✅ Đã đổi tên → "'+nw+'"'+(kem?' (kèm '+kem+')':''));
+  }catch(e){ showToast('❌ Không đổi được tên: '+(e.code||e.message||'lỗi không rõ')+' — không có gì bị đổi'); }
 }
 function addSite(){
   if(_chuaTaiXong()) return;   // v40: chưa tải xong mà thêm thì chỉ nằm trên máy (pushToFirebase bỏ qua) → tải lại là mất
