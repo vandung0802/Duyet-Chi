@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v47 (D 27/11/2026, ảnh chụp màn hình: QR Techcombank ra tên "TCB" thay vì "NGUYEN THI BAI")
+- Nguyên nhân: mã QR Techcombank có thẻ 59 (tên đơn vị) = "TCB"; v46 tin thẻ đó làm tên nên không đọc chữ nữa. Nay thẻ 59 chỉ nhận khi ≥ 2 từ, ≥ 5 ký tự, không phải tên / từ khoá ngân hàng.
+- Có mã QR mà chưa có tên (và tài khoản chưa từng chi) → **cắt vùng quanh mã** (2 mức nới: gần rồi rộng), phóng to tới 1800 điểm ảnh (tối đa ×4), che mã, đọc riêng vùng đó (`_scanCropCanvas`; `_scanOcr` nhận thẳng canvas). Ảnh chụp màn hình có thẻ QR nhỏ, chữ tên rất nhỏ vẫn đọc được. Không ra thì mới đọc cả ảnh như cũ.
+- `_scanFixUpperName`: tên IN HOA lẫn từ có dấu với không dấu ("NGUYEN THỊ BAI" — bộ chữ tiếng Việt tự thêm dấu) → bỏ dấu về dạng ngân hàng in; tên in hoa có dấu ở đa số từ thì giữ.
+- Thử: `unit-scan.js` 18/18; `smoke24` 29/29 (thêm ảnh tái hiện của D ở 3 độ phân giải: ra đúng tài khoản + "NGUYEN THI BAI"); hồi quy smoke7, 22, 23.
+
 ## v46 (D 27/11/2026 "đưa QR lên mà không thấy hiện tên người thụ hưởng"; "viết bằng chữ viết tay là không đọc được")
 - Mã VietQR KHÔNG chứa tên người thụ hưởng (chỉ BIN + số TK, tuỳ chọn số tiền / nội dung) → tên phải đọc từ chữ in cạnh mã. v45 chỉ nhận tên sau nhãn "chủ tài khoản…" hoặc dòng "Công ty…", còn thẻ QR của app ngân hàng in tên TRƠN.
 - `_scanParseText(text, {acct, okLine})`: thêm bước tìm **tên không nhãn** = dòng CHỮ IN HOA 2–7 từ, không số, không phải tên ngân hàng / khẩu hiệu (VietQR, napas, quét mã…), gần dòng số tài khoản nhất (≤ 4 dòng), chỉ lấy từ dòng bộ đọc tin ≥ 60%. Không có thì KHÔNG bịa tên.
