@@ -55,6 +55,11 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v34 (D 27/11/2026 "thêm cả ứng lương đã duyệt — giải ngân cũng có thể dùng để trả lương")
+- `_allocProps` gồm cả phiếu ỨNG LƯƠNG (kind salary, nằm trong `pva379/proposals`, cùng luồng duyệt / chuyển) đã duyệt còn phải chuyển; nhãn "Lương · tên NV · nhóm · Ứng lương tháng …"; xếp sau phiếu chi. Vẫn bỏ ký quỹ, tạm ứng.
+- Nút **➕ Ứng lương cả đợt** (`loanAllocAddSalary`): kê một lúc mọi phiếu ứng lương đã duyệt còn phải chuyển (bỏ phiếu đã có dòng), số tiền = phần còn lại — giải ngân trả lương cả đợt không phải chọn từng người.
+- Luật không đổi. Thử: `smoke17` thêm 2 phiếu lương (1 đã duyệt có trong danh sách, 1 chưa duyệt không có; nút cả đợt kê đúng 1 dòng 8tr).
+
 ## v33 (D 27/11/2026 "bấm Trả phiếu không hiện phiếu nào")
 - Danh sách phiếu cho giải ngân thẳng (`_allocProps`) nay gồm cả **phiếu P.KH** đã duyệt (trả nhà cung cấp phần lớn là phiếu P.KH; v32 lọc nhầm). Vẫn bỏ ứng lương, ký quỹ, tạm ứng. Nhãn có tiền tố "P.KH ·".
 - Danh sách trống → ghi rõ "Chưa có phiếu nào ĐÃ DUYỆT còn phải chuyển (N phiếu đang chờ duyệt — duyệt xong mới chọn được)"; có phiếu thì ghi số lượng.

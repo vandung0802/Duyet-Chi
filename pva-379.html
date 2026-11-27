@@ -1971,7 +1971,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = true;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v33';
+const APP_VERSION = '20261127-v34';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -13252,17 +13252,26 @@ function _loanDirectUi(){
   _loanAllocSum();
 }
 function _allocArr(l){ const a=l&&l.alloc; return Array.isArray(a) ? a.filter(Boolean) : Object.values(a||{}).filter(Boolean); }
-// phiếu được NH trả thẳng: đã duyệt (D hoặc H) còn phải chuyển, gồm cả phiếu P.KH (v33 — D 27/11 "bấm Trả phiếu không hiện phiếu nào": trả nhà cung cấp phần lớn là phiếu P.KH); không ký quỹ / tạm ứng / ứng lương
+// phiếu được NH trả thẳng: đã duyệt (D hoặc H) còn phải chuyển, gồm phiếu P.KH (v33) và ỨNG LƯƠNG đã duyệt (v34 — D 27/11 "giải ngân cũng có thể dùng để trả lương"); không ký quỹ / tạm ứng
 function _allocProps(){
-  return (proposals||[]).filter(p=>p.status!=='rejected' && p.kind!=='salary' && p.costType!=='kyquy' && p.costType!=='tamung' && (getOfficialApprovedAmount(p)||0) - getTotalTransferred(p) > 0.5)
+  return (proposals||[]).filter(p=>p.status!=='rejected' && p.costType!=='kyquy' && p.costType!=='tamung' && (getOfficialApprovedAmount(p)||0) - getTotalTransferred(p) > 0.5)
     .map(p=>({p, remain:(getOfficialApprovedAmount(p)||0)-getTotalTransferred(p)}))
-    .sort((a,b)=>String(a.p.site||'').localeCompare(String(b.p.site||''),'vi') || (b.p.ts||0)-(a.p.ts||0));
+    .sort((a,b)=>(a.p.kind==='salary'?1:0)-(b.p.kind==='salary'?1:0) || String(a.p.site||'').localeCompare(String(b.p.site||''),'vi') || (b.p.ts||0)-(a.p.ts||0));
+}
+function _allocLabel(p, remain){ return (p.kind==='kh'?'P.KH · ':p.kind==='salary'?'Lương · '+(p.person||'')+' · ':'')+(p.site||'Chung')+' · '+(p.desc||'')+(p.payee?' · '+p.payee:'')+' · còn '+fmtVND(remain); }
+// v34: thêm một lúc mọi phiếu ỨNG LƯƠNG đã duyệt còn phải chuyển (giải ngân trả lương cả đợt), bỏ qua phiếu đã có dòng
+function loanAllocAddSalary(){
+  const have=new Set([...document.querySelectorAll('#loan-alloc-rows .alloc-pid')].map(s=>s.value).filter(Boolean));
+  const L=_allocProps().filter(x=>x.p.kind==='salary' && !have.has(x.p.id));
+  if(!L.length){ showToast('Không có phiếu ứng lương đã duyệt nào còn phải chuyển (hoặc đã kê hết)'); return; }
+  L.forEach(x=>loanAllocAdd('prop', {pid:x.p.id, amount:Math.round(x.remain)}));
+  _loanAllocSum(); showToast('➕ Đã kê '+L.length+' phiếu ứng lương, tổng '+fmtVND(L.reduce((a,x)=>a+x.remain,0)));
 }
 function _allocPropOpts(sel){
   const L=_allocProps();
-  if(!L.length){ const cho=(proposals||[]).filter(p=>p.status==='pending' && p.kind!=='salary' && !(getOfficialApprovedAmount(p)>0)).length;
+  if(!L.length){ const cho=(proposals||[]).filter(p=>p.status==='pending' && !(getOfficialApprovedAmount(p)>0)).length;
     return '<option value="">— Chưa có phiếu nào ĐÃ DUYỆT còn phải chuyển'+(cho?' ('+cho+' phiếu đang chờ duyệt — duyệt xong mới chọn được)':'')+' —</option>'; }
-  return '<option value="">— Chọn phiếu đã duyệt ('+L.length+') —</option>' + L.map(({p,remain})=>`<option value="${esc(p.id)}" data-remain="${Math.round(remain)}"${p.id===sel?' selected':''}>${esc((p.kind==='kh'?'P.KH · ':'')+(p.site||'Chung')+' · '+(p.desc||'')+(p.payee?' · '+p.payee:'')+' · còn '+fmtVND(remain))}</option>`).join('');
+  return '<option value="">— Chọn phiếu đã duyệt ('+L.length+') —</option>' + L.map(({p,remain})=>`<option value="${esc(p.id)}" data-remain="${Math.round(remain)}"${p.id===sel?' selected':''}>${esc(_allocLabel(p, remain))}</option>`).join('');
 }
 let _allocSeq = 0;
 function loanAllocAdd(kind, pre){
@@ -13872,6 +13881,7 @@ function updateCashBadge(){
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
         <button type="button" onclick="loanAllocAdd('prop')" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ Trả phiếu</button>
         <button type="button" onclick="loanAllocAdd('acct')" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ Về tài khoản</button>
+        <button type="button" onclick="loanAllocAddSalary()" title="Kê một lúc mọi phiếu ứng lương đã duyệt còn phải chuyển" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ Ứng lương cả đợt</button>
       </div>
       <div id="loan-alloc-sum" style="font-size:12px;font-weight:700;margin-top:8px"></div>
       <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #cbd5e1">
