@@ -55,6 +55,10 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v41 (D 27/11/2026 "thêm CT Cầu xã ĐA vẫn chưa được")
+- Chưa rõ nguyên nhân trên máy D (v40 đã đúng trên giả lập cho cả Dũng và Hiền) → làm cho chắc và cho biết lỗi: `_saveSites()` ghi THẲNG `pva379/meta/sites` bằng `set()` và chờ máy chủ trả lời; báo "✅ đã lưu lên máy chủ (N công trình)" hoặc "❌ Không lưu được: <mã lỗi>"; đang "xem thử vai" (`_viewAs`) thì báo thoát ra (trước đây `save()` chỉ nhả toast "Đang xem thử" dễ bỏ qua). Thêm trùng tên bị chặn. Thẻ Danh sách công trình ghi "Máy chủ đang có N công trình", lệch với máy thì cảnh báo đỏ.
+- Thử: `smoke20` mở rộng (trùng tên, toast đã lưu, dòng số máy chủ).
+
 ## v40 (D 27/11/2026 "thêm công trình thấy rồi, quay ra lại mất")
 - Lỗi do v39: `pushToFirebase` chỉ ghi gói meta (persons + sites + sheetUrl) khi `currentRole==='dung'` → Hiền thêm công trình chỉ nằm trên máy, tải lại là mất. Nay Hiền ghi RIÊNG `pva379/meta/sites` khi danh sách đổi (luật v39 cho), không kèm persons / sheetUrl.
 - `addSite` / `delSite` chặn khi dữ liệu chưa tải xong (`_chuaTaiXong`) — trước đó thêm sớm quá cũng chỉ nằm trên máy.
