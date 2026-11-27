@@ -55,6 +55,10 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v38 (D 27/11/2026 "cho cả cái màu bên ngoài thành màu đó luôn")
+- Biểu tượng app (ngoài màn hình chính / thông báo / tab): trước manifest trỏ `icon-192.png` / `icon-512.png` dùng chung với Duyệt Chi mà **file không có trong repo** (404 → điện thoại tự sinh chữ cái). Nay có bộ riêng `icon-pva379-512.png` / `-192.png` / `-180.png` (nền cam đỏ, chữ PVA 379; tạo bằng PIL, vùng an toàn maskable). `manifest-pva379.json` icons (any + maskable), `<link rel="apple-touch-icon">` → 180, `<link rel="icon">` → 192, `sw-pva379.js` icon/badge thông báo → 192. Không đụng manifest / icon của Duyệt Chi, Gia Bình.
+- Lưu ý: điện thoại đã cài sẵn app phải **gỡ rồi cài lại** (Thêm vào màn hình chính) mới đổi biểu tượng; bản cài mới thấy ngay.
+
 ## v37 (D 27/11/2026 "đổi màu thành cam đỏ")
 - Màu chủ đạo chàm → CAM ĐỎ: `--blue:#c2410c`, `--blue-light:#ffedd5`, `--blue-dark:#9a3412` (mọi chỗ dùng biến tự đổi); `theme-color` + `manifest-pva379.json` = `#c2410c`; màn vai / màn chặn, ô "Còn được tiêu" (gradient #9a3412→#ea580c), ô "= Trong TK" / "= Tiền trong tài khoản" nền cam nhạt, tiêu đề Sheet Apps Script. Giữ nguyên: ô Tiền mặt (xanh lá), nhãn "NH giải ngân thẳng" (chàm, để phân biệt), nút Sửa (xanh dương), màu trạng thái. Biểu tượng PWA (file ảnh) chưa đổi.
 

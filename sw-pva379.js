@@ -1,4 +1,4 @@
-const VERSION = '20261127-pv37';
+const VERSION = '20261127-pv38';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim().then(() => {
@@ -19,8 +19,8 @@ self.addEventListener('push', function(event) {
     if (navigator.setAppBadge) await navigator.setAppBadge(count);
     await self.registration.showNotification(title, {
       body: body,
-      icon: 'https://vandung0802.github.io/Duyet-Chi/icon-192.png',
-      badge: 'https://vandung0802.github.io/Duyet-Chi/icon-192.png',
+      icon: 'https://vandung0802.github.io/Duyet-Chi/icon-pva379-192.png',
+      badge: 'https://vandung0802.github.io/Duyet-Chi/icon-pva379-192.png',
       data: { url: 'https://vandung0802.github.io/Duyet-Chi/pva-379.html' }
     });
   })());
