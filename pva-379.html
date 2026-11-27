@@ -466,7 +466,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div class="form-group">
         <label class="form-label">Đơn vị / người nhận tiền <span style="font-weight:400;color:var(--text-sub)">(để lọc: trả cho ai bao nhiêu)</span></label>
-        <input class="form-input" id="edit-payee" type="text" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+        <input class="form-input" id="edit-payee" type="text" onchange="_payeeAutoAcct('edit')" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Tài khoản nhận <span style="font-weight:400;color:var(--text-sub)">(ngân hàng · số tài khoản — không bắt buộc)</span></label>
+        <div style="display:flex;gap:6px">
+          <select class="form-input form-select paybank-sel" id="edit-paybank" style="flex:1 1 42%;min-width:0;margin:0" onchange="_payHint('edit')"></select>
+          <input class="form-input" id="edit-payno" type="text" autocomplete="off" autocapitalize="characters" placeholder="Số tài khoản" style="flex:1 1 58%;min-width:0;margin:0" oninput="_payNoClean(this);_payHint('edit')">
+        </div>
+        <div id="edit-payhint" style="font-size:11px;color:var(--text-sub);margin-top:4px;line-height:1.4"></div>
     </div>
     <div class="form-group" id="edit-costtype-wrap">
       <label class="form-label">Loại chi phí</label>
@@ -593,6 +601,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="acct-pick"><label class="form-label">Chuyển từ tài khoản</label>
     <select class="form-input form-select" id="ta-acct" style="margin-bottom:4px"></select>
     <div id="ta-acct-hint" style="font-size:11px;color:var(--text-sub);margin-bottom:12px;line-height:1.4"></div></div>
+    <div id="ta-qr-wrap" style="margin:0 0 10px"></div>
 
     <button class="btn-full btn-primary-full" onclick="confirmTransferAmount()">Xác nhận chuyển</button>
     <button class="btn-full btn-outline-full" onclick="closeTransferAmountModal()">Hủy</button>
@@ -740,8 +749,16 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </div>
       <div class="form-group">
         <label class="form-label">Đơn vị / người nhận tiền <span style="font-weight:400;color:var(--text-sub)">(để lọc: trả cho ai bao nhiêu)</span></label>
-        <input class="form-input" id="inp-payee" type="text" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+        <input class="form-input" id="inp-payee" type="text" onchange="_payeeAutoAcct('inp')" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
       </div>
+    <div class="form-group">
+        <label class="form-label">Tài khoản nhận <span style="font-weight:400;color:var(--text-sub)">(ngân hàng · số tài khoản — không bắt buộc)</span></label>
+        <div style="display:flex;gap:6px">
+          <select class="form-input form-select paybank-sel" id="inp-paybank" style="flex:1 1 42%;min-width:0;margin:0" onchange="_payHint('inp')"></select>
+          <input class="form-input" id="inp-payno" type="text" autocomplete="off" autocapitalize="characters" placeholder="Số tài khoản" style="flex:1 1 58%;min-width:0;margin:0" oninput="_payNoClean(this);_payHint('inp')">
+        </div>
+        <div id="inp-payhint" style="font-size:11px;color:var(--text-sub);margin-top:4px;line-height:1.4"></div>
+    </div>
       <datalist id="payee-list"></datalist>
 
       <div class="form-group">
@@ -1853,7 +1870,15 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     </div>
     <div class="form-group">
         <label class="form-label">Đơn vị / người nhận tiền <span style="font-weight:400;color:var(--text-sub)">(để lọc: trả cho ai bao nhiêu)</span></label>
-        <input class="form-input" id="kh-inp-payee" type="text" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+        <input class="form-input" id="kh-inp-payee" type="text" onchange="_payeeAutoAcct('kh-inp')" list="payee-list" autocomplete="off" placeholder="VD: Cty thép Hoà Phát / anh Nam lái máy">
+    </div>
+    <div class="form-group">
+        <label class="form-label">Tài khoản nhận <span style="font-weight:400;color:var(--text-sub)">(ngân hàng · số tài khoản — không bắt buộc)</span></label>
+        <div style="display:flex;gap:6px">
+          <select class="form-input form-select paybank-sel" id="kh-inp-paybank" style="flex:1 1 42%;min-width:0;margin:0" onchange="_payHint('kh-inp')"></select>
+          <input class="form-input" id="kh-inp-payno" type="text" autocomplete="off" autocapitalize="characters" placeholder="Số tài khoản" style="flex:1 1 58%;min-width:0;margin:0" oninput="_payNoClean(this);_payHint('kh-inp')">
+        </div>
+        <div id="kh-inp-payhint" style="font-size:11px;color:var(--text-sub);margin-top:4px;line-height:1.4"></div>
     </div>
     <div class="form-group">
       <label class="form-label">Nội dung <span class="req">*</span></label>
@@ -1973,7 +1998,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v43';
+const APP_VERSION = '20261127-v44';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4722,6 +4747,7 @@ function _buildCard(p){
             ${_salPos?`<span>💼 ${esc(_salPos)}</span>`:''}
             ${p.site?`<span>📍 ${esc(p.site)}</span>`:''}
             ${p.payee?`<span title="Đơn vị / người nhận tiền">🏢 ${esc(p.payee)}</span>`:''}
+            ${_payChip(p)}
             ${_costChip(p)}
             <span>🕐 ${fmtFull(p.ts)}</span>
           </div>
@@ -5288,6 +5314,7 @@ function confirmApproveAmount(){
   // nếu nội dung/số tài khoản bị sửa sau duyệt (dù bằng cách nào) sẽ bị phát hiện và CHẶN chuyển.
   // Máy chủ chỉ cho D/H ghi/đổi snapshot này (kẻ khác không thể sửa cho khớp nội dung giả).
   p.contentSnapshot = { desc: p.desc||'', note: p.note||'', amount: p.amount||0, person: p.person||'', site: p.site||'', payee: p.payee||'' };
+  if(p.payAcctNo){ p.contentSnapshot.payBank = p.payBank||''; p.contentSnapshot.payAcctNo = p.payAcctNo; }   // v44: tài khoản nhận cũng chụp lúc duyệt
 
   save();
   // Vẽ lại NGAY thẻ vừa duyệt (không chờ debounce) → tránh thẻ còn hiện "Chờ duyệt"
@@ -5377,7 +5404,7 @@ function doTransfer(id){
   // nghĩa là phiếu ĐÃ BỊ SỬA SAU KHI DUYỆT (VD đổi số tài khoản) → CHẶN chuyển, báo ngay.
   // Phiếu duyệt trước v77 chưa có ảnh nội dung → bỏ qua đối chiếu (sẽ có từ lần duyệt sau).
   const _cs = p.contentSnapshot;
-  if(_cs && ((_cs.desc||'') !== (p.desc||'') || (_cs.note||'') !== (p.note||'') || (_cs.amount||0) !== (p.amount||0) || (_cs.person||'') !== (p.person||'') || (_cs.site||'') !== (p.site||''))){
+  if(_cs && ((_cs.desc||'') !== (p.desc||'') || (_cs.note||'') !== (p.note||'') || (_cs.amount||0) !== (p.amount||0) || (_cs.person||'') !== (p.person||'') || (_cs.site||'') !== (p.site||'') || (_cs.payBank||'') !== (p.payBank||'') || (_cs.payAcctNo||'') !== (p.payAcctNo||''))){
     alert('⚠️ CẢNH BÁO BẢO MẬT\n\nNội dung phiếu này ĐÃ BỊ THAY ĐỔI sau khi duyệt (khác với bản lúc duyệt).\n\nKHÔNG chuyển tiền — báo ngay cho người duyệt kiểm tra. Muốn chuyển được phải bỏ duyệt và duyệt lại nội dung đúng.');
     return;
   }
@@ -5397,6 +5424,7 @@ function doTransfer(id){
     if(hint) hint.textContent = p.tax==='khonghl' ? 'Phiếu Không HL → thường chi từ TK tiền mặt / thủ quỹ.' : (p.tax && TAX_TYPES[p.tax]) ? 'Phiếu '+TAX_TYPES[p.tax].label+' → thường chi từ TK công ty.' : 'Chọn đúng tài khoản đã chuyển để Sổ quỹ khớp ngân hàng.';
   }
   { const d=document.getElementById('ta-due'); if(d) d.value = p.payDue || ''; _taDueToggle(); }   // v98
+  { const q=document.getElementById('ta-qr-wrap'); if(q) q.innerHTML = p.payAcctNo ? `<div style="padding:8px 10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;font-size:12.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:0">🏦 <b>${esc(_payBankName(p.payBank))}</b> · ${esc(p.payAcctNo)}${p.payee?'<br><span style="color:var(--text-sub)">'+esc(p.payee)+'</span>':''}</span><button onclick="openPayQr('${sid(p.id)}', parseAmountInput(document.getElementById('ta-amount')))" style="padding:7px 10px;border-radius:8px;border:none;background:#4338ca;color:#fff;font-weight:800;cursor:pointer">📲 Mã QR</button><button onclick="copyPayNo('${sid(p.id)}')" style="padding:7px 9px;border-radius:8px;border:1px solid #c7d2fe;background:#fff;cursor:pointer">📋</button></div>` : ''; }   // v44
   document.getElementById('transfer-amount-modal').style.display='flex';
   document.getElementById('transfer-amount-modal').style.pointerEvents='auto';
 }
@@ -6375,6 +6403,7 @@ function openEditProposal(id){
   document.getElementById('edit-person').value = p.person||'';
   document.getElementById('edit-site').value = p.site||'';
   { const _pe=document.getElementById('edit-payee'); if(_pe) _pe.value = p.payee||''; } try{ _fillPayeeList(); }catch(e){}   // v18
+  _paySet('edit', p.payBank||'', p.payAcctNo||''); { const _m=_isMyProposal(p); ['edit-paybank','edit-payno'].forEach(i=>{ const el=document.getElementById(i); if(el) el.disabled = !_m; }); }   // v44
   document.getElementById('edit-desc').value = p.desc||'';
   {
     const _ctW=document.getElementById('edit-costtype-wrap'), _ct=document.getElementById('edit-costtype'), _ctH=document.getElementById('edit-costtype-hint');
@@ -6559,6 +6588,9 @@ function saveEditProposal(){
   const amountRaw = parseAmountInput(document.getElementById('edit-amount'));
   const note = document.getElementById('edit-note').value.trim();
   const payee = _payeeVal('edit-payee');   // v18
+  const _mineE = _isMyProposal(p), _pa = _mineE ? _payRead('edit') : {bank:p.payBank||'', no:p.payAcctNo||''};   // v44: tài khoản nhận (chỉ người lập sửa)
+  if(_pa.err){ showToast('⚠️ '+_pa.err); return; }
+  const _payChanged = (_pa.no||'') !== (p.payAcctNo||'') || (_pa.bank||'') !== (p.payBank||'');
 
   if(!person){ showToast('Vui lòng chọn người đề xuất'); return; }
   if(!desc){ showToast('Vui lòng nhập nội dung'); return; }
@@ -6572,7 +6604,7 @@ function saveEditProposal(){
   // khoản/số tiền sau duyệt). Chặn ngay tại đây cho rõ ràng — nếu để lọt, máy chủ cũng sẽ từ chối
   // và thiết bị này bị kẹt đồng bộ. Vẫn cho sửa ý kiến/mức ưu tiên/ảnh (không thuộc phần đóng băng).
   const _frozen = !!(p.approvedD || p.approvedH || (Array.isArray(p.approvedDHistory)&&p.approvedDHistory.length) || (Array.isArray(p.approvedHHistory)&&p.approvedHHistory.length));
-  const _contentChanged = desc !== (p.desc||'') || note !== (p.note||'') || amountRaw !== (p.amount||0) || person !== (p.person||'') || site !== (p.site||'') || payee !== (p.payee||'');
+  const _contentChanged = desc !== (p.desc||'') || note !== (p.note||'') || amountRaw !== (p.amount||0) || person !== (p.person||'') || site !== (p.site||'') || payee !== (p.payee||'') || _payChanged;
   const _apEl = document.getElementById('edit-adv-person');
   const _apChanged = !!(_apEl && p.costType==='tamung' && (_apEl.value||'').trim() !== (p.advPerson||''));   // v62: người nhận tạm ứng cũng đóng băng sau duyệt
   if(_frozen && (_contentChanged || _apChanged)){
@@ -6588,12 +6620,14 @@ function saveEditProposal(){
     if(person !== (p.person||'')) _chg.push('người đề xuất');
     if(site !== (p.site||'')) _chg.push('công trường');
     if(payee !== (p.payee||'')) _chg.push('đơn vị nhận');
+    if(_payChanged) _chg.push('tài khoản nhận '+(_payAcctText(p)||'(chưa có)')+' → '+(_pa.no ? _payBankName(_pa.bank)+' · '+_pa.no : '(bỏ)'));
     if(note !== (p.note||'')) _chg.push('ghi chú');
     { const _ap=document.getElementById('edit-adv-person'); const _ct2=document.getElementById('edit-costtype'); const _ctv=(_ct2&&!_ct2.disabled)?(_ct2.value||p.costType):p.costType; if(_ap && _ctv==='tamung'){ const v=(_ap.value||'').trim(); if(!v){ showToast('Vui lòng ghi NGƯỜI NHẬN TẠM ỨNG'); return; } if(v!==(p.advPerson||'')){ _chg.push('người nhận tạm ứng → '+v); p.advPerson = v; } const _po=((document.getElementById('edit-adv-position')||{}).value||'').trim(); if(_po!==(p.advPosition||'')){ p.advPosition=_po; _chg.push('chức vụ → '+_po); } saveAdvPerson(v, _po); } }   // v51/v53
     if(editingImages.length !== ((Array.isArray(p.imgImages)&&p.imgImages.length) ? p.imgImages.length : (p.imgB64?1:0))) _chg.push('ảnh đính kèm');
     p.person = person;
     p.site = site;
     p.payee = payee;
+    if(_pa.no){ p.payBank = _pa.bank; p.payAcctNo = _pa.no; } else { delete p.payBank; delete p.payAcctNo; }   // v44
     p.desc = desc;
     p.amount = amountRaw;
     p.amountUnit = 'dong';
@@ -7104,6 +7138,7 @@ function submitProposal(){
     const _advName = ((document.getElementById('inp-costtype')||{}).value==='tamung') ? ((document.getElementById('inp-adv-person')||{}).value||'').trim() : '';   // v51
     if((document.getElementById('inp-costtype')||{}).value==='tamung' && !_advName){ showToast('Vui lòng ghi NGƯỜI NHẬN TẠM ỨNG (ai sẽ cầm tiền)'); try{ document.getElementById('inp-adv-person').focus(); }catch(e){} return; }
     if(!amountRaw){ showToast('Vui lòng nhập số tiền'); document.getElementById('inp-amount').focus(); return; }
+    const _pa = _payRead('inp'); if(_pa.err){ showToast('⚠️ '+_pa.err); return; }   // v44: tài khoản nhận
 
     // v95: chọn GẤP bắt buộc có lý do — không có thì mở bảng đòi lý do và chặn gửi
     const _prio = (document.querySelector('input[name="inp-priority"]:checked')||{value:'normal'}).value;
@@ -7112,6 +7147,7 @@ function submitProposal(){
     const p={
       id: Date.now().toString(),
       desc, person, site, payee: _payeeVal('inp-payee'),   // v18: đơn vị / người nhận tiền (để lọc)
+      ...(_pa.no ? {payBank:_pa.bank, payAcctNo:_pa.no} : {}),   // v44
       // Gia Bình: loại chi phí — 'kyquy' sẽ tự ghi sang tab Cân đối khi Thủ quỹ chuyển tiền
       costType: (document.getElementById('inp-costtype')||{}).value || 'congtruong',
       tax: (document.getElementById('inp-tax')||{}).value || '',   // v40: chi phí thuế
@@ -7160,6 +7196,7 @@ function submitProposal(){
     { const _ap=document.getElementById('inp-adv-person'); if(_ap) _ap.value=''; const _apo=document.getElementById('inp-adv-position'); if(_apo) _apo.value=''; }
     document.getElementById('inp-amount').value='';
     document.getElementById('inp-note').value='';
+    { const _pe=document.getElementById('inp-payee'); if(_pe) _pe.value=''; } _paySet('inp','','');   // v44
     document.getElementById('inp-person').value='';
     const _ro = document.getElementById('inp-person-readonly'); if(_ro) _ro.value='';
     document.getElementById('inp-site').value = sites.length===1 ? sites[0] : '';   // v41
@@ -7206,7 +7243,7 @@ function _fillAcctSelects(){   // v116: 6 ô chọn nguồn tiền dùng chung 1
   try{ _refreshAcctSelects(false); }catch(e){}
 }
 function populateSelects(){
-  _fillAcctSelects();
+  _fillAcctSelects(); try{ _fillPayBankSelects(); }catch(e){}
   const ps=document.getElementById('inp-person');
   const ss=document.getElementById('inp-site');
   const roleName = currentRole==='hien'?'Hiền': currentRole==='thuquy'?'Thủ quỹ': currentRole==='vattu'?'': currentRole==='ketoan'?'Kế toán': '';
@@ -9120,11 +9157,11 @@ async function downloadMonthExcel(){
     if(p.kind==='kh' || p.status==='rejected') return;
     if(!_canSeeP(p)) return;   // rà soát 22/11: Excel tháng cũng chỉ phiếu mình được thấy
     if(p.costType!=='tamung') (p.transfers||[]).forEach(t=>{ if(!inM(t.ts)) return;   // v62: tiền ỨNG chưa phải chi phí — chỉ các khoản KÊ đã duyệt (bên dưới) mới tính, tránh cộng 2 lần
-      rows.push([ymdLocal(t.ts), p.desc||'', p.person||'', p.site||'', p.kind==='salary'?'Ứng lương':ctName(p.costType), p.kind==='salary'?'':txName(p.tax), _oneAcct()?'':(t&&t.loanId)?'Vay NH giải ngân thẳng':((t&&t.acct)?acctLabel(t.acct):''), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.kind==='salary'?'—':(p.review?'Có':'Chưa'), p.payee||'']); });
-    if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || !x.ok || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', hdName(p), +x.amount||0, '', p.review?'Có':'Chưa', p.payee||'']); });   // v43
+      rows.push([ymdLocal(t.ts), p.desc||'', p.person||'', p.site||'', p.kind==='salary'?'Ứng lương':ctName(p.costType), p.kind==='salary'?'':txName(p.tax), _oneAcct()?'':(t&&t.loanId)?'Vay NH giải ngân thẳng':((t&&t.acct)?acctLabel(t.acct):''), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.kind==='salary'?'—':(p.review?'Có':'Chưa'), p.payee||'', _payAcctText(p)]); });
+    if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || !x.ok || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', hdName(p), +x.amount||0, '', p.review?'Có':'Chưa', p.payee||'', _payAcctText(p)]); });   // v43
   });
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
-  const head = ['Ngày','Nội dung','Người','Công trường','Loại chi phí','Thuế',_oneAcct()?'':'Tài khoản','Hợp đồng','Số tiền','Hóa đơn','KT rà soát','Đơn vị nhận'];   // v18: thêm cột cuối (không đụng cột I công thức)
+  const head = ['Ngày','Nội dung','Người','Công trường','Loại chi phí','Thuế',_oneAcct()?'':'Tài khoản','Hợp đồng','Số tiền','Hóa đơn','KT rà soát','Đơn vị nhận','Tài khoản nhận'];   // v18: thêm cột cuối (không đụng cột I công thức)
   const aoa = [['PVA-379 — BÁO CÁO CHI THÁNG '+mon.slice(5)+'/'+mon.slice(0,4)], ['Lập lúc '+fmtFull(Date.now())+' · '+(getCurrentUserName()||'')], [], head].concat(rows.length ? rows : [['','(không có khoản chi trong tháng)']]);
   const r0 = 5, r1 = r0 + Math.max(rows.length,1) - 1;
   const sumF = (cond) => ({ t:'n', f: cond ? `SUMIF(F${r0}:F${r1},"${cond}",I${r0}:I${r1})` : `SUM(I${r0}:I${r1})` });
@@ -10362,7 +10399,7 @@ function openKhModal(){
     const nm=typeof s==='string'?s:(s&&s.name)||'';
     return nm?`<option value="${esc(nm)}">🏗 ${esc(nm)}</option>`:'';
   }).join('');
-  document.getElementById('kh-inp-desc').value=''; { const _pe=document.getElementById('kh-inp-payee'); if(_pe) _pe.value=''; } try{ _fillPayeeList(); }catch(e){}
+  document.getElementById('kh-inp-desc').value=''; { const _pe=document.getElementById('kh-inp-payee'); if(_pe) _pe.value=''; } try{ _fillPayeeList(); }catch(e){} _paySet('kh-inp','','');   // v44
   document.getElementById('kh-inp-amount').value='';
   document.getElementById('kh-inp-note').value='';
   document.getElementById('kh-modal-overlay').style.display='flex';
@@ -10375,12 +10412,14 @@ function saveKhFromModal(){
   const note=document.getElementById('kh-inp-note').value.trim();
   if(!desc){ showToast('Nhập nội dung đề xuất'); return; }
   if(!amount||amount<=0){ showToast('Nhập số tiền hợp lệ'); return; }
+  const _pa = _payRead('kh-inp'); if(_pa.err){ showToast('⚠️ '+_pa.err); return; }   // v44
   const me=getCurrentUserName()||((currentUser&&currentUser.email)||'').split('@')[0]||'?';
   // Phiếu P.KH — id có TIỀN TỐ 'kh' để tự định tuyến vào kho riêng khProposals/khImages
   const p={
     id: 'kh'+Date.now(),
     kind: 'kh', createdBy: me, createdByUid: (currentUser&&currentUser.uid)||'', // v135: khóa chủ phiếu theo uid
     desc, person: me, site, payee: _payeeVal('kh-inp-payee'),   // v18
+    ...(_pa.no ? {payBank:_pa.bank, payAcctNo:_pa.no} : {}),   // v44
     amount, amountUnit:'dong', note,
     priority:'normal', status:'pending', ts: Date.now(),
     createdByUid: (currentUser&&currentUser.uid)||'', imgB64: uploadedImages[0]||null, imgImages: uploadedImages.slice(), proofImages: [],
@@ -12676,6 +12715,198 @@ function _siteNames(){
   return [...new Set(Object.keys(M).filter(k=>k && (M[k].thu||M[k].chi||M[k].kq)).concat(list.map(x=>typeof x==='string'?x:(x&&x.name)||'').filter(Boolean)))].sort();
 }
 // ── v18 (D 26/11/2026): "ở tất cả các mục chi có thêm tên đơn vị nhận tiền — để lọc trả cho công ty thép bao nhiêu, cá nhân ai bao nhiêu; người đề xuất ghi"
+const PAY_BANKS = [
+  ['970436','Vietcombank','vcb vietcombank ngoai thuong'],
+  ['970415','VietinBank','ctg vietinbank cong thuong'],
+  ['970418','BIDV','bidv dau tu'],
+  ['970405','Agribank','vba agribank nong nghiep'],
+  ['970407','Techcombank','tcb techcombank ky thuong'],
+  ['970422','MB Bank','mb mbbank quan doi'],
+  ['970423','TPBank','tpb tpbank tien phong'],
+  ['970416','ACB','acb a chau'],
+  ['970432','VPBank','vpb vpbank thinh vuong'],
+  ['970403','Sacombank','stb sacombank'],
+  ['970426','MSB','msb hang hai maritime'],
+  ['970443','SHB','shb sai gon ha noi'],
+  ['970449','LPBank','lpb lpbank lienviet lien viet buu dien loc phat'],
+  ['970430','PG Bank','pgb pgbank petrolimex'],
+  ['970433','VietBank','vietbank viet nam thuong tin'],
+  ['970437','HDBank','hdb hdbank'],
+  ['970441','VIB','vib quoc te'],
+  ['970448','OCB Bank','ocb phuong dong'],
+  ['970440','SeABank','seab seabank dong nam a'],
+  ['970431','Eximbank','eib eximbank xuat nhap khau'],
+  ['970425','AB Bank','abb abbank an binh'],
+  ['970409','BacA Bank','bab bac a'],
+  ['970438','BaoViet Bank','bvb bao viet'],
+  ['970454','BVBank','bvb ban viet vietcapital'],
+  ['546034','CAKE by VPBank',''],
+  ['970444','CB Bank','xaydungvn, xaydung'],
+  ['422589','CIMB Bank','cimbvn'],
+  ['970446','Co-op Bank','coop hop tac xa'],
+  ['796500','DBS Bank','dbshcm'],
+  ['970408','GPBank','daukhi'],
+  ['970442','HongLeong Bank','HLBVN'],
+  ['458761','HSBC Vietnam',''],
+  ['970456','IBK HCM','congnghiep'],
+  ['970455','IBK HN','congnghiep'],
+  ['970434','Indovina Bank',''],
+  ['668888','Kasikornbank',''],
+  ['970452','KienlongBank','klb kienlong kien long'],
+  ['970463','Kookmin Bank HCM',''],
+  ['970462','Kookmin Bank HN',''],
+  ['963369','Liobank',''],
+  ['970414','MBV','mbv ocean oceanbank dai duong'],
+  ['970428','Nam A Bank','nab nam a'],
+  ['970419','NCB Bank','ncb quoc dan'],
+  ['801011','Nonghyup Bank',''],
+  ['970439','Public Bank Vietnam','publicvn'],
+  ['970412','PVcomBank','pvcombank dai chung'],
+  ['970400','SaigonBank','sgb saigonbank cong thuong'],
+  ['970429','SCB','scb sai gon'],
+  ['970424','Shinhan Bank','shinhan'],
+  ['970410','Standard Chartered Vietnam',''],
+  ['963388','Timo','banviet'],
+  ['546035','Ubank by VPBank',''],
+  ['970458','United Overseas Bank Vietnam',''],
+  ['970427','VietABank','vab viet a'],
+  ['970421','VietNgaBank','vietnam-russia, vrbank'],
+  ['970406','Vikki Bank','vikki donga dong a'],
+  ['970457','Woori Bank','']
+];
+// ══ v44 (D 27/11/2026): TÀI KHOẢN NHẬN trên phiếu + MÃ QR chuyển khoản cho thủ quỹ ══
+// D: "kế toán gõ lại số tài khoản hay sai… khi có tài khoản thì tự tạo 1 mã QR trên app để thủ quỹ chuyển cho nhanh"; Trang chuyển bằng app ngân hàng trên điện thoại.
+// Phiếu thêm 2 trường: payBank = mã BIN 6 số của ngân hàng (bảng PAY_BANKS — lấy từ gói công khai vietnam-qr-pay 1.5.1), payAcctNo = số tài khoản (chữ số / chữ hoa).
+// Tên chủ tài khoản = ô "Đơn vị / người nhận tiền" (payee) sẵn có. Khoá sau duyệt như payee (luật) + nằm trong ảnh nội dung lúc duyệt (contentSnapshot) → sửa sau duyệt là chặn chuyển tiền.
+// Mã QR theo chuẩn VietQR (EMVCo): tạo NGAY TRONG APP (qrcode-gen.js, không qua dịch vụ nào). App ngân hàng quét sẽ hiện TÊN chủ tài khoản do ngân hàng tra → thủ quỹ đối chiếu với phiếu.
+function _payBank(bin){ return PAY_BANKS.find(b=>b[0]===bin) || null; }
+function _payBankName(bin){ const b=_payBank(bin); return b ? b[1] : (bin||''); }
+function _fillPayBankSelects(){
+  const opts = '<option value="">— Ngân hàng —</option>' + PAY_BANKS.map(b=>`<option value="${b[0]}">${esc(b[1])}</option>`).join('');
+  document.querySelectorAll('select.paybank-sel').forEach(s=>{ if(s.options.length<2){ const v=s.value; s.innerHTML=opts; s.value=v; } });
+}
+function _payNoClean(el){ const v=String(el.value||'').toUpperCase().replace(/[^0-9A-Z]/g,'').slice(0,30); if(v!==el.value) el.value=v; }
+function _payRead(prefix){
+  const b=(document.getElementById(prefix+'-paybank')||{}).value||'', n=String((document.getElementById(prefix+'-payno')||{}).value||'').toUpperCase().replace(/[^0-9A-Z]/g,'').slice(0,30);
+  if(!b && !n) return {bank:'', no:''};
+  if(!n) return {err:'Đã chọn ngân hàng nhưng chưa nhập số tài khoản nhận'};
+  if(!b) return {err:'Đã nhập số tài khoản — chọn thêm NGÂN HÀNG nhận'};
+  if(n.length<4) return {err:'Số tài khoản nhận quá ngắn — kiểm tra lại'};
+  return {bank:b, no:n};
+}
+function _paySet(prefix, bank, no){ try{ _fillPayBankSelects(); }catch(e){} const b=document.getElementById(prefix+'-paybank'), n=document.getElementById(prefix+'-payno'), h=document.getElementById(prefix+'-payhint'); if(b) b.value=bank||''; if(n) n.value=no||''; if(h) h.innerHTML=''; }
+function _payAcctText(p){ return (p && p.payAcctNo) ? (_payBankName(p.payBank)+' · '+p.payAcctNo) : ''; }
+// Tài khoản đã dùng gần nhất cho đúng đơn vị này (so tên không dấu) — "sổ nhà cung cấp" suy từ các phiếu đã có
+function _payLast(payee, exceptId, beforeTs){
+  const k=_tagFold(payee); if(!k) return null; let best=null;
+  (proposals||[]).forEach(q=>{ if(q.id===exceptId || !q.payAcctNo || q.status==='rejected' || _tagFold(q.payee)!==k) return; if(beforeTs && !((q.ts||0) < beforeTs)) return; if(!best || (q.ts||0)>(best.ts||0)) best=q; });
+  return best ? {bank:best.payBank||'', no:best.payAcctNo, ts:best.ts||0, id:best.id} : null;
+}
+// Chọn / gõ xong đơn vị nhận → ô tài khoản còn trống thì điền theo lần chi trước
+function _payeeAutoAcct(prefix){
+  const pe=document.getElementById(prefix+'-payee'), n=document.getElementById(prefix+'-payno'); if(!pe || !n) return;
+  if(n.disabled) return;
+  if(String(n.value||'').trim()) { _payHint(prefix); return; }
+  const last=_payLast(pe.value, prefix==='edit' ? editingProposalId : null); if(!last) { _payHint(prefix); return; }
+  _paySet(prefix, last.bank, last.no);
+  const h=document.getElementById(prefix+'-payhint'); if(h) h.innerHTML='↩ Đã điền theo lần chi trước cho đơn vị này ('+fmtFull(last.ts)+') — <b>kiểm lại</b> trước khi gửi';
+}
+// Gõ tài khoản khác với lần trước của cùng đơn vị → nhắc ngay tại ô
+function _payHint(prefix){
+  const h=document.getElementById(prefix+'-payhint'), pe=document.getElementById(prefix+'-payee'); if(!h) return;
+  const r=_payRead(prefix); if(r.err || !r.no){ if(!/↩/.test(h.innerHTML)) h.innerHTML=''; return; }
+  const last=_payLast(pe&&pe.value, prefix==='edit' ? editingProposalId : null);
+  h.innerHTML = (last && (last.no!==r.no || last.bank!==r.bank)) ? '<span style="color:#b45309">⚠️ Khác tài khoản lần trước của đơn vị này: <b>'+esc(_payBankName(last.bank)+' · '+last.no)+'</b> — chắc chắn đúng mới gửi</span>' : (last ? '<span style="color:#047857">✓ Trùng tài khoản lần chi trước</span>' : '');
+}
+// Cảnh báo cho người duyệt / thủ quỹ: tài khoản trên phiếu KHÁC lần chi trước cho cùng đơn vị (kiểu lừa "đổi tài khoản nhận")
+function _payWarn(p){ if(!p || !p.payAcctNo) return null; const last=_payLast(p.payee, p.id, p.ts||0); return (last && (last.no!==p.payAcctNo || last.bank!==(p.payBank||''))) ? last : null; }
+function _payChip(p){
+  if(!p || !p.payAcctNo) return '';
+  const w = (_isApprover() || _isTreasurer()) ? _payWarn(p) : null;
+  const canQr = (_isTreasurer() || currentRole==='dung') && p.status!=='rejected';
+  return `<span title="Tài khoản nhận" style="display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap">🏦 <b>${esc(_payBankName(p.payBank))}</b> · <span style="font-variant-numeric:tabular-nums">${esc(p.payAcctNo)}</span>`
+    + `<button onclick="event.stopPropagation();copyPayNo('${sid(p.id)}')" title="Chép số tài khoản" style="border:1px solid #d1d5db;background:#fff;border-radius:6px;font-size:11px;padding:1px 6px;cursor:pointer">📋</button>`
+    + (canQr ? `<button onclick="event.stopPropagation();openPayQr('${sid(p.id)}')" title="Mã QR chuyển khoản" style="border:1px solid #c7d2fe;background:#eef2ff;color:#3730a3;border-radius:6px;font-size:11px;font-weight:700;padding:1px 7px;cursor:pointer">📲 QR</button>` : '')
+    + (w ? `<span style="color:#b91c1c;font-weight:700;font-size:11px">⚠️ khác TK lần trước (${esc(_payBankName(w.bank))} · …${esc(String(w.no).slice(-4))})</span>` : '') + `</span>`;
+}
+function copyPayNo(id){
+  const p=proposals.find(x=>x.id===id); if(!p || !p.payAcctNo) return;
+  const done=()=>showToast('📋 Đã chép số tài khoản '+p.payAcctNo+' ('+_payBankName(p.payBank)+')');
+  try{ if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(p.payAcctNo).then(done, ()=>_copyFallback(p.payAcctNo, done)); return; } }catch(e){}
+  _copyFallback(p.payAcctNo, done);
+}
+function _copyFallback(t, done){ try{ const ta=document.createElement('textarea'); ta.value=t; ta.style.cssText='position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); done(); }catch(e){ showToast('Không chép được — bấm giữ vào số để chép tay'); } }
+// ── Chuỗi VietQR (EMVCo MPM): 00 phiên bản · 01 cách khởi tạo (12 = có số tiền, 11 = không) · 38 {00 A000000727 · 01 {00 BIN · 01 số TK} · 02 QRIBFTTA} · 53 704 · 54 số tiền · 58 VN · 62 {08 nội dung} · 63 CRC16
+function _qrTlv(id, v){ v=String(v); return id + String(v.length).padStart(2,'0') + v; }
+function _qrCrc16(s){ let c=0xFFFF; for(let i=0;i<s.length;i++){ c ^= (s.charCodeAt(i) & 0xFF) << 8; for(let j=0;j<8;j++) c = (c & 0x8000) ? ((c<<1) ^ 0x1021) & 0xFFFF : (c<<1) & 0xFFFF; } return c.toString(16).toUpperCase().padStart(4,'0'); }
+function _qrMemo(t){ return String(t||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').replace(/[^A-Za-z0-9 ]/g,' ').replace(/ +/g,' ').trim().slice(0,50).trim(); }
+function vietQrPayload(bin, acct, amount, memo){
+  const amt = Math.round(+amount||0), m = _qrMemo(memo);
+  const mai = _qrTlv('00','A000000727') + _qrTlv('01', _qrTlv('00', bin) + _qrTlv('01', acct)) + _qrTlv('02','QRIBFTTA');
+  let s = _qrTlv('00','01') + _qrTlv('01', amt>0 ? '12' : '11') + _qrTlv('38', mai) + _qrTlv('53','704') + (amt>0 ? _qrTlv('54', String(amt)) : '') + _qrTlv('58','VN') + (m ? _qrTlv('62', _qrTlv('08', m)) : '');
+  s += '6304'; return s + _qrCrc16(s);
+}
+let _qrLibP = null;
+function _loadQrLib(){
+  if(typeof qrcode==='function') return Promise.resolve();
+  if(!_qrLibP) _qrLibP = new Promise((res, rej)=>{ const sc=document.createElement('script'); sc.src='qrcode-gen.js?v=204'; sc.onload=()=>res(); sc.onerror=()=>{ _qrLibP=null; rej(new Error('Không tải được bộ vẽ mã QR — kiểm tra mạng')); }; document.head.appendChild(sc); });
+  return _qrLibP;
+}
+function _qrDataUrl(text){   // PNG, viền trắng 4 ô (app ngân hàng đọc ảnh từ thư viện cần viền)
+  const qr = qrcode(0, 'M'); qr.addData(text); qr.make();
+  const n = qr.getModuleCount(), cell = 8, pad = 4*cell, cv = document.createElement('canvas'); cv.width = cv.height = n*cell + pad*2;
+  const g = cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,cv.width,cv.height); g.fillStyle='#000';
+  for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c)) g.fillRect(pad+c*cell, pad+r*cell, cell, cell);
+  return cv.toDataURL('image/png');
+}
+let _payQrState = null;
+async function openPayQr(id, amount){
+  const p=proposals.find(x=>x.id===id); if(!p || !p.payAcctNo){ showToast('Phiếu này chưa có tài khoản nhận'); return; }
+  if(!_payBank(p.payBank)){ showToast('⚠️ Ngân hàng trên phiếu không có trong bảng mã QR — chép số tài khoản để chuyển tay'); return; }
+  // v77: phiếu bị sửa sau duyệt → không vẽ mã
+  const _cs=p.contentSnapshot; if(_cs && ((_cs.payBank||'')!==(p.payBank||'') || (_cs.payAcctNo||'')!==(p.payAcctNo||''))){ alert('⚠️ CẢNH BÁO BẢO MẬT\n\nTài khoản nhận trên phiếu này KHÁC với lúc duyệt.\n\nKHÔNG chuyển tiền — báo ngay cho người duyệt.'); return; }
+  try{ await _loadQrLib(); }catch(e){ showToast('❌ '+e.message); return; }
+  const off=getOfficialApprovedAmount(p)||0, remain=Math.max(0, off-getTotalTransferred(p));
+  const amt = (amount>0 ? amount : (remain>0 ? remain : 0));
+  const old=document.getElementById('payqr-ov'); if(old) old.remove();
+  const ov=document.createElement('div'); ov.id='payqr-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:center;justify-content:center;padding:14px';
+  const w=_payWarn(p);
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:14px;width:100%;max-width:360px;max-height:94vh;overflow:auto;text-align:center">
+    <div style="font-size:15px;font-weight:800">📲 Mã QR chuyển khoản</div>
+    <div style="font-size:12.5px;color:var(--text-sub);margin-top:2px;word-break:break-word">${esc(p.desc||'')}${p.site?' · '+esc(p.site):''}</div>
+    <img id="payqr-img" alt="Mã QR" style="width:100%;max-width:260px;margin:10px auto 6px;display:block;border:1px solid #e5e7eb;border-radius:10px">
+    <div style="font-size:13px;line-height:1.5"><b>${esc(_payBankName(p.payBank))}</b> · <span style="font-size:15px;font-weight:800;font-variant-numeric:tabular-nums">${esc(p.payAcctNo)}</span></div>
+    <div style="font-size:13px">Tên trên phiếu: <b>${esc(p.payee||'(chưa ghi)')}</b></div>
+    <div style="display:flex;gap:6px;align-items:center;justify-content:center;margin-top:8px"><span style="font-size:12px">Số tiền</span><input id="payqr-amt" class="form-input" type="text" inputmode="numeric" style="width:150px;margin:0;text-align:right" value="${amt?Number(amt).toLocaleString('vi-VN'):''}" oninput="fmtAmountInput(this);_payQrRedraw()"></div>
+    <div style="font-size:11px;color:var(--text-sub);margin-top:2px">${off>0?'Đã duyệt '+fmtVND(off)+' · còn phải chuyển '+fmtVND(remain):'Phiếu chưa duyệt xong'}</div>
+    <div style="margin-top:8px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;text-align:left;line-height:1.45">App ngân hàng sẽ hiện <b>TÊN chủ tài khoản</b>. Tên đó phải khớp tên trên phiếu mới bấm chuyển.${w?'<br><b style="color:#b91c1c">⚠️ Tài khoản này KHÁC lần chi trước cho cùng đơn vị ('+esc(_payBankName(w.bank))+' · …'+esc(String(w.no).slice(-4))+').</b>':''}</div>
+    <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+      <button id="payqr-save" style="flex:1 1 45%;padding:10px;border-radius:10px;border:none;background:var(--blue);color:#fff;font-weight:800;cursor:pointer">⬇️ Lưu ảnh QR</button>
+      <button onclick="copyPayNo('${sid(p.id)}')" style="flex:1 1 45%;padding:10px;border-radius:10px;border:1px solid #d1d5db;background:#fff;font-weight:700;cursor:pointer">📋 Chép số TK</button>
+      <button onclick="document.getElementById('payqr-ov').remove()" style="flex:1 1 100%;padding:9px;border-radius:10px;border:1px solid #d1d5db;background:#f8fafc;cursor:pointer">Đóng</button>
+    </div>
+    <div style="font-size:11px;color:var(--text-sub);margin-top:6px;line-height:1.4">Cùng một điện thoại: bấm Lưu ảnh QR (hoặc bấm giữ vào mã → Lưu ảnh) rồi mở app ngân hàng → Quét QR → chọn ảnh từ thư viện. Chuyển xong quay lại phiếu bấm "Bấm để chuyển" để ghi sổ.</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
+  _payQrState = { id, memo: 'PVA '+(p.desc||'') };
+  _payQrRedraw();
+  ov.querySelector('#payqr-save').onclick = async ()=>{
+    const url=document.getElementById('payqr-img').src, name='QR-'+(p.payAcctNo)+'.png';
+    try{ const blob=await (await fetch(url)).blob(), file=new File([blob], name, {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Mã QR chuyển khoản'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
+    const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); showToast('⬇️ Đã lưu ảnh QR (nếu chưa thấy: bấm giữ vào mã → Lưu ảnh)');
+  };
+}
+function _payQrRedraw(){
+  const st=_payQrState, img=document.getElementById('payqr-img'); if(!st || !img) return;
+  const p=proposals.find(x=>x.id===st.id); if(!p) return;
+  const amt=parseAmountInput(document.getElementById('payqr-amt')||{value:''});
+  st.payload = vietQrPayload(p.payBank, p.payAcctNo, amt, st.memo);
+  try{ img.src=_qrDataUrl(st.payload); }catch(e){ showToast('❌ Không vẽ được mã QR: '+(e.message||e)); }
+}
+try{ _fillPayBankSelects(); }catch(e){}
 function _payeeVal(id){ const el=document.getElementById(id); return el ? String(el.value||'').trim().slice(0,200) : ''; }
 function _payeeKey(v){ return String(v||'').trim(); }
 function _payeeNames(){
