@@ -8,7 +8,8 @@
   "background_color": "#c2410c",
   "theme_color": "#c2410c",
   "icons": [
-    {"src": "https://vandung0802.github.io/Duyet-Chi/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "https://vandung0802.github.io/Duyet-Chi/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {"src": "https://vandung0802.github.io/Duyet-Chi/icon-pva379-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "https://vandung0802.github.io/Duyet-Chi/icon-pva379-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "https://vandung0802.github.io/Duyet-Chi/icon-pva379-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
   ]
 }
