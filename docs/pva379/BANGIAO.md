@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v42 (D 27/11/2026 "mục công trình phải sửa tên được")
+- Nút ✏️ cạnh mỗi công trình (Dũng, Hiền) → `renameSite(i)`: hỏi tên mới, chặn trống / trùng (không phân biệt hoa thường), đếm và hỏi xác nhận số phiếu / khoản sổ quỹ / kế hoạch vật tư đang ghi tên cũ, rồi ghi MỘT lần (`db.ref().update`, cả hoặc không): `meta/sites`, `site` của mọi phiếu (`proposals` + `khProposals`, kể cả ứng lương), `contentSnapshot/site` cùng giá trị cho phiếu đã duyệt, `cashflow/*/site`, `plans/*/site`. Báo cáo theo công trình không bị tách hai tên; phiếu đã duyệt vẫn chuyển tiền được (không vấp cảnh báo sửa sau duyệt).
+- Luật: `proposals/$id/site` và `khProposals/$id/site` thêm vế Dũng / Hiền đổi được kể cả phiếu đã duyệt, CHỈ khi `contentSnapshot/site` mới = giá trị mới (hoặc phiếu chưa có snapshot) — giữ lớp chống sửa sau duyệt. Hàng Google Sheet đã đồng bộ trước đó vẫn ghi tên cũ (không sửa ngược).
+- Gia cố: gợi ý tài khoản khi chuyển tiền không lỗi khi phiếu có loại thuế lạ.
+- Thử: luật 123/123 (thêm 5 ca); `smoke21` (đổi "Thép Thương mại Hà Nội" → tên mới: 3 phiếu + 1 khoản đổi, phiếu đã duyệt đổi kèm snapshot, báo cáo gộp, vẫn mở được chuyển tiền, chặn trùng tên); hồi quy smoke7, smoke20.
+
 ## v41 (D 27/11/2026 "thêm CT Cầu xã ĐA vẫn chưa được")
 - Chưa rõ nguyên nhân trên máy D (v40 đã đúng trên giả lập cho cả Dũng và Hiền) → làm cho chắc và cho biết lỗi: `_saveSites()` ghi THẲNG `pva379/meta/sites` bằng `set()` và chờ máy chủ trả lời; báo "✅ đã lưu lên máy chủ (N công trình)" hoặc "❌ Không lưu được: <mã lỗi>"; đang "xem thử vai" (`_viewAs`) thì báo thoát ra (trước đây `save()` chỉ nhả toast "Đang xem thử" dễ bỏ qua). Thêm trùng tên bị chặn. Thẻ Danh sách công trình ghi "Máy chủ đang có N công trình", lệch với máy thì cảnh báo đỏ.
 - Thử: `smoke20` mở rộng (trùng tên, toast đã lưu, dòng số máy chủ).
