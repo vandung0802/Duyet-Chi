@@ -55,6 +55,11 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v33 (D 27/11/2026 "bấm Trả phiếu không hiện phiếu nào")
+- Danh sách phiếu cho giải ngân thẳng (`_allocProps`) nay gồm cả **phiếu P.KH** đã duyệt (trả nhà cung cấp phần lớn là phiếu P.KH; v32 lọc nhầm). Vẫn bỏ ứng lương, ký quỹ, tạm ứng. Nhãn có tiền tố "P.KH ·".
+- Danh sách trống → ghi rõ "Chưa có phiếu nào ĐÃ DUYỆT còn phải chuyển (N phiếu đang chờ duyệt — duyệt xong mới chọn được)"; có phiếu thì ghi số lượng.
+- Thử: luật 114/114 (thêm 2 ca lần chuyển nguồn vay trên khProposals); `smoke17` thêm phiếu P.KH đã duyệt có trong danh sách + câu báo trống.
+
 ## v32 (D 27/11/2026 "vay: chọn ngân hàng có sẵn của công ty; giải ngân thẳng cho đơn vị nhận theo phiếu đã duyệt")
 D chốt: (1) giải ngân thẳng BẮT BUỘC có phiếu và phiếu đã duyệt; (2) mỗi lần NH giải ngân = 1 khoản vay riêng, hạch toán / trả gốc lãi / lãi suất riêng; (3) thủ quỹ hoặc Hiền ghi; (4) một lần giải ngân chia nhiều dòng (phiếu A, phiếu B, phần còn lại về TK); (5) phí giải ngân NH thu RIÊNG ngoài khoản vay, là chi phí → mục "Trả phí + lãi vay NH".
 - Form Vay: "Vay của = Ngân hàng" → ô **Ngân hàng cho vay (theo từng công ty)** chọn từ tài khoản đã khai (`_loanBankOpts`: `379 · TP`, `PVA · Vietin`…, bỏ nhóm Tiền mặt, có "Ngân hàng khác (gõ tên)"); `lenderName` = tên đó → tab Vay gộp nợ đúng theo công ty vay.
