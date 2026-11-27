@@ -43,12 +43,14 @@ async function ghi(p, data) {
   console.log((CHEP ? '' : '[CHẠY THỬ — chỉ đếm] ') + 'Chép hồ sơ tài khoản Duyệt Chi → PVA-379 (project ' + DU_AN + ')');
   const src = (await doc('/duyetchi/userRoles')) || {}, dst = (await doc('/pva379/userRoles')) || {};
   const ids = Object.keys(src).filter(k => src[k] && typeof src[k] === 'object');
-  const dem = { tong: ids.length, daCo: 0, boQua: 0, chep: 0 }, theoVai = {};
+  const dem = { tong: ids.length, daCo: 0, boQua: 0, chep: 0 }, theoVai = {}, daCoVai = {}, daCoChuaDuyet = {};   // đã có bên PVA-379: đếm theo vai + cờ approved (để biết ai còn bị chặn)
   for (const uid of ids) {
     const u = src[uid], role0 = String(u.role || '');
     const duyet = u.approved === true || ['dung', 'hien', 'trang'].indexOf(role0) >= 0;
     if (!duyet) { dem.boQua++; continue; }                 // chưa được duyệt bên Duyệt Chi → không chép
-    if (dst[uid] && typeof dst[uid] === 'object' && dst[uid].role) { dem.daCo++; continue; }   // đã có bên PVA-379 → giữ nguyên
+    if (dst[uid] && typeof dst[uid] === 'object' && dst[uid].role) {   // đã có bên PVA-379 → giữ nguyên
+      const rv = String(dst[uid].role); daCoVai[rv] = (daCoVai[rv] || 0) + 1; if (dst[uid].approved !== true) daCoChuaDuyet[rv] = (daCoChuaDuyet[rv] || 0) + 1;
+      dem.daCo++; continue; }
     const role = MAP[role0] || 'other';
     const rec = { role, approved: true, name: typeof u.name === 'string' ? u.name.slice(0, 200) : '', email: typeof u.email === 'string' ? u.email.slice(0, 320) : '' };
     if (u.dept === 'kehoach' || u.dept === 'both') rec.dept = u.dept;
@@ -57,5 +59,6 @@ async function ghi(p, data) {
   }
   console.log('  Duyệt Chi có ' + dem.tong + ' tài khoản · chưa duyệt (bỏ qua) ' + dem.boQua + ' · đã có bên PVA-379 (giữ nguyên) ' + dem.daCo + ' · ' + (CHEP ? 'ĐÃ CHÉP ' : 'sẽ chép ') + dem.chep);
   console.log('  theo vai: ' + (Object.keys(theoVai).sort().map(k => k + ' ' + theoVai[k]).join(' · ') || '(không có)'));
+  console.log('  đã có bên PVA-379 theo vai: ' + (Object.keys(daCoVai).sort().map(k => k + ' ' + daCoVai[k] + (daCoChuaDuyet[k] ? ' (CHƯA duyệt ' + daCoChuaDuyet[k] + ')' : '')).join(' · ') || '(không có)'));
   console.log(CHEP ? 'XONG — người được chép đăng nhập Google như ở Duyệt Chi là vào PVA-379 (nếu còn giai đoạn thử thì vai other vẫn bị chặn tới khi phát hành).' : 'Chạy thử xong — KHÔNG ghi gì.');
 })().catch(e => { console.error('LỖI: ' + (e && e.message || e)); process.exit(1); });
