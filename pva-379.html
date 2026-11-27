@@ -730,6 +730,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <input type="file" id="file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="handleImg(this)">
         </div>
         <div id="img-preview-wrap" class="img-preview-grid" style="display:none"></div>
+        <div class="scan-box" style="margin-top:8px;padding:8px 10px;border:1.5px dashed #c7d2fe;border-radius:10px;background:#f5f7ff">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" onclick="scanFill('inp')" style="flex:1 1 150px;padding:8px;border-radius:8px;border:none;background:#4338ca;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">🔎 Đọc ảnh điền giúp</button>
+            <button type="button" onclick="scanPasteText('inp')" style="flex:1 1 130px;padding:8px;border-radius:8px;border:1px solid #c7d2fe;background:#fff;color:#3730a3;font-size:12.5px;font-weight:700;cursor:pointer">📋 Dán chữ có số TK</button>
+          </div>
+          <div id="inp-scan-out" style="font-size:12px;margin-top:6px;line-height:1.5;color:var(--text-sub)">Đọc ngay trên máy này, ảnh không gửi đi đâu. Lấy tài khoản nhận, tên đơn vị, số tiền, công trình (nếu có) — luôn kiểm lại trước khi gửi.</div>
+        </div>
       </div>
 
       <div class="form-group">
@@ -1901,6 +1908,13 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       </label>
       <input type="file" id="kh-file-input" accept="image/*,application/pdf,.pdf" multiple style="display:none" onchange="handleKhImg(this)">
       <div id="kh-img-preview" class="img-preview-grid" style="display:none;margin-top:8px"></div>
+      <div class="scan-box" style="margin-top:8px;padding:8px 10px;border:1.5px dashed #c7d2fe;border-radius:10px;background:#f5f7ff">
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <button type="button" onclick="scanFill('kh-inp')" style="flex:1 1 150px;padding:8px;border-radius:8px;border:none;background:#4338ca;color:#fff;font-size:12.5px;font-weight:700;cursor:pointer">🔎 Đọc ảnh điền giúp</button>
+            <button type="button" onclick="scanPasteText('kh-inp')" style="flex:1 1 130px;padding:8px;border-radius:8px;border:1px solid #c7d2fe;background:#fff;color:#3730a3;font-size:12.5px;font-weight:700;cursor:pointer">📋 Dán chữ có số TK</button>
+          </div>
+          <div id="kh-inp-scan-out" style="font-size:12px;margin-top:6px;line-height:1.5;color:var(--text-sub)">Đọc ngay trên máy này, ảnh không gửi đi đâu. Lấy tài khoản nhận, tên đơn vị, số tiền, công trình (nếu có) — luôn kiểm lại trước khi gửi.</div>
+        </div>
     </div>
     <button class="btn-full btn-primary-full" onclick="saveKhFromModal()">💾 Gửi đề xuất</button>
     <button class="btn-full btn-outline-full" onclick="closeKhModal()">Hủy</button>
@@ -1998,7 +2012,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v44';
+const APP_VERSION = '20261127-v45';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -6699,6 +6713,7 @@ function addImagesToUpload(files){
   let done=0;
   validFiles.forEach(file=>{
     _setImgLoading(1);
+    _scanKeep(file);   // v45: giữ ảnh GỐC trong bộ nhớ máy để đọc tài khoản (ảnh lưu lên chỉ còn 1000 điểm ảnh, quá mờ để đọc chữ)
     compressImage(file).then(dataUrl=>{
       uploadedImages.push(dataUrl);
       done++; _setImgLoading(-1);
@@ -6740,7 +6755,7 @@ function removeUploadedImage(idx){
 
 function removeImg(){
   // Giữ lại tên hàm cũ để tương thích, giờ nghĩa là xóa hết toàn bộ ảnh đã chọn
-  uploadedImages=[];
+  uploadedImages=[]; _scanFiles=[];   // v45
   document.getElementById('file-input').value='';
   renderUploadPreview();
 }
@@ -7139,6 +7154,7 @@ function submitProposal(){
     if((document.getElementById('inp-costtype')||{}).value==='tamung' && !_advName){ showToast('Vui lòng ghi NGƯỜI NHẬN TẠM ỨNG (ai sẽ cầm tiền)'); try{ document.getElementById('inp-adv-person').focus(); }catch(e){} return; }
     if(!amountRaw){ showToast('Vui lòng nhập số tiền'); document.getElementById('inp-amount').focus(); return; }
     const _pa = _payRead('inp'); if(_pa.err){ showToast('⚠️ '+_pa.err); return; }   // v44: tài khoản nhận
+    if(!_scanConfirmAcct('inp', _pa.no)) return;   // v45: số đọc từ ảnh → xác nhận đã so từng số
 
     // v95: chọn GẤP bắt buộc có lý do — không có thì mở bảng đòi lý do và chặn gửi
     const _prio = (document.querySelector('input[name="inp-priority"]:checked')||{value:'normal'}).value;
@@ -10380,7 +10396,7 @@ function addKhImages(files){
   if(!valid.length) return;
   showToast('⏳ Đang tải ảnh...');
   let done=0;
-  valid.forEach(file=>compressImage(file).then(d=>{ uploadedImages.push(d); done++; if(done===valid.length){ renderKhImgPreview(); showToast('✅ Đã thêm '+valid.length+' ảnh'); } })
+  valid.forEach(file=>(_scanKeep(file), compressImage(file)).then(d=>{ uploadedImages.push(d); done++; if(done===valid.length){ renderKhImgPreview(); showToast('✅ Đã thêm '+valid.length+' ảnh'); } })
     .catch(err=>{ done++; showToast('❌ '+((err&&err.message)||'Xử lý ảnh thất bại')); if(done===valid.length) renderKhImgPreview(); }));
 }
 function renderKhImgPreview(){
@@ -10390,7 +10406,7 @@ function renderKhImgPreview(){
   wrap.innerHTML=uploadedImages.map((src,idx)=>`<div class="img-preview-item" data-idx="${idx}"><img src="${esc(thumbSrc(src))}" alt="Ảnh ${idx+1}"></div>`).join('');
   wrap.querySelectorAll('.img-preview-item').forEach(item=>{ const idx=parseInt(item.dataset.idx,10); const img=item.querySelector('img'); attachLongPress(img, ()=>uploadedImages[idx], ()=>(()=>{ uploadedImages.splice(idx,1); renderKhImgPreview(); })); });
 }
-function _khClearImages(){ uploadedImages=[]; renderKhImgPreview(); const fi=document.getElementById('kh-file-input'); if(fi) fi.value=''; }
+function _khClearImages(){ uploadedImages=[]; _scanFiles=[]; renderKhImgPreview(); const fi=document.getElementById('kh-file-input'); if(fi) fi.value=''; }
 function openKhModal(){
   _khClearImages();
   // Nạp danh sách công trình dùng chung của app (Chi phí chung đứng đầu)
@@ -10413,6 +10429,7 @@ function saveKhFromModal(){
   if(!desc){ showToast('Nhập nội dung đề xuất'); return; }
   if(!amount||amount<=0){ showToast('Nhập số tiền hợp lệ'); return; }
   const _pa = _payRead('kh-inp'); if(_pa.err){ showToast('⚠️ '+_pa.err); return; }   // v44
+  if(!_scanConfirmAcct('kh-inp', _pa.no)) return;   // v45
   const me=getCurrentUserName()||((currentUser&&currentUser.email)||'').split('@')[0]||'?';
   // Phiếu P.KH — id có TIỀN TỐ 'kh' để tự định tuyến vào kho riêng khProposals/khImages
   const p={
@@ -12907,6 +12924,187 @@ function _payQrRedraw(){
   try{ img.src=_qrDataUrl(st.payload); }catch(e){ showToast('❌ Không vẽ được mã QR: '+(e.message||e)); }
 }
 try{ _fillPayBankSelects(); }catch(e){}
+// ══ v45 (D 27/11/2026 "làm tiếp đọc ảnh tự điền") — BƯỚC 2: ĐỌC ẢNH NGAY TRÊN MÁY ══
+// D chốt: ảnh KHÔNG gửi ra ngoài. Bộ đọc (thư mục ocr/ trong repo: jsQR + tesseract.js + bộ chữ tiếng Việt) tải về trình duyệt rồi chạy tại máy.
+// Thứ tự: (1) tìm mã QR chuyển khoản trong ảnh → chính xác tuyệt đối; (2) không có thì đọc chữ → lọc số tài khoản, ngân hàng, tên, số tiền;
+// (3) tên đơn vị khớp lại với các phiếu đã có; công trình: thấy tên trong ảnh, không thì theo lần chi trước. CHỈ điền ô đang trống, kế toán kiểm lại rồi mới gửi.
+let _scanFiles = [];   // ảnh GỐC (File) của form đang soạn — chỉ nằm trong bộ nhớ, không lưu đi đâu
+function _scanKeep(file){ try{ if(file && /^image\//.test(file.type||'')){ _scanFiles.push(file); if(_scanFiles.length>6) _scanFiles.shift(); } }catch(e){} }
+function _scanFold(v){ return String(v||'').normalize('NFC').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d'); }
+// Cụm từ nhận ra ngân hàng trong chữ đã bỏ dấu (cụm dài thắng cụm ngắn). Ngân hàng không có ở đây thì so theo tên ngắn trong PAY_BANKS.
+const SCAN_BANK_KW = {
+  '970436':['vietcombank','vcb','ngoai thuong'], '970415':['vietinbank','vietin bank','viettinbank','vietin','ctg','cong thuong viet nam'], '970418':['bidv','dau tu va phat trien'],
+  '970405':['agribank','nong nghiep va phat trien','nong nghiep'], '970407':['techcombank','tcb','ky thuong'], '970422':['mbbank','mb bank','quan doi','mb'],
+  '970423':['tpbank','tp bank','tien phong','tpb'], '970416':['acb','a chau'], '970432':['vpbank','vp bank','viet nam thinh vuong','vpb'],
+  '970403':['sacombank','sai gon thuong tin','stb'], '970426':['msb','hang hai','maritime'], '970443':['shb','sai gon ha noi'],
+  '970449':['lpbank','lp bank','lienvietpostbank','lien viet post bank','buu dien lien viet','lien viet','loc phat','lpb'], '970430':['pgbank','pg bank','petrolimex'],
+  '970433':['vietbank','viet nam thuong tin'], '970437':['hdbank','hd bank','phat trien tp ho chi minh','phat trien thanh pho ho chi minh'], '970441':['vib','quoc te viet nam'],
+  '970448':['ocb','phuong dong'], '970440':['seabank','dong nam a'], '970431':['eximbank','xuat nhap khau','eib'], '970429':['scb','tmcp sai gon'], '970428':['nam a bank','namabank','nam a'],
+  '970419':['ncb','quoc dan'], '970412':['pvcombank','dai chung viet nam'], '970425':['abbank','ab bank','an binh'], '970409':['bac a bank','bacabank','bac a'], '970452':['kienlongbank','kien long'],
+  '970427':['vietabank','viet a bank','viet a'], '970454':['bvbank','ban viet'], '970438':['baovietbank','baoviet bank','bao viet'], '970400':['saigonbank','sai gon cong thuong'], '970424':['shinhan'], '970446':['co-op bank','coopbank','hop tac xa']
+};
+let _scanBankList = null;
+function _scanBanks(){
+  if(_scanBankList) return _scanBankList; const L=[];
+  PAY_BANKS.forEach(b=>{ const kws=(SCAN_BANK_KW[b[0]]||[]).slice(); const sn=_scanFold(b[1]).replace(/[^a-z0-9 ]/g,' ').replace(/ +/g,' ').trim(); if(sn.length>=4) kws.push(sn); const sn2=sn.replace(/ /g,''); if(sn2.length>=5 && sn2!==sn) kws.push(sn2);
+    [...new Set(kws)].forEach(k=>L.push({bin:b[0], kw:k, re:new RegExp('(^|[^a-z0-9])'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&').replace(/ /g,'\\s+')+'([^a-z0-9]|$)')})); });
+  L.sort((a,b)=>b.kw.length-a.kw.length); return (_scanBankList=L);
+}
+function _scanFindBank(folded){ const t=folded.replace(/[-_.,;:()\/]/g,' '); let best=null; _scanBanks().forEach(x=>{ const m=x.re.exec(t); if(!m) return; if(!best || x.kw.length>best.kw.length || (x.kw.length===best.kw.length && m.index<best.at)) best={bin:x.bin, kw:x.kw, at:m.index}; }); return best ? best.bin : ''; }
+function _scanNum(str){   // "1.234.567", "1,234,567.00", "1 234 567" → số nguyên đồng
+  let t=String(str||'').replace(/\s/g,''); if(!/^[0-9.,]+$/.test(t)) return 0;
+  const m=/[.,](\d{1,2})$/.exec(t); if(m && (t.match(/[.,]/g)||[]).length>=1 && !/[.,]\d{3}$/.test(t)) t=t.slice(0, t.length-m[0].length);   // bỏ phần lẻ ",00"
+  const n=parseInt(t.replace(/[.,]/g,''),10); return isFinite(n) ? n : 0;
+}
+// Tách thông tin từ một khối chữ (đọc từ ảnh hoặc dán vào). Trả {bank, acct, acctSure, amount, name, nameSure}
+function _scanParseText(text){
+  const raw=String(text||'').normalize('NFC').replace(/\r/g,'').replace(/[|]/g,' ');
+  let lines=raw.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
+  let fl=lines.map(_scanFold);
+  const fullText=fl.join('\n');   // toàn bộ chữ (tìm tên công trình ở cả phần trên dòng "thụ hưởng")
+  // Uỷ nhiệm chi có cả bên chuyển lẫn bên nhận → chỉ lấy phần từ dòng "thụ hưởng / người nhận / bên nhận" trở đi
+  const bi=fl.findIndex(x=>/(thu huong|nguoi huong|don vi huong|ben nhan|nguoi nhan|don vi nhan)/.test(x));
+  if(bi>0){ lines=lines.slice(bi); fl=fl.slice(bi); }
+  const res={bank:'', acct:'', acctSure:false, amount:0, name:'', nameSure:false};
+  const all=fl.join('\n');
+  res.bank=_scanFindBank(all);
+  // ── số tài khoản: ưu tiên số đứng sau nhãn
+  const reLab=/(^|[^a-z])(so\s*tk|stk|so\s*tai\s*khoan|tai\s*khoan\s*so|tai\s*khoan|so\s*tai\s*khoan\s*nhan|tk|account\s*(?:no|number|num)?|a\/c|acc)\s*(?:nhan|thu huong|so)?\s*[:.\-–=]?\s*([0-9][0-9 .\-]{4,30}[0-9])/;
+  for(const l of fl){ if(/(ma so thue|mst|dien thoai|hotline|sdt|\btel\b|fax)/.test(l) && !/(stk|tai khoan|so tk)/.test(l)) continue; const m=reLab.exec(l); if(!m) continue; const d=m[3].replace(/[^0-9]/g,''); if(d.length>=6 && d.length<=19){ res.acct=d; res.acctSure=true; break; } }
+  if(!res.acct){ const cand=[]; fl.forEach(l=>{ if(/(ma so thue|mst|dien thoai|hotline|sdt|\btel\b|fax|so hoa don|ky hieu|mau so)/.test(l)) return; (l.match(/(?<![0-9.,])[0-9]{8,16}(?![0-9]|[.,][0-9]{3})/g)||[]).forEach(d=>cand.push(d)); }); cand.sort((a,b)=>b.length-a.length); if(cand.length) res.acct=cand[0]; }
+  // ── số tiền: chỉ lấy số đứng sau nhãn (không đoán)
+  const reAmt=/(tong thanh toan|tong cong|tong tien|tong gia tri|so tien|thanh tien|gia tri thanh toan|amount|total)[^0-9\n]{0,28}([0-9][0-9.,\s]{2,22}[0-9])/g; let ma;
+  while((ma=reAmt.exec(all))){ const v=_scanNum(ma[2]); if(v>=1000 && v<=100000000000 && v>res.amount) res.amount=v; }
+  // ── tên: sau nhãn chủ tài khoản / người thụ hưởng…; không có thì dòng bắt đầu bằng "Công ty…"
+  const reName=/(ten\s*chu\s*(?:tai\s*khoan|tk)|chu\s*tai\s*khoan|chu\s*tk|ten\s*tai\s*khoan|ten\s*tk|nguoi\s*thu\s*huong|don\s*vi\s*thu\s*huong|ten\s*nguoi\s*(?:nhan|huong|thu\s*huong)|nguoi\s*huong|don\s*vi\s*huong|nguoi\s*nhan|don\s*vi\s*nhan|ben\s*nhan|account\s*name|ten\s*don\s*vi|ctk)\s*(?:la)?\s*[:.\-–=]*\s*/;
+  for(let i=0;i<fl.length && !res.name;i++){ const m=reName.exec(fl[i]); if(!m) continue; let v=lines[i].slice(m.index+m[0].length).trim(); if(!v && lines[i+1] && !/[0-9]{6,}/.test(lines[i+1])) v=lines[i+1]; v=v.replace(/\s{2,}.*$/,'').replace(/[;,.:\-–]+$/,'').trim(); if(v.length>=3 && !/^[0-9 .\-]+$/.test(v)){ res.name=v.slice(0,80); res.nameSure=true; } }
+  if(!res.name){ const i=fl.findIndex(x=>/^(cong ty|cty|c\.ty|doanh nghiep|ho kinh doanh|hop tac xa|chi nhanh|dntn|htx)\b/.test(x)); if(i>=0) res.name=lines[i].replace(/[;,.:\-–]+$/,'').slice(0,80); }
+  res.text=fullText; return res;
+}
+// Chuỗi VietQR trong ảnh → {bin, acct, amount, memo, name}
+function _vietQrParse(text){
+  const tlv=s=>{ const o={}; let i=0; while(i+4<=s.length){ const id=s.slice(i,i+2), n=parseInt(s.slice(i+2,i+4),10); if(!(n>=0)) break; o[id]=s.slice(i+4,i+4+n); i+=4+n; } return o; };
+  try{ const t=tlv(String(text||'')); if(!t['38']) return null; const m=tlv(t['38']); if(m['00']!=='A000000727') return null; const a=tlv(m['01']||''); if(!/^[0-9]{6}$/.test(a['00']||'') || !a['01']) return null;
+    return { bin:a['00'], acct:String(a['01']).toUpperCase().replace(/[^0-9A-Z]/g,''), amount: t['54'] ? Math.round(parseFloat(t['54'])||0) : 0, memo:(tlv(t['62']||'')['08'])||'', name:t['59']||'' }; }catch(e){ return null; }
+}
+function _scanLoadScript(src, test){ return test() ? Promise.resolve() : new Promise((res, rej)=>{ const sc=document.createElement('script'); sc.src=src; sc.onload=()=>res(); sc.onerror=()=>rej(new Error('Không tải được bộ đọc ('+src+') — kiểm tra mạng')); document.head.appendChild(sc); }); }
+function _scanToCanvas(src, maxSide){   // src: File hoặc data URL → canvas (thu về tối đa maxSide)
+  return new Promise((res, rej)=>{ const isFile = typeof src!=='string', url = isFile ? URL.createObjectURL(src) : src, img=new Image();
+    img.onload=()=>{ let w=img.naturalWidth, h=img.naturalHeight; const k=Math.min(1, maxSide/Math.max(w,h)); w=Math.max(1,Math.round(w*k)); h=Math.max(1,Math.round(h*k)); const cv=document.createElement('canvas'); cv.width=w; cv.height=h; const g=cv.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,w,h); g.drawImage(img,0,0,w,h); if(isFile) URL.revokeObjectURL(url); res(cv); };
+    img.onerror=()=>{ if(isFile) URL.revokeObjectURL(url); rej(new Error('Không mở được ảnh')); }; img.src=url; });
+}
+async function _scanQrIn(src){
+  await _scanLoadScript('ocr/jsqr.js?v=140', ()=>typeof jsQR==='function');
+  for(const side of [1600, 1000, 640]){ const cv=await _scanToCanvas(src, side), d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height); const r=jsQR(d.data, cv.width, cv.height); if(r && r.data) return r.data; }
+  return '';
+}
+let _scanWorker = null;
+async function _scanOcr(src, onProg, side){
+  await _scanLoadScript('ocr/tesseract.min.js?v=511', ()=>typeof Tesseract!=='undefined');
+  const base = new URL('ocr/', location.href).href;
+  if(!_scanWorker) _scanWorker = await Tesseract.createWorker('vie', 1, { workerPath: base+'worker.min.js', corePath: base, langPath: base, gzip: true, logger: m=>{ try{ if(_scanWorker && _scanWorker._prog) _scanWorker._prog(m); }catch(e){} } });
+  _scanWorker._prog = m=>{ if(onProg && m && m.status==='recognizing text') onProg(Math.round((m.progress||0)*100)); };
+  const cv = await _scanToCanvas(src, side||2200);
+  const r = await _scanWorker.recognize(cv, { rotateAuto: true });   // rotateAuto: ảnh chụp nghiêng được xoay thẳng trước khi đọc
+  const d = (r && r.data) || {};
+  return { text: d.text||'', words: (d.words||[]).map(w=>({t:w.text||'', c:+w.confidence||0})) };
+}
+// Độ tin (0–100) của bộ đọc với chính dãy số tài khoản: lấy mức thấp nhất trong các từ ghép thành dãy đó
+function _scanAcctConf(words, acct){
+  const W=(words||[]).map(w=>({d:String(w.t).replace(/[^0-9]/g,''), c:w.c})).filter(w=>w.d);
+  for(let i=0;i<W.length;i++){ let acc='', mn=100; for(let j=i;j<W.length && acc.length<acct.length;j++){ acc+=W[j].d; mn=Math.min(mn, W[j].c); if(acc===acct) return mn; if(acct.indexOf(acc)!==0) break; } }
+  for(const w of W){ if(w.d.indexOf(acct)>=0) return w.c; }
+  return 0;
+}
+let _scanBusy = false;
+// Số tài khoản vừa điền từ CHỮ (ảnh / dán), kế toán chưa xác nhận → lúc bấm Gửi app hỏi lại, hiện số theo nhóm 4 cho dễ so
+const _scanUnchecked = {};
+function _scanConfirmAcct(prefix, no){
+  if(!no || _scanUnchecked[prefix]!==no) return true;
+  const grp = String(no).replace(/(.{4})(?=.)/g,'$1 ');
+  if(!confirm('Số tài khoản nhận được ĐỌC TỪ ẢNH / CHỮ DÁN:\n\n      '+grp+'\n\nAnh / chị đã so lại TỪNG SỐ với ảnh gốc chưa?\n\nOK = đã so, đúng  ·  Huỷ = quay lại kiểm tra')) return false;
+  _scanUnchecked[prefix]=''; return true;
+}
+function _scanOut(prefix, html){ const el=document.getElementById(prefix+'-scan-out'); if(el) el.innerHTML=html; }
+async function scanFill(prefix){
+  if(_scanBusy){ showToast('⏳ Đang đọc ảnh…'); return; }
+  const srcs = _scanFiles.length ? _scanFiles.slice(-4) : (uploadedImages||[]).filter(x=>typeof x==='string' && /^data:image\//.test(x)).slice(-4);
+  if(!srcs.length){ showToast('Chưa có ảnh nào để đọc — chọn / chụp ảnh trước (file PDF chưa đọc được)'); return; }
+  _scanBusy = true;
+  try{
+    const res={bank:'', acct:'', acctSure:false, amount:0, name:'', nameSure:false, text:'', src:''};
+    // 1) mã QR trong ảnh
+    _scanOut(prefix, '⏳ Đang tìm mã QR trong ảnh…');
+    for(const s of srcs){ let t=''; try{ t=await _scanQrIn(s); }catch(e){} const q=t ? _vietQrParse(t) : null; if(q){ res.bank=q.bin; res.acct=q.acct; res.acctSure=true; res.amount=q.amount||0; if(q.name) res.name=q.name; res.src='qr'; break; } }
+    // 2) chưa đủ (không có mã QR, hoặc chưa có tên) → đọc chữ
+    const known = res.acct ? _scanPayeeOfAcct(res.acct) : '';
+    if(!res.acct || (!res.name && !known)){
+      for(let i=0;i<srcs.length;i++){
+        _scanOut(prefix, '⏳ Đang đọc chữ ảnh '+(i+1)+'/'+srcs.length+'… (lần đầu tải bộ đọc khoảng 5 MB)');
+        let txt={text:'', words:[]}; try{ txt = await Promise.race([ _scanOcr(srcs[i], pc=>_scanOut(prefix, '⏳ Đang đọc chữ ảnh '+(i+1)+'/'+srcs.length+'… '+pc+'%')), new Promise((_,rej)=>setTimeout(()=>rej(new Error('quá 120 giây')), 120000)) ]); }
+        catch(e){ _scanOut(prefix, '<span style="color:#b91c1c">❌ Không đọc được chữ: '+esc(e.message||String(e))+'</span>'); if(!res.acct) return; break; }
+        const r=_scanParseText(txt.text); res.text += '\n'+r.text;
+        if(!res.acct && r.acct){
+          res.acct=r.acct; res.acctSure=r.acctSure; if(!res.src) res.src='ocr';
+          // v45: ĐỌC LẦN 2 ở cỡ ảnh khác — hai lần phải ra CÙNG một số mới coi là đọc được (ảnh nghiêng / mờ hay rụng 1 chữ số)
+          res.conf = _scanAcctConf(txt.words, r.acct);
+          _scanOut(prefix, '⏳ Đang đọc lại lần 2 để đối chiếu số tài khoản…');
+          try{ const t2 = await _scanOcr(srcs[i], null, 1500), r2 = _scanParseText(t2.text); res.acct2 = r2.acct||''; if(r2.acct===r.acct) res.conf = Math.min(res.conf, _scanAcctConf(t2.words, r2.acct)||res.conf); }catch(e){ res.acct2=''; }
+          res.agree = (res.acct2===res.acct);
+        }
+        if(!res.bank && r.bank) res.bank=r.bank;
+        if(!res.amount && r.amount) res.amount=r.amount;
+        if(!res.name && r.name){ res.name=r.name; res.nameSure=r.nameSure; }
+        if(res.acct && res.name) break;
+      }
+      if(!res.src) res.src='ocr';
+    }
+    _scanApply(prefix, res);
+  } finally { _scanBusy = false; }
+}
+async function scanPasteText(prefix){
+  let t=''; try{ if(navigator.clipboard && navigator.clipboard.readText) t = await navigator.clipboard.readText(); }catch(e){}
+  if(!t || !t.trim()) t = prompt('Dán tin nhắn / dòng chữ có số tài khoản vào đây:') || '';
+  if(!t.trim()) return;
+  const r=_scanParseText(t); r.src='text'; _scanApply(prefix, r);
+}
+function _scanPayeeOfAcct(acct){ let best=null; (proposals||[]).forEach(q=>{ if(q.payAcctNo===acct && q.payee && q.status!=='rejected' && (!best || (q.ts||0)>(best.ts||0))) best=q; }); return best ? best.payee : ''; }
+function _scanApply(prefix, res){
+  const $=id=>document.getElementById(prefix+'-'+id), out=[]; const SRC={qr:'mã QR trong ảnh', ocr:'chữ trong ảnh', text:'chữ dán vào'}[res.src]||'ảnh';
+  const line=(label, val, state)=>out.push(`<div>${state==='fill'?'✅':state==='keep'?'↷':'—'} <b>${label}</b>: ${val}${state==='keep'?' <span style="color:var(--text-sub)">(ô đã có sẵn, giữ nguyên)</span>':''}</div>`);
+  // tên: khớp lại với đơn vị đã từng chi
+  let name=res.name||'', nameNote='';
+  const byAcct = res.acct ? _scanPayeeOfAcct(res.acct) : '';
+  if(byAcct){ name=byAcct; nameNote=' <span style="color:#047857">(tài khoản này đã chi cho đơn vị này)</span>'; }
+  else if(name){ const k=_tagFold(name); const hit=_payeeNames().find(n=>{ const f=_tagFold(n); return f===k || (f.length>=6 && k.length>=6 && (k.includes(f) || f.includes(k))); }); if(hit){ name=hit; nameNote=' <span style="color:#047857">(khớp đơn vị đã có)</span>'; } else nameNote=' <span style="color:#b45309">(đọc từ ảnh — sửa lại cho đúng dấu)</span>'; }
+  // tài khoản
+  const no=$('payno'), bk=$('paybank');
+  if(res.acct){
+    const bankOk = !!_payBank(res.bank), txt = (bankOk ? esc(_payBankName(res.bank)) : '<span style="color:#b91c1c">chưa rõ ngân hàng — tự chọn</span>')+' · <b style="font-variant-numeric:tabular-nums">'+esc(res.acct)+'</b>'+(res.src==='qr' ? ' <span style="color:#047857">(từ mã QR — chính xác)</span>'
+      : res.src==='ocr' && res.agree===false ? ' <span style="color:#b91c1c;font-weight:700">⚠️ hai lần đọc ra hai số khác nhau'+(res.acct2?' (lần 2: '+esc(res.acct2)+')':' (lần 2 không ra)')+' — ảnh mờ / nghiêng, PHẢI so lại từng số hoặc chụp lại</span>'
+      : res.src==='ocr' && (res.conf||0) < 80 ? ' <span style="color:#b91c1c;font-weight:700">⚠️ bộ đọc không chắc ('+Math.round(res.conf||0)+'%) — so lại từng số</span>'
+      : !res.acctSure ? ' <span style="color:#b91c1c">(đoán — không thấy chữ "số tài khoản" đứng trước, so lại kỹ)</span>'
+      : ' <span style="color:#b45309">(đọc từ chữ'+(res.src==='ocr'?', hai lần đọc khớp nhau':'')+' — vẫn so lại từng số)</span>');
+    if(res.src==='ocr' && res.agree===false){ out.push('<div>⛔ <b>Tài khoản nhận</b>: '+txt+' <b>KHÔNG điền vào ô</b> — tự gõ theo ảnh gốc.</div>'); }   // hai lần đọc khác nhau → không điền
+    else if(no && !String(no.value||'').trim() && !no.disabled){ _paySet(prefix, bankOk?res.bank:'', res.acct); line('Tài khoản nhận', txt, 'fill'); _scanUnchecked[prefix] = (res.src==='qr') ? '' : res.acct; } else line('Tài khoản nhận', txt, 'keep');
+  } else line('Tài khoản nhận', 'không thấy trong '+SRC, '');
+  // tên đơn vị
+  const pe=$('payee');
+  if(name){ if(pe && !String(pe.value||'').trim() && !pe.disabled){ pe.value=name.slice(0,200); line('Đơn vị / người nhận', esc(name)+nameNote, 'fill'); } else line('Đơn vị / người nhận', esc(name)+nameNote, 'keep'); }
+  else line('Đơn vị / người nhận', 'không thấy', '');
+  // số tiền
+  const am=$('amount');
+  if(res.amount>0){ if(am && !parseAmountInput(am)){ am.value=Number(res.amount).toLocaleString('vi-VN'); try{ fmtAmountInput(am); }catch(e){} line('Số tiền', fmtVND(res.amount), 'fill'); } else line('Số tiền', fmtVND(res.amount), 'keep'); }
+  else line('Số tiền', 'không thấy (tự nhập)', '');
+  // công trình: tên công trình có trong chữ; không thì theo lần chi trước của đơn vị
+  const st=$('site'); let site='', siteNote='';
+  if(res.text){ const ft=_scanFold(res.text).replace(/\s+/g,' '); const hit=(sites||[]).map(x=>String(x)).filter(x=>{ const f=_scanFold(x).replace(/\s+/g,' ').trim(), f2=f.replace(/^(ct|tc|cong trinh)\s+/,''); return (f.length>=5 && ft.includes(f)) || (f2.length>=6 && ft.includes(f2)); }).sort((a,b)=>b.length-a.length)[0]; if(hit){ site=hit; siteNote=' <span style="color:#047857">(có tên trong ảnh)</span>'; } }
+  if(!site && name){ const k=_tagFold(name); let best=null; (proposals||[]).forEach(q=>{ if(q.site && q.status!=='rejected' && _tagFold(q.payee)===k && (!best || (q.ts||0)>(best.ts||0))) best=q; }); if(best && (sites||[]).indexOf(best.site)>=0){ site=best.site; siteNote=' <span style="color:#b45309">(theo lần chi trước cho đơn vị này — kiểm lại)</span>'; } }
+  if(site){ const cur=st ? String(st.value||'') : ''; if(st && (!cur || cur==='Chi phí chung') && [...st.options].some(o=>o.value===site)){ st.value=site; line('Công trình', esc(site)+siteNote, 'fill'); } else line('Công trình', esc(site)+siteNote, 'keep'); }
+  else line('Công trình', 'không thấy (tự chọn)', '');
+  try{ _payHint(prefix); }catch(e){}
+  _scanOut(prefix, `<div style="color:var(--text)"><div style="font-weight:800;margin-bottom:2px">Đọc từ ${SRC}:</div>${out.join('')}<div style="margin-top:4px;color:#b45309;font-weight:700">Kiểm lại từng ô trước khi gửi. App ngân hàng sẽ hiện tên chủ tài khoản khi thủ quỹ quét mã.</div></div>`);
+}
 function _payeeVal(id){ const el=document.getElementById(id); return el ? String(el.value||'').trim().slice(0,200) : ''; }
 function _payeeKey(v){ return String(v||'').trim(); }
 function _payeeNames(){
