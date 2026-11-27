@@ -591,7 +591,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div id="ta-sub" style="font-size:12px;color:var(--text-sub);margin-bottom:14px"></div>
 
     <label class="form-label">Số tiền chuyển (đồng)</label>
-    <input class="form-input" id="ta-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this);_taDueToggle()">
+    <input class="form-input" id="ta-amount" type="text" inputmode="numeric" style="font-size:16px;text-align:center;margin-bottom:8px" oninput="fmtAmountInput(this);_taDueToggle();_taQrDraw()">
     <div id="ta-due-wrap" style="display:none;margin:0 0 10px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px">
       <label class="form-label" style="margin-bottom:4px">⏰ Hẹn chuyển phần còn lại ngày</label>
       <input class="form-input" id="ta-due" type="date" style="margin:0">
@@ -2012,7 +2012,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v47';
+const APP_VERSION = '20261127-v48';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -5438,7 +5438,13 @@ function doTransfer(id){
     if(hint) hint.textContent = p.tax==='khonghl' ? 'Phiếu Không HL → thường chi từ TK tiền mặt / thủ quỹ.' : (p.tax && TAX_TYPES[p.tax]) ? 'Phiếu '+TAX_TYPES[p.tax].label+' → thường chi từ TK công ty.' : 'Chọn đúng tài khoản đã chuyển để Sổ quỹ khớp ngân hàng.';
   }
   { const d=document.getElementById('ta-due'); if(d) d.value = p.payDue || ''; _taDueToggle(); }   // v98
-  { const q=document.getElementById('ta-qr-wrap'); if(q) q.innerHTML = p.payAcctNo ? `<div style="padding:8px 10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;font-size:12.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:0">🏦 <b>${esc(_payBankName(p.payBank))}</b> · ${esc(p.payAcctNo)}${p.payee?'<br><span style="color:var(--text-sub)">'+esc(p.payee)+'</span>':''}</span><button onclick="openPayQr('${sid(p.id)}', parseAmountInput(document.getElementById('ta-amount')))" style="padding:7px 10px;border-radius:8px;border:none;background:#4338ca;color:#fff;font-weight:800;cursor:pointer">📲 Mã QR</button><button onclick="copyPayNo('${sid(p.id)}')" style="padding:7px 9px;border-radius:8px;border:1px solid #c7d2fe;background:#fff;cursor:pointer">📋</button></div>` : ''; }   // v44
+  { const q=document.getElementById('ta-qr-wrap'); if(q) q.innerHTML = p.payAcctNo ? `<div style="padding:10px;background:#eef2ff;border:1px solid #c7d2fe;border-radius:10px;font-size:12.5px;text-align:center">
+      <div style="text-align:left">🏦 <b>${esc(_payBankName(p.payBank))}</b> · <b style="font-size:14px;font-variant-numeric:tabular-nums">${esc(p.payAcctNo)}</b> <button onclick="copyPayNo('${sid(p.id)}')" style="padding:2px 7px;border-radius:6px;border:1px solid #c7d2fe;background:#fff;cursor:pointer">📋</button>${p.payee?'<br>Tên trên phiếu: <b>'+esc(p.payee)+'</b>':''}</div>
+      ${_payBank(p.payBank) ? `<img id="ta-qr-img" alt="Mã QR chuyển khoản" onclick="openPayQr('${sid(p.id)}', parseAmountInput(document.getElementById('ta-amount')))" style="display:none;width:100%;max-width:210px;margin:8px auto 4px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;cursor:zoom-in">
+      <div id="ta-qr-note" style="font-size:11px;color:var(--text-sub);line-height:1.4">Đang vẽ mã QR…</div>
+      <button id="ta-qr-save" onclick="_taQrSave()" style="display:none;margin-top:6px;padding:7px 12px;border-radius:8px;border:none;background:#4338ca;color:#fff;font-weight:700;cursor:pointer">⬇️ Lưu ảnh QR</button>` : '<div style="font-size:11px;color:#b45309;margin-top:4px">Ngân hàng này không có trong bảng mã QR — chép số tài khoản để chuyển tay.</div>'}
+      ${(()=>{ const w=_payWarn(p); return w ? '<div style="margin-top:6px;color:#b91c1c;font-weight:700;font-size:12px;text-align:left">⚠️ Tài khoản này KHÁC lần chi trước cho cùng đơn vị ('+esc(_payBankName(w.bank))+' · …'+esc(String(w.no).slice(-4))+').</div>' : ''; })()}
+    </div>` : ''; try{ _taQrDraw(); }catch(e){} }   // v44
   document.getElementById('transfer-amount-modal').style.display='flex';
   document.getElementById('transfer-amount-modal').style.pointerEvents='auto';
 }
@@ -5453,7 +5459,7 @@ function taFillFull(){
   if(!p) return;
   const remain = getOfficialApprovedAmount(p) - getTotalTransferred(p);
   document.getElementById('ta-amount').value = remain>0 ? Number(remain).toLocaleString('vi-VN',{maximumFractionDigits:0}) : '';
-  _taDueToggle();
+  _taDueToggle(); try{ _taQrDraw(); }catch(e){}
 }
 // v98: chuyển THIẾU số còn lại → hiện ô "Hẹn chuyển phần còn lại ngày"
 function _taDueToggle(){
@@ -12876,6 +12882,26 @@ function _qrDataUrl(text){   // PNG, viền trắng 4 ô (app ngân hàng đọc
   for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(qr.isDark(r,c)) g.fillRect(pad+c*cell, pad+r*cell, cell, cell);
   return cv.toDataURL('image/png');
 }
+// v48 (D 27/11 "nhập tài khoản vào thì tự hiện ra QR chưa"): hộp chuyển tiền HIỆN SẴN mã QR, tự vẽ lại theo số tiền đang gõ
+let _taQrSeq = 0;
+async function _taQrDraw(){
+  const img=document.getElementById('ta-qr-img'); if(!img || !pendingTransferId) return;
+  const p=proposals.find(x=>x.id===pendingTransferId); if(!p || !p.payAcctNo || !_payBank(p.payBank)) return;
+  const seq=++_taQrSeq, note=document.getElementById('ta-qr-note'), sv=document.getElementById('ta-qr-save');
+  try{ await _loadQrLib(); }catch(e){ if(note) note.textContent='Không tải được bộ vẽ mã QR — kiểm tra mạng, hoặc chép số tài khoản.'; return; }
+  if(seq!==_taQrSeq || !document.getElementById('ta-qr-img')) return;
+  const amt=parseAmountInput(document.getElementById('ta-amount')||{value:''});
+  try{ img.src=_qrDataUrl(vietQrPayload(p.payBank, p.payAcctNo, amt, 'PVA '+(p.desc||''))); img.style.display='block'; if(sv) sv.style.display='inline-block';
+    if(note) note.innerHTML = (amt>0 ? 'Mã đã kèm số tiền <b>'+fmtVND(amt)+'</b>. ' : 'Mã chưa kèm số tiền. ')+'App ngân hàng sẽ hiện <b>tên chủ tài khoản</b> — phải khớp tên trên phiếu mới chuyển. Bấm vào mã để phóng to.'; }
+  catch(e){ if(note) note.textContent='Không vẽ được mã QR: '+(e.message||e); }
+}
+function _taQrSave(){ const img=document.getElementById('ta-qr-img'), p=proposals.find(x=>x.id===pendingTransferId); if(img && img.src && p) _qrSave(img.src, 'QR-'+p.payAcctNo+'.png'); }
+// Lưu / chia sẻ ảnh mã QR (điện thoại: bảng chia sẻ → Lưu ảnh; máy tính: tải file)
+async function _qrSave(url, name){
+  try{ const blob=await (await fetch(url)).blob(), file=new File([blob], name, {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Mã QR chuyển khoản'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
+  const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); showToast('⬇️ Đã lưu ảnh QR (nếu chưa thấy: bấm giữ vào mã → Lưu ảnh)');
+}
 let _payQrState = null;
 async function openPayQr(id, amount){
   const p=proposals.find(x=>x.id===id); if(!p || !p.payAcctNo){ showToast('Phiếu này chưa có tài khoản nhận'); return; }
@@ -12909,12 +12935,7 @@ async function openPayQr(id, amount){
   ov.addEventListener('click', e=>{ if(e.target===ov) ov.remove(); });
   _payQrState = { id, memo: 'PVA '+(p.desc||'') };
   _payQrRedraw();
-  ov.querySelector('#payqr-save').onclick = async ()=>{
-    const url=document.getElementById('payqr-img').src, name='QR-'+(p.payAcctNo)+'.png';
-    try{ const blob=await (await fetch(url)).blob(), file=new File([blob], name, {type:'image/png'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){ await navigator.share({files:[file], title:'Mã QR chuyển khoản'}); return; } }catch(e){ if(e && e.name==='AbortError') return; }
-    const a=document.createElement('a'); a.href=url; a.download=name; document.body.appendChild(a); a.click(); a.remove(); showToast('⬇️ Đã lưu ảnh QR (nếu chưa thấy: bấm giữ vào mã → Lưu ảnh)');
-  };
+  ov.querySelector('#payqr-save').onclick = ()=>_qrSave(document.getElementById('payqr-img').src, 'QR-'+(p.payAcctNo)+'.png');
 }
 function _payQrRedraw(){
   const st=_payQrState, img=document.getElementById('payqr-img'); if(!st || !img) return;
