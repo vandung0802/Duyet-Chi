@@ -55,6 +55,14 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v46 (D 27/11/2026 "đưa QR lên mà không thấy hiện tên người thụ hưởng"; "viết bằng chữ viết tay là không đọc được")
+- Mã VietQR KHÔNG chứa tên người thụ hưởng (chỉ BIN + số TK, tuỳ chọn số tiền / nội dung) → tên phải đọc từ chữ in cạnh mã. v45 chỉ nhận tên sau nhãn "chủ tài khoản…" hoặc dòng "Công ty…", còn thẻ QR của app ngân hàng in tên TRƠN.
+- `_scanParseText(text, {acct, okLine})`: thêm bước tìm **tên không nhãn** = dòng CHỮ IN HOA 2–7 từ, không số, không phải tên ngân hàng / khẩu hiệu (VietQR, napas, quét mã…), gần dòng số tài khoản nhất (≤ 4 dòng), chỉ lấy từ dòng bộ đọc tin ≥ 60%. Không có thì KHÔNG bịa tên.
+- Che vùng mã QR (theo toạ độ jsQR) trước khi đọc chữ — đọc chữ trên hình mã chỉ ra rác. `_scanQrIn` trả `{data, box}`.
+- Ảnh chỉ có mã, không in tên → ô tên để trống, giải thích "mã QR không chứa tên… app ngân hàng sẽ hiện tên khi thủ quỹ quét".
+- **Chữ viết tay**: bộ đọc trên máy (tesseract) không đọc được — giới hạn của công nghệ, không sửa được bằng mã. Lựa chọn đã nêu với D: gõ tay lần đầu (lần sau app tự điền theo đơn vị), xin mã QR / tin nhắn chữ, hoặc dịch vụ đọc chữ của Google (ảnh gửi sang dịch vụ Google — cần D đồng ý vì trái yêu cầu "ảnh không ra ngoài"). CHƯA làm gì thêm.
+- Thử: `unit-scan.js` 17/17 (thêm 4 mẫu tên trơn / rác / không bịa); `smoke24` 23/23 (thêm thẻ QR ngân hàng có tên trơn, ảnh chỉ có mã); hồi quy smoke7, 22, 23; `robust24` không đổi kết luận.
+
 ## v45 (D 27/11/2026 "làm tiếp đọc ảnh tự điền") — BƯỚC 2: đọc ảnh NGAY TRÊN MÁY
 - Khung "🔎 Đọc ảnh điền giúp" + "📋 Dán chữ có số TK" dưới phần ảnh của form phiếu chi và form P.KH (`scanFill`, `scanPasteText`). Chỉ điền ô đang TRỐNG; kết quả ghi rõ nguồn và mức tin từng ô.
 - **Ảnh không rời máy**: thư mục `ocr/` trong repo (jsQR 1.4.0, tesseract.js 5.1.1 + core LSTM, bộ chữ tiếng Việt `vie` best_int — xem `ocr/README.md`), tải về trình duyệt khi bấm nút lần đầu (khoảng 5 MB), chạy tại chỗ; `workerPath` / `corePath` / `langPath` trỏ về `ocr/` nên không gọi CDN (bài thử kiểm không có request ra jsdelivr / unpkg / tessdata).

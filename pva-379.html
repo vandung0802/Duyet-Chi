@@ -2012,7 +2012,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v45';
+const APP_VERSION = '20261127-v46';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12957,7 +12957,8 @@ function _scanNum(str){   // "1.234.567", "1,234,567.00", "1 234 567" → số n
   const n=parseInt(t.replace(/[.,]/g,''),10); return isFinite(n) ? n : 0;
 }
 // Tách thông tin từ một khối chữ (đọc từ ảnh hoặc dán vào). Trả {bank, acct, acctSure, amount, name, nameSure}
-function _scanParseText(text){
+function _scanParseText(text, opt){
+  opt = opt || {};
   const raw=String(text||'').normalize('NFC').replace(/\r/g,'').replace(/[|]/g,' ');
   let lines=raw.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean);
   let fl=lines.map(_scanFold);
@@ -12979,6 +12980,23 @@ function _scanParseText(text){
   const reName=/(ten\s*chu\s*(?:tai\s*khoan|tk)|chu\s*tai\s*khoan|chu\s*tk|ten\s*tai\s*khoan|ten\s*tk|nguoi\s*thu\s*huong|don\s*vi\s*thu\s*huong|ten\s*nguoi\s*(?:nhan|huong|thu\s*huong)|nguoi\s*huong|don\s*vi\s*huong|nguoi\s*nhan|don\s*vi\s*nhan|ben\s*nhan|account\s*name|ten\s*don\s*vi|ctk)\s*(?:la)?\s*[:.\-–=]*\s*/;
   for(let i=0;i<fl.length && !res.name;i++){ const m=reName.exec(fl[i]); if(!m) continue; let v=lines[i].slice(m.index+m[0].length).trim(); if(!v && lines[i+1] && !/[0-9]{6,}/.test(lines[i+1])) v=lines[i+1]; v=v.replace(/\s{2,}.*$/,'').replace(/[;,.:\-–]+$/,'').trim(); if(v.length>=3 && !/^[0-9 .\-]+$/.test(v)){ res.name=v.slice(0,80); res.nameSure=true; } }
   if(!res.name){ const i=fl.findIndex(x=>/^(cong ty|cty|c\.ty|doanh nghiep|ho kinh doanh|hop tac xa|chi nhanh|dntn|htx)\b/.test(x)); if(i>=0) res.name=lines[i].replace(/[;,.:\-–]+$/,'').slice(0,80); }
+  // v46 (D 27/11 "đưa QR lên mà không thấy hiện tên người thụ hưởng"): mã QR KHÔNG chứa tên — thẻ QR của app ngân hàng in tên TRƠN, không nhãn
+  // (VD "NGUYEN VAN NAM" ngay trên / dưới số tài khoản). Lấy dòng CHỮ IN HOA 2–7 từ, không có số, không phải tên ngân hàng / khẩu hiệu, gần dòng số tài khoản nhất.
+  if(!res.name){
+    const acctK = res.acct || String(opt.acct||'').replace(/[^0-9]/g,'');
+    const ai = acctK ? fl.findIndex(x=>x.replace(/[^0-9]/g,'').indexOf(acctK)>=0) : -1;
+    const STOP = /(vietqr|viet qr|napas|quet ma|quet qr|ma qr|qr code|chuyen khoan|chuyen tien|thanh toan|ngan hang|tai khoan|so tien|noi dung|scan|bank|chi nhanh|cam on|vui long|luu y|mo app|ung dung|chia se|luu anh|tai xuong|huong dan|viet nam dong|vnd)/;
+    const cand=[];
+    lines.forEach((l,i)=>{ const f=fl[i].replace(/[^a-z ]/g,' ').replace(/ +/g,' ').trim(), w=f.split(' ').filter(Boolean);
+      if(w.length<2 || w.length>7 || f.length<5 || f.length>50) return;
+      if(/[0-9]/.test(l) || STOP.test(fl[i]) || _scanFindBank(fl[i])) return;
+      if(w.some(x=>x.length<2) && w.length<3) return;
+      const letters=l.replace(/[^\p{L}]/gu,''); if(letters.length<5 || letters!==letters.toUpperCase()) return;   // chỉ nhận chữ IN HOA (tên chủ tài khoản ngân hàng in hoa)
+      if(l.replace(/[\p{L} .]/gu,'').length>1) return;   // có ký tự lạ (rác đọc từ hình) → bỏ
+      if(opt.okLine && !opt.okLine(l)) return;
+      cand.push({i, l:l.replace(/\s+/g,' ').trim()}); });
+    if(cand.length){ cand.sort((a,b)=> ai>=0 ? Math.abs(a.i-ai)-Math.abs(b.i-ai) : a.i-b.i); if(ai<0 || Math.abs(cand[0].i-ai)<=4 || cand.length===1) res.name=cand[0].l.slice(0,80); }
+  }
   res.text=fullText; return res;
 }
 // Chuỗi VietQR trong ảnh → {bin, acct, amount, memo, name}
@@ -12995,19 +13013,21 @@ function _scanToCanvas(src, maxSide){   // src: File hoặc data URL → canvas 
 }
 async function _scanQrIn(src){
   await _scanLoadScript('ocr/jsqr.js?v=140', ()=>typeof jsQR==='function');
-  for(const side of [1600, 1000, 640]){ const cv=await _scanToCanvas(src, side), d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height); const r=jsQR(d.data, cv.width, cv.height); if(r && r.data) return r.data; }
-  return '';
+  for(const side of [1600, 1000, 640]){ const cv=await _scanToCanvas(src, side), d=cv.getContext('2d').getImageData(0,0,cv.width,cv.height); const r=jsQR(d.data, cv.width, cv.height);
+    if(r && r.data){ let box=null; try{ const L=r.location, xs=[L.topLeftCorner.x,L.topRightCorner.x,L.bottomLeftCorner.x,L.bottomRightCorner.x], ys=[L.topLeftCorner.y,L.topRightCorner.y,L.bottomLeftCorner.y,L.bottomRightCorner.y]; box={x0:Math.min(...xs)/cv.width, y0:Math.min(...ys)/cv.height, x1:Math.max(...xs)/cv.width, y1:Math.max(...ys)/cv.height}; }catch(e){} return {data:r.data, box}; } }
+  return {data:'', box:null};
 }
 let _scanWorker = null;
-async function _scanOcr(src, onProg, side){
+async function _scanOcr(src, onProg, side, mask){
   await _scanLoadScript('ocr/tesseract.min.js?v=511', ()=>typeof Tesseract!=='undefined');
   const base = new URL('ocr/', location.href).href;
   if(!_scanWorker) _scanWorker = await Tesseract.createWorker('vie', 1, { workerPath: base+'worker.min.js', corePath: base, langPath: base, gzip: true, logger: m=>{ try{ if(_scanWorker && _scanWorker._prog) _scanWorker._prog(m); }catch(e){} } });
   _scanWorker._prog = m=>{ if(onProg && m && m.status==='recognizing text') onProg(Math.round((m.progress||0)*100)); };
   const cv = await _scanToCanvas(src, side||2200);
+  if(mask){ const g=cv.getContext('2d'), px=0.02*cv.width, py=0.02*cv.height; g.fillStyle='#fff'; g.fillRect(mask.x0*cv.width-px, mask.y0*cv.height-py, (mask.x1-mask.x0)*cv.width+2*px, (mask.y1-mask.y0)*cv.height+2*py); }   // v46: che mã QR
   const r = await _scanWorker.recognize(cv, { rotateAuto: true });   // rotateAuto: ảnh chụp nghiêng được xoay thẳng trước khi đọc
   const d = (r && r.data) || {};
-  return { text: d.text||'', words: (d.words||[]).map(w=>({t:w.text||'', c:+w.confidence||0})) };
+  return { text: d.text||'', words: (d.words||[]).map(w=>({t:w.text||'', c:+w.confidence||0})), lines: (d.lines||[]).map(l=>({t:String(l.text||'').replace(/\s+/g,' ').trim(), c:+l.confidence||0})) };
 }
 // Độ tin (0–100) của bộ đọc với chính dãy số tài khoản: lấy mức thấp nhất trong các từ ghép thành dãy đó
 function _scanAcctConf(words, acct){
@@ -13035,15 +13055,17 @@ async function scanFill(prefix){
     const res={bank:'', acct:'', acctSure:false, amount:0, name:'', nameSure:false, text:'', src:''};
     // 1) mã QR trong ảnh
     _scanOut(prefix, '⏳ Đang tìm mã QR trong ảnh…');
-    for(const s of srcs){ let t=''; try{ t=await _scanQrIn(s); }catch(e){} const q=t ? _vietQrParse(t) : null; if(q){ res.bank=q.bin; res.acct=q.acct; res.acctSure=true; res.amount=q.amount||0; if(q.name) res.name=q.name; res.src='qr'; break; } }
+    const masks = new Map();
+    for(const s of srcs){ let t={data:'',box:null}; try{ t=await _scanQrIn(s); }catch(e){} if(t.box) masks.set(s, t.box); const q=t.data ? _vietQrParse(t.data) : null; if(q && !res.acct){ res.bank=q.bin; res.acct=q.acct; res.acctSure=true; res.amount=q.amount||0; if(q.name) res.name=q.name; res.src='qr'; } }
     // 2) chưa đủ (không có mã QR, hoặc chưa có tên) → đọc chữ
     const known = res.acct ? _scanPayeeOfAcct(res.acct) : '';
     if(!res.acct || (!res.name && !known)){
       for(let i=0;i<srcs.length;i++){
         _scanOut(prefix, '⏳ Đang đọc chữ ảnh '+(i+1)+'/'+srcs.length+'… (lần đầu tải bộ đọc khoảng 5 MB)');
-        let txt={text:'', words:[]}; try{ txt = await Promise.race([ _scanOcr(srcs[i], pc=>_scanOut(prefix, '⏳ Đang đọc chữ ảnh '+(i+1)+'/'+srcs.length+'… '+pc+'%')), new Promise((_,rej)=>setTimeout(()=>rej(new Error('quá 120 giây')), 120000)) ]); }
+        let txt={text:'', words:[], lines:[]}; try{ txt = await Promise.race([ _scanOcr(srcs[i], pc=>_scanOut(prefix, '⏳ Đang đọc chữ ảnh '+(i+1)+'/'+srcs.length+'… '+pc+'%'), 2200, masks.get(srcs[i])), new Promise((_,rej)=>setTimeout(()=>rej(new Error('quá 120 giây')), 120000)) ]); }
         catch(e){ _scanOut(prefix, '<span style="color:#b91c1c">❌ Không đọc được chữ: '+esc(e.message||String(e))+'</span>'); if(!res.acct) return; break; }
-        const r=_scanParseText(txt.text); res.text += '\n'+r.text;
+        const _good = new Set((txt.lines||[]).filter(l=>l.c>=60).map(l=>l.t));   // dòng bộ đọc đủ tin (tên không nhãn chỉ lấy từ các dòng này)
+        const r=_scanParseText(txt.text, { acct: res.acct, okLine: l=>!_good.size || _good.has(String(l).replace(/\s+/g,' ').trim()) }); res.text += '\n'+r.text;
         if(!res.acct && r.acct){
           res.acct=r.acct; res.acctSure=r.acctSure; if(!res.src) res.src='ocr';
           // v45: ĐỌC LẦN 2 ở cỡ ảnh khác — hai lần phải ra CÙNG một số mới coi là đọc được (ảnh nghiêng / mờ hay rụng 1 chữ số)
@@ -13091,7 +13113,7 @@ function _scanApply(prefix, res){
   // tên đơn vị
   const pe=$('payee');
   if(name){ if(pe && !String(pe.value||'').trim() && !pe.disabled){ pe.value=name.slice(0,200); line('Đơn vị / người nhận', esc(name)+nameNote, 'fill'); } else line('Đơn vị / người nhận', esc(name)+nameNote, 'keep'); }
-  else line('Đơn vị / người nhận', 'không thấy', '');
+  else line('Đơn vị / người nhận', res.src==='qr' ? 'không thấy — <b>mã QR không chứa tên</b>, app chỉ đọc được tên nếu ảnh có in tên cạnh mã. Tự gõ tên; khi thủ quỹ quét, app ngân hàng sẽ hiện tên chủ tài khoản để đối chiếu' : 'không thấy', '');
   // số tiền
   const am=$('amount');
   if(res.amount>0){ if(am && !parseAmountInput(am)){ am.value=Number(res.amount).toLocaleString('vi-VN'); try{ fmtAmountInput(am); }catch(e){} line('Số tiền', fmtVND(res.amount), 'fill'); } else line('Số tiền', fmtVND(res.amount), 'keep'); }
