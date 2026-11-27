@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v36 (27/11/2026) — PHÁT HÀNH (D: "giữ nguyên không thay đổi gì nhé. phát hành")
+- `PUSH_TRIAL = false`: bỏ màn chặn thử → 12 nhân viên (vai other, đã có hồ sơ + đã duyệt sẵn bên `pva379/userRoles`) vào được; thông báo đẩy gửi đúng vai, không còn "[Thử]". Không đổi gì khác (D dặn giữ nguyên; lô 40 phiếu ứng lương giữ). `version-pva379.txt` + `sw-pva379.js` = v36.
+- Người mới (D nêu 1 nhân viên 27/11): tự Đăng ký trong app → D đọc mã 6 số → D bấm "Cho xem dữ liệu" ở Cài đặt → Duyệt tài khoản.
+- Còn việc của D: `firebase deploy --only functions` trên máy D (push379 kiểm thêm `pva379/userRoles`).
+- Thử: `smoke19` (nhân viên vào không bị chặn; thấy Đề xuất + Báo cáo, không Cân đối / Thùng rác; thông báo không gắn [Thử]).
+
 ## 27/11/2026 — chuẩn bị cho mọi người Duyệt Chi vào PVA-379 (D hỏi "cho toàn bộ những người đã vào được sổ DC cũng đăng nhập vào sổ này")
 - `scripts/chep-vai-tu-duyet-chi.js` + tác vụ `chep-vai-tu-duyet-chi.yml` (gõ `CHEP`; trống = chạy thử đếm): chép HỒ SƠ TÀI KHOẢN `duyetchi/userRoles` → `pva379/userRoles` cho uid chưa có (không đè ai đã có), chỉ tài khoản đã duyệt bên DC; vai trang→thuquy, dung/hien/ketoan giữ, còn lại other; dept kehoach/both giữ. KHÔNG chép phiếu / sổ quỹ (sổ mới). Nhật ký chỉ đếm theo vai, không in tên / email. Cùng project nên uid trùng → đăng nhập Google như cũ là vào.
 - `functions/push379.js`: người nhận / tên người nhận được kiểm thêm ở `pva379/userRoles` (trước chỉ `duyetchi/userRoles` → người chỉ có hồ sơ PVA-379 không nhận thông báo). **Cần D deploy functions** (`firebase deploy --only functions` trên máy D) — repo không có tác vụ tự deploy functions.
