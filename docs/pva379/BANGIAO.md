@@ -55,6 +55,13 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v49 (D 27/11/2026 "cho mã QR hiện luôn ở form lập phiếu khi nhập tk")
+- Ba form có ô Tài khoản nhận (lập phiếu `inp`, P.KH `kh-inp`, sửa phiếu `edit`) có thêm khung `#<prefix>-payqr` ngay dưới ô gợi ý. Chọn ngân hàng + gõ số tài khoản hợp lệ (theo `_payRead`) → `_formQrDraw(prefix)` vẽ mã sau 350 ms kể từ lần gõ cuối; thiếu ngân hàng / số quá ngắn → mã biến mất.
+- Gọi từ `_payHint` (gõ, chọn ngân hàng) và `_paySet` (tự điền theo lần chi trước, đọc ảnh, mở form sửa, xoá form) nên mọi đường điền tài khoản đều ra mã.
+- Mã ở form **KHÔNG kèm số tiền và nội dung** (thẻ 01 = 11): chỉ để người lập phiếu quét kiểm TÊN chủ tài khoản. Mã kèm số tiền vẫn chỉ ở hộp chuyển tiền / `openPayQr` của thủ quỹ sau khi duyệt — đừng gộp hai chỗ này.
+- `_formQrZoom(prefix)` phóng to (kèm tên trên phiếu), `_formQrSave(prefix)` lưu / chia sẻ ảnh (dùng lại `_qrSave`).
+- Không đổi luật, không đổi dữ liệu. Thử: `smoke25.js` 15/15 (giải mã mã bằng bộ đọc độc lập), hồi quy smoke7, 14, 23, 24.
+
 ## v48 (D 27/11/2026 "nhập tài khoản vào thì tự hiện ra QR chưa")
 - Trước: mã QR chỉ hiện khi bấm nút 📲. Nay hộp **Xác nhận chuyển tiền** của phiếu có tài khoản nhận **hiện sẵn mã QR** (`_taQrDraw`), kèm ngân hàng · số TK (nút chép), tên trên phiếu, cảnh báo nếu TK khác lần chi trước; mã tự vẽ lại theo số tiền đang gõ (kể cả nút "Chuyển toàn bộ"); bấm vào mã → hộp phóng to (`openPayQr`); nút "Lưu ảnh QR" (`_qrSave` dùng chung cho cả hai hộp). Nút 📲 QR trên thẻ phiếu giữ nguyên.
 - Thử: `smoke23` thêm 2 ca (mã tự hiện, giải mã ra đúng TK + số tiền; đổi số tiền → mã đổi); hồi quy smoke7, 14, 17, 24.
