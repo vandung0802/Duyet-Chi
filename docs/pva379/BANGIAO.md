@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v64 (D 28/11/2026) — Bảo lãnh để lẫn cũ / mới; nhắc ảnh chuyển tiền chỉ từ 29/11
+- D: "chọn vào bảo lãnh thì hiện ra tất cả các bảo lãnh đang có, không cần phân biệt cũ mới. Cũ mới chỉ khác lúc nhập để có trừ ký quỹ hay không, phần theo dõi như nhau nên thống kê cứ để lẫn và sắp xếp theo thời gian với từng loại".
+- Bỏ 2 tab "Bảo lãnh / Bảo lãnh cũ". Danh sách chung: gom theo loại (`BL_KIND_ORDER`), trong loại xếp ngày phát hành cũ → mới, cũ mới lẫn nhau (thẻ BL cũ vẫn có nhãn "📜 cũ"). Thêm nút **📜 Thêm BL cũ** cạnh "➕ Thêm bảo lãnh" (mở `openBlModal(null,false,true)`). `setBlTab` còn giữ nhưng không lọc nữa.
+- D: "có 67 món chưa up ảnh vì đang lẫn cũ mới … chỉ nhắc các món từ ngày 29/11 trở đi". `ZALO_REMIND_SINCE` = 29/11/2026 00:00 (+07) — áp cho cả nhắc thủ quỹ "chưa upload ảnh chuyển tiền" và nhắc người đề xuất "chưa gửi ảnh lên Zalo". Món chuyển trước mốc không nhắc (vẫn up ảnh được bình thường).
+- Thử: `smoke38.js` (không còn tab, có nút Thêm BL cũ, 4 BL lẫn cũ mới xếp đúng ngày, nhắc ảnh chỉ món từ 29/11); hồi quy smoke35 (sửa theo nút mới), 36, 37.
+
 ## v63 (D 28/11/2026) — Bảo lãnh tạm ứng giảm trừ; ký quỹ nhập số hoặc %; tiền bung về TK ngân hàng phát hành
 - D: "bảo lãnh tạm ứng có giảm trừ giá trị từng phần, giảm bằng nào thì ký quỹ bung tương ứng bằng đó"; làm rõ: "nút giảm bảo lãnh có thể giảm cả hoặc giảm 1 phần, mục ký quỹ có thể nhập số hoặc nhập phần trăm, nếu nhập % thì khi giảm sẽ tự giảm theo %, nhập số thì giảm số, tiền bung sẽ cộng vào tk ngân hàng phát hành"; "giải toả về TK TM Trang là sai, giải toả về tk ngân hàng phát hành" + "cũ hay mới đều về đúng tk phát hành".
 - Form: ô Ký quỹ có chọn **Số tiền / Phần trăm** (`#bl-dep-mode`). Phần trăm → lưu `depPct` (0–100) và `depAmount = round(amount × depPct / 100)` (bắt buộc có số tiền bảo lãnh). Số tiền → không có `depPct`.
