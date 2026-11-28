@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v59 (D 28/11/2026 "giao diện rối quá: nút 1 H đã duyệt, nút 2 từ chối, nút 3 bấm vào thì hiện ra mấy cái đó, nhìn cho gọn; Hiền đã duyệt thì nút đổi sang màu khác màu nút bấm duyệt")
+- Hàng nút trên thẻ phiếu (`renderApproveRow`): Hiền chỉ còn **H · Từ chối · ⋯**. Chuyển tiền / chuyển tiếp, hoàn tác lần chuyển gần nhất, xem / thêm / dán ảnh chuyển khoản, Giục → nằm trong menu ⋯ (`openCardMenu`, nhánh `currentRole==='hien'`). Ô "—" khi không còn quyền từ chối không vẽ nữa (`renderBtnReject` trả '').
+- Thủ quỹ: **T · ảnh CK · ⋯** — ô ảnh chuyển khoản gọn 1 nút (`renderBtnShareCompact` "📤 n ảnh CK ▾"), bấm mở `openProofMenu` (Xem / chia sẻ · Thêm ảnh · Dán ảnh). `renderBtnShare` cũ giữ cho nhân viên (chỉ xem ảnh).
+- Màu: nút **bấm duyệt** (D / H) = cam đặc chữ trắng; **duyệt thêm** (đã duyệt một phần) = vàng; **đã duyệt** = xanh dương (`#dbeafe` / `#1e40af`) cho cả nút và ô trạng thái `.badge-approved`; đã chuyển giữ xanh lá.
+- Thử: `smoke34.js`; hồi quy smoke12, 14, 23, 24, 26, 27, 29, 31–33.
+
 ## v58 (D 28/11/2026) — mục BẢO LÃNH (menu Khác → 🛡 Bảo lãnh, trang `#page-baolanh`)
 - D yêu cầu: tên bảo lãnh, ngân hàng, ký quỹ bao nhiêu lấy từ nguồn nào nằm lại ngân hàng nào (trừ ở nguồn nộp, sang phần ký quỹ), phí bảo lãnh trích từ TK nào hạch toán vào phí và lãi ngân hàng, thời hạn hết (nhắc trước 5 ngày).
 - D chốt: (1) chỉ quản ở PVA-379, KHÔNG nối bảng bảo lãnh của app Hợp đồng / Công nợ NH; (2) thủ quỹ / Hiền / Dũng thêm, sửa — có hiệu lực ngay; người khác thêm → "chờ Hiền duyệt"; (3) mọi người xem + thấy nhắc; (4) có bảo lãnh tín chấp (ký quỹ 0 / trống); (5) chỉ nhắc bằng khung đỏ trong app (không thông báo đẩy 7h).
