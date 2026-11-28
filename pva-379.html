@@ -2015,7 +2015,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v55';
+const APP_VERSION = '20261128-v56';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4040,15 +4040,69 @@ setInterval(function(){
   b.textContent = `☁️ Tải lại (${secs}s)`;
 }, 1000);
 function fmt(n){return n||n===0?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0}):'—'}
-function parseAmountInput(el){return parseInt((el.value||'').replace(/\./g,'').replace(/[^\d]/g,''))||0;}
+// v56 (D 28/11/2026 "nhập các số nhỏ xong app cộng cho được không" → chọn cách 1, "làm cả cho các mục"):
+// MỌI ô số tiền nhận phép CỘNG: gõ 120.000+35.000+8.500 → app hiện "= 163.500 đ" ngay dưới ô, rời ô thì tự thay bằng tổng.
+// Mọi chỗ đọc số tiền đi qua amtVal() (cộng các số), không còn ghép chữ số lại với nhau. Chỉ cộng — không trừ / nhân.
+function amtVal(v){ const t=String(v==null?'':v); if(t.indexOf('+')<0) return parseInt(t.replace(/[^\d]/g,''),10)||0; return t.split('+').reduce((a,x)=>a+(parseInt(String(x).replace(/[^\d]/g,''),10)||0),0); }
+function parseAmountInput(el){ return amtVal(el && el.value); }
+function _amtFmt1(d){ return d ? Number(d).toLocaleString('vi-VN',{maximumFractionDigits:0}) : ''; }
 function fmtAmountInput(el){
-  const pos=el.selectionStart, oldLen=el.value.length;
-  const raw=(el.value||'').replace(/[^\d]/g,'');
-  const formatted=raw?Number(raw).toLocaleString('vi-VN',{maximumFractionDigits:0}):'';
+  const v=el.value||'';
+  if(v.indexOf('+')>=0){
+    const parts=v.split('+').map(x=>_amtFmt1(String(x).replace(/[^\d]/g,'')));
+    const out=parts.join('+').replace(/\+{2,}/g,'+').replace(/^\+/,'');
+    if(out!==v){ el.value=out; try{ el.setSelectionRange(out.length,out.length); }catch(e){} }
+    _amtHelpShow(el); return;
+  }
+  const pos=el.selectionStart, oldLen=v.length;
+  const raw=v.replace(/[^\d]/g,'');
+  const formatted=_amtFmt1(raw);
   el.value=formatted;
   const diff=formatted.length-oldLen;
   try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
+  _amtHelpShow(el);
 }
+// Nút "+" (bàn phím số iPhone không có dấu +) + dòng "= tổng" nổi cạnh ô đang gõ; rời ô → thay phép cộng bằng tổng.
+function _amtIsInp(el){ return !!(el && el.tagName==='INPUT' && /fmtAmountInput/.test(el.getAttribute('oninput')||'')); }
+function _amtHelpEl(){
+  let h=document.getElementById('amt-help'); if(h) return h;
+  h=document.createElement('div'); h.id='amt-help';
+  h.style.cssText='position:absolute;z-index:100003;display:none;align-items:center;gap:6px;pointer-events:none';
+  h.innerHTML='<span id="amt-help-sum" style="display:none;background:#1f2937;color:#fff;font-size:12px;font-weight:800;padding:3px 8px;border-radius:8px;white-space:nowrap"></span><button type="button" id="amt-help-plus" tabindex="-1" title="Cộng thêm số" style="pointer-events:auto;width:30px;height:30px;border-radius:8px;border:1.5px solid var(--blue);background:#fff7ed;color:var(--blue);font-size:19px;font-weight:900;line-height:1;cursor:pointer;padding:0">+</button>';
+  document.body.appendChild(h);
+  const b=h.querySelector('#amt-help-plus');
+  const keep=e=>{ e.preventDefault(); };
+  b.addEventListener('mousedown', keep); b.addEventListener('touchstart', keep, {passive:false}); b.addEventListener('pointerdown', keep);
+  const add=e=>{ e.preventDefault(); const el=_amtHelpEl._el; if(!el || el.disabled || el.readOnly) return; if(!/\+\s*$/.test(el.value||'') && (el.value||'').trim()!=='') el.value=(el.value||'')+'+'; el.dispatchEvent(new Event('input',{bubbles:true})); try{ el.focus(); const n=el.value.length; el.setSelectionRange(n,n); }catch(x){} };
+  b.addEventListener('click', add); b.addEventListener('touchend', add, {passive:false});
+  return h;
+}
+function _amtHelpShow(el){
+  if(!_amtIsInp(el) || document.activeElement!==el || el.disabled || el.readOnly){ return; }
+  const h=_amtHelpEl(); _amtHelpEl._el=el;
+  const r=el.getBoundingClientRect(); if(!r.width){ h.style.display='none'; return; }
+  const sum=h.querySelector('#amt-help-sum'), v=el.value||'';
+  if(v.indexOf('+')>=0){ sum.textContent='= '+fmtVND(amtVal(v)); sum.style.display='inline-block'; } else sum.style.display='none';
+  h.style.display='flex';
+  const hw=h.offsetWidth||30;
+  h.style.left=Math.max(4, r.right+window.scrollX-hw-4)+'px';
+  h.style.top=(r.top+window.scrollY+(r.height-30)/2)+'px';
+  if(v.indexOf('+')>=0){ h.style.top=(r.bottom+window.scrollY+2)+'px'; }
+}
+function _amtSettle(el){
+  if(!_amtIsInp(el)) return; const v=el.value||'';
+  if(v.indexOf('+')<0) return;
+  const tot=amtVal(v); el.value=_amtFmt1(String(tot)); el.title='Đã cộng: '+v.replace(/\+$/,'');
+  el.dispatchEvent(new Event('input',{bubbles:true}));
+}
+(function(){
+  document.addEventListener('focusin', e=>{ if(_amtIsInp(e.target)) setTimeout(()=>_amtHelpShow(e.target), 0); }, true);
+  document.addEventListener('focusout', e=>{ if(!_amtIsInp(e.target)) return; const el=e.target;
+    setTimeout(()=>{ if(document.activeElement===el) return; const h=document.getElementById('amt-help'); if(h) h.style.display='none'; _amtSettle(el); }, 0); }, true);
+  document.addEventListener('keydown', e=>{ if(e.key==='Enter' && _amtIsInp(e.target)) _amtSettle(e.target); }, true);
+  const re=()=>{ const el=document.activeElement; if(_amtIsInp(el)) _amtHelpShow(el); };
+  window.addEventListener('scroll', re, true); window.addEventListener('resize', re);
+})();
 function fmtVND(n){return (n||n===0)?Number(n).toLocaleString('vi-VN',{maximumFractionDigits:0})+' đ':'—'}
 // v165 UX: số tiền NGẮN cho ô thống kê ("12,48 tỷ" / "553 tr") — số đầy đủ vẫn ở danh sách & title khi rê chuột
 function fmtShortMoney(n){
@@ -6024,8 +6078,8 @@ async function settleImportExcel(input){
 }
 function _settleRead(){
   const items = Array.from(document.querySelectorAll('#settle-rows .settle-row')).map(r=>({
-    desc:(r.querySelector('.st-desc').value||'').trim(), amount:parseFloat(String(r.querySelector('.st-amt').value).replace(/[^\d]/g,''))||0, tax:r.querySelector('.st-tax').value||'', date:r.dataset.date||'' })).filter(x=>x.desc||x.amount);
-  const returned = parseFloat(String(document.getElementById('settle-ret').value).replace(/[^\d]/g,''))||0;
+    desc:(r.querySelector('.st-desc').value||'').trim(), amount:amtVal(r.querySelector('.st-amt').value), tax:r.querySelector('.st-tax').value||'', date:r.dataset.date||'' })).filter(x=>x.desc||x.amount);
+  const returned = amtVal(document.getElementById('settle-ret').value);
   return {items, returned};
 }
 function settleRecalc(){
@@ -6285,7 +6339,7 @@ function ctStageAdd(v){
   box.appendChild(row);
 }
 function _ctStagesRead(){
-  return [...document.querySelectorAll('#ct-stages .ct-stage-row')].map(r=>{ const ins=r.querySelectorAll('input'); return {id:r.dataset.id, name:(ins[0].value||'').trim().slice(0,200), amount:parseFloat(String(ins[1].value).replace(/[^\d]/g,''))||0, cond:(ins[2].value||'').trim().slice(0,300)}; }).filter(x=>x.name || x.amount>0);
+  return [...document.querySelectorAll('#ct-stages .ct-stage-row')].map(r=>{ const ins=r.querySelectorAll('input'); return {id:r.dataset.id, name:(ins[0].value||'').trim().slice(0,200), amount:amtVal(ins[1].value), cond:(ins[2].value||'').trim().slice(0,300)}; }).filter(x=>x.name || x.amount>0);
 }
 function contractWarnBeforeTransfer(p, val){
   const c = contractOf(p); if(!c) return true;
@@ -6352,7 +6406,7 @@ function closeContractModal(){ document.getElementById('ct-modal-overlay').style
 async function submitContract(){
   const id = document.getElementById('ct-inp-id').value;
   const name = (document.getElementById('ct-inp-name').value||'').trim(), partner = (document.getElementById('ct-inp-partner').value||'').trim();
-  const kind = document.getElementById('ct-inp-kind').value || 'khac', value = parseFloat(String(document.getElementById('ct-inp-value').value).replace(/[^\d]/g,''))||0;
+  const kind = document.getElementById('ct-inp-kind').value || 'khac', value = amtVal(document.getElementById('ct-inp-value').value);
   const date = document.getElementById('ct-inp-date').value || '', note = (document.getElementById('ct-inp-note').value||'').trim();
   if(!name){ showToast('⚠️ Nhập tên / số hợp đồng'); return; }
   if(value <= 0){ showToast('⚠️ Nhập giá trị hợp đồng'); return; }
@@ -12292,7 +12346,7 @@ async function saveCashStart(){
 }
 async function saveAcctOpen(k, el){
   if(!_canSetOpening() || !CASH_ACCT[k] || !el) return;
-  const raw=String(el.value||'').replace(/[^\d-]/g,''); const v = raw==='' ? null : (parseInt(raw,10)||0);
+  const _s=String(el.value||'').trim(); const v = _s==='' ? null : (/^-/.test(_s) ? -amtVal(_s) : amtVal(_s));   // v56: nhận cả phép cộng
   try{ await db.ref('pva379/meta/accounts/'+k+'/open').set(v); showToast('✅ Đầu kỳ '+CASH_ACCT[k].label+': '+(v===null?'bỏ':fmtVND(v))); }catch(e){ showToast('❌ '+(e.message||e.code||'')); }
 }
 // ── Cài đặt: danh sách tài khoản (chỉ Dũng). Ghi thẳng pva379/meta/accounts/<mã> ──
@@ -13583,7 +13637,7 @@ function _ceCollect(r){
   _ceFields(r).forEach(([f,k])=>{
     const el=document.getElementById('ce-'+f); if(!el) return;
     let v;
-    if(k==='money') v = parseFloat(String(el.value).replace(/[^\d]/g,''))||0;
+    if(k==='money') v = amtVal(el.value);
     else if(k==='num') v = parseFloat(String(el.value).replace(',', '.'))||0;
     else v = String(el.value||'').trim();
     const cur = r[f];
@@ -13903,7 +13957,7 @@ async function saveBankBalance(a){
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền mới nhập số dư ngân hàng'); return; }
   a = acctKey(a);
   const inp = document.getElementById('cash-bank-inp-'+a); if(!inp) return;
-  const v = parseFloat(String(inp.value).replace(/[^\d]/g,''))||0;
+  const v = amtVal(inp.value);
   try{
     await db.ref('pva379/bankBalance/'+a).set({amount:v, at:Date.now(), by:getCurrentUserName()||''});
     showToast('✅ Đã lưu số dư '+acctLabel(a));
@@ -14138,7 +14192,7 @@ function closeLoanModal(){ document.getElementById('loan-modal-overlay').style.d
 async function submitLoan(){
   if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền mới ghi được khoản vay'); return; }
-  const amount = parseFloat(String(document.getElementById('loan-inp-amount').value).replace(/[^\d]/g,''))||0;
+  const amount = amtVal(document.getElementById('loan-inp-amount').value);
   const desc = (document.getElementById('loan-inp-desc').value||'').trim();
   if(amount<=0){ showToast('⚠️ Nhập số tiền vay'); return; }
   if(!desc){ showToast('⚠️ Nhập nội dung'); return; }
@@ -14191,8 +14245,8 @@ async function submitRepay(){
   if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền mới ghi được trả nợ'); return; }
   const loanId = document.getElementById('repay-inp-loan').value; const l = cashflow.find(x=>x.id===loanId); if(!l){ showToast('Không thấy khoản vay'); return; }
-  const principal = parseFloat(String(document.getElementById('repay-inp-principal').value).replace(/[^\d]/g,''))||0;
-  const interest  = parseFloat(String(document.getElementById('repay-inp-interest').value).replace(/[^\d]/g,''))||0;
+  const principal = amtVal(document.getElementById('repay-inp-principal').value);
+  const interest  = amtVal(document.getElementById('repay-inp-interest').value);
   if(principal<=0 && interest<=0){ showToast('⚠️ Nhập tiền gốc hoặc tiền lãi'); return; }
   if(principal > loanLeft(l) + 0.0001){ showToast('⚠️ Trả gốc nhiều hơn số còn nợ ('+fmtVND(loanLeft(l))+')'); return; }
   const rec = { type:'repay', loanId, principal, interest, amount: principal+interest, desc:(document.getElementById('repay-inp-desc').value||'').trim()||(l.desc||''),
@@ -14245,7 +14299,7 @@ async function submitBankPay(){
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được'); return; }
   const kind = document.getElementById('bankpay-inp-kind').value==='laiphi' ? 'laiphi' : 'goc';
   const bank = (document.getElementById('bankpay-inp-bank').value||'').trim().slice(0,200);
-  const amount = parseFloat(String(document.getElementById('bankpay-inp-amount').value).replace(/[^\d]/g,''))||0;
+  const amount = amtVal(document.getElementById('bankpay-inp-amount').value);
   if(!bank){ showToast('⚠️ Nhập tên ngân hàng'); return; }
   if(amount<=0){ showToast('⚠️ Nhập số tiền'); return; }
   const rec = { type:'bankpay', kind, bank, amount, desc:(document.getElementById('bankpay-inp-desc').value||'').trim(), date: document.getElementById('bankpay-inp-date').value||ymdLocal(),
@@ -14294,7 +14348,7 @@ function closeRiengModal(){ document.getElementById('rieng-modal-overlay').style
 async function submitRieng(){
   if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_riengCanWrite()){ showToast('🔒 Chỉ thủ quỹ / Hiền ghi được chi riêng'); return; }
-  const amount = parseFloat(String(document.getElementById('rieng-inp-amount').value).replace(/[^\d]/g,''))||0;
+  const amount = amtVal(document.getElementById('rieng-inp-amount').value);
   const desc = (document.getElementById('rieng-inp-desc').value||'').trim();
   const who = RIENG_WHO[document.getElementById('rieng-inp-who').value] ? document.getElementById('rieng-inp-who').value : 'dung';
   if(amount<=0){ showToast('⚠️ Nhập số tiền'); return; }
@@ -14352,7 +14406,7 @@ async function submitXfer(){
   if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
   if(!_cashWriter()){ showToast('🔒 Chỉ thủ quỹ / Hiền mới ghi chuyển tiền giữa các tài khoản'); return; }
   const from = document.getElementById('xfer-inp-from').value, to = document.getElementById('xfer-inp-to').value;
-  const amount = parseFloat(String(document.getElementById('xfer-inp-amount').value).replace(/[^\d]/g,''))||0;
+  const amount = amtVal(document.getElementById('xfer-inp-amount').value);
   if(from===to){ showToast('⚠️ Hai tài khoản phải khác nhau'); return; }
   if(amount<=0){ showToast('⚠️ Nhập số tiền'); return; }
   const rec = { type:'xfer', from, to, amount, desc:(document.getElementById('xfer-inp-desc').value||'').trim(), date: document.getElementById('xfer-inp-date').value||ymdLocal(),
@@ -14390,7 +14444,7 @@ function closeCashModal(){ document.getElementById('cash-modal-overlay').style.d
 
 async function submitCash(){
   if(_cashBusy()) return;   // v20: chặn bấm đúp → ghi trùng (D 26/11: món trả nợ 696,9tr bị 2 bản)
-  const amount = parseFloat(String(document.getElementById('cash-inp-amount').value).replace(/[^\d]/g,''))||0;
+  const amount = amtVal(document.getElementById('cash-inp-amount').value);
   const desc   = (document.getElementById('cash-inp-desc').value||'').trim();
   const date   = document.getElementById('cash-inp-date').value || ymdLocal();
   if(amount <= 0){ showToast('⚠️ Nhập số tiền'); return; }
@@ -14423,7 +14477,7 @@ async function returnDeposit(id){
   const left = cashDepOutstanding(r);
   const raw = prompt('Lấy về bao nhiêu? (đang treo '+fmtVND(left)+')', String(Math.round(left)));
   if(raw===null) return;
-  const amount = parseFloat(String(raw).replace(/[^\d]/g,''))||0;
+  const amount = amtVal(raw);
   if(amount<=0){ showToast('⚠️ Số tiền không hợp lệ'); return; }
   if(amount > left + 0.0001){ showToast('⚠️ Lấy về nhiều hơn số đang treo'); return; }
   const arr = Array.isArray(r.returned) ? r.returned.slice() : [];
