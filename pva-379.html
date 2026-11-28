@@ -709,6 +709,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div style="position:relative;margin-bottom:8px">
     <input id="search-input" type="text" name="dc-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm kiếm đề xuất..." oninput="renderProposals()" style="width:100%;padding:9px 12px 9px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit">
   </div>
+  <div id="bl-alert"></div>   <!-- v58: nhắc bảo lãnh sắp hết hạn -->
   <div id="delreq-panel"></div>
   <div id="proposal-list"><div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có đề xuất nào<br><small>Nhấn ➕ để thêm mới</small></div></div>
 </div>
@@ -935,6 +936,20 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div id="report-table-rejected" style="max-height:calc(100vh - 230px);overflow-y:auto;-webkit-overflow-scrolling:touch"></div>
     </div>
   </div>
+</div>
+
+<!-- v58 (D 28/11/2026): BẢO LÃNH — trang riêng, mở từ menu Khác -->
+<div id="page-baolanh" class="main" style="display:none">
+  <div class="card"><div class="card-header">🛡 Bảo lãnh</div>
+    <div class="tab-desc" style="padding:8px 12px 0">Mỗi bảo lãnh: ngân hàng phát hành, <b>ký quỹ</b> (trừ ở tài khoản nộp, sang mục Ký quỹ của Cân đối), <b>phí</b> (vào Phí + lãi ngân hàng), ngày hết hạn — app nhắc trước 5 ngày. Thủ quỹ / Hiền / Dũng thêm là có hiệu lực ngay; người khác thêm thì chờ Hiền duyệt.</div>
+    <div class="card-body" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <button class="btn-sm btn-primary-full" onclick="openBlModal()" style="flex:1 1 160px;margin:0">➕ Thêm bảo lãnh</button>
+      <select id="bl-filter" class="form-input form-select" onchange="renderBaoLanh()" style="flex:1 1 140px;width:auto;margin:0;font-size:13px">
+        <option value="open">Đang hiệu lực + chờ duyệt</option><option value="pending">Chờ Hiền duyệt</option><option value="closed">Đã đóng / từ chối</option><option value="all">Tất cả</option>
+      </select>
+    </div>
+  </div>
+  <div id="bl-list"></div>
 </div>
 
 <!-- v79: SỔ HỢP ĐỒNG — trang riêng, mở từ menu Khác (trước là tab con của Báo cáo) -->
@@ -1966,6 +1981,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="more-group">CÔNG VIỆC</div>
     <div class="more-grid">
       <button class="more-tile" onclick="moreGo('plan')"><span class="more-badge" id="more-badge-plan"></span><span class="ico">📦</span>Vật tư</button>
+      <button class="more-tile" onclick="moreGo('baolanh')"><span class="more-badge" id="more-badge-bl"></span><span class="ico">🛡</span>Bảo lãnh</button>
       <button class="more-tile" onclick="moreGo('adv')"><span class="ico">👛</span>Tạm ứng chi phí</button>
       <button class="more-tile" onclick="moreGo('kt')"><span class="ico">📒</span>Kế toán rà soát</button>
     </div>
@@ -2014,7 +2030,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v57';
+const APP_VERSION = '20261128-v58';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -3822,6 +3838,8 @@ function initFirebaseSync(){
 
     // ── assets (v40: VẬT TƯ / THIẾT BỊ LUÂN CHUYỂN — ngăn riêng pva379/assets, không dính tiền) ──
     // ── v41 thùng rác (pva379/trash/<loại>/<id>) — ai đã duyệt cũng xem, Dũng khôi phục / xoá hẳn ──
+    db.ref('pva379/baoLanh').off('value');   // v58: bảo lãnh
+    db.ref('pva379/baoLanh').on('value', snap=>{ baoLanh = snap.val() || {}; try{ renderBlAlert(); }catch(e){} try{ const pg=document.getElementById('page-baolanh'); if(pg && pg.style.display!=='none') renderBaoLanh(); }catch(e){} }, ()=>{ baoLanh = {}; });
     db.ref('pva379/delReqs').off('value');   // v43: đề nghị xoá chờ Dũng
     db.ref('pva379/delReqs').on('value', snap=>{ delReqs = snap.val() || {}; try{ renderDelReqPanel(); }catch(e){} try{ const pg=document.getElementById('page-settings'); if(pg && pg.style.display!=='none') renderSettings(); }catch(e){} }, ()=>{ delReqs = {}; });
     db.ref('pva379/trash').off('value');
@@ -4269,6 +4287,7 @@ function moreGo(k){
   if(k==='plan') showPage('plan', g('nav-plan'));
   else if(k==='luong') showPage('luong', g('nav-luong'));
   else if(k==='contracts') showPage('contracts', null);
+  else if(k==='baolanh') showPage('baolanh', null);   // v58
   else if(k==='rotate'){ showPage('plan', g('nav-plan')); setPlanTab('rotate', q('#page-plan .report-subtab[data-tab="rotate"]')); }
   else if(k==='adv'){ showPage('cash', g('nav-cash')); setCashTab('adv', q('#page-cash .report-subtab[data-tab="adv"]')); }
   else if(k==='kt'){ showPage('report', g('nav-report')); setReportTab('kt', g('report-subtab-kt')); }
@@ -4287,12 +4306,13 @@ function showPage(pg, btn){
     if(pg==='add'){ try{ openKhModal(); }catch(e){} return; }
     if(pg==='home'||pg==='report'||pg==='luong'){ pg='kh'; btn=document.getElementById('nav-kh'); }
   }
-  ['home','add','report','settings','plan','luong','kh','cash','contracts'].forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display='none'; });
+  ['home','add','report','settings','plan','luong','kh','cash','contracts','baolanh'].forEach(p=>{ const el=document.getElementById('page-'+p); if(el) el.style.display='none'; });
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+pg).style.display='block';
   if(btn) btn.classList.add('active');
-  { const more=document.getElementById('nav-more'); if(more && ['plan','settings'].includes(pg)){ document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); more.classList.add('active'); } try{ closeMoreSheet(); }catch(e){} }   // v79: trang trong menu → sáng nút Khác
+  { const more=document.getElementById('nav-more'); if(more && ['plan','settings','baolanh'].includes(pg)){ document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); more.classList.add('active'); } try{ closeMoreSheet(); }catch(e){} }   // v79: trang trong menu → sáng nút Khác
   if(pg==='contracts'){ try{ renderContracts(); }catch(e){} }   // v79
+  if(pg==='baolanh'){ try{ renderBaoLanh(); }catch(e){} }   // v58
   if(pg==='add'){ populateSelects(); try{ _fillPayeeList(); }catch(e){} }
   if(pg==='settings') renderSettings();
   if(pg==='plan'){
@@ -4330,6 +4350,7 @@ let _renderAllTimer = null;
 let _renderAllPending = false;
 function renderAll(){
   _applyOneAcct();   // v109
+  try{ renderBlAlert(); }catch(e){}   // v58: vai có thể vừa biết sau khi dữ liệu bảo lãnh về
   // Nếu modal Sửa đang mở → hoãn render để không lag khi user đang nhập
   const editOpen = document.getElementById('edit-modal')?.style.display !== 'none';
   // v106: đang gõ ô Hỏi–Đáp trên thẻ cũng hoãn (vẽ lại sẽ xoá mất chữ đang nhập)
@@ -8603,6 +8624,192 @@ function addPerson(){
   document.getElementById('new-person-role').value='';
 }
 function delPerson(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng sửa được danh sách này'); return; } persons.splice(i,1); save(); renderSettings(); }   // v62
+
+// ══ v58 (D 28/11/2026) BẢO LÃNH — "tên bảo lãnh, chọn ngân hàng, ký quỹ bao nhiêu lấy từ nguồn nào nằm lại ngân hàng nào (trừ ở nguồn
+//    nộp, nằm sang phần ký quỹ), phí bảo lãnh trích từ TK nào hạch toán vào phí và lãi ngân hàng, thời hạn hết bảo lãnh (nhắc trước 5 ngày)".
+//    D chốt: chỉ quản ở PVA-379 (không nối app Hợp đồng / Công nợ); thủ quỹ / Hiền / Dũng thêm là có hiệu lực, người khác thêm thì chờ Hiền
+//    duyệt; mọi người xem + thấy nhắc; có bảo lãnh tín chấp (ký quỹ 0); chỉ nhắc bằng khung đỏ trong app.
+//    Dữ liệu pva379/baoLanh/<id>; tiền KHÔNG ghi riêng: lúc có hiệu lực app tạo 1 khoản 'dep' (ký quỹ, holder = ngân hàng) + 1 khoản
+//    'bankpay' kind 'laiphi' (phí) trong sổ quỹ, lưu mã ở depId / feeId. Gia hạn: thêm khoản phí mới, ghi vào ext[]. Giải toả = "lấy ký quỹ về".
+let baoLanh = {};
+const BL_KIND = { duthau:'Dự thầu', thuchien:'Thực hiện HĐ', tamung:'Tạm ứng', baohanh:'Bảo hành', khac:'Khác' };
+const BL_ST = { pending:'⏳ Chờ Hiền duyệt', active:'✅ Đang hiệu lực', rejected:'❌ Bị từ chối', closed:'⚫ Đã đóng' };
+function _blList(){ return Object.keys(baoLanh||{}).map(k=>Object.assign({id:k}, baoLanh[k])); }
+function _blDays(exp){ if(!exp) return null; const t=new Date(ymdLocal()+'T00:00:00'), e=new Date(String(exp)+'T00:00:00'); if(isNaN(e)) return null; return Math.round((e-t)/86400000); }
+function _blDate(d){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(d||'')); return m ? m[3]+'/'+m[2]+'/'+m[1] : (d||''); }
+function _blDepLeft(b){ const r=b.depId && (cashflow||[]).find(x=>x.id===b.depId); return r ? cashDepOutstanding(r) : 0; }
+function _blCanEdit(b){ return _cashWriter() || (b && b.status==='pending' && currentUser && b.by===currentUser.uid); }
+function renderBlAlert(){
+  const el=document.getElementById('bl-alert'); if(!el) return;
+  const due=_blList().filter(b=>b.status==='active' && _blDays(b.expDate)!==null && _blDays(b.expDate)<=5).sort((a,b)=>String(a.expDate).localeCompare(String(b.expDate)));
+  const pend=(_isApprover()) ? _blList().filter(b=>b.status==='pending') : [];
+  { const t=document.getElementById('more-badge-bl'); const n=due.length+pend.length; if(t){ t.textContent=n; t.style.display=n>0?'block':'none'; } }
+  if(!due.length && !pend.length){ el.innerHTML=''; return; }
+  el.innerHTML=`<div class="card" onclick="showPage('baolanh', null)" style="cursor:pointer;border-left:4px solid #dc2626;margin-bottom:10px"><div class="card-body" style="padding:10px 12px">
+    ${due.length?`<div style="font-size:13px;font-weight:800;color:#b91c1c">🛡 ${due.length} bảo lãnh sắp hết hạn / đã quá hạn</div>`+due.slice(0,6).map(b=>{ const d=_blDays(b.expDate); return `<div style="font-size:12.5px;margin-top:4px">• <b>${esc(b.name||'')}</b> — ${esc(b.bank||'')} · hết hạn ${_blDate(b.expDate)} <b style="color:${d<0?'#991b1b':'#b45309'}">(${d<0?'quá '+(-d)+' ngày':d===0?'hôm nay':'còn '+d+' ngày'})</b></div>`; }).join(''):''}
+    ${pend.length?`<div style="font-size:12.5px;font-weight:800;color:#b45309;margin-top:${due.length?6:0}px">⏳ ${pend.length} bảo lãnh chờ Hiền duyệt</div>`:''}
+    <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Bấm để mở mục Bảo lãnh</div></div></div>`;
+}
+function renderBaoLanh(){
+  const el=document.getElementById('bl-list'); if(!el) return;
+  try{ renderBlAlert(); }catch(e){}
+  const f=(document.getElementById('bl-filter')||{}).value||'open';
+  let L=_blList().filter(b=> f==='all' ? true : f==='pending' ? b.status==='pending' : f==='closed' ? (b.status==='closed'||b.status==='rejected') : (b.status==='active'||b.status==='pending'));
+  L.sort((a,b)=>{ const r=x=>x.status==='pending'?0:x.status==='active'?1:2; return (r(a)-r(b)) || String(a.expDate||'9').localeCompare(String(b.expDate||'9')); });
+  if(!L.length){ el.innerHTML='<div class="card"><div class="card-body" style="text-align:center;color:var(--text-sub);font-size:13px;padding:20px">Chưa có bảo lãnh nào</div></div>'; return; }
+  const B='padding:5px 10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;border:1px solid #d1d5db;background:#fff';
+  const one=_oneAcct();
+  el.innerHTML=L.map(b=>{
+    const d=_blDays(b.expDate), late=b.status==='active' && d!==null && d<=5;
+    const left=_blDepLeft(b);
+    const ext=Array.isArray(b.ext)?b.ext:[];
+    const btns=[];
+    if(b.status==='pending' && _isApprover()){ btns.push(`<button onclick="openBlModal('${sid(b.id)}',true)" style="${B};background:#047857;color:#fff;border:none">✅ Duyệt & ghi sổ</button>`, `<button onclick="rejectBl('${sid(b.id)}')" style="${B};color:#b91c1c">✖ Từ chối</button>`); }
+    if(_blCanEdit(b) && (b.status==='pending'||b.status==='active')) btns.push(`<button onclick="openBlModal('${sid(b.id)}')" style="${B}">✏️ Sửa</button>`);
+    if(b.status==='active' && _cashWriter()){
+      btns.push(`<button onclick="extendBl('${sid(b.id)}')" style="${B};color:#1d4ed8">📅 Gia hạn</button>`);
+      if(left>0) btns.push(`<button onclick="returnDeposit('${sid(b.depId)}')" style="${B};color:#047857">↩ Giải toả ký quỹ</button>`);
+      btns.push(`<button onclick="closeBl('${sid(b.id)}')" style="${B}">⚫ Đóng</button>`);
+    }
+    if(_isApprover() || (b.status!=='active' && b.status!=='closed' && currentUser && b.by===currentUser.uid)) btns.push(`<button onclick="deleteBl('${sid(b.id)}')" style="${B};color:#b91c1c">🗑</button>`);
+    return `<div class="card" style="border-left:4px solid ${b.status==='pending'?'#f59e0b':late?'#dc2626':b.status==='active'?'#047857':'#9ca3af'}"><div class="card-body" style="padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><div style="font-size:14px;font-weight:800;word-break:break-word">${esc(b.name||'')}</div><div style="font-size:11px;font-weight:700;white-space:nowrap">${BL_ST[b.status]||esc(b.status||'')}</div></div>
+      <div style="font-size:12px;color:var(--text-sub);margin-top:2px">${esc(BL_KIND[b.kind]||'')}${b.site?' · '+esc(b.site):''} · 🏦 <b>${esc(b.bank||'')}</b></div>
+      <div style="font-size:12.5px;margin-top:5px;line-height:1.55">
+        Phát hành ${_blDate(b.issueDate)||'—'} · Hết hạn <b style="color:${late?'#b91c1c':'inherit'}">${_blDate(b.expDate)}</b>${b.status==='active'&&d!==null?` <span style="color:${late?'#b91c1c':'var(--text-sub)'}">(${d<0?'quá '+(-d)+' ngày':d===0?'hôm nay':'còn '+d+' ngày'})</span>`:''}<br>
+        Ký quỹ: <b>${b.depAmount?fmtVND(b.depAmount):'0 (tín chấp)'}</b>${b.depAmount&&!one&&b.depAcct&&CASH_ACCT[b.depAcct]?' từ '+esc(acctLabel(b.depAcct)):''}${b.status==='active'&&b.depAmount?' · còn treo '+fmtVND(left):''}<br>
+        Phí: <b>${fmtVND(b.fee||0)}</b>${b.fee&&!one&&b.feeAcct&&CASH_ACCT[b.feeAcct]?' từ '+esc(acctLabel(b.feeAcct)):''}${ext.length?' · gia hạn '+ext.length+' lần (phí '+fmtVND(ext.reduce((a,x)=>a+(+x.fee||0),0))+')':''}
+        ${b.note?`<br><span style="color:var(--text-sub)">${esc(b.note)}</span>`:''}
+      </div>
+      <div style="font-size:10.5px;color:var(--text-sub);margin-top:4px">${esc(b.byName||'')} thêm ${fmtFull(b.ts||0)}${b.okH?' · '+esc(b.okH.name||'Hiền')+' duyệt '+fmtFull(b.okH.ts||0):''}${b.rej?' · từ chối: '+esc(b.rej.reason||''):''}</div>
+      ${btns.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px">${btns.join('')}</div>`:''}
+    </div></div>`; }).join('');
+}
+function openBlModal(id, approve){
+  const b = id ? (baoLanh||{})[id] : null;
+  if(b && !_blCanEdit(b) && !(approve && _isApprover())){ showToast('🔒 Không sửa được bảo lãnh này'); return; }
+  const lock = !!(b && b.status==='active');   // đã ghi sổ: tiền sửa ở Cân đối, ở đây chỉ sửa thông tin
+  const showAcct = _cashWriter();
+  try{ _fillAcctSelects(); }catch(e){}
+  const old=document.getElementById('bl-ov'); if(old) old.remove();
+  const ov=document.createElement('div'); ov.id='bl-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:12px;overflow:auto';
+  const v=(k,d)=> b && b[k]!=null ? b[k] : (d||'');
+  const sitesOpt='<option value="">— Chung công ty —</option>'+(sites||[]).map(x=>{ const n=typeof x==='string'?x:(x&&x.name)||''; return `<option value="${esc(n)}"${n===v('site')?' selected':''}>${esc(n)}</option>`; }).join('');
+  const acctSel=(idp, cur)=>`<select id="${idp}" class="form-input form-select" style="margin:0">${_ACCT_OPTS}</select>`;
+  const fmt=n=> n ? Number(n).toLocaleString('vi-VN') : '';
+  ov.innerHTML=`<div style="background:#fff;border-radius:14px;padding:14px;width:100%;max-width:440px;margin-top:3vh">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800">${approve?'✅ Duyệt bảo lãnh':b?'✏️ Sửa bảo lãnh':'🛡 Thêm bảo lãnh'}</div><button type="button" onclick="document.getElementById('bl-ov').remove()" style="border:none;background:#f1f5f9;border-radius:8px;padding:4px 10px;font-size:15px;cursor:pointer">✕</button></div>
+    <div class="form-group" style="margin-top:8px"><label class="form-label">Tên bảo lãnh *</label><input id="bl-name" class="form-input" value="${esc(v('name'))}" placeholder="VD: BL thực hiện HĐ cầu xã ĐA"></div>
+    <div style="display:flex;gap:6px"><div class="form-group" style="flex:1"><label class="form-label">Loại</label><select id="bl-kind" class="form-input form-select">${Object.keys(BL_KIND).map(k=>`<option value="${k}"${k===v('kind','thuchien')?' selected':''}>${BL_KIND[k]}</option>`).join('')}</select></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Công trình</label><select id="bl-site" class="form-input form-select">${sitesOpt}</select></div></div>
+    <div class="form-group"><label class="form-label">Ngân hàng phát hành *</label><input id="bl-bank" class="form-input" list="bl-bank-list" autocomplete="off" value="${esc(v('bank'))}" placeholder="Gõ hoặc chọn"><datalist id="bl-bank-list">${_bankNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
+    <div style="display:flex;gap:6px"><div class="form-group" style="flex:1"><label class="form-label">Ngày phát hành</label><input id="bl-issue" type="date" class="form-input" value="${esc(v('issueDate', ymdLocal()))}"></div>
+      <div class="form-group" style="flex:1"><label class="form-label">Ngày hết hạn *</label><input id="bl-exp" type="date" class="form-input" value="${esc(v('expDate'))}"></div></div>
+    <div class="form-group"><label class="form-label">Ký quỹ <span style="font-weight:400;color:var(--text-sub)">(để trống = tín chấp)</span></label>
+      <input id="bl-dep" class="form-input" type="text" inputmode="numeric" placeholder="0" value="${fmt(v('depAmount'))}" oninput="fmtAmountInput(this)" ${lock?'disabled':''}>
+      ${showAcct?`<div style="font-size:11px;color:var(--text-sub);margin:5px 0 3px">Trích từ tài khoản (tiền sang mục Ký quỹ, nằm ở ngân hàng phát hành)</div>${acctSel('bl-depacct')}`:''}</div>
+    <div class="form-group"><label class="form-label">Phí bảo lãnh</label>
+      <input id="bl-fee" class="form-input" type="text" inputmode="numeric" placeholder="0" value="${fmt(v('fee'))}" oninput="fmtAmountInput(this)" ${lock?'disabled':''}>
+      ${showAcct?`<div style="font-size:11px;color:var(--text-sub);margin:5px 0 3px">Trích từ tài khoản (vào mục Phí + lãi ngân hàng)</div>${acctSel('bl-feeacct')}`:''}</div>
+    ${lock?'<div style="font-size:11.5px;color:#b45309;margin:-4px 0 8px">Bảo lãnh đã ghi sổ: muốn sửa tiền ký quỹ / phí thì sửa khoản tương ứng ở Cân đối.</div>':''}
+    <div class="form-group"><label class="form-label">Ghi chú</label><input id="bl-note" class="form-input" value="${esc(v('note'))}" placeholder="Số bảo lãnh, chủ đầu tư…"></div>
+    <button type="button" id="bl-save" onclick="saveBl(${b?`'${sid(id)}'`:'null'}, ${approve?'true':'false'})" style="width:100%;padding:11px;border:none;border-radius:10px;background:${approve?'#047857':'var(--blue)'};color:#fff;font-weight:800;font-size:14px;cursor:pointer">${approve?'✅ Duyệt & ghi sổ':_cashWriter()?'Lưu (ghi sổ ngay)':'Gửi — chờ Hiền duyệt'}</button>
+  </div>`;
+  document.body.appendChild(ov);
+  if(showAcct){ const d=document.getElementById('bl-depacct'), f=document.getElementById('bl-feeacct'); const dv=v('depAcct'), fv=v('feeAcct'); if(d) d.value = CASH_ACCT[dv] ? dv : _acctDefault(); if(f) f.value = CASH_ACCT[fv] ? fv : (d?d.value:_acctDefault()); if(lock){ if(d) d.disabled=true; if(f) f.disabled=true; } }
+}
+async function saveBl(id, approve){
+  if(_cashBusy()) return;
+  const g=x=>document.getElementById(x), old = id ? (baoLanh||{})[id] : null;
+  const rec = Object.assign({}, old||{});
+  rec.name=(g('bl-name').value||'').trim().slice(0,200); rec.kind=g('bl-kind').value||'khac'; rec.site=(g('bl-site').value||'').slice(0,200);
+  rec.bank=(g('bl-bank').value||'').trim().slice(0,120); rec.issueDate=g('bl-issue').value||ymdLocal(); rec.expDate=g('bl-exp').value||''; rec.note=(g('bl-note').value||'').trim().slice(0,1000);
+  if(!rec.name){ showToast('⚠️ Nhập tên bảo lãnh'); return; }
+  if(!rec.bank){ showToast('⚠️ Chọn / gõ ngân hàng phát hành'); return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(rec.expDate)){ showToast('⚠️ Chọn ngày hết hạn'); return; }
+  if(rec.expDate < rec.issueDate){ showToast('⚠️ Ngày hết hạn trước ngày phát hành'); return; }
+  const lock = !!(old && old.status==='active');
+  if(!lock){ rec.depAmount=amtVal(g('bl-dep').value); rec.fee=amtVal(g('bl-fee').value); }
+  const W=_cashWriter(), up={}, uid=(currentUser&&currentUser.uid)||'', nm=getCurrentUserName()||'';
+  if(W && !lock){ const d=g('bl-depacct'), f=g('bl-feeacct'); rec.depAcct = rec.depAmount>0 ? ((d&&CASH_ACCT[d.value])?d.value:'') : ''; rec.feeAcct = rec.fee>0 ? ((f&&CASH_ACCT[f.value])?f.value:'') : '';
+    if((rec.depAmount>0 && !rec.depAcct) || (rec.fee>0 && !rec.feeAcct)){ showToast('⚠️ Chọn tài khoản trích tiền'); return; } }
+  // Có hiệu lực ngay: người ghi sổ (thủ quỹ / Hiền / Dũng) thêm mới, hoặc bấm "Duyệt & ghi sổ" (Hiền / Dũng), hoặc tự sửa bảo lãnh chờ của chính mình
+  const goLive = !lock && W && (!old || ((old.status==='pending' || old.status==='rejected') && ((approve && _isApprover()) || old.by===uid)));
+  const key = id || db.ref('pva379/baoLanh').push().key;
+  if(!old){ rec.by=uid; rec.byName=nm; rec.ts=Date.now(); }
+  if(goLive){
+    rec.status='active';
+    if(old && old.status==='pending' && old.by!==uid) rec.okH={by:uid, name:nm, ts:Date.now()};
+    const base={date:rec.issueDate, ts:Date.now(), by:uid, byName:nm};
+    if(rec.depAmount>0){ const k=db.ref('pva379/cashflow').push().key; rec.depId=k; up['pva379/cashflow/'+k]=Object.assign({type:'dep', amount:rec.depAmount, desc:('Ký quỹ BL: '+rec.name).slice(0,300), holder:rec.bank, acct:rec.depAcct, site:rec.site||''}, base); }
+    if(rec.fee>0){ const k=db.ref('pva379/cashflow').push().key; rec.feeId=k; up['pva379/cashflow/'+k]=Object.assign({type:'bankpay', kind:'laiphi', bank:rec.bank, amount:rec.fee, desc:('Phí BL: '+rec.name).slice(0,300), acct:rec.feeAcct}, base); }
+  } else if(!old){ rec.status = W ? 'active' : 'pending'; }
+  if(rec.status==='rejected' && !W){ rec.status='pending'; delete rec.rej; }   // người lập sửa lại phiếu bị từ chối → gửi lại
+  Object.keys(rec).forEach(k=>{ if(rec[k]===undefined || rec[k]==='') { if(['site','note','depAcct','feeAcct'].indexOf(k)<0) delete rec[k]; } });
+  delete rec.id;
+  up['pva379/baoLanh/'+key]=rec;
+  _cashBusySet(true);
+  try{ await db.ref().update(up); }
+  catch(e){ showToast('❌ Không lưu được: '+(e.code||e.message||'')); _cashBusySet(false); return; }
+  _cashBusySet(false);
+  const ov=document.getElementById('bl-ov'); if(ov) ov.remove();
+  if(rec.status==='pending'){ showToast('📨 Đã gửi bảo lãnh — chờ Hiền duyệt'); if(!old) sendPushNotif('🛡 Bảo lãnh chờ duyệt', nm+': '+rec.name+' — '+rec.bank, ['hien','dung']); }
+  else showToast(goLive ? '✅ Đã ghi bảo lãnh'+(rec.depAmount>0?' · ký quỹ '+fmtVND(rec.depAmount):'')+(rec.fee>0?' · phí '+fmtVND(rec.fee):'') : '✅ Đã lưu');
+  renderBaoLanh();
+}
+async function rejectBl(id){
+  const b=(baoLanh||{})[id]; if(!b || !_isApprover()) return;
+  const r=prompt('Lý do từ chối bảo lãnh "'+(b.name||'')+'":',''); if(r===null) return;
+  try{ await db.ref('pva379/baoLanh/'+id).update({status:'rejected', rej:{by:(currentUser&&currentUser.uid)||'', name:getCurrentUserName()||'', ts:Date.now(), reason:String(r).trim().slice(0,300)}}); showToast('✖ Đã từ chối'); }
+  catch(e){ showToast('❌ '+(e.code||e.message||'')); }
+}
+async function extendBl(id){
+  const b=(baoLanh||{})[id]; if(!b || !_cashWriter()) return;
+  try{ _fillAcctSelects(); }catch(e){}
+  const old=document.getElementById('bl-ov'); if(old) old.remove();
+  const ov=document.createElement('div'); ov.id='bl-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:12px';
+  ov.innerHTML=`<div style="background:#fff;border-radius:14px;padding:14px;width:100%;max-width:420px;margin-top:6vh">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800">📅 Gia hạn: ${esc(b.name||'')}</div><button type="button" onclick="document.getElementById('bl-ov').remove()" style="border:none;background:#f1f5f9;border-radius:8px;padding:4px 10px;font-size:15px;cursor:pointer">✕</button></div>
+    <div style="font-size:12px;color:var(--text-sub);margin:4px 0 8px">Hết hạn hiện tại: <b>${_blDate(b.expDate)}</b></div>
+    <div class="form-group"><label class="form-label">Hết hạn mới *</label><input id="blx-exp" type="date" class="form-input" value="${esc(b.expDate||'')}"></div>
+    <div class="form-group"><label class="form-label">Phí gia hạn</label><input id="blx-fee" class="form-input" type="text" inputmode="numeric" placeholder="0" oninput="fmtAmountInput(this)">
+      <div style="font-size:11px;color:var(--text-sub);margin:5px 0 3px">Trích từ tài khoản (vào mục Phí + lãi ngân hàng)</div><select id="blx-acct" class="form-input form-select" style="margin:0">${_ACCT_OPTS}</select></div>
+    <button type="button" onclick="saveExtendBl('${sid(id)}')" style="width:100%;padding:11px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer">Lưu gia hạn</button></div>`;
+  document.body.appendChild(ov);
+  const a=document.getElementById('blx-acct'); if(a) a.value = CASH_ACCT[b.feeAcct] ? b.feeAcct : _acctDefault();
+}
+async function saveExtendBl(id){
+  if(_cashBusy()) return;
+  const b=(baoLanh||{})[id]; if(!b || !_cashWriter()) return;
+  const exp=document.getElementById('blx-exp').value||'', fee=amtVal(document.getElementById('blx-fee').value), acct=document.getElementById('blx-acct').value||'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(exp) || exp<=String(b.expDate||'')){ showToast('⚠️ Ngày hết hạn mới phải sau '+_blDate(b.expDate)); return; }
+  if(fee>0 && !CASH_ACCT[acct]){ showToast('⚠️ Chọn tài khoản trích phí'); return; }
+  const uid=(currentUser&&currentUser.uid)||'', nm=getCurrentUserName()||'', up={};
+  const ext=Array.isArray(b.ext)?b.ext.slice():[]; const e={ts:Date.now(), from:b.expDate||'', to:exp, fee:fee||0, byName:nm};
+  if(fee>0){ const k=db.ref('pva379/cashflow').push().key; e.feeId=k; up['pva379/cashflow/'+k]={type:'bankpay', kind:'laiphi', bank:b.bank||'', amount:fee, desc:('Phí gia hạn BL: '+(b.name||'')).slice(0,300), acct, date:ymdLocal(), ts:Date.now(), by:uid, byName:nm}; }
+  ext.push(e);
+  up['pva379/baoLanh/'+id+'/expDate']=exp; up['pva379/baoLanh/'+id+'/ext']=ext;
+  _cashBusySet(true);
+  try{ await db.ref().update(up); const ov=document.getElementById('bl-ov'); if(ov) ov.remove(); showToast('✅ Đã gia hạn đến '+_blDate(exp)+(fee>0?' · phí '+fmtVND(fee):'')); }
+  catch(e){ showToast('❌ Không lưu được: '+(e.code||e.message||'')); }
+  finally{ _cashBusySet(false); }
+}
+async function closeBl(id){
+  const b=(baoLanh||{})[id]; if(!b || !_cashWriter()) return;
+  const left=_blDepLeft(b);
+  if(!confirm('Đóng bảo lãnh "'+(b.name||'')+'"?'+(left>0?'\n\n⚠️ Ký quỹ còn treo '+fmtVND(left)+' — nên bấm "Giải toả ký quỹ" trước (tiền về tài khoản). Đóng vẫn để nguyên khoản ký quỹ trong Cân đối.':''))) return;
+  try{ await db.ref('pva379/baoLanh/'+id).update({status:'closed', closedAt:Date.now()}); showToast('⚫ Đã đóng bảo lãnh'); }
+  catch(e){ showToast('❌ '+(e.code||e.message||'')); }
+}
+async function deleteBl(id){
+  const b=(baoLanh||{})[id]; if(!b) return;
+  const live = b.status==='active' || b.status==='closed';
+  if(!confirm('Xoá bảo lãnh "'+(b.name||'')+'"?'+(live && (b.depId||b.feeId) ? '\n\nKhoản ký quỹ / phí đã ghi trong Cân đối VẪN GIỮ — muốn bỏ thì xoá ở Cân đối.' : ''))) return;
+  try{ await db.ref('pva379/baoLanh/'+id).remove(); showToast('🗑 Đã xoá'); }
+  catch(e){ showToast('❌ Không xoá được: '+(e.code||e.message||'')); }
+}
 
 // ══ v43 (D 27/11/2026 "tất cả nút xoá khi 1 ai đó xoá phải được sự đồng ý của tôi") ══
 // ══ v51 (D 28/11/2026 "tất cả các lệnh sửa, xoá bỏ yêu cầu Dũng duyệt đi, chỉ cần Hiền duyệt là được"): Hiền như Dũng —
