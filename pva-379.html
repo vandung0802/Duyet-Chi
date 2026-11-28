@@ -60,7 +60,7 @@ body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên đi�
 #nav-kh       .nav-icon{background:#f3e8ff} /* P.KH */
 .nav-item.active .nav-icon{box-shadow:0 0 0 2px #2563eb}
 /* v79 (D chốt 27/09): thanh dưới 4 nút + Khác — nút Vật tư / Lương / Cài đặt vẫn trong DOM (code cũ dùng) nhưng ẩn, mở qua menu Khác */
-#nav-plan,#nav-luong,#nav-settings{display:none}
+#nav-plan,#nav-settings{display:none}   /* v57 (D 28/11): Lương và NC ra thanh dưới */
 .nav-item{font-size:11px}
 #more-sheet{display:none;position:fixed;inset:0;z-index:5000;background:rgba(15,23,42,.45)}
 #more-sheet.open{display:block}
@@ -961,7 +961,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <div style="margin:4px 0 0 2px">
         📋 <b>Đề xuất</b> — tạo và duyệt phiếu chi<br>
         📦 <b>Vật tư</b> — kế hoạch vật tư cần mua, nhắc trước ngày cần<br>
-        💵 <b>Lương</b> — ứng lương nhân viên (duyệt y như phiếu chi)<br>
+        💵 <b>Lương và NC</b> — lương, nhân công (duyệt y như phiếu chi)<br>
         📊 <b>Báo cáo</b> — thống kê chi theo người, công trường, thời gian<br>
         ⚖️ <b>Cân đối</b> — tiền vào, tiền ra, ký quỹ, số dư từng tài khoản (chỉ D, Hiền, thủ quỹ)<br>
         ⚙️ <b>Cài đặt</b> — tài khoản, thông báo, kết nối Google Sheet
@@ -996,7 +996,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
       <!-- v118: đồng bộ toàn bộ phiếu ứng lương → sheet "Tổng hợp Lương" (chỉ D) -->
       <div id="admin-luongsheet-section" style="display:none;margin-bottom:12px;padding:10px;background:#f0fdf4;border-radius:8px">
         <div style="font-size:12px;color:#16a34a;font-weight:700;margin-bottom:6px">📊 Sheet "Tổng hợp Lương" (chỉ D)</div>
-        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Phiếu ứng lương tự cập nhật sang sheet này mỗi khi có thay đổi. Nút dưới để đồng bộ LẠI toàn bộ (lần đầu, hoặc khi nghi thiếu dòng). Lưu ý: phải dán code Apps Script bản mới nhất trước.</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-bottom:8px">Phiếu Lương và NC tự cập nhật sang sheet này mỗi khi có thay đổi. Nút dưới để đồng bộ LẠI toàn bộ (lần đầu, hoặc khi nghi thiếu dòng). Lưu ý: phải dán code Apps Script bản mới nhất trước.</div>
         <button onclick="syncAllExpenseToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#1a56db;color:#fff;border:none;border-radius:8px;cursor:pointer;margin-bottom:6px">🔄 Đồng bộ lại phiếu chi → Google Sheet</button>
         <br>
         <button onclick="syncAllLuongToSheet()" style="padding:6px 12px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;border:none;border-radius:8px;cursor:pointer">🔄 Đồng bộ Lương → Google Sheet</button>
@@ -1447,11 +1447,11 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- ═══ MODULE LƯƠNG (ứng lương) — TÁCH BIỆT hoàn toàn khỏi proposals/plans ═══ -->
 <div id="page-luong" class="main" style="display:none">
   <div class="card">
-    <div class="card-header">💵 Lương</div>
-    <div class="tab-desc" style="padding-top:8px">Đề xuất <b>ứng lương</b> cho nhân viên theo từng tháng. Duyệt và chuyển tiền <b>y như phiếu chi</b> (Dũng → Hiền → Thủ quỹ). Tiền lương đã chuyển được tính vào "Đã chi ra" ở tab Cân đối.</div>
+    <div class="card-header">💵 Lương và NC</div>
+    <div class="tab-desc" style="padding-top:8px">Đề xuất <b>Lương và NC</b> cho nhân viên theo từng tháng. Duyệt và chuyển tiền <b>y như phiếu chi</b> (Dũng → Hiền → Thủ quỹ). Tiền lương đã chuyển được tính vào "Đã chi ra" ở tab Cân đối.</div>
     <div class="card-body" style="padding:0">
       <div class="report-subtabs" style="padding:0 12px 10px">
-        <button class="report-subtab active" data-tab="adv" onclick="setLuongTab('adv',this)">💵 Ứng lương</button>
+        <button class="report-subtab active" data-tab="adv" onclick="setLuongTab('adv',this)">💵 Lương và NC</button>
         <button class="report-subtab" data-tab="emp" onclick="setLuongTab('emp',this)">👥 DS nhân viên</button>
         <button class="report-subtab" data-tab="stats" onclick="setLuongTab('stats',this)">📊 TK nhóm</button>
         <button class="report-subtab" data-tab="statsName" onclick="setLuongTab('statsName',this)">👤 TK theo tên</button>
@@ -1489,7 +1489,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
           <button id="sal-view-card" onclick="salSetView('card')" style="padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer">🗂 Thẻ</button>
           <button id="sal-view-table" onclick="salSetView('table')" style="padding:7px 14px;font-size:12px;font-weight:700;border-radius:16px;border:1.5px solid var(--gray-border);background:#fff;color:var(--text-sub);cursor:pointer">📊 Bảng</button>
         </div>
-        <button class="btn-sm btn-primary-full" onclick="openAdvModal()">➕ Đề xuất ứng lương</button>
+        <button class="btn-sm btn-primary-full" onclick="openAdvModal()">➕ Đề xuất Lương và NC</button>
         <button class="btn-sm" onclick="openLuongExcelPick()" style="margin-left:6px;background:#0f766e;color:#fff;border:none;font-weight:800">📥 Nhập nhiều từ Excel</button>
         <input id="luong-excel-file" type="file" accept=".xlsx,.xls" style="display:none" onchange="onLuongExcelFile(event)">
       </div>
@@ -1501,7 +1501,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   <div id="luong-tab-emp" style="display:none">
     <div class="card">
       <div class="card-body" style="padding:10px 12px">
-        <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Danh sách nhân viên hưởng lương. Mỗi người gắn <b>Văn phòng</b> hoặc <b>một công trình</b>, có ô ghi chú (VD: nửa tháng chuyển sang công trình khác). Đề xuất ứng lương sẽ chọn tên từ danh sách này.</p>
+        <p style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Danh sách nhân viên hưởng lương. Mỗi người gắn <b>Văn phòng</b> hoặc <b>một công trình</b>, có ô ghi chú (VD: nửa tháng chuyển sang công trình khác). Đề xuất Lương và NC sẽ chọn tên từ danh sách này.</p>
         <input id="sal-emp-search" type="text" name="dc-emp-search-noauto" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="🔍 Tìm nhân viên..." oninput="renderEmployees()" style="width:100%;padding:8px 12px;border:1.5px solid var(--gray-border);border-radius:10px;font-size:13px;color:var(--text);background:#fff;outline:none;font-family:inherit;margin-bottom:8px">
         <div style="display:flex;gap:6px;margin-bottom:8px">
           <button id="emp-sort-group" onclick="setEmpSort('group')" style="flex:1;padding:7px;font-size:12px;font-weight:700;border-radius:16px;border:none;background:var(--blue);color:#fff;cursor:pointer">🏗 Theo nhóm</button>
@@ -1580,7 +1580,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="adv-modal-overlay" style="display:none;z-index:9000;background:rgba(0,0,0,0.55);align-items:flex-start;padding-top:0">
   <div style="background:#fff;border-radius:16px 16px 0 0;padding:18px 16px 22px;width:100%;max-width:480px;margin-top:auto;max-height:88vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)" id="adv-modal-title">Đề xuất ứng lương</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text)" id="adv-modal-title">Đề xuất Lương và NC</div>
       <button onclick="closeAdvModal()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
     </div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:10px">Khoản ứng cho <b id="adv-month-label">tháng —</b></div>
@@ -1616,7 +1616,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <div class="role-screen" id="lx-modal-overlay" style="display:none;z-index:9200;background:rgba(0,0,0,0.6);align-items:flex-start;padding-top:0">
   <div style="background:#fff;border-radius:16px 16px 0 0;padding:16px 12px 20px;width:100%;max-width:640px;margin-top:auto;max-height:92vh;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-size:15px;font-weight:800;color:var(--text)">📥 Nhập ứng lương từ Excel</div>
+      <div style="font-size:15px;font-weight:800;color:var(--text)">📥 Nhập Lương và NC từ Excel</div>
       <button onclick="closeLuongExcel()" style="background:none;border:none;font-size:20px;color:var(--text-sub);cursor:pointer;padding:4px">✕</button>
     </div>
     <div style="font-size:12px;color:var(--text-sub);margin-bottom:6px">Khoản ứng cho <b id="lx-month-label">tháng —</b>. Kiểm tra kỹ tên + số tiền trước khi tạo. Dòng <span style="color:#dc2626;font-weight:700">đỏ</span> = tên chưa có trong danh sách.</div>
@@ -1941,7 +1941,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
   </button>
   <button class="nav-item" id="nav-luong" onclick="showPage('luong',this)">
     <span class="nav-badge" id="nav-badge-luong" style="display:none"></span>
-    <span class="nav-icon">💵</span><span>Lương</span>
+    <span class="nav-icon">💵</span><span>Lương và NC</span>
   </button>
   <button class="nav-item" id="nav-report" onclick="showPage('report',this)">
     <span class="nav-icon">📊</span><span>Báo cáo</span>
@@ -1966,7 +1966,6 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div class="more-group">CÔNG VIỆC</div>
     <div class="more-grid">
       <button class="more-tile" onclick="moreGo('plan')"><span class="more-badge" id="more-badge-plan"></span><span class="ico">📦</span>Vật tư</button>
-      <button class="more-tile" onclick="moreGo('luong')"><span class="more-badge" id="more-badge-luong"></span><span class="ico">💵</span>Ứng lương</button>
       <button class="more-tile" onclick="moreGo('adv')"><span class="ico">👛</span>Tạm ứng chi phí</button>
       <button class="more-tile" onclick="moreGo('kt')"><span class="ico">📒</span>Kế toán rà soát</button>
     </div>
@@ -2015,7 +2014,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v56';
+const APP_VERSION = '20261128-v57';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4279,7 +4278,7 @@ function moreGo(k){
 // Chấm đỏ của các nút ẩn (Vật tư, Ứng lương, P.KH) gộp lên nút Khác + từng ô trong menu
 function _syncMoreBadges(){
   let total=0;
-  ['plan','luong'].forEach(k=>{ const b=document.getElementById('nav-badge-'+k); const n=(b&&b.style.display!=='none')?(parseInt(b.textContent)||0):0; total+=n; const t=document.getElementById('more-badge-'+k); if(t){ t.textContent=n>99?'99+':n; t.style.display=n>0?'block':'none'; } });
+  /* v57: Lương và NC đã ra thanh dưới, chấm báo hiện ngay trên nút */ ['plan'].forEach(k=>{ const b=document.getElementById('nav-badge-'+k); const n=(b&&b.style.display!=='none')?(parseInt(b.textContent)||0):0; total+=n; const t=document.getElementById('more-badge-'+k); if(t){ t.textContent=n>99?'99+':n; t.style.display=n>0?'block':'none'; } });
   const m=document.getElementById('nav-badge-more'); if(m){ m.textContent=total>99?'99+':total; m.style.display=total>0?'block':'none'; }
 }
 function showPage(pg, btn){
@@ -4292,7 +4291,7 @@ function showPage(pg, btn){
   document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
   document.getElementById('page-'+pg).style.display='block';
   if(btn) btn.classList.add('active');
-  { const more=document.getElementById('nav-more'); if(more && ['plan','luong','settings'].includes(pg)){ document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); more.classList.add('active'); } try{ closeMoreSheet(); }catch(e){} }   // v79: trang trong menu → sáng nút Khác
+  { const more=document.getElementById('nav-more'); if(more && ['plan','settings'].includes(pg)){ document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active')); more.classList.add('active'); } try{ closeMoreSheet(); }catch(e){} }   // v79: trang trong menu → sáng nút Khác
   if(pg==='contracts'){ try{ renderContracts(); }catch(e){} }   // v79
   if(pg==='add'){ populateSelects(); try{ _fillPayeeList(); }catch(e){} }
   if(pg==='settings') renderSettings();
@@ -9248,7 +9247,7 @@ async function downloadMonthExcel(){
     if(p.kind==='kh' || p.status==='rejected') return;
     if(!_canSeeP(p)) return;   // rà soát 22/11: Excel tháng cũng chỉ phiếu mình được thấy
     if(p.costType!=='tamung') (p.transfers||[]).forEach(t=>{ if(!inM(t.ts)) return;   // v62: tiền ỨNG chưa phải chi phí — chỉ các khoản KÊ đã duyệt (bên dưới) mới tính, tránh cộng 2 lần
-      rows.push([ymdLocal(t.ts), p.desc||'', p.person||'', p.site||'', p.kind==='salary'?'Ứng lương':ctName(p.costType), p.kind==='salary'?'':txName(p.tax), _oneAcct()?'':(t&&t.loanId)?'Vay NH giải ngân thẳng':((t&&t.acct)?acctLabel(t.acct):''), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.kind==='salary'?'—':(p.review?'Có':'Chưa'), p.payee||'', _payAcctText(p)]); });
+      rows.push([ymdLocal(t.ts), p.desc||'', p.person||'', p.site||'', p.kind==='salary'?'Lương và NC':ctName(p.costType), p.kind==='salary'?'':txName(p.tax), _oneAcct()?'':(t&&t.loanId)?'Vay NH giải ngân thẳng':((t&&t.acct)?acctLabel(t.acct):''), hdName(p), +t.amount||0, (Array.isArray(p.invoiceImages)&&p.invoiceImages.length)?'Có':'Chưa', p.kind==='salary'?'—':(p.review?'Có':'Chưa'), p.payee||'', _payAcctText(p)]); });
     if(p.costType==='tamung' && p.settlement) (p.settlement.items||[]).forEach(x=>{ const dt = x.date || ymdLocal(x.ts||p.settlement.ts); if(x.kind==='ret' || !x.ok || dt.slice(0,7)!==mon) return; rows.push([dt, '[Kê tạm ứng] '+(x.desc||''), p.person||'', p.site||'', 'Tạm ứng (đã kê)', txName(x.tax), '', hdName(p), +x.amount||0, '', p.review?'Có':'Chưa', p.payee||'', _payAcctText(p)]); });   // v43
   });
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
@@ -9414,7 +9413,7 @@ function syncLuongDeleteToSheet(id){
 function syncAllLuongToSheet(){
   if(!sheetUrl){ showToast('Chưa cấu hình Google Sheet'); return; }
   const list=proposals.filter(p=>p.kind==='salary');
-  if(!list.length){ showToast('Chưa có phiếu ứng lương nào'); return; }
+  if(!list.length){ showToast('Chưa có phiếu Lương và NC nào'); return; }
   showToast('⏳ Đang đồng bộ '+list.length+' phiếu lương sang Sheet...');
   list.forEach((p,i)=>setTimeout(()=>{
     syncLuongToSheet(p);
@@ -11543,7 +11542,7 @@ async function exportEmployeesExcel(){
 }
 async function exportSalaryByPersonExcel(){
   const all=proposals.filter(p=>p.kind==='salary' && p.status!=='rejected' && _canSeeP(p));
-  if(!all.length){ showToast('Chưa có dữ liệu ứng lương'); return; }
+  if(!all.length){ showToast('Chưa có dữ liệu Lương và NC'); return; }
   let XLSX; try{ XLSX=await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
   const months=Array.from(new Set(all.map(p=>p.month).filter(Boolean))).sort();
   const byP={};
@@ -11588,7 +11587,7 @@ function openAdvModal(){
   if(!employees.length){ showToast('Chưa có nhân viên — thêm ở tab 👥 Nhân viên trước'); setLuongTab('emp', document.querySelector('#page-luong .report-subtab[data-tab="emp"]')); return; }
   _advClearImages();
   const monthUsed = salaryMonth;
-  document.getElementById('adv-modal-title').textContent='Đề xuất ứng lương';
+  document.getElementById('adv-modal-title').textContent='Đề xuất Lương và NC';
   document.getElementById('adv-month-label').textContent=monthLabel(monthUsed);
   const sel=document.getElementById('adv-inp-emp');
   const order=['Văn phòng'].concat(sites);
@@ -11828,7 +11827,7 @@ function closeLuongExcel(){ document.getElementById('lx-modal-overlay').style.di
 function createLuongFromExcel(){
   const rows=_lxRows.filter(r=>r.use && r.empId);
   if(!rows.length){ showToast('Chưa có dòng nào khớp để tạo'); return; }
-  if(!confirm('Tạo '+rows.length+' phiếu ứng lương cho tháng '+monthLabel(_lxMonth)+'?')) return;
+  if(!confirm('Tạo '+rows.length+' phiếu Lương và NC cho tháng '+monthLabel(_lxMonth)+'?')) return;
   let made=0, empTouched=false;
   rows.forEach((row,idx)=>{
     const emp=employees.find(e=>e.id===row.empId); if(!emp) return;
@@ -11837,7 +11836,7 @@ function createLuongFromExcel(){
     const p={
       id:(Date.now()+idx).toString(),
       kind:'salary', empId:emp.id, month:_lxMonth, position:emp.position||row.position||'',
-      desc:'Ứng lương '+monthLabel(_lxMonth),
+      desc:'Lương và NC '+monthLabel(_lxMonth),
       person:emp.name, site:emp.group,
       amount:row.money, amountUnit:'dong',
       note:(row.note?row.note+' · ':'')+'📥 Nhập Excel lúc '+new Date().toLocaleString('vi-VN'),
@@ -11856,8 +11855,8 @@ function createLuongFromExcel(){
   closeLuongExcel();
   salaryMonth=_lxMonth;
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
-  showToast('✅ Đã tạo '+made+' phiếu ứng lương');
-  sendPushNotif('💵 '+made+' đề xuất ứng lương mới', 'Nhập từ Excel tháng '+monthLabel(_lxMonth), ['dung','hien','thuquy']);
+  showToast('✅ Đã tạo '+made+' phiếu Lương và NC');
+  sendPushNotif('💵 '+made+' đề xuất Lương và NC mới', 'Nhập từ Excel tháng '+monthLabel(_lxMonth), ['dung','hien','thuquy']);
 }
 
 function saveAdvFromModal(){
@@ -11873,7 +11872,7 @@ function saveAdvFromModal(){
   const p={
     id: Date.now().toString(),
     kind: 'salary', empId: emp.id, month, position: emp.position||'',
-    desc: 'Ứng lương ' + monthLabel(month),
+    desc: 'Lương và NC ' + monthLabel(month),
     person: emp.name, site: emp.group,
     amount, amountUnit:'dong', note,
     priority:'normal', status:'pending', ts: Date.now(),
@@ -11888,8 +11887,8 @@ function saveAdvFromModal(){
   closeAdvModal();
   salaryMonth=month;
   setLuongTab('adv', document.querySelector('#page-luong .report-subtab[data-tab="adv"]'));
-  showToast('✅ Đã gửi đề xuất ứng lương');
-  sendPushNotif('💵 Đề xuất ứng lương mới', emp.name+': '+fmtVND(amount), ['dung','hien','thuquy']);
+  showToast('✅ Đã gửi đề xuất Lương và NC');
+  sendPushNotif('💵 Đề xuất Lương và NC mới', emp.name+': '+fmtVND(amount), ['dung','hien','thuquy']);
 }
 
 // ── RENDER TAB ỨNG LƯƠNG (theo tháng, nhóm Văn phòng + công trình) — dùng ĐÚNG thẻ phiếu chi (renderCard) ──
@@ -11915,7 +11914,7 @@ function renderSalaryAdvances(){
       const n=proposals.filter(p=>p.kind==='salary'&&p.month===pm&&_canSeeP(p)).length;
       hint=`<div style="margin-top:14px"><button onclick="salaryMonth='${ejs(pm)}';renderSalaryAdvances()" style="padding:10px 16px;font-size:13px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:10px;cursor:pointer">‹ Xem ${esc(monthLabel(pm))} (${n} khoản)</button></div>`;
     }
-    list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Tháng mới chưa có khoản ứng nào<br><small>Nhấn "➕ Đề xuất ứng lương" để tạo</small>'+hint+'</div>';
+    list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Tháng mới chưa có khoản ứng nào<br><small>Nhấn "➕ Đề xuất Lương và NC" để tạo</small>'+hint+'</div>';
     return;
   }
   // v103 (PA4): lọc theo TÊN nhân viên + chọn cách xếp + 2 chế độ Thẻ/Bảng.
@@ -12055,7 +12054,7 @@ function renderSalaryStats(){
   else if(pv.indexOf('M-')===0) items=items.filter(p=>p.month===pv.slice(2));
   if(sv) items=items.filter(p=>p.site===sv);
   _salStatsScope=items; // v104: nguồn cho modal khi bấm ô thống kê
-  if(!items.length){ el.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu ứng lương</div>'; return; }
+  if(!items.length){ el.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu Lương và NC</div>'; return; }
   const tDuyet=items.reduce((s,p)=>s+(getOfficialApprovedAmount(p)||0),0);
   const tChuyen=items.reduce((s,p)=>s+getTotalTransferred(p),0);
   const tChoChuyen=Math.max(0,tDuyet-tChuyen);
@@ -12176,7 +12175,7 @@ function renderSalaryStatsByName(){
   const _sm=((document.getElementById('sal-sn-sort')||{}).value)||'sum';
   if(_sm==='name') ekeys.sort((x,y)=>_cmpTen(byE[x].name,byE[y].name));
   else ekeys.sort((x,y)=>byE[y].duyet-byE[x].duyet);
-  if(!ekeys.length){ el.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu ứng lương khớp tìm kiếm</div>'; return; }
+  if(!ekeys.length){ el.innerHTML='<div style="text-align:center;padding:30px 20px;color:var(--text-sub);font-size:13px">Chưa có dữ liệu Lương và NC khớp tìm kiếm</div>'; return; }
   const tDuyet=ekeys.reduce((s,k)=>s+byE[k].duyet,0), tCK=ekeys.reduce((s,k)=>s+byE[k].chuyen,0);
   el.innerHTML=`
     <div class="card"><div class="card-body" style="padding:12px">
@@ -12222,7 +12221,7 @@ function _snMonthTable(name){
       <tbody>${rows||'<tr><td colspan="5" style="padding:8px;color:var(--text-sub);text-align:center">Chưa có khoản ứng nào</td></tr>'}</tbody>
       <tfoot><tr style="background:#fef9c3;font-weight:800"><td style="padding:6px 8px">TỔNG</td><td style="padding:6px 8px;text-align:right">${fmtTr(tdx)}</td><td style="padding:6px 8px;text-align:right">${fmtTr(tdy)}</td><td style="padding:6px 8px;text-align:right;color:#16a34a">${fmtTr(tck)}</td><td style="padding:6px 8px;text-align:right;color:${tcon?'#dc2626':'inherit'}">${tcon?fmtTr(tcon):'—'}</td></tr></tfoot>
     </table></div>
-    <div style="font-size:10px;color:var(--text-sub);margin-top:4px">💡 Bấm vào 1 tháng → mở tab Ứng lương đúng tháng, lọc đúng người</div>
+    <div style="font-size:10px;color:var(--text-sub);margin-top:4px">💡 Bấm vào 1 tháng → mở tab Lương và NC đúng tháng, lọc đúng người</div>
   </div>`;
 }
 function salMonthJump(month,name){ if(month && month!=='?') salaryMonth=month; salNameJump(name); }
@@ -13387,7 +13386,7 @@ function renderReportPayee(){
       <tbody>${ks.map(k=>{ const o=M[k]; return `<tr onclick="_payeeJump('${ejs(k)}')" style="cursor:pointer"><td style="padding:6px 4px;font-weight:700;word-break:break-word;border-bottom:1px solid #f1f5f9">${k?esc(k):'<i style=\"color:var(--text-sub)\">(chưa ghi đơn vị nhận)</i>'}</td><td style="${R}">${o.n}</td><td style="${R}" title="${fmtVND(o.dx)}">${fmtShortMoney(o.dx)}</td><td style="${R};color:#1d4ed8" title="${fmtVND(o.duyet)}">${o.duyet?fmtShortMoney(o.duyet):'—'}</td><td style="${R};color:#b91c1c;font-weight:800" title="${fmtVND(o.chuyen)}">${o.chuyen?fmtShortMoney(o.chuyen):'—'}</td></tr>`; }).join('')}
       <tr style="background:#f8fafc;font-weight:900"><td style="padding:6px 4px">TỔNG</td><td style="${R}">${tot.n}</td><td style="${R}">${fmtShortMoney(tot.dx)}</td><td style="${R}">${fmtShortMoney(tot.duyet)}</td><td style="${R}">${fmtShortMoney(tot.chuyen)}</td></tr></tbody>
     </table></div>
-    <div style="font-size:10px;color:var(--text-sub);margin:4px 2px 0">Chỉ tính phiếu chi (không gồm ứng lương, P.KH, chi riêng). Số rút gọn, chạm ô xem số đầy đủ.${none?' · '+none+' phiếu chưa ghi đơn vị nhận — sửa phiếu để bổ sung.':''}</div>`;
+    <div style="font-size:10px;color:var(--text-sub);margin:4px 2px 0">Chỉ tính phiếu chi (không gồm Lương và NC, P.KH, chi riêng). Số rút gọn, chạm ô xem số đầy đủ.${none?' · '+none+' phiếu chưa ghi đơn vị nhận — sửa phiếu để bổ sung.':''}</div>`;
 }
 function _payeeJump(k){ const sel=document.getElementById('filter-payee'); if(sel){ if(![...sel.options].some(o=>o.value===k)) sel.add(new Option(k,k)); sel.value=k; } setReportTab('list', document.querySelector('#page-report .report-subtab[data-tab="list"]')); }
 function renderReportSite(){
@@ -13410,7 +13409,7 @@ function _siteRows(site){
     else if(r.type==='dep'){ rows.push([r.date||ymdLocal(r.ts), r.site||'', 'KÝ QUỸ đưa đi', r.desc||'', r.holder||'', r.byName||'', '', N(r.amount)]);
       (r.returned||[]).forEach(x=>rows.push([x.date||ymdLocal(x.ts), r.site||'', 'KÝ QUỸ lấy về', r.desc||'', r.holder||'', x.by||'', N(x.amount), ''])); } });
   (proposals||[]).forEach(p=>{ if(p.status==='rejected' || p.costType==='kyquy' || !hit(p.site)) return;
-    (p.transfers||[]).filter(t=>t && _inLedgerTs(t.ts)).forEach(t=>rows.push([ymdLocal(t.ts), p.site||'', 'CHI', p.desc||'', p.kind==='salary'?'Ứng lương':((COST_TYPES[p.costType]||COST_TYPES.congtruong).label), p.person||'', '', N(t.amount)])); });
+    (p.transfers||[]).filter(t=>t && _inLedgerTs(t.ts)).forEach(t=>rows.push([ymdLocal(t.ts), p.site||'', 'CHI', p.desc||'', p.kind==='salary'?'Lương và NC':((COST_TYPES[p.costType]||COST_TYPES.congtruong).label), p.person||'', '', N(t.amount)])); });
   rows.sort((a,b)=>String(a[0]).localeCompare(String(b[0])));
   return rows;
 }
@@ -14096,9 +14095,9 @@ function _allocLabel(p, remain){ return (p.kind==='kh'?'P.KH · ':p.kind==='sala
 function loanAllocAddSalary(){
   const have=new Set([...document.querySelectorAll('#loan-alloc-rows .alloc-pid')].map(s=>s.value).filter(Boolean));
   const L=_allocProps().filter(x=>x.p.kind==='salary' && !have.has(x.p.id));
-  if(!L.length){ showToast('Không có phiếu ứng lương đã duyệt nào còn phải chuyển (hoặc đã kê hết)'); return; }
+  if(!L.length){ showToast('Không có phiếu Lương và NC đã duyệt nào còn phải chuyển (hoặc đã kê hết)'); return; }
   L.forEach(x=>loanAllocAdd('prop', {pid:x.p.id, amount:Math.round(x.remain)}));
-  _loanAllocSum(); showToast('➕ Đã kê '+L.length+' phiếu ứng lương, tổng '+fmtVND(L.reduce((a,x)=>a+x.remain,0)));
+  _loanAllocSum(); showToast('➕ Đã kê '+L.length+' phiếu Lương và NC, tổng '+fmtVND(L.reduce((a,x)=>a+x.remain,0)));
 }
 function _allocPropOpts(sel){
   const L=_allocProps();
@@ -14715,7 +14714,7 @@ function updateCashBadge(){
       <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
         <button type="button" onclick="loanAllocAdd('prop')" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ Trả phiếu</button>
         <button type="button" onclick="loanAllocAdd('acct')" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ Về tài khoản</button>
-        <button type="button" onclick="loanAllocAddSalary()" title="Kê một lúc mọi phiếu ứng lương đã duyệt còn phải chuyển" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ Ứng lương cả đợt</button>
+        <button type="button" onclick="loanAllocAddSalary()" title="Kê một lúc mọi phiếu Lương và NC đã duyệt còn phải chuyển" style="padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;font-size:12px;font-weight:700;cursor:pointer">➕ Lương và NC cả đợt</button>
       </div>
       <div id="loan-alloc-sum" style="font-size:12px;font-weight:700;margin-top:8px"></div>
       <div style="margin-top:10px;padding-top:8px;border-top:1px dashed #cbd5e1">
