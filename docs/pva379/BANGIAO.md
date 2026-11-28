@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v52 (D 28/11/2026 "ô chọn tên nhân viên, ngân hàng để chế độ gợi ý — gõ vài ký tự là nhảy đến tên cần tìm")
+- Mọi `<select>` có từ 8 dòng trở lên (`_CBX_MIN`): bấm / chạm vào → hộp `#cbx-ov` có ô gõ tìm (không dấu, khớp mọi từ, khớp cả từ khoá ngân hàng qua `data-kw`, ví dụ "vcb", "ky thuong"), Enter chọn dòng đầu. Chọn xong ghi `selectedIndex` vào ô gốc + bắn `input` / `change` → mã cũ (onchange, `.value`) chạy y nguyên.
+- Bắt sự kiện ở cấp `document` (mousedown / touchend / phím cách, Enter, Alt+↓), nên ô dựng sau (danh sách động) tự có. Vuốt cuộn qua ô không mở. Ô ngắn, ô bị khoá, ô chọn nhiều giữ kiểu cũ; muốn bỏ một ô thì thêm `data-nocbx="1"`.
+- Áp dụng thực tế: ngân hàng nhận (lập / sửa phiếu, P.KH), nhân viên ứng lương, người đề xuất (Dũng), các ô lọc theo người / công trình khi danh sách dài.
+- Thử: `smoke28.js` (điện thoại chạm + máy tính chuột); hồi quy smoke7, 12, 14, 21, 23–27.
+
 ## v51 (D 28/11/2026 "tất cả các lệnh sửa, xoá bỏ yêu cầu Dũng duyệt đi, chỉ cần Hiền duyệt là được") — THAY quyết định v43
 - Hiền như Dũng (`_isApprover()`): xoá THẲNG phiếu / P.KH / ứng lương / công trình / đề xuất vật tư / nhân viên / khoản sổ quỹ / ảnh / dòng sổ tạm ứng đã xác nhận; DUYỆT hoặc TỪ CHỐI đề nghị xoá của người khác (`delReqs`, `deleteReq` sổ quỹ). Đề nghị mới báo cả `dung` + `hien`.
 - Người khác (thủ quỹ, kế toán, nhân viên, chủ phiếu) vẫn chỉ GỬI đề nghị xoá. Đề nghị SỬA khoản sổ quỹ (`editReq`) đã do Hiền / Dũng duyệt từ v19/v27, không đổi.

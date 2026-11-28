@@ -2015,7 +2015,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v51';
+const APP_VERSION = '20261128-v52';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -12812,10 +12812,69 @@ const PAY_BANKS = [
 // Phiếu thêm 2 trường: payBank = mã BIN 6 số của ngân hàng (bảng PAY_BANKS — lấy từ gói công khai vietnam-qr-pay 1.5.1), payAcctNo = số tài khoản (chữ số / chữ hoa).
 // Tên chủ tài khoản = ô "Đơn vị / người nhận tiền" (payee) sẵn có. Khoá sau duyệt như payee (luật) + nằm trong ảnh nội dung lúc duyệt (contentSnapshot) → sửa sau duyệt là chặn chuyển tiền.
 // Mã QR theo chuẩn VietQR (EMVCo): tạo NGAY TRONG APP (qrcode-gen.js, không qua dịch vụ nào). App ngân hàng quét sẽ hiện TÊN chủ tài khoản do ngân hàng tra → thủ quỹ đối chiếu với phiếu.
+// ══ v52 (D 28/11/2026 "ô chọn tên nhân viên, ngân hàng để chế độ gợi ý — gõ vài ký tự là nhảy đến tên cần tìm") ══
+// Ô chọn (<select>) DÀI từ 8 dòng trở lên: bấm vào thì mở hộp có ô gõ tìm (không dấu, khớp bất kỳ đoạn nào, khớp cả tên viết tắt
+// ngân hàng) thay cho danh sách cuộn của máy. Chọn xong ghi đúng vào ô chọn gốc + bắn sự kiện change như người dùng chọn tay,
+// nên mọi mã cũ (onchange, đọc .value) chạy y nguyên. Ô ngắn, ô bị khoá, ô chọn nhiều → giữ kiểu cũ. data-nocbx="1" để bỏ qua.
+const _CBX_MIN = 8;
+function _cbxFold(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim(); }
+function _cbxOk(sel){ return !!sel && sel.tagName==='SELECT' && !sel.disabled && !sel.multiple && !(sel.size>1) && sel.options.length>=_CBX_MIN && sel.dataset.nocbx!=='1'; }
+function _cbxLabel(sel){
+  try{ if(sel.id){ const l=document.querySelector('label[for="'+sel.id+'"]'); if(l) return l.textContent.trim(); }
+    const g=sel.closest('.form-group'); const l=g && g.querySelector('.form-label'); if(l) return l.textContent.replace(/\s*\(.*$/,'').trim(); }catch(e){}
+  return 'Chọn';
+}
+function _cbxOpen(sel){
+  if(!_cbxOk(sel)) return;
+  const old=document.getElementById('cbx-ov'); if(old) old.remove();
+  const items=[]; let grp='';
+  Array.from(sel.options).forEach((o,i)=>{ const g=(o.parentElement && o.parentElement.tagName==='OPTGROUP') ? (o.parentElement.label||'') : '';
+    items.push({i, v:o.value, t:o.textContent, g, dis:o.disabled, k:_cbxFold(o.textContent+' '+(o.dataset.kw||'')+' '+g)}); });
+  const ov=document.createElement('div'); ov.id='cbx-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100002;display:flex;align-items:flex-start;justify-content:center;padding:10px';
+  ov.innerHTML=`<div style="background:#fff;border-radius:14px;width:100%;max-width:420px;margin-top:4vh;max-height:86vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)">
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 12px 6px"><div style="flex:1;font-size:14px;font-weight:800;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(_cbxLabel(sel))}</div>
+      <button type="button" id="cbx-x" style="border:none;background:#f1f5f9;border-radius:8px;font-size:15px;padding:4px 10px;cursor:pointer">✕</button></div>
+    <div style="padding:0 12px 8px"><input id="cbx-q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Gõ vài chữ để tìm…" style="width:100%;box-sizing:border-box;padding:10px 12px;font-size:16px;border:1.5px solid var(--blue);border-radius:10px;outline:none"></div>
+    <div id="cbx-list" style="overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 6px 8px;flex:1"></div></div>`;
+  document.body.appendChild(ov);
+  const q=ov.querySelector('#cbx-q'), list=ov.querySelector('#cbx-list');
+  let shown=[];
+  const draw=()=>{
+    const words=_cbxFold(q.value).split(' ').filter(Boolean);
+    shown=items.filter(it=>!words.length || words.every(w=>it.k.indexOf(w)>=0));
+    if(words.length) shown=shown.filter(it=>it.v!=='' || it.k.indexOf(words[0])>=0);
+    let lastG=null;
+    list.innerHTML = shown.length ? shown.map((it,n)=>{ let h=''; if(it.g && it.g!==lastG){ lastG=it.g; h=`<div style="font-size:11px;font-weight:800;color:var(--text-sub);padding:8px 8px 2px;text-transform:uppercase">${esc(it.g)}</div>`; }
+      const cur = it.i===sel.selectedIndex;
+      return h+`<div class="cbx-it" data-n="${n}" style="padding:11px 10px;border-radius:9px;font-size:14.5px;cursor:${it.dis?'default':'pointer'};${it.dis?'color:#9ca3af;':''}${cur?'background:var(--blue-light);font-weight:800;':''}${n===0&&words.length&&!it.dis?'outline:2px solid var(--blue);outline-offset:-2px;':''}">${esc(it.t)}${cur?' ✓':''}</div>`; }).join('')
+      : '<div style="padding:16px;text-align:center;color:var(--text-sub);font-size:13px">Không thấy — gõ ít chữ hơn</div>';
+  };
+  const close=()=>{ ov.remove(); };
+  const pick=it=>{ if(!it || it.dis) return; close();
+    if(sel.selectedIndex!==it.i){ sel.selectedIndex=it.i; sel.dispatchEvent(new Event('input',{bubbles:true})); sel.dispatchEvent(new Event('change',{bubbles:true})); }
+    try{ sel.focus({preventScroll:true}); }catch(e){} };
+  q.addEventListener('input', draw);
+  q.addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); pick(shown.find(it=>!it.dis)); } else if(e.key==='Escape'){ e.preventDefault(); close(); } });
+  list.addEventListener('click', e=>{ const d=e.target.closest('.cbx-it'); if(d) pick(shown[+d.dataset.n]); });
+  ov.querySelector('#cbx-x').onclick=close;
+  ov.addEventListener('click', e=>{ if(e.target===ov) close(); });
+  draw();
+  const curEl=list.querySelector('.cbx-it[style*="font-weight:800"]'); if(curEl) try{ curEl.scrollIntoView({block:'center'}); }catch(e){}
+  q.focus();
+}
+(function(){
+  let tx=null;
+  document.addEventListener('mousedown', e=>{ if(e.button!==0) return; const s=e.target && e.target.closest && e.target.closest('select'); if(_cbxOk(s)){ e.preventDefault(); _cbxOpen(s); } }, true);
+  document.addEventListener('touchstart', e=>{ const s=e.target && e.target.closest && e.target.closest('select'); tx = (_cbxOk(s) && e.touches.length===1) ? {s, x:e.touches[0].clientX, y:e.touches[0].clientY} : null; }, {capture:true, passive:true});
+  document.addEventListener('touchend', e=>{ if(!tx) return; const t=e.changedTouches[0], s=tx.s; const moved = !t || Math.abs(t.clientX-tx.x)>10 || Math.abs(t.clientY-tx.y)>10; tx=null;
+    if(!moved && _cbxOk(s)){ e.preventDefault(); _cbxOpen(s); } }, {capture:true, passive:false});
+  document.addEventListener('keydown', e=>{ const s=e.target; if(s && s.tagName==='SELECT' && _cbxOk(s) && (e.key===' ' || e.key==='Enter' || (e.altKey && e.key==='ArrowDown'))){ e.preventDefault(); _cbxOpen(s); } }, true);
+})();
 function _payBank(bin){ return PAY_BANKS.find(b=>b[0]===bin) || null; }
 function _payBankName(bin){ const b=_payBank(bin); return b ? b[1] : (bin||''); }
 function _fillPayBankSelects(){
-  const opts = '<option value="">— Ngân hàng —</option>' + PAY_BANKS.map(b=>`<option value="${b[0]}">${esc(b[1])}</option>`).join('');
+  const opts = '<option value="">— Ngân hàng —</option>' + PAY_BANKS.map(b=>`<option value="${b[0]}" data-kw="${esc(b[2]||'')}">${esc(b[1])}</option>`).join('');   // v52: data-kw để ô gõ tìm nhận cả tên viết tắt (vcb, ctg…)
   document.querySelectorAll('select.paybank-sel').forEach(s=>{ if(s.options.length<2){ const v=s.value; s.innerHTML=opts; s.value=v; } });
 }
 function _payNoClean(el){ const v=String(el.value||'').toUpperCase().replace(/[^0-9A-Z]/g,'').slice(0,30); if(v!==el.value) el.value=v; }
