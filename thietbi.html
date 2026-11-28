@@ -208,7 +208,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261014-v11';
+const APP_VERSION = '20261128-v12';
 document.getElementById('ver-label').textContent = APP_VERSION.split('-').pop();
 firebase.initializeApp(firebaseConfig);
 // 08/10/2026 TĂNG TỐC MỞ APP TRÊN ĐIỆN THOẠI: Firebase Auth (bản compat) trên điện thoại/Safari tự tải gói Google + trang ẩn
@@ -310,6 +310,8 @@ document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==
 // ══ TIỆN ÍCH ══
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Bảo mật 28/11: dữ liệu đặt trong chuỗi JS của onclick — đổi ký tự nguy hiểm thành \uXXXX (hàm nhận vẫn được đúng chuỗi gốc).
+const ejs = s => String(s==null?'':s).replace(/[^A-Za-z0-9 _.,:;@\/+\-\u00C0-\u1EF9]/g, c => '\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4));
 const pad=n=>String(n).padStart(2,'0');
 function fmtDate(ts){ if(!ts) return ''; const d=new Date(ts); return pad(d.getDate())+'/'+pad(d.getMonth()+1)+'/'+d.getFullYear(); }
 function fmtDT(ts){ if(!ts) return ''; const d=new Date(ts); return fmtDate(ts)+' '+pad(d.getHours())+':'+pad(d.getMinutes()); }
@@ -323,7 +325,7 @@ let _toastT; function toast(m){ let t=document.querySelector('.toast'); if(!t){ 
 const STATUS={run:'🟢 Đang chạy',idle:'🟡 Chờ việc',broken:'🔴 Hỏng',repair:'🔧 Đang sửa',sold:'⚫ Thanh lý'};
 const ISS={new:'🔴 Mới báo',repair:'🔧 Đang sửa',done:'✅ Đã sửa'};
 const TYPES=['Máy xúc','Máy ủi','Máy lu','Xe tải','Xe con','Máy phát điện','Máy bơm','Máy hàn','Máy khoan','Máy cắt','Máy trộn','Cẩu','Dụng cụ','Khác'];
-const badge=s=>`<span class="badge s-${s}">${STATUS[s]||s}</span>`;
+const badge=s=>`<span class="badge s-${STATUS[s]?s:''}">${STATUS[s]||esc(s)}</span>`;
 const DOCS=[['inspectionEnd','Đăng kiểm'],['insuranceEnd','Bảo hiểm'],['warrantyEnd','Bảo hành']];
 const SOON=30*86400000; // giấy tờ còn dưới 30 ngày = sắp hết hạn
 const moneyInput=id=>`<input id="${id}" inputmode="numeric" oninput="this.value=parseMoney(this.value)?parseMoney(this.value).toLocaleString('vi-VN'):''">`;
@@ -430,7 +432,7 @@ async function removeSite(name){
 function renderStats(){
   const c={all:0}; Object.values(items).forEach(it=>{ if(it.status==='sold') return; c.all++; c[it.status]=(c[it.status]||0)+1; });
   $('stats').innerHTML=[['','Tất cả',c.all],['run','Đang chạy',c.run||0],['idle','Chờ việc',c.idle||0],['broken','Hỏng',c.broken||0],['repair','Đang sửa',c.repair||0],['sold','Thanh lý',Object.values(items).filter(i=>i.status==='sold').length]]
-    .map(([k,l,n])=>`<div class="stat ${filterStatus===k?'on':''}" onclick="filterStatus='${k}';renderAll()"><b>${n}</b><span>${l}</span></div>`).join('');
+    .map(([k,l,n])=>`<div class="stat ${filterStatus===k?'on':''}" onclick="filterStatus='${ejs(k)}';renderAll()"><b>${n}</b><span>${l}</span></div>`).join('');
 }
 function renderFilters(){
   const opt=(id,vals,lbl)=>{ const cur=$(id).value; $(id).innerHTML=`<option value="">${lbl}</option>`+[...vals].filter(Boolean).sort().map(v=>`<option ${v===cur?'selected':''}>${esc(v)}</option>`).join(''); };
@@ -448,7 +450,7 @@ function renderList(){
     return !q||[it.code,it.name,it.plate,it.keeper,it.site,it.serial].join(' ').toLowerCase().includes(q);
   }).sort((a,b)=>String(a[1].code).localeCompare(String(b[1].code),'vi',{numeric:true}));
   const openOf={}; Object.values(issues).forEach(v=>{ if(v.status!=='done'&&(!openOf[v.itemId]||v.ts<openOf[v.itemId])) openOf[v.itemId]=v.ts; });
-  const card=([id,it])=>`<div class="item" onclick="openDetail('${id}')">
+  const card=([id,it])=>`<div class="item" onclick="openDetail('${ejs(id)}')">
     ${it.photo?`<img class="thumb" src="${esc(it.photo)}">`:`<div class="thumb">🚜</div>`}
     <div class="item-main"><div class="item-name">${esc(it.code)} · ${esc(it.name)}</div>
     <div class="item-sub">📍 ${esc(it.site||'—')}${it.keeper?' · 👤 '+esc(it.keeper):''}${openOf[id]?' · nằm <b>'+days(openOf[id])+' ngày</b>':''}</div></div>${badge(it.status)}</div>`;
@@ -472,18 +474,18 @@ function renderIssues(){
   const exp=expiringItems(), now=Date.now();
   const dr=Object.entries(items).filter(([k,it])=>it.delReq).sort((a,b)=>a[1].delReq.ts-b[1].delReq.ts);
   $('delreqs').hidden=!dr.length;
-  $('delreqs').innerHTML=dr.length?`<div class="sec-h">🗑 Đề nghị xoá thiết bị — ${isDung?'chờ anh duyệt':'chờ Dũng duyệt'} (${dr.length})</div>`+dr.map(([id,it])=>`<div class="item" onclick="openDetail('${id}')">
+  $('delreqs').innerHTML=dr.length?`<div class="sec-h">🗑 Đề nghị xoá thiết bị — ${isDung?'chờ anh duyệt':'chờ Dũng duyệt'} (${dr.length})</div>`+dr.map(([id,it])=>`<div class="item" onclick="openDetail('${ejs(id)}')">
     <div class="item-main"><div class="item-name">${esc(it.code)} · ${esc(it.name)}</div>
     <div class="item-sub">👤 ${esc(it.delReq.by)} · ${fmtDate(it.delReq.ts)}${it.delReq.reason?' · '+esc(it.delReq.reason):''}</div></div>
     <span class="badge s-idle">chờ duyệt</span></div>`).join(''):'';
   const nb=rows.length+exp.length+(isDung?dr.length:0);
   $('iss-badge').hidden=!nb; $('iss-badge').textContent=nb;
   $('expiring').hidden=!exp.length;
-  $('expiring').innerHTML=exp.length?`<div class="sec-h">📅 Giấy tờ sắp hết hạn (trong 30 ngày)</div>`+exp.map(e=>`<div class="item" onclick="openDetail('${e.id}')">
+  $('expiring').innerHTML=exp.length?`<div class="sec-h">📅 Giấy tờ sắp hết hạn (trong 30 ngày)</div>`+exp.map(e=>`<div class="item" onclick="openDetail('${ejs(e.id)}')">
     <div class="item-main"><div class="item-name">${esc(e.it.code)} · ${esc(e.it.name)}</div>
     <div class="item-sub">📍 ${esc(e.it.site||'—')}${e.it.plate?' · '+esc(e.it.plate):''}</div></div>
     <span class="badge ${e.ts<now?'s-broken':'s-idle'}">${e.l} ${e.ts<now?'HẾT HẠN':'đến'} ${fmtDate(e.ts)}</span></div>`).join(''):'';
-  $('issues').innerHTML=rows.length?`<div class="sec-h">🔧 Máy đang hỏng / đang sửa (${rows.length})</div>`+rows.map(([id,v])=>{ const it=items[v.itemId]||{}; return `<div class="item" onclick="openDetail('${v.itemId}')">
+  $('issues').innerHTML=rows.length?`<div class="sec-h">🔧 Máy đang hỏng / đang sửa (${rows.length})</div>`+rows.map(([id,v])=>{ const it=items[v.itemId]||{}; return `<div class="item" onclick="openDetail('${ejs(v.itemId)}')">
     <div class="item-main"><div class="item-name">${esc(it.code||'?')} · ${esc(it.name||'(đã xoá)')}</div>
     <div class="item-sub">${esc(v.desc)}</div>
     <div class="item-sub">📍 ${esc(it.site||'—')} · báo ${fmtDate(v.ts)} · nằm <b>${days(v.ts)} ngày</b>${v.repairer?' · thợ: '+esc(v.repairer):''}</div></div>
@@ -519,7 +521,7 @@ function renderReport(){
       <div style="font-size:12px;color:var(--text-sub);margin-top:4px">Sự cố xếp vào kỳ theo ngày báo hỏng. Ngày nằm = từ báo hỏng đến sửa xong (chưa xong tính đến hôm nay). Chi phí = chi phí ghi lúc sửa xong.</div></div></div>
     ${tbl('🔧 Theo máy',R.byItem,'Máy',itemName)}
     ${R.site?'':tbl('📍 Theo công trình',R.bySite,'Công trình',k=>k)}
-    ${R.list.length?`<div class="card"><div class="card-body"><h3 style="font-size:15px;margin-bottom:8px">📋 Từng lần hỏng (${R.list.length})</h3><table class="x"><tr><th>Ngày</th><th>Máy · hỏng gì</th><th class="r">Chi phí</th></tr>${R.list.map(v=>`<tr onclick="openDetail('${v.itemId}')" style="cursor:pointer"><td style="white-space:nowrap">${fmtDate(v.ts)}</td><td><b>${esc((items[v.itemId]||{}).code||'?')}</b> ${esc(v.desc)}${v.status!=='done'?' <span class="badge '+(v.status==='new'?'s-broken':'s-repair')+'" style="font-size:11px;padding:1px 6px">'+(ISS[v.status]||v.status||'').replace(/^\S+ /,'')+'</span>':''}</td><td class="r">${fmtMoney(v.cost)||'—'}</td></tr>`).join('')}</table></div></div>`
+    ${R.list.length?`<div class="card"><div class="card-body"><h3 style="font-size:15px;margin-bottom:8px">📋 Từng lần hỏng (${R.list.length})</h3><table class="x"><tr><th>Ngày</th><th>Máy · hỏng gì</th><th class="r">Chi phí</th></tr>${R.list.map(v=>`<tr onclick="openDetail('${ejs(v.itemId)}')" style="cursor:pointer"><td style="white-space:nowrap">${fmtDate(v.ts)}</td><td><b>${esc((items[v.itemId]||{}).code||'?')}</b> ${esc(v.desc)}${v.status!=='done'?' <span class="badge '+(v.status==='new'?'s-broken':'s-repair')+'" style="font-size:11px;padding:1px 6px">'+esc(ISS[v.status]||v.status||'').replace(/^\S+ /,'')+'</span>':''}</td><td class="r">${fmtMoney(v.cost)||'—'}</td></tr>`).join('')}</table></div></div>`
       :'<div class="card"><div class="empty">Không có sự cố nào trong kỳ này.</div></div>'}
     <div class="row"><button class="btn" onclick="shareReport()">📤 Gửi Zalo / sao chép</button><button class="btn sec" onclick="exportIssues(true)">📊 Excel kỳ này</button></div>`;
 }
@@ -569,17 +571,17 @@ function renderDetail(logs){
     if(v.doneTs) tl.push({ts:v.doneTs,cls:'ok',by:v.doneBy,html:'✅ <b>Đã sửa</b> (nằm '+days(v.ts,v.doneTs)+' ngày): '+esc(v.repairDesc)+(v.repairer?' · thợ: '+esc(v.repairer):'')+(v.cost?' · <b>'+fmtMoney(v.cost)+'</b>':''),pics:v.invoicePhotos});
   });
   tl.sort((a,b)=>b.ts-a.ts);
-  const pics=p=>p&&p.length?`<div class="pics">${p.map(u=>`<img src="${esc(u)}" onclick="viewImg('${esc(u)}')">`).join('')}</div>`:'';
+  const pics=p=>p&&p.length?`<div class="pics">${p.map(u=>`<img src="${esc(u)}" onclick="viewImg('${ejs(u)}')">`).join('')}</div>`:'';
   $('detail').innerHTML=`
-  <header class="app-header"><button class="btn sm sec" onclick="closeDetail()">‹ Quay lại</button><h1 style="flex:1;text-align:center">${esc(it.code)}</h1><button class="btn sm sec" onclick="itemForm('${id}')">✏️ Sửa</button></header>
+  <header class="app-header"><button class="btn sm sec" onclick="closeDetail()">‹ Quay lại</button><h1 style="flex:1;text-align:center">${esc(it.code)}</h1><button class="btn sm sec" onclick="itemForm('${ejs(id)}')">✏️ Sửa</button></header>
   <div class="main">
     ${warn.map(w=>`<div class="warn">⚠️ ${esc(w)}</div>`).join('')}
     ${it.delReq?`<div class="card" style="background:var(--yellow-light);border:1px solid #f5d06f"><div class="card-body" style="font-size:14px">🗑 <b>${esc(it.delReq.by)}</b> đề nghị xoá thiết bị này (${fmtDate(it.delReq.ts)})${it.delReq.reason?': '+esc(it.delReq.reason):''}. ${isDung?'':'Chờ Dũng duyệt.'}
-      ${isDung?`<div class="row" style="margin-top:10px"><button class="btn red sm" onclick="delItem('${id}')">✅ Duyệt xoá</button><button class="btn sec sm" onclick="rejectDel('${id}')">✖ Từ chối</button></div>`
-        :it.delReq.uid===currentUser.uid?`<div style="margin-top:10px"><button class="btn sec sm" onclick="cancelDelReq('${id}')">Huỷ đề nghị</button></div>`:''}</div></div>`:''}
+      ${isDung?`<div class="row" style="margin-top:10px"><button class="btn red sm" onclick="delItem('${ejs(id)}')">✅ Duyệt xoá</button><button class="btn sec sm" onclick="rejectDel('${ejs(id)}')">✖ Từ chối</button></div>`
+        :it.delReq.uid===currentUser.uid?`<div style="margin-top:10px"><button class="btn sec sm" onclick="cancelDelReq('${ejs(id)}')">Huỷ đề nghị</button></div>`:''}</div></div>`:''}
     <div class="card"><div class="card-body">
       <div class="row" style="align-items:flex-start">
-        ${it.photo?`<img class="thumb" style="width:90px;height:90px;flex:0 0 90px" src="${esc(it.photo)}" onclick="viewImg('${esc(it.photo)}')">`:''}
+        ${it.photo?`<img class="thumb" style="width:90px;height:90px;flex:0 0 90px" src="${esc(it.photo)}" onclick="viewImg('${ejs(it.photo)}')">`:''}
         <div><div style="font-size:19px;font-weight:800">${esc(it.name)}</div><div style="margin:4px 0">${badge(it.status)}</div>
         <div style="font-size:14px;color:var(--text-sub)">${esc(it.type||'')}${it.year?' · '+esc(it.year):''}</div></div>
       </div>
@@ -594,17 +596,17 @@ function renderDetail(logs){
       </div>
     </div></div>
     <div class="row">
-      <button class="btn" onclick="moveForm('${id}')">📦 Điều chuyển</button>
-      ${open.length?`<button class="btn yel" onclick="repairForm('${open[0][0]}')">🔧 Cập nhật sửa</button>`:`<button class="btn red" onclick="issueForm('${id}')">🔴 Báo hỏng</button>`}
+      <button class="btn" onclick="moveForm('${ejs(id)}')">📦 Điều chuyển</button>
+      ${open.length?`<button class="btn yel" onclick="repairForm('${ejs(open[0][0])}')">🔧 Cập nhật sửa</button>`:`<button class="btn red" onclick="issueForm('${ejs(id)}')">🔴 Báo hỏng</button>`}
     </div>
     <div class="row" style="margin-top:8px">
-      <button class="btn sec" onclick="noteForm('${id}')">📝 Ghi nhật ký</button>
-      ${it.status!=='broken'&&it.status!=='repair'?`<button class="btn sec" onclick="statusForm('${id}')">Đổi tình trạng</button>`:''}
+      <button class="btn sec" onclick="noteForm('${ejs(id)}')">📝 Ghi nhật ký</button>
+      ${it.status!=='broken'&&it.status!=='repair'?`<button class="btn sec" onclick="statusForm('${ejs(id)}')">Đổi tình trạng</button>`:''}
     </div>
     <h3 style="margin:16px 0 10px;font-size:16px">🕘 Lịch sử</h3>
     <div class="tl">${tl.map(e=>`<div class="tl-e ${e.cls}"><div class="tl-t">${fmtDT(e.ts)} · ${esc(e.by||'')}</div><div class="tl-b">${e.html}</div>${pics(e.pics)}</div>`).join('')||'<div class="empty">Chưa có gì.</div>'}</div>
-    <div style="margin-top:20px">${isDung?`<button class="btn sec" style="color:var(--red)" onclick="delItem('${id}')">🗑 Xoá thiết bị này</button>`
-      :it.delReq?'':`<button class="btn sec" style="color:var(--red)" onclick="requestDel('${id}')">🗑 Đề nghị xoá (chờ Dũng duyệt)</button>`}</div>
+    <div style="margin-top:20px">${isDung?`<button class="btn sec" style="color:var(--red)" onclick="delItem('${ejs(id)}')">🗑 Xoá thiết bị này</button>`
+      :it.delReq?'':`<button class="btn sec" style="color:var(--red)" onclick="requestDel('${ejs(id)}')">🗑 Đề nghị xoá (chờ Dũng duyệt)</button>`}</div>
   </div>`;
 }
 function viewImg(u){ $('viewer-img').src=u; if($('viewer').hidden) pushLayer('viewer'); $('viewer').hidden=false; }
@@ -622,14 +624,14 @@ function allSites(){ const extra=[...new Set(Object.values(items).map(i=>i.site)
 // ô chọn công trình: select đủ danh sách + dòng "Khác (nhập tay)…" mở ô gõ
 function siteField(id,cur){
   const list=allSites(), known=!cur||list.includes(cur);
-  return `<select id="${id}" onchange="$('${id}-x').hidden=this.value!=='__x'; if(this.value==='__x') $('${id}-x').focus()">
+  return `<select id="${id}" onchange="$('${ejs(id)}-x').hidden=this.value!=='__x'; if(this.value==='__x') $('${ejs(id)}-x').focus()">
     <option value="">— Chọn công trình —</option>${list.map(v=>`<option value="${esc(v)}" ${v===cur?'selected':''}>${esc(v)}</option>`).join('')}<option value="__x" ${cur&&!known?'selected':''}>✏️ Khác (nhập tay)…</option></select>
     <input id="${id}-x" placeholder="Tên công trình / kho" value="${known?'':esc(cur)}" style="margin-top:6px" ${cur&&!known?'':'hidden'}>`;
 }
 function siteVal(id){ const v=$(id).value; return (v==='__x'?$(id+'-x').value:v).trim(); }
 // ô chọn ảnh: nén rồi giữ dataUrl trong _pending[key]; upload lúc lưu
 let _pending={};
-function picInput(key,label){ _pending[key]=[]; return `<label class="f">${label}</label><input type="file" accept="image/*" multiple onchange="onPics(event,'${key}')"><div class="pics" id="pp-${key}"></div>`; }
+function picInput(key,label){ _pending[key]=[]; return `<label class="f">${label}</label><input type="file" accept="image/*" multiple onchange="onPics(event,'${ejs(key)}')"><div class="pics" id="pp-${key}"></div>`; }
 async function onPics(ev,key){
   for(const f of ev.target.files){ try{ _pending[key].push(await compressImage(f)); }catch(e){ toast('❌ '+e.message); } }
   $('pp-'+key).innerHTML=_pending[key].map(u=>`<img src="${u}">`).join('');
@@ -674,7 +676,7 @@ function itemForm(id){
     <label class="f">Đăng kiểm đến</label><input id="m-k" type="date" value="${d('inspectionEnd')}">
     <label class="f">Ghi chú</label><textarea id="m-note">${esc(it.note||'')}</textarea>
     ${picInput('photo','Ảnh thiết bị (1 ảnh)')}
-    <div style="margin-top:14px"><button class="btn" onclick="saveItem('${id||''}',this)">💾 Lưu</button></div>`);
+    <div style="margin-top:14px"><button class="btn" onclick="saveItem('${ejs(id||'')}',this)">💾 Lưu</button></div>`);
 }
 async function saveItem(id,btn){
   await busy(btn,async()=>{
@@ -721,7 +723,7 @@ function moveForm(id){
     <label class="f">Người nhận / giữ máy</label><input id="mv-keeper" list="dl-keeper" value="${esc(it.keeper||'')}">${dl('dl-keeper',keepers())}
     <label class="f">Ngày chuyển</label><input id="mv-date" type="date" value="${toISO(Date.now())}">
     <label class="f">Ghi chú</label><input id="mv-note" placeholder="Xe chở, lý do…">
-    <div style="margin-top:14px"><button class="btn" onclick="saveMove('${id}',this)">💾 Lưu</button></div>`);
+    <div style="margin-top:14px"><button class="btn" onclick="saveMove('${ejs(id)}',this)">💾 Lưu</button></div>`);
 }
 async function saveMove(id,btn){
   await busy(btn,async()=>{
@@ -738,7 +740,7 @@ function noteForm(id){
     <label class="f">Nội dung *</label><textarea id="nt-desc" placeholder="VD: Thay dầu máy + lọc dầu lúc 2.500 giờ"></textarea>
     <div class="row"><div><label class="f">Ngày</label><input id="nt-date" type="date" value="${toISO(Date.now())}"></div><div><label class="f">Chi phí (đ, nếu có)</label>${moneyInput('nt-cost')}</div></div>
     ${picInput('note','Ảnh')}
-    <div style="margin-top:14px"><button class="btn" onclick="saveNote('${id}',this)">💾 Lưu</button></div>`);
+    <div style="margin-top:14px"><button class="btn" onclick="saveNote('${ejs(id)}',this)">💾 Lưu</button></div>`);
 }
 async function saveNote(id,btn){
   await busy(btn,async()=>{
@@ -750,7 +752,7 @@ async function saveNote(id,btn){
 }
 function statusForm(id){
   openModal(`<h3>Đổi tình trạng</h3><label class="f">Tình trạng mới</label><select id="st">${Object.entries(STATUS).filter(([k])=>k!=='broken'&&k!=='repair').map(([k,v])=>`<option value="${k}" ${items[id].status===k?'selected':''}>${v}</option>`).join('')}</select>
-    <label class="f">Ghi chú</label><input id="st-note"><div style="margin-top:14px"><button class="btn" onclick="saveStatus('${id}',this)">💾 Lưu</button></div>`);
+    <label class="f">Ghi chú</label><input id="st-note"><div style="margin-top:14px"><button class="btn" onclick="saveStatus('${ejs(id)}',this)">💾 Lưu</button></div>`);
 }
 async function saveStatus(id,btn){
   await busy(btn,async()=>{ const s=$('st').value;
@@ -764,7 +766,7 @@ function issueForm(id){
     <label class="f">Hỏng gì? *</label><textarea id="is-desc" placeholder="VD: gãy xích, chảy dầu thủy lực, không nổ máy…"></textarea>
     <label class="f">Ngày phát hiện</label><input id="is-date" type="date" value="${toISO(Date.now())}">
     ${picInput('iss','Ảnh chỗ hỏng')}
-    <div style="margin-top:14px"><button class="btn red" onclick="saveIssue('${id}',this)">🔴 Ghi nhận hỏng</button></div>`);
+    <div style="margin-top:14px"><button class="btn red" onclick="saveIssue('${ejs(id)}',this)">🔴 Ghi nhận hỏng</button></div>`);
 }
 async function saveIssue(id,btn){
   await busy(btn,async()=>{
@@ -779,13 +781,13 @@ function repairForm(isId){
   const v=issues[isId];
   openModal(`<h3>🔧 ${esc(items[v.itemId].code)} — ${esc(v.desc)}</h3><p style="font-size:14px;color:var(--text-sub)">Báo hỏng ${fmtDate(v.ts)} · đã nằm ${days(v.ts)} ngày · ${ISS[v.status]}</p>
     ${v.status==='new'?`<div class="card" style="background:var(--gray-light)"><div class="card-body"><label class="f" style="margin-top:0">Ai sửa (thợ / xưởng)</label><input id="rp-who">
-      <div style="margin-top:10px"><button class="btn yel" onclick="startRepair('${isId}',this)">🔧 Bắt đầu sửa</button></div></div></div><p style="text-align:center;color:var(--text-sub);font-size:13px;margin:10px 0">— hoặc đã sửa xong luôn —</p>`:''}
+      <div style="margin-top:10px"><button class="btn yel" onclick="startRepair('${ejs(isId)}',this)">🔧 Bắt đầu sửa</button></div></div></div><p style="text-align:center;color:var(--text-sub);font-size:13px;margin:10px 0">— hoặc đã sửa xong luôn —</p>`:''}
     <label class="f">Đã sửa / thay những gì? *</label><textarea id="rp-desc"></textarea>
     <label class="f">Ai sửa</label><input id="rp-who2" value="${esc(v.repairer||'')}">
     <div class="row"><div><label class="f">Chi phí (đ)</label>${moneyInput('rp-cost')}</div><div><label class="f">Ngày sửa xong</label><input id="rp-date" type="date" value="${toISO(Date.now())}"></div></div>
     ${picInput('inv','Ảnh hóa đơn / máy sau sửa')}
     <label class="f">Tình trạng máy sau sửa</label><select id="rp-st"><option value="run">🟢 Đang chạy</option><option value="idle">🟡 Chờ việc</option><option value="sold">⚫ Thanh lý (không sửa được)</option></select>
-    <div style="margin-top:14px"><button class="btn green" onclick="doneRepair('${isId}',this)">✅ Sửa xong</button></div>`);
+    <div style="margin-top:14px"><button class="btn green" onclick="doneRepair('${ejs(isId)}',this)">✅ Sửa xong</button></div>`);
 }
 async function startRepair(isId,btn){
   await busy(btn,async()=>{ const v=issues[isId], repairer=$('rp-who').value.trim();

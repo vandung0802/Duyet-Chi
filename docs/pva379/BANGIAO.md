@@ -55,6 +55,15 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v50 (D 28/11/2026 "làm sao cho an toàn nhất") — gia cố bảo mật đợt 1
+- **Mã**: hàm `ejs()` (đặt cạnh `sid()`) dùng cho MỌI dữ liệu ghép vào chuỗi JS trong `onclick="…('…')"` — `esc()` không đủ ở ngữ cảnh đó. Quy ước từ nay: trong thuộc tính `on*` chỉ dùng `ejs()` (chuỗi bất kỳ) hoặc `sid()` (mã phiếu); `esc()` chỉ cho phần chữ hiện ra. `monthLabel()` và các ô chọn tháng đã lọc. Tin chat: khoá thật luôn thắng ô `_k` trong dữ liệu.
+- **Luật** (`database.rules.json`): `pva379/cashflow/$id` chỉ thủ quỹ / Hiền / Dũng ghi (nhân viên vẫn đọc cho Báo cáo → Công trình); `transfers/$i/loanId|src` của lần chuyển đã có chỉ 3 vai đó đổi (cả `khProposals`); `trash` chỉ Dũng bỏ vào (từ v43 chỉ Dũng xoá); `proposals/$id/month` phải dạng `2026-11` (cả `duyetchi`); `pva379/online/$uid` chỉ người đã duyệt ghi.
+- **Thùng rác**: khôi phục mục không do chính tài khoản Dũng bỏ vào → hỏi lại kèm cảnh báo.
+- **Sao lưu**: `scripts/backup-db.ps1` thêm nhánh `/pva379` (file `backup-pva379-<ngày>.json`). Máy đang chạy tác vụ `PVA-Backup` cần lấy bản mới (bấm lại `CAI-BACKUP.bat` nếu tác vụ gọi bản chép ngoài repo).
+- Kèm: app Duyệt Chi v189, Hợp đồng v37, Thiết bị v12 sửa cùng kiểu (`ejs()`); luật `thietbi/*/status` chỉ nhận chữ thường ngắn, `hopdong/nhacNho/$id/soLanDaNhac` phải là số.
+- Thử: bộ thử luật 179/179 (26 ca mới "BM"); `smoke26.js` nạp sẵn dữ liệu xấu rồi mở app — bản cũ mã chạy, bản mới không; hồi quy smoke7, 12–25.
+- Chưa làm trong đợt này (cần D quyết vì đổi cách dùng): quyền ghi ảnh chứng từ, danh sách người dùng riêng cho 3 app phụ, đọc sổ theo từng người. App Gia Bình chưa sửa (chờ D yêu cầu đích danh).
+
 ## v49 (D 27/11/2026 "cho mã QR hiện luôn ở form lập phiếu khi nhập tk")
 - Ba form có ô Tài khoản nhận (lập phiếu `inp`, P.KH `kh-inp`, sửa phiếu `edit`) có thêm khung `#<prefix>-payqr` ngay dưới ô gợi ý. Chọn ngân hàng + gõ số tài khoản hợp lệ (theo `_payRead`) → `_formQrDraw(prefix)` vẽ mã sau 350 ms kể từ lần gõ cuối; thiếu ngân hàng / số quá ngắn → mã biến mất.
 - Gọi từ `_payHint` (gõ, chọn ngân hàng) và `_paySet` (tự điền theo lần chi trước, đọc ảnh, mở form sửa, xoá form) nên mọi đường điền tài khoản đều ra mã.

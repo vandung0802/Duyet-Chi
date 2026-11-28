@@ -242,3 +242,7 @@ Mặc định nếu anh Dũng nói "cứ làm": 1 giữ chỗ hiện tại, 2 gi
 ## Chỗ đang lỗi
 
 - Không có lỗi đã biết. Chưa kiểm tra trên iPhone thật (mới mô phỏng 390px). Thư bảo lãnh nhập từ app Công Nợ chỉ hiện mã ngân hàng (`nganHangId`) vì app này không đọc `congNo/nganHang` (quy tắc 17b).
+
+## v37 (28/11/2026) — gia cố bảo mật
+- Thêm `ejs()` (cạnh `esc()`): mọi giá trị ghép vào chuỗi JS trong `onclick` đi qua `ejs()`; `esc()` chỉ dùng cho chữ hiện ra. Các chỗ in thêm đã lọc: số lần đã nhắc, loại hành động trong lịch sử, số tháng bảo hành, gợi ý mã ngân hàng; liên kết file chỉ nhận `http(s)`.
+- Luật: `hopdong/nhacNho/$id/soLanDaNhac` phải là số. Không đổi công thức, không đổi cấu trúc dữ liệu (`node test-hopdong-tinhtoan.js` vẫn đúng).
