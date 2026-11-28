@@ -1438,7 +1438,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
     <div id="cash-rieng-list"></div>
   </div>
   <div id="cash-tab-book" style="display:none">
-    <div class="tab-desc" style="padding:0 4px 8px">Mọi khoản vào / ra xếp theo ngày, kèm <b>số dư sau từng dòng</b> — giống sổ quỹ giấy. Thủ quỹ nhập số dư ngân hàng thật để app so: lệch ở đâu dò ra ngay dòng đó.</div>
+    <div class="tab-desc" style="padding:0 4px 8px">Mọi khoản vào / ra xếp theo ngày, kèm <b>số dư sau từng dòng</b> — giống sổ quỹ giấy. Bấm vào từng tài khoản để xổ chi tiết các khoản của riêng tài khoản đó ngay bên dưới.</div>
     <div id="cash-book-bal"></div>
     <div id="cash-book-list"></div>
   </div>
@@ -2015,7 +2015,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v53';
+const APP_VERSION = '20261128-v54';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -13821,6 +13821,22 @@ function bankOf(a){
 }
 let _bookAcct = '';   // bộ lọc sổ quỹ: '' = cả 2 tài khoản
 function setBookAcct(v){ _bookAcct = v || ''; renderCashBook(); }
+let _bookOpen = '', _bookLim = 40;   // v54: tài khoản đang xổ chi tiết trong ô số dư
+function toggleBookAcct(a){ _bookOpen = (_bookOpen===a) ? '' : a; _bookLim = 40; renderCashBook(); }
+function _bookAcctDetail(a){
+  const rows = cashBookRows().filter(r=>r.acct===a);
+  let bal = 0; rows.forEach(r=>{ bal += (r.kind==='in' ? r.amount : -r.amount); r.bal = bal; });
+  if(!rows.length) return `<div style="margin:4px 2px 2px;padding:10px;border-radius:8px;background:#f8fafc;font-size:12px;color:var(--text-sub);text-align:center">Chưa có giao dịch nào</div>`;
+  const list = rows.slice().reverse(), more = list.length - _bookLim;
+  return `<div onclick="event.stopPropagation()" style="margin:4px 0 2px;border:1px solid var(--gray-border);border-radius:8px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse">${list.slice(0,_bookLim).map(r=>`<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:6px 5px;font-size:10.5px;color:var(--text-sub);white-space:nowrap;vertical-align:top">${esc(r.date||'')}</td>
+      <td style="padding:6px 5px;font-size:12px;word-break:break-word">${esc(r.desc)}${r.tag?`<div style="font-size:10px;color:var(--text-sub)">${esc(r.tag)}</div>`:''}</td>
+      <td style="padding:6px 5px;text-align:right;font-size:12px;font-weight:800;color:${r.kind==='in'?'#047857':'#b91c1c'};white-space:nowrap;vertical-align:top">${r.kind==='in'?'+':'−'}${fmtVND(r.amount)}</td>
+      <td style="padding:6px 5px;text-align:right;font-size:11.5px;font-weight:700;color:${r.bal<0?'#b91c1c':'var(--text)'};white-space:nowrap;vertical-align:top">${fmtVND(r.bal)}</td></tr>`).join('')}</table>
+    ${more>0?`<div style="text-align:center;padding:7px"><button onclick="event.stopPropagation();_bookLim+=60;renderCashBook()" style="border:1px solid #d1d5db;background:#fff;border-radius:8px;font-size:12px;font-weight:700;padding:5px 12px;cursor:pointer">Xem thêm ${more} dòng cũ hơn</button></div>`:''}
+  </div>`;
+}
 function renderCashBook(){
   const elBal = document.getElementById('cash-book-bal');
   const elList = document.getElementById('cash-book-list');
@@ -13830,36 +13846,24 @@ function renderCashBook(){
   const rows = (!one && _bookAcct) ? all.filter(r=> _bookAcct.indexOf('g:')===0 ? (CASH_ACCT[r.acct]||{}).group===_bookAcct.slice(2) : r.acct===_bookAcct) : all;
   let bal = 0; rows.forEach(r=>{ bal += (r.kind==='in' ? r.amount : -r.amount); r.bal = bal; });
   const t = cashTotals();
-  const canBank = _cashWriter();   // D chốt: số dư ngân hàng thật chỉ Thủ quỹ nhập (Dũng: quản trị)
 
   if(elBal){
+    // v54 (D 28/11/2026 "bỏ phần nhập số thực, hiện tài khoản và số dư, bấm vào tài khoản sổ ra chi tiết phía dưới"):
+    // mỗi tài khoản = 1 dòng (tên + số dư sổ tính ra); bấm → xổ các giao dịch của riêng tài khoản đó ngay bên dưới (mới nhất trước).
     const acctBox = (a) => {
-      const b = bankOf(a); const real = b ? parseFloat(b.amount)||0 : null;
-      const calc = one ? t.tienTrongTk : (t.byAcct[a]||0); const diff = real===null ? null : real - calc;
-      return `<div style="margin-top:7px;padding:8px 9px;border:1.5px solid ${CASH_ACCT[a].color}55;border-radius:10px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-          <span style="font-size:13px;font-weight:800;color:${CASH_ACCT[a].color}">${one?'Tài khoản':esc(CASH_ACCT[a].label)}${CASH_ACCT[a].off?' <span style="font-size:10px;color:var(--text-sub)">(đã ẩn)</span>':''}</span>
-          <span style="font-size:15px;font-weight:900;color:var(--blue-dark);white-space:nowrap;word-break:normal">${fmtVND(calc)}</span>
-        </div>
-        <div style="display:flex;gap:6px;margin-top:7px;align-items:center">
-          <input id="cash-bank-inp-${a}" class="form-input" inputmode="numeric" placeholder="Số dư ngân hàng thật" ${canBank?'':'disabled'}
-                 value="${real!==null?fmtVND(real).replace(/\s*đ\s*$/,''):''}" oninput="fmtAmountInput(this)" style="flex:1;font-size:14px;margin:0">
-          ${canBank ? `<button onclick="saveBankBalance('${a}')" style="padding:9px 14px;font-size:13px;font-weight:700;background:var(--blue);color:#fff;border:none;border-radius:8px;cursor:pointer;white-space:nowrap">Lưu</button>` : ''}
-        </div>
-        ${diff===null ? `<div style="font-size:11px;color:var(--text-sub);margin-top:5px">${canBank?'Nhập số dư thật theo sao kê để app tự so':'Chưa có số dư thật (Thủ quỹ nhập)'}</div>`
-          : Math.abs(diff)<1
-            ? '<div style="margin-top:6px;padding:6px 9px;background:#f0fdf4;border-radius:6px;font-size:12px;font-weight:700;color:#047857">✅ Khớp với ngân hàng</div>'
-            : `<div style="margin-top:6px;padding:6px 9px;background:#fef2f2;border-radius:6px;font-size:12px;font-weight:700;color:#991b1b">⚠️ Lệch ${fmtVND(Math.abs(diff))} — ${diff>0?'ngân hàng nhiều hơn sổ':'sổ nhiều hơn ngân hàng'}. Dò lại các dòng gần đây.</div>`}
-        ${(b&&b.at) ? `<div style="font-size:10px;color:var(--text-sub);margin-top:4px">Cập nhật: ${fmtFull(b.at)}${b.by?' · '+esc(b.by):''}</div>` : ''}
-      </div>`;
+      const calc = one ? t.tienTrongTk : (t.byAcct[a]||0), isOpen = _bookOpen===a, col = CASH_ACCT[a].color;
+      return `<div onclick="toggleBookAcct('${ejs(a)}')" role="button" style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;padding:10px 10px;border:1.5px solid ${col}55;border-radius:10px;cursor:pointer;background:${isOpen?'#fff7ed':'#fff'}">
+          <span style="font-size:13px;font-weight:800;color:${col};min-width:0;word-break:break-word"><span style="display:inline-block;width:14px;color:var(--text-sub)">${isOpen?'▾':'▸'}</span>${one?'Tài khoản':esc(CASH_ACCT[a].label)}${CASH_ACCT[a].off?' <span style="font-size:10px;color:var(--text-sub)">(đã ẩn)</span>':''}</span>
+          <span style="font-size:15px;font-weight:900;color:${calc<0?'#b91c1c':'var(--blue-dark)'};white-space:nowrap;word-break:normal">${fmtVND(calc)}</span>
+        </div>${isOpen ? _bookAcctDetail(a) : ''}`;
     };
     elBal.innerHTML = one ? `<div class="card"><div class="card-body" style="padding:11px 13px;font-size:13px;color:var(--text-sub)">Chỉ D, Hiền, thủ quỹ xem được số dư từng tài khoản.</div></div>` : `<div class="card"><div class="card-body" style="padding:11px 13px">
+      ${(_cashWriter()) ? `<button onclick="openXferModal()" class="btn-sm" style="margin:0 0 10px;width:100%;background:#f0f9ff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:10px;font-weight:700;cursor:pointer">🔁 Ghi chuyển tiền giữa các tài khoản</button>` : ''}
       <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
         <span style="font-size:13px;font-weight:700;color:var(--text-sub)">Sổ quỹ tính ra (mọi tài khoản)</span>
         <span style="font-size:17px;font-weight:900;color:var(--blue-dark);white-space:nowrap;word-break:normal">${fmtVND(t.tienTrongTk)}</span>
       </div>
-      ${Object.keys(CASH_ACCT).length ? ACCT_GROUPS.map(g=>{ const ks=_acctsOfGroup(g).filter(k=>!CASH_ACCT[k].off || Math.abs(t.byAcct[k]||0)>=1); if(!ks.length) return ''; const sub=ks.reduce((a,k)=>a+(t.byAcct[k]||0),0); const open=_bookAcct==='g:'+g || (_bookAcct && (CASH_ACCT[_bookAcct]||{}).group===g); return `<details ${open?'open':''} style="margin-top:9px;border:1px solid var(--gray-border);border-radius:10px;padding:6px 9px"><summary style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:800"><span style="color:${CASH_ACCT[ks[0]].color}">${esc(g)} <span style="font-weight:600;color:var(--text-sub);font-size:11px">(${ks.length} TK)</span></span><span style="white-space:nowrap">${fmtVND(sub)}</span></summary>${ks.map(acctBox).join('')}</details>`; }).join('') : '<div style="margin-top:8px;font-size:12.5px;color:#b45309">Chưa có danh sách tài khoản — anh Dũng vào <b>Cài đặt → Tài khoản & nguồn tiền</b> để khai.</div>'}
-      ${(_cashWriter()) ? `<button onclick="openXferModal()" class="btn-sm" style="margin-top:10px;background:#f0f9ff;color:#0369a1;border:1.5px solid #bae6fd;border-radius:10px;font-weight:700;cursor:pointer">🔁 Ghi chuyển tiền giữa các tài khoản</button>` : ''}
+      ${Object.keys(CASH_ACCT).length ? ACCT_GROUPS.map(g=>{ const ks=_acctsOfGroup(g).filter(k=>!CASH_ACCT[k].off || Math.abs(t.byAcct[k]||0)>=1); if(!ks.length) return ''; const sub=ks.reduce((a,k)=>a+(t.byAcct[k]||0),0); const open=_bookAcct==='g:'+g || (_bookAcct && (CASH_ACCT[_bookAcct]||{}).group===g) || (_bookOpen && (CASH_ACCT[_bookOpen]||{}).group===g); return `<details ${open?'open':''} style="margin-top:9px;border:1px solid var(--gray-border);border-radius:10px;padding:6px 9px"><summary style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:800"><span style="color:${CASH_ACCT[ks[0]].color}">${esc(g)} <span style="font-weight:600;color:var(--text-sub);font-size:11px">(${ks.length} TK)</span></span><span style="white-space:nowrap">${fmtVND(sub)}</span></summary>${ks.map(acctBox).join('')}</details>`; }).join('') : '<div style="margin-top:8px;font-size:12.5px;color:#b45309">Chưa có danh sách tài khoản — anh Dũng vào <b>Cài đặt → Tài khoản & nguồn tiền</b> để khai.</div>'}
     </div></div>`;
   }
 
