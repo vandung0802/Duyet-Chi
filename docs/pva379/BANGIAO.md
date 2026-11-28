@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v65 (D 28/11/2026 "tất cả bảng này phải hiện kiểu như Excel cho dễ nhìn")
+- Bảng Cân đối theo công ty + bảng "Theo công trình" dùng lớp CSS `.xl-wrap` / `.xl-tbl`: kẻ ô đủ 4 cạnh, hàng tiêu đề nền xám ("Khoản mục" ở ô đầu), số không xuống dòng, cột đầu (tên khoản mục / công trình) đứng yên khi vuốt ngang (`position:sticky`), chữ tiêu đề nhóm (Tiền vào / Tiền ra / Đang treo, `tr.xl-sec`) cũng đứng yên.
+- Dòng "Ngân hàng thật" chỉ hiện khi có TK đã nhập số dư ngân hàng (v54 đã bỏ ô nhập → trước đây toàn "chưa nhập").
+- Muốn bảng khác cũng kiểu Excel: bọc `<div class="xl-wrap"><table class="xl-tbl">`; dòng tiêu đề nhóm thêm `class="xl-sec"` và bọc chữ trong `<span>`.
+- Thử: `smoke39.js` (chụp khổ điện thoại 400px, vuốt ngang).
+
 ## v64 (D 28/11/2026) — Bảo lãnh để lẫn cũ / mới; nhắc ảnh chuyển tiền chỉ từ 29/11
 - D: "chọn vào bảo lãnh thì hiện ra tất cả các bảo lãnh đang có, không cần phân biệt cũ mới. Cũ mới chỉ khác lúc nhập để có trừ ký quỹ hay không, phần theo dõi như nhau nên thống kê cứ để lẫn và sắp xếp theo thời gian với từng loại".
 - Bỏ 2 tab "Bảo lãnh / Bảo lãnh cũ". Danh sách chung: gom theo loại (`BL_KIND_ORDER`), trong loại xếp ngày phát hành cũ → mới, cũ mới lẫn nhau (thẻ BL cũ vẫn có nhãn "📜 cũ"). Thêm nút **📜 Thêm BL cũ** cạnh "➕ Thêm bảo lãnh" (mở `openBlModal(null,false,true)`). `setBlTab` còn giữ nhưng không lọc nữa.
