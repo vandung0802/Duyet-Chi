@@ -55,6 +55,15 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v53 (D 28/11/2026 "cho tất cả mọi người đều nhìn thấy các phiếu đề xuất của cả công ty, không có quyền sửa chữa can thiệp gì vào phiếu của người khác, xem được toàn bộ báo cáo") — THAY quy tắc xem v10 / v14
+- `_canSeeP()` luôn đúng: ai đã được duyệt cũng thấy mọi phiếu chi, ứng lương, P.KH, sổ tạm ứng của cả công ty. Sửa / xoá / duyệt / chuyển KHÔNG đổi: vẫn theo `_canEditDelete`, `_canOpenEdit`, nút D / H / T (nhân viên mở phiếu người khác không có nút Sửa / Xoá).
+- Báo cáo: tab Công trình có dòng TỔNG và xuất Excel "Tất cả công trình" cho mọi người. Các tab Danh sách / Đã chuyển / Chưa chuyển / Từ chối / Người nhận / Tóm tắt đọc qua `_canSeeP` nên tự đủ.
+- Trang P.KH: mọi người thấy nút trang (chỉ xem); nút "Đề xuất chi phí Kế hoạch" (`#kh-new-btn`) và `openKhModal()` vẫn chỉ `_khCanSee()`. Luật: `pva379/khProposals` + `khImages` `.read` mở cho mọi người đã duyệt (ghi giữ nguyên).
+- GIỮ hạn chế (D chưa yêu cầu): tab Cân đối (số dư tài khoản, thu, ký quỹ, vay, chi riêng), Thùng rác, nút gửi báo cáo Telegram, ô bảng tính Google, phần sổ quỹ trong Excel tháng — chỉ Dũng / Hiền / thủ quỹ (`_fullView()`).
+- Người CHỈ thuộc phòng Kế hoạch: thấy hết phiếu P.KH; phiếu bên kế toán CHƯA mở (luật `proposals` chặn đọc phòng KH, app rút gọn của họ ghi chung một gói nên mở thêm cần sửa riêng).
+- Sót ở v51 đã sửa: xoá dòng sổ tạm ứng đã duyệt (`advDeleteItem`) cho Hiền như Dũng.
+- Thử: `smoke29.js`; hồi quy smoke14, 23, 25–28. `smoke7` / `smoke15` / `smoke22` còn kiểm quy tắc cũ (nhân viên chỉ thấy phiếu mình, không TỔNG, chờ Dũng duyệt xoá) — đã được thay, không phải lỗi.
+
 ## v52 (D 28/11/2026 "ô chọn tên nhân viên, ngân hàng để chế độ gợi ý — gõ vài ký tự là nhảy đến tên cần tìm")
 - Mọi `<select>` có từ 8 dòng trở lên (`_CBX_MIN`): bấm / chạm vào → hộp `#cbx-ov` có ô gõ tìm (không dấu, khớp mọi từ, khớp cả từ khoá ngân hàng qua `data-kw`, ví dụ "vcb", "ky thuong"), Enter chọn dòng đầu. Chọn xong ghi `selectedIndex` vào ô gốc + bắn `input` / `change` → mã cũ (onchange, `.value`) chạy y nguyên.
 - Bắt sự kiện ở cấp `document` (mousedown / touchend / phím cách, Enter, Alt+↓), nên ô dựng sau (danh sách động) tự có. Vuốt cuộn qua ô không mở. Ô ngắn, ô bị khoá, ô chọn nhiều giữ kiểu cũ; muốn bỏ một ô thì thêm `data-nocbx="1"`.
