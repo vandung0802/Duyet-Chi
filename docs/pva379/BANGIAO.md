@@ -55,6 +55,10 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v55 (D 28/11/2026 "sắp xếp những tài khoản đang có tiền lên trên, xong đến TK MSB, TP rồi đến các TK đang 0 đồng khác")
+- Sổ quỹ, khung số dư: trong từng công ty `_bookAcctSort()` xếp TK có số dư khác 0 (nhiều tiền trước) → MSB → TP (TP / TPBank / Tiên Phong, so tên không dấu) → các TK 0 đồng còn lại theo thứ tự cài đặt. TK MSB / TP đang có tiền thì nằm ở nhóm đầu theo số tiền. Chỉ đổi thứ tự hiển thị, không đổi `order` trong `meta/accounts`.
+- Thử: `smoke30.js` thêm ca thứ tự.
+
 ## v54 (D 28/11/2026 "sổ quỹ: bỏ phần nhập số thực, hiện tài khoản và số dư, bấm vào tài khoản sổ ra chi tiết phía dưới" + "mục ghi chuyển tiền giữa các tài khoản đổi lên trên cùng")
 - Cân đối → Sổ quỹ, khung số dư (`renderCashBook` → `acctBox`): mỗi tài khoản 1 dòng (tên + số dư sổ tính ra), BỎ ô "Số dư ngân hàng thật" + nút Lưu + dòng khớp / lệch. Bấm dòng → `toggleBookAcct(a)` xổ `_bookAcctDetail(a)` ngay bên dưới (giao dịch của riêng tài khoản, mới nhất trước, có số dư chạy, 40 dòng + "Xem thêm"); bấm lại thu gọn; mở tài khoản khác thì tài khoản cũ thu lại.
 - Nút "🔁 Ghi chuyển tiền giữa các tài khoản" chuyển lên TRÊN CÙNG khung số dư.

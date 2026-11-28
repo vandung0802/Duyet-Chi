@@ -2015,7 +2015,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v54';
+const APP_VERSION = '20261128-v55';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -13821,6 +13821,14 @@ function bankOf(a){
 }
 let _bookAcct = '';   // bộ lọc sổ quỹ: '' = cả 2 tài khoản
 function setBookAcct(v){ _bookAcct = v || ''; renderCashBook(); }
+// v55 (D 28/11/2026 "sắp xếp những tài khoản đang có tiền lên trên, xong đến TK MSB, TP rồi đến các TK đang 0 đồng khác"):
+// trong từng công ty: TK có số dư (khác 0, nhiều tiền trước) → MSB → TP → các TK 0 đồng còn lại (giữ thứ tự cài đặt).
+function _bookAcctSort(ks, t){
+  const bal = k => Math.round(+(t.byAcct[k]||0));
+  const nm = k => _tagFold((CASH_ACCT[k]||{}).label||'');
+  const rank = k => bal(k)!==0 ? 0 : /(^|[^a-z0-9])msb([^a-z0-9]|$)/.test(nm(k)) ? 1 : /(^|[^a-z0-9])(tp|tpbank|tien phong)([^a-z0-9]|$)/.test(nm(k)) ? 2 : 3;
+  return ks.map((k,i)=>({k,i})).sort((a,b)=> (rank(a.k)-rank(b.k)) || (rank(a.k)===0 ? bal(b.k)-bal(a.k) : 0) || (a.i-b.i)).map(x=>x.k);
+}
 let _bookOpen = '', _bookLim = 40;   // v54: tài khoản đang xổ chi tiết trong ô số dư
 function toggleBookAcct(a){ _bookOpen = (_bookOpen===a) ? '' : a; _bookLim = 40; renderCashBook(); }
 function _bookAcctDetail(a){
@@ -13863,7 +13871,7 @@ function renderCashBook(){
         <span style="font-size:13px;font-weight:700;color:var(--text-sub)">Sổ quỹ tính ra (mọi tài khoản)</span>
         <span style="font-size:17px;font-weight:900;color:var(--blue-dark);white-space:nowrap;word-break:normal">${fmtVND(t.tienTrongTk)}</span>
       </div>
-      ${Object.keys(CASH_ACCT).length ? ACCT_GROUPS.map(g=>{ const ks=_acctsOfGroup(g).filter(k=>!CASH_ACCT[k].off || Math.abs(t.byAcct[k]||0)>=1); if(!ks.length) return ''; const sub=ks.reduce((a,k)=>a+(t.byAcct[k]||0),0); const open=_bookAcct==='g:'+g || (_bookAcct && (CASH_ACCT[_bookAcct]||{}).group===g) || (_bookOpen && (CASH_ACCT[_bookOpen]||{}).group===g); return `<details ${open?'open':''} style="margin-top:9px;border:1px solid var(--gray-border);border-radius:10px;padding:6px 9px"><summary style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:800"><span style="color:${CASH_ACCT[ks[0]].color}">${esc(g)} <span style="font-weight:600;color:var(--text-sub);font-size:11px">(${ks.length} TK)</span></span><span style="white-space:nowrap">${fmtVND(sub)}</span></summary>${ks.map(acctBox).join('')}</details>`; }).join('') : '<div style="margin-top:8px;font-size:12.5px;color:#b45309">Chưa có danh sách tài khoản — anh Dũng vào <b>Cài đặt → Tài khoản & nguồn tiền</b> để khai.</div>'}
+      ${Object.keys(CASH_ACCT).length ? ACCT_GROUPS.map(g=>{ const ks=_bookAcctSort(_acctsOfGroup(g).filter(k=>!CASH_ACCT[k].off || Math.abs(t.byAcct[k]||0)>=1), t); if(!ks.length) return ''; const sub=ks.reduce((a,k)=>a+(t.byAcct[k]||0),0); const open=_bookAcct==='g:'+g || (_bookAcct && (CASH_ACCT[_bookAcct]||{}).group===g) || (_bookOpen && (CASH_ACCT[_bookOpen]||{}).group===g); return `<details ${open?'open':''} style="margin-top:9px;border:1px solid var(--gray-border);border-radius:10px;padding:6px 9px"><summary style="cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:800"><span style="color:${CASH_ACCT[ks[0]].color}">${esc(g)} <span style="font-weight:600;color:var(--text-sub);font-size:11px">(${ks.length} TK)</span></span><span style="white-space:nowrap">${fmtVND(sub)}</span></summary>${ks.map(acctBox).join('')}</details>`; }).join('') : '<div style="margin-top:8px;font-size:12.5px;color:#b45309">Chưa có danh sách tài khoản — anh Dũng vào <b>Cài đặt → Tài khoản & nguồn tiền</b> để khai.</div>'}
     </div></div>`;
   }
 
