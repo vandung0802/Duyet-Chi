@@ -97,7 +97,7 @@ body.kb-open .bottom-nav{display:none}   /* v72: đang gõ ô nhập trên đi�
 .badge-history{font-size:12px;color:var(--text-sub);text-align:right;line-height:1.5;font-weight:600;padding:0 4px}
 .badge-stack .badge{font-size:12px;font-weight:800;padding:2px 7px}
 .badge-wait{background:var(--yellow-light);color:var(--yellow)}
-.badge-approved{background:var(--blue-light);color:var(--blue-dark)}
+.badge-approved{background:#dbeafe;color:#1e40af}   /* v59: đã duyệt = xanh dương, khác cam của nút bấm duyệt và xanh lá của đã chuyển */
 .badge-done{background:var(--green-light);color:var(--green)}
 .badge-reject{background:var(--red-light);color:var(--red)}
 
@@ -2030,7 +2030,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v58';
+const APP_VERSION = '20261128-v59';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -4876,8 +4876,10 @@ function renderApproveBox(){ return ''; }
 function renderApproveRow(p){
   const parts=[];
   if(currentRole==='dung'){ parts.push(renderBtnD(p)); parts.push(renderBtnReject(p)); }
-  else if(currentRole==='hien'){ parts.push(renderBtnH(p)); parts.push(renderBtnReject(p)); if(approvedAmtOf(p,'H')>0){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShare(p)); } }   // v17: Hiền chuyển tiền được sau khi đã duyệt H
-  else if(currentRole==='thuquy'){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShare(p)); }
+  // v59 (D 28/11 "giao diện rối quá: nút 1 H đã duyệt, nút 2 từ chối, nút 3 bấm vào thì hiện ra mấy cái kia"): Hiền chỉ còn
+  // H · Từ chối · ⋯ — chuyển tiền / hoàn tác / ảnh chuyển khoản (v17) gom vào menu ⋯; ô "—" trống không hiện nữa.
+  else if(currentRole==='hien'){ parts.push(renderBtnH(p)); parts.push(renderBtnReject(p)); }
+  else if(currentRole==='thuquy'){ parts.push(renderBtnTransfer(p)); parts.push(renderBtnShareCompact(p)); }   // v59: ảnh chuyển khoản = 1 nút, bấm mới hiện Xem / Thêm / Dán
   else {
     // v39 (D yêu cầu 24/09): người đề xuất / phụ trách vật tư thấy HẾT nút ngay trên thẻ, không phải mở menu ⋯
     const _prf=Array.isArray(p.proofImages)?p.proofImages:(p.proofB64?[p.proofB64]:[]);
@@ -4892,16 +4894,24 @@ function renderApproveRow(p){
     const _rm2=renderBtnRemind(p); if(_rm2) parts.push(_rm2);
     return parts.join('');   // đã đủ nút → không cần menu ⋯
   }
-  const _rm=renderBtnRemind(p); if(_rm) parts.push(_rm); // tự gác quyền bên trong
+  if(currentRole!=='hien'){ const _rm=renderBtnRemind(p); if(_rm) parts.push(_rm); } // tự gác quyền bên trong; v59: Hiền → nút Giục nằm trong ⋯
   parts.push(`<button class="approve-box ab-menu-btn" onclick="openCardMenu('${sid(p.id)}')" title="Thêm thao tác">⋯</button>`);
   return parts.join('');
 }
 function openCardMenu(id){
   const p=proposals.find(x=>x.id===id); if(!p) return;
   const mk=(icon,label,fn,danger)=>`<button class="card-menu-item${danger?' cmi-danger':''}" onclick="closeCardMenu();${fn}">${icon} ${label}</button>`;
-  const items=[ mk('💬','Gửi phiếu vào Chat nhóm',`openChatWithRef('${sid(id)}')`) ];
+  const items=[];
+  if(currentRole==='hien'){   // v59: các nút đã gom từ hàng nút của Hiền
+    const off=getOfficialApprovedAmount(p)||0, tr=getTotalTransferred(p);
+    if(approvedAmtOf(p,'H')>0 && off>0 && tr < off-0.0001 && p.status!=='rejected') items.push(mk('💸', tr>0 ? 'Chuyển tiếp ('+fmtVND(off-tr)+' còn lại)' : 'Chuyển tiền ('+fmtVND(off)+')', `doTransfer('${sid(id)}')`));
+    if(tr>0) items.push(mk('↩','Hoàn tác lần chuyển gần nhất',`undoTransfer('${sid(id)}')`));
+    _proofMenuItems(p, mk).forEach(x=>items.push(x));
+    if(canRemind(p)) items.push(mk('🔔','Giục người duyệt / người chuyển',`remindApprove('${sid(id)}')`));
+  }
+  items.push(mk('💬','Gửi phiếu vào Chat nhóm',`openChatWithRef('${sid(id)}')`));
   const _prf=Array.isArray(p.proofImages)?p.proofImages:(p.proofB64?[p.proofB64]:[]);
-  if(_prf.length) items.push(mk('📤','Chia sẻ ảnh chứng từ ('+_prf.length+' ảnh)',`shareProof('${sid(id)}')`));
+  if(_prf.length && currentRole!=='hien') items.push(mk('📤','Chia sẻ ảnh chứng từ ('+_prf.length+' ảnh)',`shareProof('${sid(id)}')`));
   if(_canOpenEdit(p)) items.push(mk('✏️', _isMyProposal(p) ? 'Sửa đề xuất' : ((currentRole==='hien'||currentRole==='dung') && p.kind!=='salary' && p.kind!=='kh') ? 'Ghi ý kiến / sửa thuế, hạng mục chi phí' : 'Ghi ý kiến / sửa thuế', `openEditProposal('${sid(id)}')`));   // v41; v86: H / Dũng thấy rõ sửa được hạng mục
   if(currentRole==='dung' && p.kind!=='kh') items.push(mk('🔍', p.review ? 'Rà soát lại (KT đã rà)' : 'Rà soát thuế / hợp đồng / hóa đơn', `openReviewModal('${sid(id)}')`));   // v41
   if(_payDueCan(p)) items.push(mk('⏰', p.payDue ? 'Đổi / bỏ hẹn chuyển nốt' : 'Hẹn chuyển nốt phần còn lại', `openPayDueModal('${sid(id)}')`));   // v99
@@ -4924,18 +4934,19 @@ function renderBtnD(p){
   const canPress = currentRole==='dung' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
     const done = amt>0;
-    const txtClr = done ? '#dc2626' : 'var(--yellow)';       // đã duyệt: chữ đỏ
-    const boxClr = done ? 'var(--green)' : 'var(--yellow)';  // nền/viền xanh lá
-    const bg  = done ? '#eafff0' : '#fffbeb';
+    // v59 (D 28/11 "đã duyệt thì nút đổi sang màu khác với màu nút bấm duyệt"): bấm duyệt = cam đặc chữ trắng · duyệt thêm = vàng · đã duyệt = xanh dương · đã chuyển = xanh lá
+    const txtClr = done ? '#92400e' : '#fff';
+    const boxClr = done ? '#f59e0b' : 'var(--blue)';
+    const bg  = done ? '#fef3c7' : 'var(--blue)';
     const lbl = done ? 'Duyệt thêm' : 'Bấm để duyệt';
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr}">D</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${sid(p.id)}','approvedD')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626">D</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#1e40af">✓ D</span><span class="ab-mid-label" style="color:#1e40af">Đã duyệt</span></div>`;   // v59: xanh dương
     const canUndo = currentRole==='dung' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedD')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:#2563eb;background:#dbeafe"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedD')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:#2563eb;background:#dbeafe"><div class="ab-done-btn">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 D</div></div>`;
 }
@@ -4950,18 +4961,19 @@ function renderBtnH(p){
   const canPress = currentRole==='hien' && p.status!=='rejected' && amt < total - 0.0001;
   if(canPress){
     const done = amt>0;
-    const txtClr = done ? '#dc2626' : 'var(--yellow)';       // đã duyệt: chữ đỏ
-    const boxClr = done ? 'var(--green)' : 'var(--yellow)';  // nền/viền xanh lá
-    const bg  = done ? '#eafff0' : '#fffbeb';
+    // v59 (D 28/11 "đã duyệt thì nút đổi sang màu khác với màu nút bấm duyệt"): bấm duyệt = cam đặc chữ trắng · duyệt thêm = vàng · đã duyệt = xanh dương · đã chuyển = xanh lá
+    const txtClr = done ? '#92400e' : '#fff';
+    const boxClr = done ? '#f59e0b' : 'var(--blue)';
+    const bg  = done ? '#fef3c7' : 'var(--blue)';
     const lbl = done ? 'Duyệt thêm' : 'Bấm để duyệt';
     const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:${txtClr};font-size:13px">H</span><span class="ab-mid-label" style="color:${txtClr}">${lbl}</span></div>`;
     return `<div class="approve-box ab-done-box" style="border-color:${boxClr};background:${bg}"><button class="ab-done-btn" style="color:${txtClr};width:100%" onclick="approveBy('${sid(p.id)}','approvedH')">${inner}</button></div>`;
   }
   if(amt>0){
-    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#dc2626;font-size:13px">${esc(hlNames(p))}</span><span class="ab-mid-label" style="color:#dc2626">Đã duyệt</span></div>`;
+    const inner = `<div class="ab-row-top"><span class="ab-big-letter" style="color:#1e40af;font-size:13px">✓ ${esc(hlNames(p))}</span><span class="ab-mid-label" style="color:#1e40af">Đã duyệt</span></div>`;   // v59: xanh dương
     const canUndo = currentRole==='hien' && p.status!=='transferred';
-    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
-    return `<div class="approve-box ab-done-box" style="border-color:var(--green);background:#eafff0"><div class="ab-done-btn">${inner}</div></div>`;
+    if(canUndo) return `<div class="approve-box ab-done-box" style="border-color:#2563eb;background:#dbeafe"><button class="ab-done-btn" onclick="undoApprove('${sid(p.id)}','approvedH')" title="Bấm để bỏ duyệt">${inner}</button></div>`;
+    return `<div class="approve-box ab-done-box" style="border-color:#2563eb;background:#dbeafe"><div class="ab-done-btn">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 H</div></div>`;
 }
@@ -5007,7 +5019,7 @@ function renderBtnReject(p){
     return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','D')"><div class="ab-row-top"><span class="ab-mid-label" style="color:var(--red)">✕ Từ chối</span></div></button></div>`;
   if(canRejectH)
     return `<div class="approve-box ab-done-box" style="flex:0.6 1 0%;border-color:#d1d5db"><button class="ab-done-btn" onclick="rejectBy('${sid(p.id)}','H')"><div class="ab-row-top"><span class="ab-mid-label" style="color:var(--red)">✕ Từ chối</span></div></button></div>`;
-  return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">—</div></div>`;
+  return '';   // v59: không còn quyền từ chối → không vẽ ô "—" trống
 }
 function renderBtnTransfer(p){
   const approvedAmt = getOfficialApprovedAmount(p);
@@ -5032,6 +5044,27 @@ function renderBtnTransfer(p){
     return `<div class="approve-box ab-done-box" style="border-color:var(--yellow);background:#fffbeb"><div class="ab-done-btn" style="color:var(--yellow)">${inner}</div></div>`;
   }
   return `<div class="approve-box"><div class="ab-flat-locked">🔒 T</div></div>`;
+}
+// v59: ảnh chuyển khoản gọn 1 nút — bấm mở danh sách Xem / chia sẻ · Thêm ảnh · Dán ảnh
+function _proofCount(p){ return (Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64 ? [p.proofB64] : [])).length; }
+function _proofCanUpload(p){ return _isTreasurer() && (p.status==='transferred' || p.status==='approved'); }
+function renderBtnShareCompact(p){
+  const n=_proofCount(p), up=_proofCanUpload(p);
+  if(!n && !up) return `<div class="approve-box"><div class="ab-flat-locked" style="font-size:9px">${p.status==='transferred'?'⏳ Chờ T':'🔒'}</div></div>`;
+  return `<div class="approve-box" style="border-color:var(--blue);background:var(--blue-light)"><button class="ab-btn" style="background:none;color:var(--blue)" onclick="openProofMenu('${sid(p.id)}')">${n?'📤 '+n+' ảnh CK':'📎 Ảnh CK'} ▾</button></div>`;
+}
+function _proofMenuItems(p, mk){
+  const n=_proofCount(p), up=_proofCanUpload(p), id=p.id, it=[];
+  if(n) it.push(mk('📤','Xem / chia sẻ '+n+' ảnh chuyển khoản',`shareProof('${sid(id)}')`));
+  if(up) it.push(mk('📎', n?'Thêm ảnh chuyển khoản':'Tải ảnh chuyển khoản lên',`uploadProof('${sid(id)}')`), mk('📋','Dán ảnh đã copy (Zalo, chụp màn hình)',`pasteProof('${sid(id)}')`));
+  return it;
+}
+function openProofMenu(id){
+  const p=proposals.find(x=>x.id===id); if(!p) return;
+  const mk=(icon,label,fn)=>`<button class="card-menu-item" onclick="closeCardMenu();${fn}">${icon} ${label}</button>`;
+  document.getElementById('card-menu-items').innerHTML=_proofMenuItems(p, mk).join('') || '<div style="padding:12px;color:var(--text-sub);font-size:13px">Chưa có ảnh</div>';
+  document.getElementById('card-menu-title').textContent='Ảnh chuyển khoản · '+(p.desc||'');
+  document.getElementById('card-menu-overlay').style.display='flex';
 }
 function renderBtnShare(p){
   const proofImages = Array.isArray(p.proofImages) ? p.proofImages : (p.proofB64 ? [p.proofB64] : []);
