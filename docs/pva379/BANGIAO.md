@@ -55,6 +55,14 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v51 (D 28/11/2026 "tất cả các lệnh sửa, xoá bỏ yêu cầu Dũng duyệt đi, chỉ cần Hiền duyệt là được") — THAY quyết định v43
+- Hiền như Dũng (`_isApprover()`): xoá THẲNG phiếu / P.KH / ứng lương / công trình / đề xuất vật tư / nhân viên / khoản sổ quỹ / ảnh / dòng sổ tạm ứng đã xác nhận; DUYỆT hoặc TỪ CHỐI đề nghị xoá của người khác (`delReqs`, `deleteReq` sổ quỹ). Đề nghị mới báo cả `dung` + `hien`.
+- Người khác (thủ quỹ, kế toán, nhân viên, chủ phiếu) vẫn chỉ GỬI đề nghị xoá. Đề nghị SỬA khoản sổ quỹ (`editReq`) đã do Hiền / Dũng duyệt từ v19/v27, không đổi.
+- GIỮ chỉ Dũng (lớp đỡ cuối, D chưa yêu cầu đổi): khôi phục / xoá hẳn khỏi thùng rác; cấp vai, sửa danh sách tài khoản ngân hàng, danh sách người đề xuất; xoá sạch nhóm chat.
+- Luật: xoá `proposals`, `khProposals`, `plans`, `employees`, `cashflow` thêm `hien`; `delReqs` Hiền gỡ được; `trash` Hiền bỏ vào được (lấy ra vẫn chỉ Dũng).
+- Vật tư luân chuyển (`pva379/assets`, v69) vẫn ghi "Dũng duyệt" nhưng nhánh này KHÔNG có luật → mọi ghi đều bị máy chủ chặn từ trước (lỗi có sẵn, chưa sửa).
+- Thử: bộ thử luật 189/189; `smoke27.js` (Hiền duyệt / từ chối đề nghị, xoá thẳng, không khôi phục được, Dũng khôi phục được); hồi quy smoke7, 12, 14, 20–26.
+
 ## v50 (D 28/11/2026 "làm sao cho an toàn nhất") — gia cố bảo mật đợt 1
 - **Mã**: hàm `ejs()` (đặt cạnh `sid()`) dùng cho MỌI dữ liệu ghép vào chuỗi JS trong `onclick="…('…')"` — `esc()` không đủ ở ngữ cảnh đó. Quy ước từ nay: trong thuộc tính `on*` chỉ dùng `ejs()` (chuỗi bất kỳ) hoặc `sid()` (mã phiếu); `esc()` chỉ cho phần chữ hiện ra. `monthLabel()` và các ô chọn tháng đã lọc. Tin chat: khoá thật luôn thắng ô `_k` trong dữ liệu.
 - **Luật** (`database.rules.json`): `pva379/cashflow/$id` chỉ thủ quỹ / Hiền / Dũng ghi (nhân viên vẫn đọc cho Báo cáo → Công trình); `transfers/$i/loanId|src` của lần chuyển đã có chỉ 3 vai đó đổi (cả `khProposals`); `trash` chỉ Dũng bỏ vào (từ v43 chỉ Dũng xoá); `proposals/$id/month` phải dạng `2026-11` (cả `duyetchi`); `pva379/online/$uid` chỉ người đã duyệt ghi.
