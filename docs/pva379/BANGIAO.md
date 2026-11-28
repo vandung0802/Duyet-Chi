@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v54 (D 28/11/2026 "sổ quỹ: bỏ phần nhập số thực, hiện tài khoản và số dư, bấm vào tài khoản sổ ra chi tiết phía dưới" + "mục ghi chuyển tiền giữa các tài khoản đổi lên trên cùng")
+- Cân đối → Sổ quỹ, khung số dư (`renderCashBook` → `acctBox`): mỗi tài khoản 1 dòng (tên + số dư sổ tính ra), BỎ ô "Số dư ngân hàng thật" + nút Lưu + dòng khớp / lệch. Bấm dòng → `toggleBookAcct(a)` xổ `_bookAcctDetail(a)` ngay bên dưới (giao dịch của riêng tài khoản, mới nhất trước, có số dư chạy, 40 dòng + "Xem thêm"); bấm lại thu gọn; mở tài khoản khác thì tài khoản cũ thu lại.
+- Nút "🔁 Ghi chuyển tiền giữa các tài khoản" chuyển lên TRÊN CÙNG khung số dư.
+- Dữ liệu `pva379/bankBalance` + hàm `saveBankBalance` để nguyên (không còn nút gọi), không xoá gì. Danh sách sổ quỹ chung (có ô lọc) bên dưới giữ nguyên.
+- Thử: `smoke30.js`; hồi quy smoke12, 24, 26, 28, 29.
+
 ## v53 (D 28/11/2026 "cho tất cả mọi người đều nhìn thấy các phiếu đề xuất của cả công ty, không có quyền sửa chữa can thiệp gì vào phiếu của người khác, xem được toàn bộ báo cáo") — THAY quy tắc xem v10 / v14
 - `_canSeeP()` luôn đúng: ai đã được duyệt cũng thấy mọi phiếu chi, ứng lương, P.KH, sổ tạm ứng của cả công ty. Sửa / xoá / duyệt / chuyển KHÔNG đổi: vẫn theo `_canEditDelete`, `_canOpenEdit`, nút D / H / T (nhân viên mở phiếu người khác không có nút Sửa / Xoá).
 - Báo cáo: tab Công trình có dòng TỔNG và xuất Excel "Tất cả công trình" cho mọi người. Các tab Danh sách / Đã chuyển / Chưa chuyển / Từ chối / Người nhận / Tóm tắt đọc qua `_canSeeP` nên tự đủ.
