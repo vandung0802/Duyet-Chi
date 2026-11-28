@@ -2015,7 +2015,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261127-v49';
+const APP_VERSION = '20261128-v50';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -2884,7 +2884,7 @@ function trackOnline(uid, name, role){
   const ROLE_LABEL = {dung:'Dũng',hien:'Hiền',thuquy:'Thủ quỹ',vattu:'Vật tư',ketoan:'Kế toán',other:'Khác'};
   const displayName = (name && name !== 'undefined') ? name : (ROLE_LABEL[role] || role || 'Ẩn danh');
   const since = Date.now();
-  ref.set({ name: displayName, role: role||'other', since });
+  ref.set({ name: displayName, role: role||'other', since }).catch(()=>{});   // 28/11: luật chỉ cho người đã duyệt ghi
   ref.onDisconnect().remove();
   trackOnline._timer = setInterval(()=>{ ref.update({ lastSeen: Date.now() }).catch(()=>{}); }, 60000);   // rà soát 22/11: giữ id để dọn khi đăng xuất
   listenOnlineUsers();
@@ -3869,7 +3869,7 @@ function initFirebaseSync(){
     _gcQuery = db.ref('pva379/groupChat').limitToLast(200);
     _gcQuery.on('value', snap=>{
       const raw = snap.val() || {};
-      groupChatMsgs = Object.keys(raw).map(k=>Object.assign({_k:k}, raw[k])).sort((a,b)=>(a.ts||0)-(b.ts||0));
+      groupChatMsgs = Object.keys(raw).map(k=>Object.assign({}, raw[k], {_k:k})).sort((a,b)=>(a.ts||0)-(b.ts||0));
       try{ updateChatBadge(); }catch(e){}
       const pg = document.getElementById('chat-page');
       if(pg && pg.style.display==='flex'){ try{ renderChatMsgs(); markGroupChatRead(); }catch(e){} }
@@ -3894,7 +3894,7 @@ function initFirebaseSync(){
     _khGcQuery = db.ref('pva379/khChat').limitToLast(200);
     _khGcQuery.on('value', snap=>{
       const raw = snap.val() || {};
-      khChatMsgs = Object.keys(raw).map(k=>Object.assign({_k:k}, raw[k])).sort((a,b)=>(a.ts||0)-(b.ts||0));
+      khChatMsgs = Object.keys(raw).map(k=>Object.assign({}, raw[k], {_k:k})).sort((a,b)=>(a.ts||0)-(b.ts||0));
       try{ updateChatBadge(); }catch(e){}
       const pg = document.getElementById('chat-page');
       if(pg && pg.style.display==='flex' && chatChannel==='kh'){ try{ renderChatMsgs(); markGroupChatRead(); }catch(e){} }
@@ -4069,6 +4069,9 @@ function esc(s){
 // (jumpToProposal('${id}')). Đây là ngữ cảnh KÉP (HTML + JS) mà esc() một mình KHÔNG chặn được —
 // kẻ xấu tạo phiếu với "khóa" chứa dấu nháy/thẻ HTML sẽ thoát ra chạy mã. id hợp lệ luôn là chuỗi số
 // (Date.now()), nên lọc về đúng [chữ-số-gạch] là AN TOÀN TUYỆT ĐỐI mà không mất dữ liệu thật.
+// Bảo mật 28/11: dữ liệu đặt trong chuỗi JS của onclick="…('…')" — esc() KHÔNG đủ (trình duyệt đổi &#39; lại thành dấu nháy trước khi chạy).
+// ejs() đổi mọi ký tự nguy hiểm thành \uXXXX: hàm nhận vẫn được đúng chuỗi gốc, nhưng không thoát ra khỏi chuỗi được.
+function ejs(s){ return String(s==null?'':s).replace(/[^A-Za-z0-9 _.,:;@\/+\-\u00C0-\u1EF9]/g, function(c){ return '\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4); }); }
 function sid(id){ return String(id==null?'':id).replace(/[^a-zA-Z0-9_-]/g,''); }
 // Chuyển đổi dữ liệu cũ (đơn vị triệu) sang đồng — chỉ chạy 1 lần
 function migrateAmountsToVND(){
@@ -4743,7 +4746,7 @@ function _buildCard(p){
     const _tagMe = !mine && _mentionsMe(m.text);   // v90
     return `<div style="max-width:88%;margin:4px 0;${mine?'margin-left:auto;':''}background:${_tagMe?'#fef9c3':mine?'#f1f5f9':'#eff6ff'};${_tagMe?'border:1px solid #facc15;':''}border-radius:${mine?'10px 10px 2px 10px':'10px 10px 10px 2px'};padding:5px 9px">
       <div style="font-size:9.5px;font-weight:700;color:${_chClr(m.role)}">${esc(m.by||'')} · ${fmtFull(m.ts)}${_tagMe?' · <span style="color:#b45309">📣 nhắc tên bạn</span>':''}</div>
-      ${m.img?`<img src="${esc(thumbSrc(m.img))}" loading="lazy" decoding="async" onclick="event.stopPropagation();openCardChatImg('${esc(m.img).replace(/'/g,'&#39;')}')" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin:3px 0;cursor:zoom-in;background:#e2e8f0">`:''}
+      ${m.img?`<img src="${esc(thumbSrc(m.img))}" loading="lazy" decoding="async" onclick="event.stopPropagation();openCardChatImg('${ejs(m.img)}')" style="max-width:180px;max-height:180px;border-radius:8px;display:block;margin:3px 0;cursor:zoom-in;background:#e2e8f0">`:''}
       ${(m.img && (m.text||'')==='📷') ? '' : `<div style="font-size:12.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_cardHighlightTags(esc(m.text||''))}</div>`}</div>`;
   }).join('');
   const _chInput = `<div style="display:flex;gap:5px;margin-top:5px">
@@ -5838,8 +5841,8 @@ function _settleHtml(p){   // trên thẻ phiếu tạm ứng
   return `<div class="proposal-note" style="background:#fff7ed;border-left:3px solid #f59e0b;white-space:normal;line-height:1.35">
     <div style="font-size:12px">👛 Sổ tạm ứng <b>${esc(who)}</b>${(p.advPosition||advPosOf(who))?` <span style="font-size:10.5px;color:var(--text-sub)">— ${esc(p.advPosition||advPosOf(who))}</span>`:''}${p.advPerson&&p.advPerson!==p.person?` <span style="font-size:10.5px;color:var(--text-sub)">(đề xuất hộ: ${esc(p.person||'')})</span>`:''}: ${advBalHtml(o.bal, o)}<div style="font-size:10.5px;color:var(--text-sub)">Tổng ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}</div></div>
     <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">
-      ${(target && _settleCan(target)) ? `<button onclick="openTamUngModal('${esc(who).replace(/'/g,'&#39;')}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
-      <button onclick="showPage('cash', document.querySelector('.nav-item')); setCashTab('adv', document.querySelector('#page-cash .report-subtab[data-tab=\\'adv\\']')); _advOpen='${esc(who).replace(/'/g,'&#39;')}'; renderAdvLedger();" style="padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#b45309;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📖 Xem sổ</button>
+      ${(target && _settleCan(target)) ? `<button onclick="openTamUngModal('${ejs(who)}')" style="padding:5px 12px;font-size:12px;font-weight:700;background:#f59e0b;color:#fff;border:none;border-radius:8px;cursor:pointer">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
+      <button onclick="showPage('cash', document.querySelector('.nav-item')); setCashTab('adv', document.querySelector('#page-cash .report-subtab[data-tab=\\'adv\\']')); _advOpen='${ejs(who)}'; renderAdvLedger();" style="padding:5px 12px;font-size:12px;font-weight:700;background:#fff;color:#b45309;border:1px solid #fed7aa;border-radius:8px;cursor:pointer">📖 Xem sổ</button>
     </div></div>`;
 }
 let _advOpen = '';
@@ -5892,16 +5895,16 @@ function renderAdvLedger(){
         </div>${detail}</div>`;
     }).join('');
     return `<div class="card"><div class="card-body" style="padding:11px 13px">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;cursor:pointer" onclick="_advOpen=_advOpen==='${esc(n).replace(/'/g,'&#39;')}'?'':'${esc(n).replace(/'/g,'&#39;')}';renderAdvLedger()">
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;cursor:pointer" onclick="_advOpen=_advOpen==='${ejs(n)}'?'':'${ejs(n)}';renderAdvLedger()">
         <div style="min-width:0;flex:1"><div style="font-size:14px;font-weight:700">👛 ${esc(n)}${advPosOf(n)?` <span style="font-size:11px;font-weight:600;color:var(--text-sub)">— ${esc(advPosOf(n))}</span>`:''}</div><div style="font-size:10.5px;color:var(--text-sub)">${(()=>{ const bs=Object.keys(o.by||{}).filter(b=>b!==n); return bs.length?'đề xuất hộ: '+esc(bs.join(', '))+' · ':''; })()}${o.phieu} phiếu · ứng ${fmtShortMoney(o.tr)} · chi đã duyệt ${fmtShortMoney(o.chi)}${o.ret?' · nộp lại '+fmtShortMoney(o.ret):''}${o.pend>0?' · <b style="color:#b45309">chờ duyệt '+fmtShortMoney(o.pend)+'</b>':''}${o.rejN?' · <span style="color:#b91c1c">'+o.rejN+' khoản bị từ chối</span>':''}</div></div>
         <div style="text-align:right;font-size:14px">${advBalHtml(o.bal, o)}<div style="font-size:10px;color:var(--text-sub)">${open?'▲ thu gọn':'▼ xem sổ'}</div></div>
       </div>
       ${open ? `<div style="margin-top:6px">${rows||'<div style="font-size:12px;color:var(--text-sub)">Chưa có dòng nào</div>'}</div>` : ''}
       <div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
-        ${o.bal < -0.5 ? `<button onclick="advMakeTopUp('${esc(n).replace(/'/g,'&#39;')}', ${Math.round(-o.bal)})" style="${_CASH_BTN}background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">➕ Lập phiếu chi bù ${fmtShortMoney(-o.bal)}</button>` : ''}
-        ${(o.pendChi>0 && currentRole==='hien') ? `<button onclick="advApproveAll('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ H duyệt hết khoản chi chờ (${fmtShortMoney(o.pendChi)})</button>` : ''}
-        ${(currentRole==='dung' && o.entries.some(e=>e.kind==='chi'&&!e.okD&&!_advDSelf(proposals.find(x=>x.id===e.pid)))) ? `<button onclick="advApproveAll('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#1d4ed8;color:#fff;border:none">✅ D duyệt hết khoản chi chờ</button>` : ''}
-        ${can ? `<button onclick="openTamUngModal('${esc(n).replace(/'/g,'&#39;')}')" style="${_CASH_BTN}background:#f59e0b;color:#fff;border:none">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
+        ${o.bal < -0.5 ? `<button onclick="advMakeTopUp('${ejs(n)}', ${Math.round(-o.bal)})" style="${_CASH_BTN}background:#fef2f2;color:#b91c1c;border:1px solid #fecaca">➕ Lập phiếu chi bù ${fmtShortMoney(-o.bal)}</button>` : ''}
+        ${(o.pendChi>0 && currentRole==='hien') ? `<button onclick="advApproveAll('${ejs(n)}')" style="${_CASH_BTN}background:#047857;color:#fff;border:none">✅ H duyệt hết khoản chi chờ (${fmtShortMoney(o.pendChi)})</button>` : ''}
+        ${(currentRole==='dung' && o.entries.some(e=>e.kind==='chi'&&!e.okD&&!_advDSelf(proposals.find(x=>x.id===e.pid)))) ? `<button onclick="advApproveAll('${ejs(n)}')" style="${_CASH_BTN}background:#1d4ed8;color:#fff;border:none">✅ D duyệt hết khoản chi chờ</button>` : ''}
+        ${can ? `<button onclick="openTamUngModal('${ejs(n)}')" style="${_CASH_BTN}background:#f59e0b;color:#fff;border:none">🧾 Kê khoản đã chi / nộp lại</button>` : ''}
       </div>
     </div></div>`; }).join('');
 }
@@ -8405,6 +8408,8 @@ function renderTrash(){
 async function restoreTrash(kind, id){
   if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng khôi phục được'); return; }
   const t = trashItems.find(x=>x.kind===kind && x.id===id), K = TRASH_KIND[kind]; if(!t || !K) return;
+  // Bảo mật 28/11: mục trong thùng rác không do chính tài khoản Dũng bỏ vào thì có thể không phải bản gốc (trước 28/11 ai đã duyệt cũng ghi được vào thùng rác)
+  if(t.deletedBy && currentUser && t.deletedBy !== currentUser.uid && !confirm('⚠️ CẨN THẬN\n\nMục này KHÔNG do tài khoản của anh bỏ vào thùng rác (người ghi: '+(t.deletedByName||'?')+').\nNếu anh không nhớ đã cho xoá mục này thì ĐỪNG khôi phục — nó có thể là bản ghi giả, khôi phục sẽ đưa cả chữ duyệt / lần chuyển tiền ghi trong đó vào sổ.\n\nVẫn khôi phục?')) return;
   if(!confirm('Khôi phục "'+_trashTitle(t)+'"?')) return;
   try{
     const rec = Object.assign({}, t.rec||{}); delete rec.deleteReq;   // v62: đề nghị xoá cũ không đi theo
@@ -8972,7 +8977,7 @@ function _fillRepMonths(){
   (typeof cashflow!=='undefined'?cashflow:[]).forEach(r=>add(String(r.date||'').slice(0,7)));
   const now = new Date(); for(let i=0;i<12;i++){ const d=new Date(now.getFullYear(), now.getMonth()-i, 1); add(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')); }
   const list = Object.keys(set).sort().reverse();
-  sel.innerHTML = '<option value="">Tất cả (tổng hợp)</option>' + list.map(m=>`<option value="${m}">Tháng ${m.slice(5)}/${m.slice(0,4)}</option>`).join('');   // v70: "Tất cả" = bảng tổng hợp; chọn tháng = Excel báo cáo tháng
+  sel.innerHTML = '<option value="">Tất cả (tổng hợp)</option>' + list.map(m=>`<option value="${esc(m)}">Tháng ${esc(m.slice(5))}/${esc(m.slice(0,4))}</option>`).join('');   // v70: "Tất cả" = bảng tổng hợp; chọn tháng = Excel báo cáo tháng
   sel.value = (cur && set[cur]) ? cur : '';
 }
 function downloadExcelAuto(){   // v70: 1 nút Tải Excel — theo ô chọn: Tất cả → bảng tổng hợp; 1 tháng → Excel báo cáo tháng
@@ -10690,7 +10695,7 @@ function _cardTagHint(inp){
   const names=(q===null)?[]:_mentionNames().filter(n=>!q||_mnNorm(n).indexOf(q)>=0).sort((a,b)=>a.localeCompare(b,'vi'));
   if(!names.length){ if(row) row.remove(); return; }
   if(!row){ row=document.createElement('div'); row.id='chat-tagrow-'+id; row.style.cssText='margin-top:4px;white-space:nowrap;overflow-x:auto;padding-bottom:2px'; host.parentNode.insertBefore(row, host.nextSibling); }
-  row.innerHTML=names.map(n=>`<button type="button" onpointerdown="event.preventDefault()" onmousedown="event.preventDefault()" onclick="_cardTagPick('${id}','${esc(n).replace(/'/g,'&#39;')}')" style="display:inline-block;margin-right:5px;padding:5px 11px;font-size:12px;font-weight:700;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
+  row.innerHTML=names.map(n=>`<button type="button" onpointerdown="event.preventDefault()" onmousedown="event.preventDefault()" onclick="_cardTagPick('${sid(id)}','${ejs(n)}')" style="display:inline-block;margin-right:5px;padding:5px 11px;font-size:12px;font-weight:700;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
 }
 function _cardTagPick(id, name){
   const inp=document.getElementById('chat-inp-'+id); if(!inp) return;
@@ -10862,18 +10867,18 @@ function renderChatMsgs(){
     const body=(m.text&&m.text!=='📋')?`<div style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_chatHighlightTags(esc(m.text))}</div>`:'';
     // v113: nút thu hồi/xóa — D xóa được mọi tin, người khác chỉ tin của mình (tin vừa gửi chờ đồng bộ xong mới xóa được)
     const canDel = m._k && (currentRole==='dung' || mine);
-    const delBtn = canDel ? `<span onclick="event.stopPropagation();deleteChatMsg('${esc(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
+    const delBtn = canDel ? `<span onclick="event.stopPropagation();deleteChatMsg('${ejs(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
     // v116: khung TRÍCH DẪN khi tin là trả lời tin khác — bấm vào cuộn tới tin gốc
-    const reBox = m.re ? `<div onclick="event.stopPropagation();scrollToChatMsg('${esc((m.re.k||''))}')" style="border-left:3px solid var(--blue);background:${mine?'#e2eefc':'#f1f5f9'};border-radius:6px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer"><b style="color:var(--blue-dark)">${esc(m.re.by||'')}</b>: ${esc(m.re.text||'')}</div>` : '';
+    const reBox = m.re ? `<div onclick="event.stopPropagation();scrollToChatMsg('${ejs((m.re.k||''))}')" style="border-left:3px solid var(--blue);background:${mine?'#e2eefc':'#f1f5f9'};border-radius:6px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer"><b style="color:var(--blue-dark)">${esc(m.re.by||'')}</b>: ${esc(m.re.text||'')}</div>` : '';
     // v117: tin ĐANG GHIM → nền/viền ĐỎ + nhãn 📌 cho dễ nhận biết (user chốt)
     const isPinned = _cPin() && _cPin().k && _cPin().k===m._k;
     return sep+`<div id="chatmsg-${esc(m._k||'')}" style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
-      <div${m._k?` onclick="openChatMsgMenu('${esc(m._k)}')"`:''} style="background:${isPinned?'#fdecea':(mine?'#d2e7ff':'#fff')};border:1.5px solid ${isPinned?'#e24b4a':(mine?'#b6d7fb':'var(--gray-border)')};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
+      <div${m._k?` onclick="openChatMsgMenu('${ejs(m._k)}')"`:''} style="background:${isPinned?'#fdecea':(mine?'#d2e7ff':'#fff')};border:1.5px solid ${isPinned?'#e24b4a':(mine?'#b6d7fb':'var(--gray-border)')};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
         ${isPinned?`<div style="font-size:9.5px;font-weight:800;color:#dc0000">📌 Tin đã ghim</div>`:''}
         ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
         ${reBox}
         ${body}
-        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(thumbSrc(m.img))}" loading="lazy" decoding="async" onclick="event.stopPropagation();openChatImg('${esc(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
+        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(thumbSrc(m.img))}" loading="lazy" decoding="async" onclick="event.stopPropagation();openChatImg('${ejs(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
         ${m.ref?_chatRefChip(m.ref):''}
         <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${delBtn}${time}</div>
       </div>
@@ -11155,7 +11160,7 @@ function _chatTagHint(inp){
   if((inp.value||'').endsWith('@')){
     // v116: chip "@Tất cả" đứng đầu (tag cả nhóm, kiểu Zalo)
     row.innerHTML=`<button onclick="_chatTagPick('Tất cả')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:800;background:#fff7ed;color:#ea580c;border:1px solid #fdba74;border-radius:14px;cursor:pointer">@Tất cả</button>`
-      + _chatMemberNames().map(n=>`<button onclick="_chatTagPick('${esc(n)}')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
+      + _chatMemberNames().map(n=>`<button onclick="_chatTagPick('${ejs(n)}')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
     row.style.display='block';
   } else row.style.display='none';
 }
@@ -11181,7 +11186,7 @@ function showToast(msg){
 let _lastEmpIds = new Set(employees.map(e=>e.id));
 
 function monthKeyNow(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-function monthLabel(mk){ if(!mk) return '—'; const p=mk.split('-'); return 'Tháng '+p[1]+'/'+p[0]; }
+function monthLabel(mk){ if(!mk) return '—'; const p=String(mk).split('-'); return esc('Tháng '+p[1]+'/'+p[0]); }   // bảo mật 28/11: lọc ký tự (tháng là dữ liệu từ máy chủ)
 function ensureSalaryMonth(){ if(!salaryMonth) salaryMonth = monthKeyNow(); }
 function gIcon(g){ return g==='Văn phòng' ? '🏢' : '🏗'; }
 function salaryGroupOptions(){ return '<option value="Văn phòng">🏢 Văn phòng</option>'+sites.map(s=>`<option value="${esc(s)}">🏗 ${esc(s)}</option>`).join(''); }
@@ -11386,7 +11391,7 @@ function renderEmployees(){
         <div style="font-size:14px;font-weight:700">${esc(e.name)}${e.position?` <span style="font-size:11px;font-weight:600;color:var(--blue)">· ${esc(e.position)}</span>`:''}</div>
         ${showGroup?`<div style="font-size:11px;color:var(--text-sub);margin-top:1px">${gIcon(e.group)} ${esc(e.group||'')}</div>`:''}
         ${e.note?`<div style="font-size:11px;color:#c2410c;margin-top:1px">📝 ${esc(e.note)}</div>`:''}
-        <div onclick="salNameStatsJump('${esc(e.name||'')}')" style="font-size:11px;margin-top:2px;cursor:pointer;color:${a?'#16a34a':'var(--text-sub)'};font-weight:${a?'700':'500'}">💵 Đã ứng ${_yr}: ${a?fmtTr(a):'—'} <span style="color:var(--blue)">· xem lịch sử ›</span></div>
+        <div onclick="salNameStatsJump('${ejs(e.name||'')}')" style="font-size:11px;margin-top:2px;cursor:pointer;color:${a?'#16a34a':'var(--text-sub)'};font-weight:${a?'700':'500'}">💵 Đã ứng ${_yr}: ${a?fmtTr(a):'—'} <span style="color:var(--blue)">· xem lịch sử ›</span></div>
       </div>
       <button onclick="openEmpModal('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button>
       <button onclick="deleteEmp('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>
@@ -11845,7 +11850,7 @@ function renderSalaryAdvances(){
     if(prevMonths.length){
       const pm=prevMonths[prevMonths.length-1];
       const n=proposals.filter(p=>p.kind==='salary'&&p.month===pm&&_canSeeP(p)).length;
-      hint=`<div style="margin-top:14px"><button onclick="salaryMonth='${esc(pm)}';renderSalaryAdvances()" style="padding:10px 16px;font-size:13px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:10px;cursor:pointer">‹ Xem ${esc(monthLabel(pm))} (${n} khoản)</button></div>`;
+      hint=`<div style="margin-top:14px"><button onclick="salaryMonth='${ejs(pm)}';renderSalaryAdvances()" style="padding:10px 16px;font-size:13px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:10px;cursor:pointer">‹ Xem ${esc(monthLabel(pm))} (${n} khoản)</button></div>`;
     }
     list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Tháng mới chưa có khoản ứng nào<br><small>Nhấn "➕ Đề xuất ứng lương" để tạo</small>'+hint+'</div>';
     return;
@@ -11971,7 +11976,7 @@ function renderSalaryStats(){
   const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
   if(per){
     const cur=per.value;
-    per.innerHTML = years.map(y=>`<option value="Y-${y}">Cả năm ${y}</option>`).join('') + months.map(m=>`<option value="M-${m}">${monthLabel(m)}</option>`).join('');
+    per.innerHTML = years.map(y=>`<option value="Y-${esc(y)}">Cả năm ${esc(y)}</option>`).join('') + months.map(m=>`<option value="M-${esc(m)}">${monthLabel(m)}</option>`).join('');
     if(cur && Array.from(per.options).some(o=>o.value===cur)) per.value=cur;
     else if(per.options.length) per.value=per.options[0].value;
   }
@@ -12088,7 +12093,7 @@ function renderSalaryStatsByName(){
   const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
   if(per){
     const cur=per.value;
-    per.innerHTML = years.map(y=>`<option value="Y-${y}">Cả năm ${y}</option>`).join('') + months.map(m=>`<option value="M-${m}">${monthLabel(m)}</option>`).join('');
+    per.innerHTML = years.map(y=>`<option value="Y-${esc(y)}">Cả năm ${esc(y)}</option>`).join('') + months.map(m=>`<option value="M-${esc(m)}">${monthLabel(m)}</option>`).join('');
     if(cur && Array.from(per.options).some(o=>o.value===cur)) per.value=cur;
     else if(per.options.length) per.value=per.options[0].value;
   }
@@ -12120,7 +12125,7 @@ function renderSalaryStatsByName(){
       <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Bấm vào một Ô để xem danh sách · Bấm vào một người → bung bảng ứng theo TỪNG THÁNG</div>
     </div></div>
     <div class="card"><div class="card-body" style="padding:2px 0">
-      ${ekeys.map((k,i)=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);const open=_snExpandName && _normName(e.name||'')===_snExpandName;return `<div class="sal-name-row" onclick="salNameExpand('${esc(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer;${open?'background:#eff6ff':''}">
+      ${ekeys.map((k,i)=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);const open=_snExpandName && _normName(e.name||'')===_snExpandName;return `<div class="sal-name-row" onclick="salNameExpand('${ejs(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer;${open?'background:#eff6ff':''}">
         <span style="min-width:0"><span style="font-weight:700">${open?'▾ ':'▸ '}${esc(e.name||'')}</span>${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''}<div style="font-size:10px;color:var(--text-sub)">${gIcon(e.group)} ${esc(e.group||'')} · ${e.soKhoan} khoản</div></span>
         <span style="text-align:right;flex-shrink:0"><div style="font-weight:700">${fmtVND(e.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(e.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span>
       </div>${open?_snMonthTable(e.name||''):''}`}).join('')}
@@ -12141,7 +12146,7 @@ function _snMonthTable(name){
   const months=Object.keys(byM).sort();
   let tdx=0,tdy=0,tck=0;
   const rows=months.map(m=>{ const r=byM[m]; tdx+=r.dx; tdy+=r.duyet; tck+=r.ck; const con=Math.max(0,r.duyet-r.ck);
-    return `<tr onclick="event.stopPropagation();salMonthJump('${esc(m)}','${esc(name)}')" style="cursor:pointer">
+    return `<tr onclick="event.stopPropagation();salMonthJump('${ejs(m)}','${ejs(name)}')" style="cursor:pointer">
       <td style="padding:6px 8px;font-weight:700;white-space:nowrap">${esc(monthLabel(m))}<div style="font-size:10px;color:var(--text-sub);font-weight:500">${r.n} khoản ›</div></td>
       <td style="padding:6px 8px;text-align:right">${fmtTr(r.dx)}</td>
       <td style="padding:6px 8px;text-align:right">${fmtTr(r.duyet)}</td>
@@ -12653,7 +12658,7 @@ function renderCashSummary(){
   const cashBox = (one || !cashKs.length) ? '' : `<div style="background:linear-gradient(135deg,#065f46,#059669);color:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)">
     <div style="font-size:12px;opacity:.9;font-weight:600">💵 TIỀN MẶT ĐANG CÒN</div>
     <div style="font-size:24px;font-weight:900;letter-spacing:-.5px;margin:2px 0 ${cashKs.length>1?'8px':'0'};white-space:nowrap;${cashTot<0?'color:#fecaca':''}" title="${fmtVND(cashTot)}">${fmtVND(cashTot)}</div>
-    ${cashKs.length>1 ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${cashKs.map(k=>`<div onclick="setCashTab('book',document.querySelector('#page-cash .report-subtab[data-tab=\'book\']'));setBookAcct('${esc(k)}')" style="flex:1;min-width:90px;background:rgba(255,255,255,.16);border-radius:10px;padding:7px 9px;cursor:pointer"><div style="font-size:10.5px;opacity:.9">${esc(CASH_ACCT[k].name)}</div><div style="font-size:14px;font-weight:800;white-space:nowrap" title="${fmtVND(t.byAcct[k]||0)}">${fmtVND(t.byAcct[k]||0)}</div></div>`).join('')}</div>` : ''}
+    ${cashKs.length>1 ? `<div style="display:flex;gap:8px;flex-wrap:wrap">${cashKs.map(k=>`<div onclick="setCashTab('book',document.querySelector('#page-cash .report-subtab[data-tab=\'book\']'));setBookAcct('${ejs(k)}')" style="flex:1;min-width:90px;background:rgba(255,255,255,.16);border-radius:10px;padding:7px 9px;cursor:pointer"><div style="font-size:10.5px;opacity:.9">${esc(CASH_ACCT[k].name)}</div><div style="font-size:14px;font-weight:800;white-space:nowrap" title="${fmtVND(t.byAcct[k]||0)}">${fmtVND(t.byAcct[k]||0)}</div></div>`).join('')}</div>` : ''}
   </div>`;
   const hero = cashBox + `<div style="background:linear-gradient(135deg,#9a3412,#ea580c);color:#fff;border-radius:14px;padding:14px;margin-bottom:10px;box-shadow:var(--shadow)">
     <div style="font-size:12px;opacity:.9;font-weight:600">💰 CÒN ĐƯỢC TIÊU</div>
@@ -13257,7 +13262,7 @@ function renderReportPayee(){
   el.innerHTML=`<div style="font-size:11.5px;color:var(--text-sub);margin:10px 2px 6px">Gộp theo <b>đơn vị / người nhận tiền</b> ghi trên phiếu${pf||sf?' (đang lọc '+esc([pf,sf].filter(Boolean).join(' · '))+')':''}. Chạm một dòng để xem danh sách phiếu của đơn vị đó.</div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11.5px">
       <thead><tr style="background:var(--gray-light)"><th style="padding:6px 4px;text-align:left">Đơn vị / người nhận</th><th style="padding:6px 4px;text-align:right">Phiếu</th><th style="padding:6px 4px;text-align:right">Đề xuất</th><th style="padding:6px 4px;text-align:right">Đã duyệt</th><th style="padding:6px 4px;text-align:right">Đã chuyển</th></tr></thead>
-      <tbody>${ks.map(k=>{ const o=M[k]; return `<tr onclick="_payeeJump('${esc(k).replace(/'/g,'&#39;')}')" style="cursor:pointer"><td style="padding:6px 4px;font-weight:700;word-break:break-word;border-bottom:1px solid #f1f5f9">${k?esc(k):'<i style=\"color:var(--text-sub)\">(chưa ghi đơn vị nhận)</i>'}</td><td style="${R}">${o.n}</td><td style="${R}" title="${fmtVND(o.dx)}">${fmtShortMoney(o.dx)}</td><td style="${R};color:#1d4ed8" title="${fmtVND(o.duyet)}">${o.duyet?fmtShortMoney(o.duyet):'—'}</td><td style="${R};color:#b91c1c;font-weight:800" title="${fmtVND(o.chuyen)}">${o.chuyen?fmtShortMoney(o.chuyen):'—'}</td></tr>`; }).join('')}
+      <tbody>${ks.map(k=>{ const o=M[k]; return `<tr onclick="_payeeJump('${ejs(k)}')" style="cursor:pointer"><td style="padding:6px 4px;font-weight:700;word-break:break-word;border-bottom:1px solid #f1f5f9">${k?esc(k):'<i style=\"color:var(--text-sub)\">(chưa ghi đơn vị nhận)</i>'}</td><td style="${R}">${o.n}</td><td style="${R}" title="${fmtVND(o.dx)}">${fmtShortMoney(o.dx)}</td><td style="${R};color:#1d4ed8" title="${fmtVND(o.duyet)}">${o.duyet?fmtShortMoney(o.duyet):'—'}</td><td style="${R};color:#b91c1c;font-weight:800" title="${fmtVND(o.chuyen)}">${o.chuyen?fmtShortMoney(o.chuyen):'—'}</td></tr>`; }).join('')}
       <tr style="background:#f8fafc;font-weight:900"><td style="padding:6px 4px">TỔNG</td><td style="${R}">${tot.n}</td><td style="${R}">${fmtShortMoney(tot.dx)}</td><td style="${R}">${fmtShortMoney(tot.duyet)}</td><td style="${R}">${fmtShortMoney(tot.chuyen)}</td></tr></tbody>
     </table></div>
     <div style="font-size:10px;color:var(--text-sub);margin:4px 2px 0">Chỉ tính phiếu chi (không gồm ứng lương, P.KH, chi riêng). Số rút gọn, chạm ô xem số đầy đủ.${none?' · '+none+' phiếu chưa ghi đơn vị nhận — sửa phiếu để bổ sung.':''}</div>`;

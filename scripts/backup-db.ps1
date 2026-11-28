@@ -21,7 +21,9 @@ $viec = @(
   @{ ten = 'backup-giabinh'; proj = 'so-quy-gia-binh'; nhanh = '/duyetchi'; chinh = $false },
   @{ ten = 'backup-hopdong'; proj = 'duyetchi-pva379'; nhanh = '/hopdong';  chinh = $false },
   @{ ten = 'backup-congno';  proj = 'duyetchi-pva379'; nhanh = '/congNo';   chinh = $false },
-  @{ ten = 'backup-thietbi'; proj = 'duyetchi-pva379'; nhanh = '/thietbi';  chinh = $false }
+  @{ ten = 'backup-thietbi'; proj = 'duyetchi-pva379'; nhanh = '/thietbi';  chinh = $false },
+  # 28/11/2026: them /pva379 - so chinh cua cong ty tu 27/11, truoc do CHUA duoc sao luu.
+  @{ ten = 'backup-pva379';  proj = 'duyetchi-pva379'; nhanh = '/pva379';   chinh = $false }
 )
 
 $hongChinh = $false

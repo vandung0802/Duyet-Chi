@@ -1438,7 +1438,7 @@ const firebaseConfig = {
   messagingSenderId: "366275914302",
   appId: "1:366275914302:web:c9d7aefd880fa0985c7f6f"
 };
-const APP_VERSION = '20261118-v188';
+const APP_VERSION = '20261128-v189';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'Duyệt Chi ' + VER_LABEL; })();
@@ -3107,7 +3107,7 @@ function initFirebaseSync(){
     _gcQuery = db.ref('duyetchi/groupChat').limitToLast(200);
     _gcQuery.on('value', snap=>{
       const raw = snap.val() || {};
-      groupChatMsgs = Object.keys(raw).map(k=>Object.assign({_k:k}, raw[k])).sort((a,b)=>(a.ts||0)-(b.ts||0));
+      groupChatMsgs = Object.keys(raw).map(k=>Object.assign({}, raw[k], {_k:k})).sort((a,b)=>(a.ts||0)-(b.ts||0));
       try{ updateChatBadge(); }catch(e){}
       const pg = document.getElementById('chat-page');
       if(pg && pg.style.display==='flex'){ try{ renderChatMsgs(); markGroupChatRead(); }catch(e){} }
@@ -3132,7 +3132,7 @@ function initFirebaseSync(){
     _khGcQuery = db.ref('duyetchi/khChat').limitToLast(200);
     _khGcQuery.on('value', snap=>{
       const raw = snap.val() || {};
-      khChatMsgs = Object.keys(raw).map(k=>Object.assign({_k:k}, raw[k])).sort((a,b)=>(a.ts||0)-(b.ts||0));
+      khChatMsgs = Object.keys(raw).map(k=>Object.assign({}, raw[k], {_k:k})).sort((a,b)=>(a.ts||0)-(b.ts||0));
       try{ updateChatBadge(); }catch(e){}
       const pg = document.getElementById('chat-page');
       if(pg && pg.style.display==='flex' && chatChannel==='kh'){ try{ renderChatMsgs(); markGroupChatRead(); }catch(e){} }
@@ -3305,6 +3305,9 @@ function esc(s){
 // (jumpToProposal('${id}')). Đây là ngữ cảnh KÉP (HTML + JS) mà esc() một mình KHÔNG chặn được —
 // kẻ xấu tạo phiếu với "khóa" chứa dấu nháy/thẻ HTML sẽ thoát ra chạy mã. id hợp lệ luôn là chuỗi số
 // (Date.now()), nên lọc về đúng [chữ-số-gạch] là AN TOÀN TUYỆT ĐỐI mà không mất dữ liệu thật.
+// Bảo mật 28/11: dữ liệu đặt trong chuỗi JS của onclick="…('…')" — esc() KHÔNG đủ (trình duyệt đổi &#39; lại thành dấu nháy trước khi chạy).
+// ejs() đổi mọi ký tự nguy hiểm thành \uXXXX: hàm nhận vẫn được đúng chuỗi gốc, nhưng không thoát ra khỏi chuỗi được.
+function ejs(s){ return String(s==null?'':s).replace(/[^A-Za-z0-9 _.,:;@\/+\-\u00C0-\u1EF9]/g, function(c){ return '\\u'+('0000'+c.charCodeAt(0).toString(16)).slice(-4); }); }
 function sid(id){ return String(id==null?'':id).replace(/[^a-zA-Z0-9_-]/g,''); }
 // Chuyển đổi dữ liệu cũ (đơn vị triệu) sang đồng — chỉ chạy 1 lần
 function migrateAmountsToVND(){
@@ -8002,18 +8005,18 @@ function renderChatMsgs(){
     const body=(m.text&&m.text!=='📋')?`<div style="font-size:13.5px;color:var(--text);white-space:pre-wrap;word-break:break-word">${_chatHighlightTags(esc(m.text))}</div>`:'';
     // v113: nút thu hồi/xóa — D xóa được mọi tin, người khác chỉ tin của mình (tin vừa gửi chờ đồng bộ xong mới xóa được)
     const canDel = m._k && (currentRole==='dung' || mine);
-    const delBtn = canDel ? `<span onclick="event.stopPropagation();deleteChatMsg('${esc(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
+    const delBtn = canDel ? `<span onclick="event.stopPropagation();deleteChatMsg('${ejs(m._k)}')" style="cursor:pointer;margin-right:6px;opacity:.55" title="Thu hồi / xóa tin">🗑</span>` : '';
     // v116: khung TRÍCH DẪN khi tin là trả lời tin khác — bấm vào cuộn tới tin gốc
-    const reBox = m.re ? `<div onclick="event.stopPropagation();scrollToChatMsg('${esc((m.re.k||''))}')" style="border-left:3px solid var(--blue);background:${mine?'#e2eefc':'#f1f5f9'};border-radius:6px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer"><b style="color:var(--blue-dark)">${esc(m.re.by||'')}</b>: ${esc(m.re.text||'')}</div>` : '';
+    const reBox = m.re ? `<div onclick="event.stopPropagation();scrollToChatMsg('${ejs((m.re.k||''))}')" style="border-left:3px solid var(--blue);background:${mine?'#e2eefc':'#f1f5f9'};border-radius:6px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:var(--text-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer"><b style="color:var(--blue-dark)">${esc(m.re.by||'')}</b>: ${esc(m.re.text||'')}</div>` : '';
     // v117: tin ĐANG GHIM → nền/viền ĐỎ + nhãn 📌 cho dễ nhận biết (user chốt)
     const isPinned = _cPin() && _cPin().k && _cPin().k===m._k;
     return sep+`<div id="chatmsg-${esc(m._k||'')}" style="max-width:86%;margin:3px 0;${mine?'margin-left:auto;':''}">
-      <div${m._k?` onclick="openChatMsgMenu('${esc(m._k)}')"`:''} style="background:${isPinned?'#fdecea':(mine?'#d2e7ff':'#fff')};border:1.5px solid ${isPinned?'#e24b4a':(mine?'#b6d7fb':'var(--gray-border)')};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
+      <div${m._k?` onclick="openChatMsgMenu('${ejs(m._k)}')"`:''} style="background:${isPinned?'#fdecea':(mine?'#d2e7ff':'#fff')};border:1.5px solid ${isPinned?'#e24b4a':(mine?'#b6d7fb':'var(--gray-border)')};border-radius:${mine?'12px 12px 3px 12px':'12px 12px 12px 3px'};padding:6px 10px;${m._k?'cursor:pointer':''}">
         ${isPinned?`<div style="font-size:9.5px;font-weight:800;color:#dc0000">📌 Tin đã ghim</div>`:''}
         ${mine?'':`<div style="font-size:10px;font-weight:700;color:${_chatRoleClr(m.role)}">${esc(m.by||'')}</div>`}
         ${reBox}
         ${body}
-        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(m.img)}" loading="lazy" decoding="async" onclick="event.stopPropagation();openChatImg('${esc(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
+        ${m.img?`<img class="chat-img-el" data-k="${esc(m._k||'')}" src="${esc(m.img)}" loading="lazy" decoding="async" onclick="event.stopPropagation();openChatImg('${ejs(m._k||'')}')" style="max-width:190px;max-height:190px;border-radius:8px;display:block;margin-top:3px;cursor:pointer" alt="Ảnh chat">`:''}
         ${m.ref?_chatRefChip(m.ref):''}
         <div style="font-size:9px;color:var(--text-sub);text-align:right;margin-top:1px">${delBtn}${time}</div>
       </div>
@@ -8284,7 +8287,7 @@ function _chatTagHint(inp){
   if((inp.value||'').endsWith('@')){
     // v116: chip "@Tất cả" đứng đầu (tag cả nhóm, kiểu Zalo)
     row.innerHTML=`<button onclick="_chatTagPick('Tất cả')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:800;background:#fff7ed;color:#ea580c;border:1px solid #fdba74;border-radius:14px;cursor:pointer">@Tất cả</button>`
-      + _chatMemberNames().map(n=>`<button onclick="_chatTagPick('${esc(n)}')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
+      + _chatMemberNames().map(n=>`<button onclick="_chatTagPick('${ejs(n)}')" style="display:inline-block;margin-right:5px;padding:4px 10px;font-size:12px;font-weight:600;background:#eff6ff;color:var(--blue-dark);border:1px solid #bfdbfe;border-radius:14px;cursor:pointer">@${esc(n)}</button>`).join('');
     row.style.display='block';
   } else row.style.display='none';
 }
@@ -8310,7 +8313,7 @@ function showToast(msg){
 let _lastEmpIds = new Set(employees.map(e=>e.id));
 
 function monthKeyNow(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
-function monthLabel(mk){ if(!mk) return '—'; const p=mk.split('-'); return 'Tháng '+p[1]+'/'+p[0]; }
+function monthLabel(mk){ if(!mk) return '—'; const p=String(mk).split('-'); return esc('Tháng '+p[1]+'/'+p[0]); }   // bảo mật 28/11: lọc ký tự (tháng là dữ liệu từ máy chủ)
 function ensureSalaryMonth(){ if(!salaryMonth) salaryMonth = monthKeyNow(); }
 function gIcon(g){ return g==='Văn phòng' ? '🏢' : '🏗'; }
 function salaryGroupOptions(){ return '<option value="Văn phòng">🏢 Văn phòng</option>'+sites.map(s=>`<option value="${esc(s)}">🏗 ${esc(s)}</option>`).join(''); }
@@ -8426,7 +8429,7 @@ function renderEmployees(){
         <div style="font-size:14px;font-weight:700">${esc(e.name)}${e.position?` <span style="font-size:11px;font-weight:600;color:var(--blue)">· ${esc(e.position)}</span>`:''}</div>
         ${showGroup?`<div style="font-size:11px;color:var(--text-sub);margin-top:1px">${gIcon(e.group)} ${esc(e.group||'')}</div>`:''}
         ${e.note?`<div style="font-size:11px;color:#c2410c;margin-top:1px">📝 ${esc(e.note)}</div>`:''}
-        <div onclick="salNameStatsJump('${esc(e.name||'')}')" style="font-size:11px;margin-top:2px;cursor:pointer;color:${a?'#16a34a':'var(--text-sub)'};font-weight:${a?'700':'500'}">💵 Đã ứng ${_yr}: ${a?fmtTr(a):'—'} <span style="color:var(--blue)">· xem lịch sử ›</span></div>
+        <div onclick="salNameStatsJump('${ejs(e.name||'')}')" style="font-size:11px;margin-top:2px;cursor:pointer;color:${a?'#16a34a':'var(--text-sub)'};font-weight:${a?'700':'500'}">💵 Đã ứng ${_yr}: ${a?fmtTr(a):'—'} <span style="color:var(--blue)">· xem lịch sử ›</span></div>
       </div>
       <button onclick="openEmpModal('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer">✏️</button>
       <button onclick="deleteEmp('${sid(e.id)}')" style="padding:6px 9px;font-size:12px;background:#fef2f2;color:var(--red);border:none;border-radius:8px;cursor:pointer">🗑</button>
@@ -8891,7 +8894,7 @@ function renderSalaryAdvances(){
     if(prevMonths.length){
       const pm=prevMonths[prevMonths.length-1];
       const n=proposals.filter(p=>p.kind==='salary'&&p.month===pm&&_canSeeP(p)).length;
-      hint=`<div style="margin-top:14px"><button onclick="salaryMonth='${esc(pm)}';renderSalaryAdvances()" style="padding:10px 16px;font-size:13px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:10px;cursor:pointer">‹ Xem ${esc(monthLabel(pm))} (${n} khoản)</button></div>`;
+      hint=`<div style="margin-top:14px"><button onclick="salaryMonth='${ejs(pm)}';renderSalaryAdvances()" style="padding:10px 16px;font-size:13px;font-weight:700;background:var(--blue-light);color:var(--blue-dark);border:1.5px solid var(--blue);border-radius:10px;cursor:pointer">‹ Xem ${esc(monthLabel(pm))} (${n} khoản)</button></div>`;
     }
     list.innerHTML='<div style="text-align:center;padding:40px 20px;color:var(--text-sub);font-size:13px">Tháng mới chưa có khoản ứng nào<br><small>Nhấn "➕ Đề xuất ứng lương" để tạo</small>'+hint+'</div>';
     return;
@@ -9017,7 +9020,7 @@ function renderSalaryStats(){
   const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
   if(per){
     const cur=per.value;
-    per.innerHTML = years.map(y=>`<option value="Y-${y}">Cả năm ${y}</option>`).join('') + months.map(m=>`<option value="M-${m}">${monthLabel(m)}</option>`).join('');
+    per.innerHTML = years.map(y=>`<option value="Y-${esc(y)}">Cả năm ${esc(y)}</option>`).join('') + months.map(m=>`<option value="M-${esc(m)}">${monthLabel(m)}</option>`).join('');
     if(cur && Array.from(per.options).some(o=>o.value===cur)) per.value=cur;
     else if(per.options.length) per.value=per.options[0].value;
   }
@@ -9134,7 +9137,7 @@ function renderSalaryStatsByName(){
   const years=Array.from(new Set(months.map(m=>m.split('-')[0]))).sort().reverse();
   if(per){
     const cur=per.value;
-    per.innerHTML = years.map(y=>`<option value="Y-${y}">Cả năm ${y}</option>`).join('') + months.map(m=>`<option value="M-${m}">${monthLabel(m)}</option>`).join('');
+    per.innerHTML = years.map(y=>`<option value="Y-${esc(y)}">Cả năm ${esc(y)}</option>`).join('') + months.map(m=>`<option value="M-${esc(m)}">${monthLabel(m)}</option>`).join('');
     if(cur && Array.from(per.options).some(o=>o.value===cur)) per.value=cur;
     else if(per.options.length) per.value=per.options[0].value;
   }
@@ -9166,7 +9169,7 @@ function renderSalaryStatsByName(){
       <div style="font-size:10px;color:var(--text-sub);text-align:center;margin-top:7px">💡 Bấm vào một Ô để xem danh sách · Bấm vào một người → bung bảng ứng theo TỪNG THÁNG</div>
     </div></div>
     <div class="card"><div class="card-body" style="padding:2px 0">
-      ${ekeys.map((k,i)=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);const open=_snExpandName && _normName(e.name||'')===_snExpandName;return `<div class="sal-name-row" onclick="salNameExpand('${esc(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer;${open?'background:#eff6ff':''}">
+      ${ekeys.map((k,i)=>{const e=byE[k];const con=Math.max(0,e.duyet-e.chuyen);const open=_snExpandName && _normName(e.name||'')===_snExpandName;return `<div class="sal-name-row" onclick="salNameExpand('${ejs(e.name||'')}')" style="display:flex;justify-content:space-between;align-items:center;padding:9px 14px;border-bottom:1px solid var(--gray-border);font-size:13px;cursor:pointer;${open?'background:#eff6ff':''}">
         <span style="min-width:0"><span style="font-weight:700">${open?'▾ ':'▸ '}${esc(e.name||'')}</span>${e.position?` <span style="font-size:11px;color:var(--blue)">· ${esc(e.position)}</span>`:''}<div style="font-size:10px;color:var(--text-sub)">${gIcon(e.group)} ${esc(e.group||'')} · ${e.soKhoan} khoản</div></span>
         <span style="text-align:right;flex-shrink:0"><div style="font-weight:700">${fmtVND(e.duyet)}</div><div style="font-size:10px"><span style="color:#16a34a">CK ${fmtTr(e.chuyen)}</span> · <span style="color:#d97706">còn ${fmtTr(con)}</span></div></span>
       </div>${open?_snMonthTable(e.name||''):''}`}).join('')}
@@ -9187,7 +9190,7 @@ function _snMonthTable(name){
   const months=Object.keys(byM).sort();
   let tdx=0,tdy=0,tck=0;
   const rows=months.map(m=>{ const r=byM[m]; tdx+=r.dx; tdy+=r.duyet; tck+=r.ck; const con=Math.max(0,r.duyet-r.ck);
-    return `<tr onclick="event.stopPropagation();salMonthJump('${esc(m)}','${esc(name)}')" style="cursor:pointer">
+    return `<tr onclick="event.stopPropagation();salMonthJump('${ejs(m)}','${ejs(name)}')" style="cursor:pointer">
       <td style="padding:6px 8px;font-weight:700;white-space:nowrap">${esc(monthLabel(m))}<div style="font-size:10px;color:var(--text-sub);font-weight:500">${r.n} khoản ›</div></td>
       <td style="padding:6px 8px;text-align:right">${fmtTr(r.dx)}</td>
       <td style="padding:6px 8px;text-align:right">${fmtTr(r.duyet)}</td>
