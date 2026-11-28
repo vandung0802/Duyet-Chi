@@ -2030,7 +2030,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v59';
+const APP_VERSION = '20261128-v60';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -8665,7 +8665,7 @@ function delPerson(i){ if(currentRole!=='dung'){ showToast('🔒 Chỉ Dũng s�
 //    Dữ liệu pva379/baoLanh/<id>; tiền KHÔNG ghi riêng: lúc có hiệu lực app tạo 1 khoản 'dep' (ký quỹ, holder = ngân hàng) + 1 khoản
 //    'bankpay' kind 'laiphi' (phí) trong sổ quỹ, lưu mã ở depId / feeId. Gia hạn: thêm khoản phí mới, ghi vào ext[]. Giải toả = "lấy ký quỹ về".
 let baoLanh = {};
-const BL_KIND = { duthau:'Dự thầu', thuchien:'Thực hiện HĐ', tamung:'Tạm ứng', baohanh:'Bảo hành', khac:'Khác' };
+const BL_KIND = { duthau:'Dự thầu', thuchien:'Thực hiện HĐ', tamung:'Tạm ứng', thanhtoan:'Thanh toán', baohanh:'Bảo hành', khac:'Khác' };   // v60: + Thanh toán
 const BL_ST = { pending:'⏳ Chờ Hiền duyệt', active:'✅ Đang hiệu lực', rejected:'❌ Bị từ chối', closed:'⚫ Đã đóng' };
 function _blList(){ return Object.keys(baoLanh||{}).map(k=>Object.assign({id:k}, baoLanh[k])); }
 function _blDays(exp){ if(!exp) return null; const t=new Date(ymdLocal()+'T00:00:00'), e=new Date(String(exp)+'T00:00:00'); if(isNaN(e)) return null; return Math.round((e-t)/86400000); }
@@ -8709,7 +8709,7 @@ function renderBaoLanh(){
       <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><div style="font-size:14px;font-weight:800;word-break:break-word">${esc(b.name||'')}</div><div style="font-size:11px;font-weight:700;white-space:nowrap">${BL_ST[b.status]||esc(b.status||'')}</div></div>
       <div style="font-size:12px;color:var(--text-sub);margin-top:2px">${esc(BL_KIND[b.kind]||'')}${b.site?' · '+esc(b.site):''} · 🏦 <b>${esc(b.bank||'')}</b></div>
       <div style="font-size:12.5px;margin-top:5px;line-height:1.55">
-        Phát hành ${_blDate(b.issueDate)||'—'} · Hết hạn <b style="color:${late?'#b91c1c':'inherit'}">${_blDate(b.expDate)}</b>${b.status==='active'&&d!==null?` <span style="color:${late?'#b91c1c':'var(--text-sub)'}">(${d<0?'quá '+(-d)+' ngày':d===0?'hôm nay':'còn '+d+' ngày'})</span>`:''}<br>
+        ${b.amount?`Số tiền bảo lãnh: <b>${fmtVND(b.amount)}</b><br>`:''}Phát hành ${_blDate(b.issueDate)||'—'} · Hết hạn <b style="color:${late?'#b91c1c':'inherit'}">${_blDate(b.expDate)}</b>${b.status==='active'&&d!==null?` <span style="color:${late?'#b91c1c':'var(--text-sub)'}">(${d<0?'quá '+(-d)+' ngày':d===0?'hôm nay':'còn '+d+' ngày'})</span>`:''}<br>
         Ký quỹ: <b>${b.depAmount?fmtVND(b.depAmount):'0 (tín chấp)'}</b>${b.depAmount&&!one&&b.depAcct&&CASH_ACCT[b.depAcct]?' từ '+esc(acctLabel(b.depAcct)):''}${b.status==='active'&&b.depAmount?' · còn treo '+fmtVND(left):''}<br>
         Phí: <b>${fmtVND(b.fee||0)}</b>${b.fee&&!one&&b.feeAcct&&CASH_ACCT[b.feeAcct]?' từ '+esc(acctLabel(b.feeAcct)):''}${ext.length?' · gia hạn '+ext.length+' lần (phí '+fmtVND(ext.reduce((a,x)=>a+(+x.fee||0),0))+')':''}
         ${b.note?`<br><span style="color:var(--text-sub)">${esc(b.note)}</span>`:''}
@@ -8736,7 +8736,10 @@ function openBlModal(id, approve){
     <div class="form-group" style="margin-top:8px"><label class="form-label">Tên bảo lãnh *</label><input id="bl-name" class="form-input" value="${esc(v('name'))}" placeholder="VD: BL thực hiện HĐ cầu xã ĐA"></div>
     <div style="display:flex;gap:6px"><div class="form-group" style="flex:1"><label class="form-label">Loại</label><select id="bl-kind" class="form-input form-select">${Object.keys(BL_KIND).map(k=>`<option value="${k}"${k===v('kind','thuchien')?' selected':''}>${BL_KIND[k]}</option>`).join('')}</select></div>
       <div class="form-group" style="flex:1"><label class="form-label">Công trình</label><select id="bl-site" class="form-input form-select">${sitesOpt}</select></div></div>
-    <div class="form-group"><label class="form-label">Ngân hàng phát hành *</label><input id="bl-bank" class="form-input" list="bl-bank-list" autocomplete="off" value="${esc(v('bank'))}" placeholder="Gõ hoặc chọn"><datalist id="bl-bank-list">${_bankNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>
+    <div class="form-group"><label class="form-label">Ngân hàng phát hành *</label>
+      <select id="bl-bank-sel" class="form-input form-select" onchange="_blBankUi()" style="margin:0"><option value="">— Chọn ngân hàng của công ty —</option>${_loanBankOpts()}</select>
+      <input id="bl-bank" class="form-input" autocomplete="off" placeholder="Gõ tên ngân hàng khác" style="display:none;margin-top:6px"></div>
+    <div class="form-group"><label class="form-label">Số tiền bảo lãnh</label><input id="bl-amount" class="form-input" type="text" inputmode="numeric" placeholder="VD: 2.500.000.000" value="${fmt(v('amount'))}" oninput="fmtAmountInput(this)"></div>
     <div style="display:flex;gap:6px"><div class="form-group" style="flex:1"><label class="form-label">Ngày phát hành</label><input id="bl-issue" type="date" class="form-input" value="${esc(v('issueDate', ymdLocal()))}"></div>
       <div class="form-group" style="flex:1"><label class="form-label">Ngày hết hạn *</label><input id="bl-exp" type="date" class="form-input" value="${esc(v('expDate'))}"></div></div>
     <div class="form-group"><label class="form-label">Ký quỹ <span style="font-weight:400;color:var(--text-sub)">(để trống = tín chấp)</span></label>
@@ -8746,24 +8749,46 @@ function openBlModal(id, approve){
       <input id="bl-fee" class="form-input" type="text" inputmode="numeric" placeholder="0" value="${fmt(v('fee'))}" oninput="fmtAmountInput(this)" ${lock?'disabled':''}>
       ${showAcct?`<div style="font-size:11px;color:var(--text-sub);margin:5px 0 3px">Trích từ tài khoản (vào mục Phí + lãi ngân hàng)</div>${acctSel('bl-feeacct')}`:''}</div>
     ${lock?'<div style="font-size:11.5px;color:#b45309;margin:-4px 0 8px">Bảo lãnh đã ghi sổ: muốn sửa tiền ký quỹ / phí thì sửa khoản tương ứng ở Cân đối.</div>':''}
+    <div class="form-group"><label class="form-label">Gia hạn</label>
+      ${(Array.isArray(v('ext',null))?v('ext'):[]).map((e,i)=>`<div style="font-size:12px;padding:6px 8px;background:#f8fafc;border-radius:8px;margin-bottom:4px">Lần ${i+1}: hiệu lực đến <b>${_blDate(e.to)}</b>${e.fee?' · phí '+fmtVND(e.fee):''}${e.byName?' · '+esc(e.byName):''}</div>`).join('')}
+      <div id="bl-ext"></div>
+      <button type="button" onclick="_blExtAdd()" style="margin-top:4px;padding:7px 12px;border:1.5px dashed var(--blue);background:#fff7ed;color:var(--blue);border-radius:9px;font-weight:800;font-size:13px;cursor:pointer">➕ Gia hạn</button>
+      <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Mỗi lần gia hạn: hiệu lực đến ngày nào + phí gia hạn (vào Phí + lãi ngân hàng). Ngày hết hạn của bảo lãnh tự lấy theo lần gia hạn cuối.</div></div>
     <div class="form-group"><label class="form-label">Ghi chú</label><input id="bl-note" class="form-input" value="${esc(v('note'))}" placeholder="Số bảo lãnh, chủ đầu tư…"></div>
     <button type="button" id="bl-save" onclick="saveBl(${b?`'${sid(id)}'`:'null'}, ${approve?'true':'false'})" style="width:100%;padding:11px;border:none;border-radius:10px;background:${approve?'#047857':'var(--blue)'};color:#fff;font-weight:800;font-size:14px;cursor:pointer">${approve?'✅ Duyệt & ghi sổ':_cashWriter()?'Lưu (ghi sổ ngay)':'Gửi — chờ Hiền duyệt'}</button>
   </div>`;
   document.body.appendChild(ov);
+  { const sel=document.getElementById('bl-bank-sel'), inp=document.getElementById('bl-bank'), bv=v('bank'); if(bv){ if([...sel.options].some(o=>o.value===bv)) sel.value=bv; else { sel.value='__khac'; inp.value=bv; } } _blBankUi(); }
   if(showAcct){ const d=document.getElementById('bl-depacct'), f=document.getElementById('bl-feeacct'); const dv=v('depAcct'), fv=v('feeAcct'); if(d) d.value = CASH_ACCT[dv] ? dv : _acctDefault(); if(f) f.value = CASH_ACCT[fv] ? fv : (d?d.value:_acctDefault()); if(lock){ if(d) d.disabled=true; if(f) f.disabled=true; } }
 }
+function _blBankUi(){ const s=document.getElementById('bl-bank-sel'), i=document.getElementById('bl-bank'); if(!s||!i) return; const k=s.value==='__khac'; i.style.display=k?'':'none'; if(k) try{ i.focus(); }catch(e){} }
+function _blBankVal(){ const s=document.getElementById('bl-bank-sel'), i=document.getElementById('bl-bank'); if(!s) return ''; return (s.value==='__khac' ? (i.value||'') : s.value).trim().slice(0,120); }
+function _blExtAdd(){
+  const box=document.getElementById('bl-ext'); if(!box) return;
+  const W=_cashWriter(), row=document.createElement('div'); row.className='bl-ext-row';
+  row.style.cssText='border:1px solid var(--gray-border);border-radius:9px;padding:7px;margin-bottom:6px';
+  row.innerHTML=`<div style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;font-weight:700;white-space:nowrap">Hiệu lực đến</span><input type="date" class="form-input bl-ext-to" style="margin:0;flex:1"><button type="button" onclick="this.closest('.bl-ext-row').remove()" style="border:none;background:#fef2f2;color:#b91c1c;border-radius:7px;padding:6px 9px;cursor:pointer">✕</button></div>
+    <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input bl-ext-fee" type="text" inputmode="numeric" placeholder="Phí gia hạn" oninput="fmtAmountInput(this)" style="margin:0;flex:1">${W?`<select class="form-input form-select bl-ext-acct" style="margin:0;flex:1">${_ACCT_OPTS}</select>`:''}</div>`;
+  box.appendChild(row);
+  const a=row.querySelector('.bl-ext-acct'); if(a){ const f=document.getElementById('bl-feeacct'); a.value = (f && CASH_ACCT[f.value]) ? f.value : _acctDefault(); }
+}
+function _blExtRead(){ return [...document.querySelectorAll('#bl-ext .bl-ext-row')].map(r=>({to:(r.querySelector('.bl-ext-to')||{}).value||'', fee:amtVal((r.querySelector('.bl-ext-fee')||{}).value), acct:(r.querySelector('.bl-ext-acct')||{}).value||''})); }
 async function saveBl(id, approve){
   if(_cashBusy()) return;
   const g=x=>document.getElementById(x), old = id ? (baoLanh||{})[id] : null;
   const rec = Object.assign({}, old||{});
   rec.name=(g('bl-name').value||'').trim().slice(0,200); rec.kind=g('bl-kind').value||'khac'; rec.site=(g('bl-site').value||'').slice(0,200);
-  rec.bank=(g('bl-bank').value||'').trim().slice(0,120); rec.issueDate=g('bl-issue').value||ymdLocal(); rec.expDate=g('bl-exp').value||''; rec.note=(g('bl-note').value||'').trim().slice(0,1000);
+  rec.bank=_blBankVal(); rec.amount=amtVal(g('bl-amount').value); rec.issueDate=g('bl-issue').value||ymdLocal(); rec.expDate=g('bl-exp').value||''; rec.note=(g('bl-note').value||'').trim().slice(0,1000);
   if(!rec.name){ showToast('⚠️ Nhập tên bảo lãnh'); return; }
-  if(!rec.bank){ showToast('⚠️ Chọn / gõ ngân hàng phát hành'); return; }
+  if(!rec.bank){ showToast('⚠️ Chọn ngân hàng phát hành (hoặc chọn "Ngân hàng khác" rồi gõ tên)'); return; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(rec.expDate)){ showToast('⚠️ Chọn ngày hết hạn'); return; }
   if(rec.expDate < rec.issueDate){ showToast('⚠️ Ngày hết hạn trước ngày phát hành'); return; }
   const lock = !!(old && old.status==='active');
   if(!lock){ rec.depAmount=amtVal(g('bl-dep').value); rec.fee=amtVal(g('bl-fee').value); }
+  // v60: các lần gia hạn thêm trong form (hiệu lực đến + phí) — xếp theo ngày, mỗi lần phải sau lần trước; ngày hết hạn = lần cuối
+  const newExt = _blExtRead().filter(e=>e.to || e.fee).sort((a,b)=>String(a.to).localeCompare(String(b.to)));
+  { let prev = rec.expDate;
+    for(const e of newExt){ if(!/^\d{4}-\d{2}-\d{2}$/.test(e.to)){ showToast('⚠️ Lần gia hạn: chọn ngày hiệu lực đến'); return; } if(e.to<=prev){ showToast('⚠️ Ngày gia hạn '+_blDate(e.to)+' phải sau '+_blDate(prev)); return; } if(e.fee>0 && _cashWriter() && !CASH_ACCT[e.acct]){ showToast('⚠️ Chọn tài khoản trích phí gia hạn'); return; } prev=e.to; } }
   const W=_cashWriter(), up={}, uid=(currentUser&&currentUser.uid)||'', nm=getCurrentUserName()||'';
   if(W && !lock){ const d=g('bl-depacct'), f=g('bl-feeacct'); rec.depAcct = rec.depAmount>0 ? ((d&&CASH_ACCT[d.value])?d.value:'') : ''; rec.feeAcct = rec.fee>0 ? ((f&&CASH_ACCT[f.value])?f.value:'') : '';
     if((rec.depAmount>0 && !rec.depAcct) || (rec.fee>0 && !rec.feeAcct)){ showToast('⚠️ Chọn tài khoản trích tiền'); return; } }
@@ -8778,6 +8803,13 @@ async function saveBl(id, approve){
     if(rec.depAmount>0){ const k=db.ref('pva379/cashflow').push().key; rec.depId=k; up['pva379/cashflow/'+k]=Object.assign({type:'dep', amount:rec.depAmount, desc:('Ký quỹ BL: '+rec.name).slice(0,300), holder:rec.bank, acct:rec.depAcct, site:rec.site||''}, base); }
     if(rec.fee>0){ const k=db.ref('pva379/cashflow').push().key; rec.feeId=k; up['pva379/cashflow/'+k]=Object.assign({type:'bankpay', kind:'laiphi', bank:rec.bank, amount:rec.fee, desc:('Phí BL: '+rec.name).slice(0,300), acct:rec.feeAcct}, base); }
   } else if(!old){ rec.status = W ? 'active' : 'pending'; }
+  { const ext = Array.isArray(rec.ext) ? rec.ext.slice() : [];
+    let prev = ext.length ? ext[ext.length-1].to : rec.expDate;
+    newExt.forEach(e=>{ ext.push({ts:Date.now(), from:prev||'', to:e.to, fee:e.fee||0, acct:e.acct||'', byName:nm}); prev=e.to; });
+    const live = rec.status==='active';
+    ext.forEach(e=>{ if(live && W && e.fee>0 && !e.feeId){ const a = CASH_ACCT[e.acct] ? e.acct : (CASH_ACCT[rec.feeAcct] ? rec.feeAcct : _acctDefault()); const k=db.ref('pva379/cashflow').push().key; e.feeId=k; e.acct=a;
+        up['pva379/cashflow/'+k]={type:'bankpay', kind:'laiphi', bank:rec.bank, amount:e.fee, desc:('Phí gia hạn BL: '+rec.name).slice(0,300), acct:a, date:ymdLocal(), ts:Date.now(), by:uid, byName:nm}; } });
+    if(ext.length){ rec.ext = ext; if(ext[ext.length-1].to > rec.expDate) rec.expDate = ext[ext.length-1].to; } }
   if(rec.status==='rejected' && !W){ rec.status='pending'; delete rec.rej; }   // người lập sửa lại phiếu bị từ chối → gửi lại
   Object.keys(rec).forEach(k=>{ if(rec[k]===undefined || rec[k]==='') { if(['site','note','depAcct','feeAcct'].indexOf(k)<0) delete rec[k]; } });
   delete rec.id;
@@ -8820,7 +8852,7 @@ async function saveExtendBl(id){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(exp) || exp<=String(b.expDate||'')){ showToast('⚠️ Ngày hết hạn mới phải sau '+_blDate(b.expDate)); return; }
   if(fee>0 && !CASH_ACCT[acct]){ showToast('⚠️ Chọn tài khoản trích phí'); return; }
   const uid=(currentUser&&currentUser.uid)||'', nm=getCurrentUserName()||'', up={};
-  const ext=Array.isArray(b.ext)?b.ext.slice():[]; const e={ts:Date.now(), from:b.expDate||'', to:exp, fee:fee||0, byName:nm};
+  const ext=Array.isArray(b.ext)?b.ext.slice():[]; const e={ts:Date.now(), from:b.expDate||'', to:exp, fee:fee||0, acct:fee>0?acct:'', byName:nm};
   if(fee>0){ const k=db.ref('pva379/cashflow').push().key; e.feeId=k; up['pva379/cashflow/'+k]={type:'bankpay', kind:'laiphi', bank:b.bank||'', amount:fee, desc:('Phí gia hạn BL: '+(b.name||'')).slice(0,300), acct, date:ymdLocal(), ts:Date.now(), by:uid, byName:nm}; }
   ext.push(e);
   up['pva379/baoLanh/'+id+'/expDate']=exp; up['pva379/baoLanh/'+id+'/ext']=ext;

@@ -55,6 +55,13 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v60 (D 28/11/2026) — sửa form Bảo lãnh
+- D: "loại bảo lãnh thêm bảo lãnh thanh toán; ngân hàng phát hành chọn trong ngân hàng của công ty, có thể đánh thêm ngân hàng khác; thêm 1 dòng số tiền bảo lãnh; thêm dấu cộng gia hạn, khi gia hạn sẽ có phí và hiệu lực".
+- `BL_KIND` thêm `thanhtoan` (Thanh toán). Ô ngân hàng = `<select id="bl-bank-sel">` lấy `_loanBankOpts()` (tài khoản ngân hàng của từng công ty) + "Ngân hàng khác (gõ tên)…" → hiện ô gõ `#bl-bank` (`_blBankUi`, `_blBankVal`). Sửa bảo lãnh cũ: tên ngân hàng không có trong danh sách thì tự chọn "khác" và điền sẵn.
+- Trường mới `amount` (số tiền bảo lãnh; luật: số 0..10^12), hiện trên thẻ.
+- Khu "Gia hạn" trong form: liệt kê các lần đã gia hạn + nút **➕ Gia hạn** thêm dòng (hiệu lực đến, phí gia hạn, TK trích — TK chỉ người ghi sổ thấy). Lưu: xếp theo ngày, mỗi lần phải sau lần trước, `expDate` = lần cuối; bảo lãnh đang / vừa có hiệu lực thì mỗi lần có phí → 1 khoản `bankpay laiphi` (feeId, `acct`). Người khác thêm gia hạn khi bảo lãnh còn chờ → lúc Hiền duyệt mới ghi phí (TK = TK phí của bảo lãnh nếu dòng chưa có). Luật `ext/$i` thêm `acct`. Nút "📅 Gia hạn" trên thẻ vẫn giữ.
+- Thử: `smoke33.js` thêm ca (loại Thanh toán, ngân hàng công ty / khác, số tiền, 2 lần gia hạn trong form → đúng ngày hết hạn + đúng khoản phí); luật 207/207; hồi quy smoke12, 23, 27, 29–32, 34.
+
 ## v59 (D 28/11/2026 "giao diện rối quá: nút 1 H đã duyệt, nút 2 từ chối, nút 3 bấm vào thì hiện ra mấy cái đó, nhìn cho gọn; Hiền đã duyệt thì nút đổi sang màu khác màu nút bấm duyệt")
 - Hàng nút trên thẻ phiếu (`renderApproveRow`): Hiền chỉ còn **H · Từ chối · ⋯**. Chuyển tiền / chuyển tiếp, hoàn tác lần chuyển gần nhất, xem / thêm / dán ảnh chuyển khoản, Giục → nằm trong menu ⋯ (`openCardMenu`, nhánh `currentRole==='hien'`). Ô "—" khi không còn quyền từ chối không vẽ nữa (`renderBtnReject` trả '').
 - Thủ quỹ: **T · ảnh CK · ⋯** — ô ảnh chuyển khoản gọn 1 nút (`renderBtnShareCompact` "📤 n ảnh CK ▾"), bấm mở `openProofMenu` (Xem / chia sẻ · Thêm ảnh · Dán ảnh). `renderBtnShare` cũ giữ cho nhân viên (chỉ xem ảnh).
