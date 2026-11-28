@@ -941,9 +941,10 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
 <!-- v58 (D 28/11/2026): BẢO LÃNH — trang riêng, mở từ menu Khác -->
 <div id="page-baolanh" class="main" style="display:none">
   <div class="card"><div class="card-header">🛡 Bảo lãnh</div>
-    <div class="tab-desc" style="padding:8px 12px 0">Mỗi bảo lãnh: ngân hàng phát hành, <b>ký quỹ</b> (trừ ở tài khoản nộp, sang mục Ký quỹ của Cân đối), <b>phí</b> (vào Phí + lãi ngân hàng), ngày hết hạn — app nhắc trước 5 ngày. Thủ quỹ / Hiền / Dũng thêm là có hiệu lực ngay; người khác thêm thì chờ Hiền duyệt.</div>
+    <div class="tab-desc" style="padding:8px 12px 0">Mỗi bảo lãnh: ngân hàng phát hành, <b>ký quỹ</b> (trừ ở tài khoản nộp, sang mục Ký quỹ của Cân đối), <b>phí</b> (vào Phí + lãi ngân hàng), ngày hết hạn — app nhắc trước 5 ngày. Thủ quỹ / Hiền / Dũng thêm là có hiệu lực ngay; người khác thêm thì chờ Hiền duyệt. Phí ngân hàng thu theo kỳ: bấm <b>➕ Phí</b>. Tab <b>Bảo lãnh cũ</b>: bảo lãnh có trước sổ — ký quỹ vào mục Ký quỹ nhưng không trừ tài khoản, phí cũ không nhập.</div>
+    <div class="report-subtabs" style="padding:8px 12px 0"><button class="report-subtab active" data-tab="new" onclick="setBlTab('new',this)">🛡 Bảo lãnh</button><button class="report-subtab" data-tab="old" onclick="setBlTab('old',this)">📜 Bảo lãnh cũ</button></div>
     <div class="card-body" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
-      <button class="btn-sm btn-primary-full" onclick="openBlModal()" style="flex:1 1 160px;margin:0">➕ Thêm bảo lãnh</button>
+      <button class="btn-sm btn-primary-full" id="bl-new-btn" onclick="openBlModal(null,false,_blTab==='old')" style="flex:1 1 160px;margin:0">➕ Thêm bảo lãnh</button>
       <select id="bl-filter" class="form-input form-select" onchange="renderBaoLanh()" style="flex:1 1 140px;width:auto;margin:0;font-size:13px">
         <option value="open">Đang hiệu lực + chờ duyệt</option><option value="pending">Chờ Hiền duyệt</option><option value="closed">Đã đóng / từ chối</option><option value="all">Tất cả</option>
       </select>
@@ -2030,7 +2031,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v60';
+const APP_VERSION = '20261128-v61';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -8683,11 +8684,17 @@ function renderBlAlert(){
     ${pend.length?`<div style="font-size:12.5px;font-weight:800;color:#b45309;margin-top:${due.length?6:0}px">⏳ ${pend.length} bảo lãnh chờ Hiền duyệt</div>`:''}
     <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Bấm để mở mục Bảo lãnh</div></div></div>`;
 }
+// v61 (D 28/11): tab "Bảo lãnh cũ" — bảo lãnh có trước sổ: ký quỹ vẫn vào mục Ký quỹ nhưng KHÔNG trừ tài khoản nào (khoản 'dep' có old:true,
+//   giải toả thì tiền về tài khoản chọn sẵn); phí cũ không nhập, phí mới thêm ở "Phí theo kỳ".
+let _blTab = 'new';
+function setBlTab(t, btn){ _blTab = t==='old' ? 'old' : 'new'; document.querySelectorAll('#page-baolanh .report-subtab').forEach(b=>b.classList.toggle('active', b.dataset.tab===_blTab)); const nb=document.getElementById('bl-new-btn'); if(nb) nb.textContent = _blTab==='old' ? '➕ Thêm bảo lãnh cũ (có trước sổ)' : '➕ Thêm bảo lãnh'; renderBaoLanh(); }
+function _blFees(b){ return Array.isArray(b && b.fees) ? b.fees : []; }
+function _blFeeTotal(b){ return (+b.fee||0) + _blFees(b).reduce((a,x)=>a+(+x.amount||0),0) + (Array.isArray(b.ext)?b.ext:[]).reduce((a,x)=>a+(+x.fee||0),0); }
 function renderBaoLanh(){
   const el=document.getElementById('bl-list'); if(!el) return;
   try{ renderBlAlert(); }catch(e){}
   const f=(document.getElementById('bl-filter')||{}).value||'open';
-  let L=_blList().filter(b=> f==='all' ? true : f==='pending' ? b.status==='pending' : f==='closed' ? (b.status==='closed'||b.status==='rejected') : (b.status==='active'||b.status==='pending'));
+  let L=_blList().filter(b=> !!b.old === (_blTab==='old')).filter(b=> f==='all' ? true : f==='pending' ? b.status==='pending' : f==='closed' ? (b.status==='closed'||b.status==='rejected') : (b.status==='active'||b.status==='pending'));
   L.sort((a,b)=>{ const r=x=>x.status==='pending'?0:x.status==='active'?1:2; return (r(a)-r(b)) || String(a.expDate||'9').localeCompare(String(b.expDate||'9')); });
   if(!L.length){ el.innerHTML='<div class="card"><div class="card-body" style="text-align:center;color:var(--text-sub);font-size:13px;padding:20px">Chưa có bảo lãnh nào</div></div>'; return; }
   const B='padding:5px 10px;font-size:12px;font-weight:700;border-radius:8px;cursor:pointer;border:1px solid #d1d5db;background:#fff';
@@ -8699,6 +8706,9 @@ function renderBaoLanh(){
     const btns=[];
     if(b.status==='pending' && _isApprover()){ btns.push(`<button onclick="openBlModal('${sid(b.id)}',true)" style="${B};background:#047857;color:#fff;border:none">✅ Duyệt & ghi sổ</button>`, `<button onclick="rejectBl('${sid(b.id)}')" style="${B};color:#b91c1c">✖ Từ chối</button>`); }
     if(_blCanEdit(b) && (b.status==='pending'||b.status==='active')) btns.push(`<button onclick="openBlModal('${sid(b.id)}')" style="${B}">✏️ Sửa</button>`);
+    const pendFees = _blFees(b).filter(x=>!x.feeId);
+    if((b.status==='active' || (b.status==='pending' && _blCanEdit(b)))) btns.push(`<button onclick="addBlFee('${sid(b.id)}')" style="${B};color:#b45309">➕ Phí</button>`);   // v61: phí theo kỳ
+    if(b.status==='active' && _cashWriter() && pendFees.length) btns.push(`<button onclick="confirmBlFees('${sid(b.id)}')" style="${B};background:#047857;color:#fff;border:none">✅ Ghi sổ ${pendFees.length} phí</button>`);
     if(b.status==='active' && _cashWriter()){
       btns.push(`<button onclick="extendBl('${sid(b.id)}')" style="${B};color:#1d4ed8">📅 Gia hạn</button>`);
       if(left>0) btns.push(`<button onclick="returnDeposit('${sid(b.depId)}')" style="${B};color:#047857">↩ Giải toả ký quỹ</button>`);
@@ -8706,20 +8716,22 @@ function renderBaoLanh(){
     }
     if(_isApprover() || (b.status!=='active' && b.status!=='closed' && currentUser && b.by===currentUser.uid)) btns.push(`<button onclick="deleteBl('${sid(b.id)}')" style="${B};color:#b91c1c">🗑</button>`);
     return `<div class="card" style="border-left:4px solid ${b.status==='pending'?'#f59e0b':late?'#dc2626':b.status==='active'?'#047857':'#9ca3af'}"><div class="card-body" style="padding:10px 12px">
-      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><div style="font-size:14px;font-weight:800;word-break:break-word">${esc(b.name||'')}</div><div style="font-size:11px;font-weight:700;white-space:nowrap">${BL_ST[b.status]||esc(b.status||'')}</div></div>
+      <div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><div style="font-size:14px;font-weight:800;word-break:break-word">${b.old?'<span style="font-size:10.5px;font-weight:800;color:#6b7280;background:#f1f5f9;border-radius:6px;padding:1px 6px;margin-right:4px">📜 cũ</span>':''}${esc(b.name||'')}</div><div style="font-size:11px;font-weight:700;white-space:nowrap">${BL_ST[b.status]||esc(b.status||'')}</div></div>
       <div style="font-size:12px;color:var(--text-sub);margin-top:2px">${esc(BL_KIND[b.kind]||'')}${b.site?' · '+esc(b.site):''} · 🏦 <b>${esc(b.bank||'')}</b></div>
       <div style="font-size:12.5px;margin-top:5px;line-height:1.55">
         ${b.amount?`Số tiền bảo lãnh: <b>${fmtVND(b.amount)}</b><br>`:''}Phát hành ${_blDate(b.issueDate)||'—'} · Hết hạn <b style="color:${late?'#b91c1c':'inherit'}">${_blDate(b.expDate)}</b>${b.status==='active'&&d!==null?` <span style="color:${late?'#b91c1c':'var(--text-sub)'}">(${d<0?'quá '+(-d)+' ngày':d===0?'hôm nay':'còn '+d+' ngày'})</span>`:''}<br>
-        Ký quỹ: <b>${b.depAmount?fmtVND(b.depAmount):'0 (tín chấp)'}</b>${b.depAmount&&!one&&b.depAcct&&CASH_ACCT[b.depAcct]?' từ '+esc(acctLabel(b.depAcct)):''}${b.status==='active'&&b.depAmount?' · còn treo '+fmtVND(left):''}<br>
-        Phí: <b>${fmtVND(b.fee||0)}</b>${b.fee&&!one&&b.feeAcct&&CASH_ACCT[b.feeAcct]?' từ '+esc(acctLabel(b.feeAcct)):''}${ext.length?' · gia hạn '+ext.length+' lần (phí '+fmtVND(ext.reduce((a,x)=>a+(+x.fee||0),0))+')':''}
+        Ký quỹ: <b>${b.depAmount?fmtVND(b.depAmount):'0 (tín chấp)'}</b>${b.old&&b.depAmount?' <span style="color:#6b7280">(cũ — không trừ TK'+(!one&&b.depAcct&&CASH_ACCT[b.depAcct]?', giải toả về '+esc(acctLabel(b.depAcct)):'')+')</span>':(b.depAmount&&!one&&b.depAcct&&CASH_ACCT[b.depAcct]?' từ '+esc(acctLabel(b.depAcct)):'')}${b.status==='active'&&b.depAmount?' · còn treo '+fmtVND(left):''}<br>
+        Phí: <b>${fmtVND(_blFeeTotal(b))}</b>${b.fee?' (ban đầu '+fmtVND(b.fee)+')':''}${_blFees(b).length?' · '+_blFees(b).length+' kỳ phí':''}${ext.length?' · gia hạn '+ext.length+' lần (phí '+fmtVND(ext.reduce((a,x)=>a+(+x.fee||0),0))+')':''}${pendFees.length?' <b style="color:#b45309">· ⏳ '+pendFees.length+' phí chờ ghi sổ</b>':''}
+        ${_blFees(b).length?`<details style="margin-top:2px"><summary style="cursor:pointer;font-size:11.5px;color:var(--text-sub)">Xem các kỳ phí</summary>${_blFees(b).map(x=>`<div style="font-size:11.5px;color:var(--text-sub)">• ${_blDate(x.date)} · ${fmtVND(x.amount)}${!one&&x.acct&&CASH_ACCT[x.acct]?' · '+esc(acctLabel(x.acct)):''}${x.feeId?'':' · ⏳ chờ ghi sổ'}${x.byName?' · '+esc(x.byName):''}</div>`).join('')}</details>`:''}
         ${b.note?`<br><span style="color:var(--text-sub)">${esc(b.note)}</span>`:''}
       </div>
       <div style="font-size:10.5px;color:var(--text-sub);margin-top:4px">${esc(b.byName||'')} thêm ${fmtFull(b.ts||0)}${b.okH?' · '+esc(b.okH.name||'Hiền')+' duyệt '+fmtFull(b.okH.ts||0):''}${b.rej?' · từ chối: '+esc(b.rej.reason||''):''}</div>
       ${btns.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px">${btns.join('')}</div>`:''}
     </div></div>`; }).join('');
 }
-function openBlModal(id, approve){
+function openBlModal(id, approve, isOld){
   const b = id ? (baoLanh||{})[id] : null;
+  const oldMode = b ? !!b.old : !!isOld;   // v61: bảo lãnh cũ (có trước sổ)
   if(b && !_blCanEdit(b) && !(approve && _isApprover())){ showToast('🔒 Không sửa được bảo lãnh này'); return; }
   const lock = !!(b && b.status==='active');   // đã ghi sổ: tiền sửa ở Cân đối, ở đây chỉ sửa thông tin
   const showAcct = _cashWriter();
@@ -8732,7 +8744,7 @@ function openBlModal(id, approve){
   const acctSel=(idp, cur)=>`<select id="${idp}" class="form-input form-select" style="margin:0">${_ACCT_OPTS}</select>`;
   const fmt=n=> n ? Number(n).toLocaleString('vi-VN') : '';
   ov.innerHTML=`<div style="background:#fff;border-radius:14px;padding:14px;width:100%;max-width:440px;margin-top:3vh">
-    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800">${approve?'✅ Duyệt bảo lãnh':b?'✏️ Sửa bảo lãnh':'🛡 Thêm bảo lãnh'}</div><button type="button" onclick="document.getElementById('bl-ov').remove()" style="border:none;background:#f1f5f9;border-radius:8px;padding:4px 10px;font-size:15px;cursor:pointer">✕</button></div>
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800">${approve?'✅ Duyệt bảo lãnh':b?'✏️ Sửa bảo lãnh':oldMode?'📜 Thêm bảo lãnh cũ':'🛡 Thêm bảo lãnh'}${b&&oldMode?' (cũ)':''}</div><button type="button" onclick="document.getElementById('bl-ov').remove()" style="border:none;background:#f1f5f9;border-radius:8px;padding:4px 10px;font-size:15px;cursor:pointer">✕</button></div>
     <div class="form-group" style="margin-top:8px"><label class="form-label">Tên bảo lãnh *</label><input id="bl-name" class="form-input" value="${esc(v('name'))}" placeholder="VD: BL thực hiện HĐ cầu xã ĐA"></div>
     <div style="display:flex;gap:6px"><div class="form-group" style="flex:1"><label class="form-label">Loại</label><select id="bl-kind" class="form-input form-select">${Object.keys(BL_KIND).map(k=>`<option value="${k}"${k===v('kind','thuchien')?' selected':''}>${BL_KIND[k]}</option>`).join('')}</select></div>
       <div class="form-group" style="flex:1"><label class="form-label">Công trình</label><select id="bl-site" class="form-input form-select">${sitesOpt}</select></div></div>
@@ -8744,10 +8756,15 @@ function openBlModal(id, approve){
       <div class="form-group" style="flex:1"><label class="form-label">Ngày hết hạn *</label><input id="bl-exp" type="date" class="form-input" value="${esc(v('expDate'))}"></div></div>
     <div class="form-group"><label class="form-label">Ký quỹ <span style="font-weight:400;color:var(--text-sub)">(để trống = tín chấp)</span></label>
       <input id="bl-dep" class="form-input" type="text" inputmode="numeric" placeholder="0" value="${fmt(v('depAmount'))}" oninput="fmtAmountInput(this)" ${lock?'disabled':''}>
-      ${showAcct?`<div style="font-size:11px;color:var(--text-sub);margin:5px 0 3px">Trích từ tài khoản (tiền sang mục Ký quỹ, nằm ở ngân hàng phát hành)</div>${acctSel('bl-depacct')}`:''}</div>
-    <div class="form-group"><label class="form-label">Phí bảo lãnh</label>
-      <input id="bl-fee" class="form-input" type="text" inputmode="numeric" placeholder="0" value="${fmt(v('fee'))}" oninput="fmtAmountInput(this)" ${lock?'disabled':''}>
+      ${oldMode?'<div style="font-size:11px;color:#6b7280;margin-top:4px">Bảo lãnh cũ: ký quỹ vẫn vào mục Ký quỹ nhưng <b>không trừ tài khoản nào</b>.</div>':''}
+      ${showAcct?`<div style="font-size:11px;color:var(--text-sub);margin:5px 0 3px">${oldMode?'Khi giải toả, tiền về tài khoản':'Trích từ tài khoản (tiền sang mục Ký quỹ, nằm ở ngân hàng phát hành)'}</div>${acctSel('bl-depacct')}`:''}</div>
+    <div class="form-group" style="${oldMode?'display:none':''}"><label class="form-label">Phí bảo lãnh (ban đầu)</label>
+      <input id="bl-fee" class="form-input" type="text" inputmode="numeric" placeholder="0" value="${fmt(oldMode?0:v('fee'))}" oninput="fmtAmountInput(this)" ${lock?'disabled':''}>
       ${showAcct?`<div style="font-size:11px;color:var(--text-sub);margin:5px 0 3px">Trích từ tài khoản (vào mục Phí + lãi ngân hàng)</div>${acctSel('bl-feeacct')}`:''}</div>
+    <div class="form-group"><label class="form-label">Phí theo kỳ <span style="font-weight:400;color:var(--text-sub)">${oldMode?'(phí cũ không nhập — chỉ thêm phí từ nay)':'(ngân hàng thu định kỳ)'}</span></label>
+      ${_blFees(b).map((x,i)=>`<div style="font-size:12px;padding:6px 8px;background:#f8fafc;border-radius:8px;margin-bottom:4px">Kỳ ${i+1}: ${_blDate(x.date)} · <b>${fmtVND(x.amount)}</b>${x.feeId?'':' · ⏳ chờ ghi sổ'}${x.byName?' · '+esc(x.byName):''}</div>`).join('')}
+      <div id="bl-fees"></div>
+      <button type="button" onclick="_blFeeAdd()" style="margin-top:4px;padding:7px 12px;border:1.5px dashed #b45309;background:#fffbeb;color:#b45309;border-radius:9px;font-weight:800;font-size:13px;cursor:pointer">➕ Thêm phí</button></div>
     ${lock?'<div style="font-size:11.5px;color:#b45309;margin:-4px 0 8px">Bảo lãnh đã ghi sổ: muốn sửa tiền ký quỹ / phí thì sửa khoản tương ứng ở Cân đối.</div>':''}
     <div class="form-group"><label class="form-label">Gia hạn</label>
       ${(Array.isArray(v('ext',null))?v('ext'):[]).map((e,i)=>`<div style="font-size:12px;padding:6px 8px;background:#f8fafc;border-radius:8px;margin-bottom:4px">Lần ${i+1}: hiệu lực đến <b>${_blDate(e.to)}</b>${e.fee?' · phí '+fmtVND(e.fee):''}${e.byName?' · '+esc(e.byName):''}</div>`).join('')}
@@ -8755,7 +8772,7 @@ function openBlModal(id, approve){
       <button type="button" onclick="_blExtAdd()" style="margin-top:4px;padding:7px 12px;border:1.5px dashed var(--blue);background:#fff7ed;color:var(--blue);border-radius:9px;font-weight:800;font-size:13px;cursor:pointer">➕ Gia hạn</button>
       <div style="font-size:11px;color:var(--text-sub);margin-top:4px">Mỗi lần gia hạn: hiệu lực đến ngày nào + phí gia hạn (vào Phí + lãi ngân hàng). Ngày hết hạn của bảo lãnh tự lấy theo lần gia hạn cuối.</div></div>
     <div class="form-group"><label class="form-label">Ghi chú</label><input id="bl-note" class="form-input" value="${esc(v('note'))}" placeholder="Số bảo lãnh, chủ đầu tư…"></div>
-    <button type="button" id="bl-save" onclick="saveBl(${b?`'${sid(id)}'`:'null'}, ${approve?'true':'false'})" style="width:100%;padding:11px;border:none;border-radius:10px;background:${approve?'#047857':'var(--blue)'};color:#fff;font-weight:800;font-size:14px;cursor:pointer">${approve?'✅ Duyệt & ghi sổ':_cashWriter()?'Lưu (ghi sổ ngay)':'Gửi — chờ Hiền duyệt'}</button>
+    <button type="button" id="bl-save" onclick="saveBl(${b?`'${sid(id)}'`:'null'}, ${approve?'true':'false'}, ${oldMode?'true':'false'})" style="width:100%;padding:11px;border:none;border-radius:10px;background:${approve?'#047857':'var(--blue)'};color:#fff;font-weight:800;font-size:14px;cursor:pointer">${approve?'✅ Duyệt & ghi sổ':_cashWriter()?'Lưu (ghi sổ ngay)':'Gửi — chờ Hiền duyệt'}</button>
   </div>`;
   document.body.appendChild(ov);
   { const sel=document.getElementById('bl-bank-sel'), inp=document.getElementById('bl-bank'), bv=v('bank'); if(bv){ if([...sel.options].some(o=>o.value===bv)) sel.value=bv; else { sel.value='__khac'; inp.value=bv; } } _blBankUi(); }
@@ -8772,11 +8789,23 @@ function _blExtAdd(){
   box.appendChild(row);
   const a=row.querySelector('.bl-ext-acct'); if(a){ const f=document.getElementById('bl-feeacct'); a.value = (f && CASH_ACCT[f.value]) ? f.value : _acctDefault(); }
 }
+function _blFeeAdd(){
+  const box=document.getElementById('bl-fees'); if(!box) return;
+  const W=_cashWriter(), row=document.createElement('div'); row.className='bl-fee-row';
+  row.style.cssText='border:1px solid var(--gray-border);border-radius:9px;padding:7px;margin-bottom:6px';
+  row.innerHTML=`<div style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;font-weight:700;white-space:nowrap">Ngày thu</span><input type="date" class="form-input bl-fee-date" value="${ymdLocal()}" style="margin:0;flex:1"><button type="button" onclick="this.closest('.bl-fee-row').remove()" style="border:none;background:#fef2f2;color:#b91c1c;border-radius:7px;padding:6px 9px;cursor:pointer">✕</button></div>
+    <div style="display:flex;gap:6px;margin-top:6px"><input class="form-input bl-fee-amt" type="text" inputmode="numeric" placeholder="Số tiền phí" oninput="fmtAmountInput(this)" style="margin:0;flex:1">${W?`<select class="form-input form-select bl-fee-acct" style="margin:0;flex:1">${_ACCT_OPTS}</select>`:''}</div>`;
+  box.appendChild(row);
+  const a=row.querySelector('.bl-fee-acct'); if(a){ const f=document.getElementById('bl-feeacct'); a.value = (f && CASH_ACCT[f.value]) ? f.value : _acctDefault(); }
+}
+function _blFeeRead(){ return [...document.querySelectorAll('#bl-fees .bl-fee-row')].map(r=>({date:(r.querySelector('.bl-fee-date')||{}).value||'', amount:amtVal((r.querySelector('.bl-fee-amt')||{}).value), acct:(r.querySelector('.bl-fee-acct')||{}).value||''})); }
 function _blExtRead(){ return [...document.querySelectorAll('#bl-ext .bl-ext-row')].map(r=>({to:(r.querySelector('.bl-ext-to')||{}).value||'', fee:amtVal((r.querySelector('.bl-ext-fee')||{}).value), acct:(r.querySelector('.bl-ext-acct')||{}).value||''})); }
-async function saveBl(id, approve){
+async function saveBl(id, approve, oldMode){
   if(_cashBusy()) return;
   const g=x=>document.getElementById(x), old = id ? (baoLanh||{})[id] : null;
   const rec = Object.assign({}, old||{});
+  if(!old && oldMode) rec.old = true;   // v61: bảo lãnh cũ
+  const isOld = !!rec.old;
   rec.name=(g('bl-name').value||'').trim().slice(0,200); rec.kind=g('bl-kind').value||'khac'; rec.site=(g('bl-site').value||'').slice(0,200);
   rec.bank=_blBankVal(); rec.amount=amtVal(g('bl-amount').value); rec.issueDate=g('bl-issue').value||ymdLocal(); rec.expDate=g('bl-exp').value||''; rec.note=(g('bl-note').value||'').trim().slice(0,1000);
   if(!rec.name){ showToast('⚠️ Nhập tên bảo lãnh'); return; }
@@ -8784,7 +8813,9 @@ async function saveBl(id, approve){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(rec.expDate)){ showToast('⚠️ Chọn ngày hết hạn'); return; }
   if(rec.expDate < rec.issueDate){ showToast('⚠️ Ngày hết hạn trước ngày phát hành'); return; }
   const lock = !!(old && old.status==='active');
-  if(!lock){ rec.depAmount=amtVal(g('bl-dep').value); rec.fee=amtVal(g('bl-fee').value); }
+  if(!lock){ rec.depAmount=amtVal(g('bl-dep').value); rec.fee = isOld ? 0 : amtVal(g('bl-fee').value); }
+  const newFees = _blFeeRead().filter(x=>x.amount>0 || x.date!==ymdLocal());
+  for(const x of newFees){ if(!(x.amount>0)){ showToast('⚠️ Dòng phí: nhập số tiền'); return; } if(!/^\d{4}-\d{2}-\d{2}$/.test(x.date)){ showToast('⚠️ Dòng phí: chọn ngày thu'); return; } if(_cashWriter() && !CASH_ACCT[x.acct]){ showToast('⚠️ Dòng phí: chọn tài khoản trích'); return; } }
   // v60: các lần gia hạn thêm trong form (hiệu lực đến + phí) — xếp theo ngày, mỗi lần phải sau lần trước; ngày hết hạn = lần cuối
   const newExt = _blExtRead().filter(e=>e.to || e.fee).sort((a,b)=>String(a.to).localeCompare(String(b.to)));
   { let prev = rec.expDate;
@@ -8800,7 +8831,7 @@ async function saveBl(id, approve){
     rec.status='active';
     if(old && old.status==='pending' && old.by!==uid) rec.okH={by:uid, name:nm, ts:Date.now()};
     const base={date:rec.issueDate, ts:Date.now(), by:uid, byName:nm};
-    if(rec.depAmount>0){ const k=db.ref('pva379/cashflow').push().key; rec.depId=k; up['pva379/cashflow/'+k]=Object.assign({type:'dep', amount:rec.depAmount, desc:('Ký quỹ BL: '+rec.name).slice(0,300), holder:rec.bank, acct:rec.depAcct, site:rec.site||''}, base); }
+    if(rec.depAmount>0){ const k=db.ref('pva379/cashflow').push().key; rec.depId=k; up['pva379/cashflow/'+k]=Object.assign({type:'dep', amount:rec.depAmount, desc:((isOld?'Ký quỹ BL cũ (không trừ TK): ':'Ký quỹ BL: ')+rec.name).slice(0,300), holder:rec.bank, acct:rec.depAcct, site:rec.site||''}, base, isOld?{old:true, date:ymdLocal()}:{}); }   // v61: BL cũ → old:true, ngày = ngày nhập sổ (ngày phát hành có trước mốc đầu kỳ thì sổ sẽ bỏ qua)   // v61: BL cũ → old:true
     if(rec.fee>0){ const k=db.ref('pva379/cashflow').push().key; rec.feeId=k; up['pva379/cashflow/'+k]=Object.assign({type:'bankpay', kind:'laiphi', bank:rec.bank, amount:rec.fee, desc:('Phí BL: '+rec.name).slice(0,300), acct:rec.feeAcct}, base); }
   } else if(!old){ rec.status = W ? 'active' : 'pending'; }
   { const ext = Array.isArray(rec.ext) ? rec.ext.slice() : [];
@@ -8810,6 +8841,12 @@ async function saveBl(id, approve){
     ext.forEach(e=>{ if(live && W && e.fee>0 && !e.feeId){ const a = CASH_ACCT[e.acct] ? e.acct : (CASH_ACCT[rec.feeAcct] ? rec.feeAcct : _acctDefault()); const k=db.ref('pva379/cashflow').push().key; e.feeId=k; e.acct=a;
         up['pva379/cashflow/'+k]={type:'bankpay', kind:'laiphi', bank:rec.bank, amount:e.fee, desc:('Phí gia hạn BL: '+rec.name).slice(0,300), acct:a, date:ymdLocal(), ts:Date.now(), by:uid, byName:nm}; } });
     if(ext.length){ rec.ext = ext; if(ext[ext.length-1].to > rec.expDate) rec.expDate = ext[ext.length-1].to; } }
+  { // v61: phí theo kỳ — người ghi sổ thêm thì ghi khoản phí ngay; người khác thêm thì chờ ghi sổ (Hiền / thủ quỹ bấm "Ghi sổ phí")
+    const fees = _blFees(rec).slice(); const live = rec.status==='active';
+    newFees.forEach(x=>fees.push({ts:Date.now(), date:x.date, amount:x.amount, acct:x.acct||'', by:uid, byName:nm}));
+    fees.forEach(x=>{ if(live && W && x.amount>0 && !x.feeId){ const a = CASH_ACCT[x.acct] ? x.acct : (CASH_ACCT[rec.feeAcct] ? rec.feeAcct : _acctDefault()); const k=db.ref('pva379/cashflow').push().key; x.feeId=k; x.acct=a;
+        up['pva379/cashflow/'+k]={type:'bankpay', kind:'laiphi', bank:rec.bank, amount:x.amount, desc:('Phí BL (kỳ '+_blDate(x.date)+'): '+rec.name).slice(0,300), acct:a, date:x.date, ts:Date.now(), by:uid, byName:nm}; } });
+    if(fees.length) rec.fees = fees; }
   if(rec.status==='rejected' && !W){ rec.status='pending'; delete rec.rej; }   // người lập sửa lại phiếu bị từ chối → gửi lại
   Object.keys(rec).forEach(k=>{ if(rec[k]===undefined || rec[k]==='') { if(['site','note','depAcct','feeAcct'].indexOf(k)<0) delete rec[k]; } });
   delete rec.id;
@@ -8822,6 +8859,69 @@ async function saveBl(id, approve){
   if(rec.status==='pending'){ showToast('📨 Đã gửi bảo lãnh — chờ Hiền duyệt'); if(!old) sendPushNotif('🛡 Bảo lãnh chờ duyệt', nm+': '+rec.name+' — '+rec.bank, ['hien','dung']); }
   else showToast(goLive ? '✅ Đã ghi bảo lãnh'+(rec.depAmount>0?' · ký quỹ '+fmtVND(rec.depAmount):'')+(rec.fee>0?' · phí '+fmtVND(rec.fee):'') : '✅ Đã lưu');
   renderBaoLanh();
+}
+// v61: thêm phí theo kỳ nhanh từ thẻ (ai đã duyệt cũng thêm được; người ghi sổ thêm → ghi khoản phí ngay, người khác → chờ ghi sổ)
+function addBlFee(id){
+  const b=(baoLanh||{})[id]; if(!b) return;
+  try{ _fillAcctSelects(); }catch(e){}
+  const W=_cashWriter(), old=document.getElementById('bl-ov'); if(old) old.remove();
+  const ov=document.createElement('div'); ov.id='bl-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:12px';
+  ov.innerHTML=`<div style="background:#fff;border-radius:14px;padding:14px;width:100%;max-width:420px;margin-top:6vh">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800">➕ Phí kỳ: ${esc(b.name||'')}</div><button type="button" onclick="document.getElementById('bl-ov').remove()" style="border:none;background:#f1f5f9;border-radius:8px;padding:4px 10px;font-size:15px;cursor:pointer">✕</button></div>
+    <div style="font-size:12px;color:var(--text-sub);margin:4px 0 8px">${esc(b.bank||'')} · đã có ${_blFees(b).length} kỳ phí</div>
+    <div class="form-group"><label class="form-label">Ngày ngân hàng thu *</label><input id="blf-date" type="date" class="form-input" value="${ymdLocal()}"></div>
+    <div class="form-group"><label class="form-label">Số tiền phí *</label><input id="blf-amt" class="form-input" type="text" inputmode="numeric" placeholder="0" oninput="fmtAmountInput(this)"></div>
+    ${W?`<div class="form-group"><label class="form-label">Trích từ tài khoản (vào Phí + lãi ngân hàng)</label><select id="blf-acct" class="form-input form-select" style="margin:0">${_ACCT_OPTS}</select></div>`:'<div style="font-size:11.5px;color:#b45309;margin-bottom:8px">Phí sẽ chờ Hiền / thủ quỹ bấm "Ghi sổ" mới trừ tài khoản.</div>'}
+    <button type="button" onclick="saveBlFee('${sid(id)}')" style="width:100%;padding:11px;border:none;border-radius:10px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer">Lưu phí</button></div>`;
+  document.body.appendChild(ov);
+  const a=document.getElementById('blf-acct'); if(a){ const last=_blFees(b).filter(x=>CASH_ACCT[x.acct]).pop(); a.value = last ? last.acct : (CASH_ACCT[b.feeAcct] ? b.feeAcct : _acctDefault()); }
+}
+async function saveBlFee(id){
+  if(_cashBusy()) return;
+  const b=(baoLanh||{})[id]; if(!b) return;
+  const date=document.getElementById('blf-date').value||'', amount=amtVal(document.getElementById('blf-amt').value), aEl=document.getElementById('blf-acct');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){ showToast('⚠️ Chọn ngày thu'); return; }
+  if(!(amount>0)){ showToast('⚠️ Nhập số tiền phí'); return; }
+  const W=_cashWriter(), uid=(currentUser&&currentUser.uid)||'', nm=getCurrentUserName()||'', i=_blFees(b).length, up={};
+  const fe={ts:Date.now(), date, amount, by:uid, byName:nm};
+  if(W && b.status==='active'){ const acct=aEl?aEl.value:''; if(!CASH_ACCT[acct]){ showToast('⚠️ Chọn tài khoản trích'); return; }
+    const k=db.ref('pva379/cashflow').push().key; fe.feeId=k; fe.acct=acct;
+    up['pva379/cashflow/'+k]={type:'bankpay', kind:'laiphi', bank:b.bank||'', amount, desc:('Phí BL (kỳ '+_blDate(date)+'): '+(b.name||'')).slice(0,300), acct, date, ts:Date.now(), by:uid, byName:nm}; }
+  up['pva379/baoLanh/'+id+'/fees/'+i]=fe;
+  _cashBusySet(true);
+  try{ await db.ref().update(up); const ov=document.getElementById('bl-ov'); if(ov) ov.remove(); showToast(fe.feeId ? '✅ Đã ghi phí '+fmtVND(amount) : '📨 Đã thêm phí '+fmtVND(amount)+' — chờ Hiền / thủ quỹ ghi sổ'); if(!fe.feeId) sendPushNotif('🛡 Phí bảo lãnh chờ ghi sổ', nm+': '+(b.name||'')+' — '+fmtVND(amount), ['hien','thuquy']); }
+  catch(e){ showToast('❌ Không lưu được: '+(e.code||e.message||'')); }
+  finally{ _cashBusySet(false); }
+}
+// Người ghi sổ ghi các phí chờ (do người khác thêm) — chọn 1 tài khoản trích cho cả lượt
+function confirmBlFees(id){
+  const b=(baoLanh||{})[id]; if(!b || !_cashWriter()) return;
+  const P=_blFees(b).map((x,i)=>({x,i})).filter(o=>!o.x.feeId); if(!P.length) return;
+  try{ _fillAcctSelects(); }catch(e){}
+  const old=document.getElementById('bl-ov'); if(old) old.remove();
+  const ov=document.createElement('div'); ov.id='bl-ov';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:10000;display:flex;align-items:flex-start;justify-content:center;padding:12px';
+  ov.innerHTML=`<div style="background:#fff;border-radius:14px;padding:14px;width:100%;max-width:420px;margin-top:6vh">
+    <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:15px;font-weight:800">✅ Ghi sổ phí: ${esc(b.name||'')}</div><button type="button" onclick="document.getElementById('bl-ov').remove()" style="border:none;background:#f1f5f9;border-radius:8px;padding:4px 10px;font-size:15px;cursor:pointer">✕</button></div>
+    ${P.map(o=>`<div style="font-size:12.5px;padding:6px 0;border-bottom:1px solid #f1f5f9">${_blDate(o.x.date)} · <b>${fmtVND(o.x.amount)}</b> · ${esc(o.x.byName||'')}</div>`).join('')}
+    <div class="form-group" style="margin-top:8px"><label class="form-label">Trích từ tài khoản</label><select id="blc-acct" class="form-input form-select" style="margin:0">${_ACCT_OPTS}</select></div>
+    <button type="button" onclick="saveConfirmBlFees('${sid(id)}')" style="width:100%;padding:11px;border:none;border-radius:10px;background:#047857;color:#fff;font-weight:800;cursor:pointer">Ghi sổ ${P.length} phí (${fmtVND(P.reduce((a,o)=>a+(+o.x.amount||0),0))})</button></div>`;
+  document.body.appendChild(ov);
+  const a=document.getElementById('blc-acct'); if(a) a.value = CASH_ACCT[b.feeAcct] ? b.feeAcct : _acctDefault();
+}
+async function saveConfirmBlFees(id){
+  if(_cashBusy()) return;
+  const b=(baoLanh||{})[id]; if(!b || !_cashWriter()) return;
+  const acct=document.getElementById('blc-acct').value||''; if(!CASH_ACCT[acct]){ showToast('⚠️ Chọn tài khoản'); return; }
+  const uid=(currentUser&&currentUser.uid)||'', nm=getCurrentUserName()||'', up={}; let n=0;
+  _blFees(b).forEach((x,i)=>{ if(x.feeId || !(x.amount>0)) return; const k=db.ref('pva379/cashflow').push().key; n++;
+    up['pva379/cashflow/'+k]={type:'bankpay', kind:'laiphi', bank:b.bank||'', amount:x.amount, desc:('Phí BL (kỳ '+_blDate(x.date)+'): '+(b.name||'')).slice(0,300), acct, date:x.date||ymdLocal(), ts:Date.now(), by:uid, byName:nm};
+    up['pva379/baoLanh/'+id+'/fees/'+i+'/feeId']=k; up['pva379/baoLanh/'+id+'/fees/'+i+'/acct']=acct; });
+  _cashBusySet(true);
+  try{ await db.ref().update(up); const ov=document.getElementById('bl-ov'); if(ov) ov.remove(); showToast('✅ Đã ghi sổ '+n+' phí'); }
+  catch(e){ showToast('❌ Không ghi được: '+(e.code||e.message||'')); }
+  finally{ _cashBusySet(false); }
 }
 async function rejectBl(id){
   const b=(baoLanh||{})[id]; if(!b || !_isApprover()) return;
@@ -9537,7 +9637,7 @@ async function downloadMonthExcel(){
   for(let r=r0-1; r<=r1+5; r++){ const c = ws['I'+r]; if(c && c.t==='n') c.z = '#,##0'; }
   const cash = (_cashCanSee() ? (cashflow||[]) : []).filter(r=>inMd(r.date) && !(_oneAcct() && r.type==='xfer') && !repayPending(r)).sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));   // v113
   const aoa2 = [['THU / KÝ QUỸ / VAY / TRẢ LẠI — THÁNG '+mon.slice(5)+'/'+mon.slice(0,4)], [], ['Ngày','Loại','Nội dung','Nguồn / nơi giữ',_oneAcct()?'':'Tài khoản','Tiền vào','Tiền ra','Người ghi']];
-  cash.forEach(r=>{ const a = +r.amount||0, out = r.type==='ret'||r.type==='dep'||r.type==='repay'||r.type==='rieng'||r.type==='bankpay', oldLoan = r.type==='loan' && r.old, src = (r.type==='in'||r.type==='ret') ? (CASH_SRC[r.src]||CASH_SRC.other).label : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||'');
+  cash.forEach(r=>{ const a = +r.amount||0, out = r.type==='ret'||(r.type==='dep'&&!r.old)||r.type==='repay'||r.type==='rieng'||r.type==='bankpay', oldLoan = r.type==='loan' && r.old, src = (r.type==='in'||r.type==='ret') ? (CASH_SRC[r.src]||CASH_SRC.other).label : r.type==='loan' ? ((LOAN_FROM[r.lender]||LOAN_FROM.canhan).label+(r.lenderName?' '+r.lenderName:'')) : r.type==='xfer' ? (acctLabel(r.from)+' → '+acctLabel(r.to)) : (r.holder||'');
     aoa2.push([r.date||'', cashKindLabel(r), r.desc||'', src, (r.type==='xfer'||_oneAcct()||oldLoan) ? '' : acctLabel(acctOf(r)), out||r.type==='xfer'||oldLoan ? '' : a, out ? a : '', r.byName||'']);
     (r.returned||[]).forEach(x=>{ if(inMd(x.date)) aoa2.push([x.date||'', 'lấy ký quỹ về', r.desc||'', r.holder||'', _oneAcct()?'':acctLabel(acctOf(r)), +x.amount||0, '', x.by||'']); }); });
   const n2 = aoa2.length; aoa2.push([], ['TỔNG','','','','', {t:'n', f:`SUM(F4:F${n2})`}, {t:'n', f:`SUM(G4:G${n2})`}]);
@@ -12879,10 +12979,12 @@ function cashTotals(){
   const traLaiBySrc = {}; Object.keys(CASH_SRC).forEach(k=>{ traLaiBySrc[k]=0; });
   rets.forEach(r=>{ const k = CASH_SRC[r.src] ? r.src : 'other'; traLaiBySrc[k] += num(r.amount); add(r.acct, -num(r.amount), 'traLai'); });
   // Ký quỹ: phần đưa đi là tiền ra khỏi tài khoản, phần lấy về là tiền vào lại.
-  const dangGuiNgoai = deps.reduce((a,r)=>a+cashDepOutstanding(r), 0);
-  const kyQuyDaChi   = deps.reduce((a,r)=>a+num(r.amount), 0);
+  const dangGuiNgoai = deps.reduce((a,r)=>a+cashDepOutstanding(r), 0);   // hiển thị: cả ký quỹ cũ (v61)
+  // v61: ký quỹ CŨ (old, của bảo lãnh có trước sổ) không trừ tài khoản lúc ghi; tiền lấy về vẫn cộng vào tài khoản
+  const kqTruTk      = deps.reduce((a,r)=>a+(r.old ? -cashReturned(r) : cashDepOutstanding(r)), 0);
+  const kyQuyDaChi   = deps.filter(r=>!r.old).reduce((a,r)=>a+num(r.amount), 0);
   const kyQuyDaVe    = deps.reduce((a,r)=>a+cashReturned(r), 0);
-  deps.forEach(r=>add(r.acct, -cashDepOutstanding(r), 'kyQuy'));
+  deps.forEach(r=>add(r.acct, r.old ? cashReturned(r) : -cashDepOutstanding(r), 'kyQuy'));   // v61
   // v41: vay + trả nợ (gốc/lãi) + chuyển nội bộ giữa 2 tài khoản
   const _vayVe = r => r.direct ? _allocArr(r).filter(a=>a.kind==='acct').reduce((s,a)=>s+num(a.amount),0) : num(r.amount);   // v32: giải ngân thẳng → chỉ phần "về tài khoản" là tiền vào TK
   const vay = loans.reduce((a,r)=>a+_vayVe(r), 0);
@@ -12930,7 +13032,7 @@ function cashTotals(){
   });
 
   Object.values(advAcc).forEach(v=>{ if(v>0) dangTamUng += v; else noTamUng += -v; });   // v43: dương = còn giữ tiền ứng; âm = công ty nợ (chưa trừ tài khoản)
-  const tienTrongTk = dauKy + thu - daChi - dangGuiNgoai - traLai - dangTamUng + noTamUng + vay - traGoc - laiVay - chiRieng - bankGoc - bankLaiPhi;   // v11: trừ chi riêng; v21: trừ trả NH khoản cũ   // v62: phần chi VƯỢT ứng đã nằm trong daChi nhưng tiền CHƯA ra khỏi tài khoản → cộng lại cho khớp ngân hàng (= TK cty + TK quỹ)
+  const tienTrongTk = dauKy + thu - daChi - kqTruTk - traLai - dangTamUng + noTamUng + vay - traGoc - laiVay - chiRieng - bankGoc - bankLaiPhi;   // v11: trừ chi riêng; v21: trừ trả NH khoản cũ   // v62: phần chi VƯỢT ứng đã nằm trong daChi nhưng tiền CHƯA ra khỏi tài khoản → cộng lại cho khớp ngân hàng (= TK cty + TK quỹ)
   const conDuocTieu = tienTrongTk - daDuyetChuaChuyen - noTamUng;   // còn nợ người tạm ứng = tiền đã hứa chi
   return {thu, thuBySrc, traLai, traLaiBySrc, daChi, dangGuiNgoai, kyQuyDaChi, kyQuyDaVe, dauKy,
           vay, traGoc, laiVay, noVay, dangTamUng, noTamUng, hoanUngChi, byAcct, byRow,
@@ -13678,7 +13780,7 @@ function _siteRows(site){
   const N=v=>parseFloat(v)||0, all = site==='*', hit = k => all || (k||'')===site, rows=[];
   (cashflow||[]).filter(_inLedgerRec).forEach(r=>{ if(!hit(r.site)) return;
     if(r.type==='in') rows.push([r.date||ymdLocal(r.ts), r.site||'', 'THU', r.desc||'', (CASH_SRC[r.src]||CASH_SRC.other).label, r.byName||'', N(r.amount), '']);
-    else if(r.type==='dep'){ rows.push([r.date||ymdLocal(r.ts), r.site||'', 'KÝ QUỸ đưa đi', r.desc||'', r.holder||'', r.byName||'', '', N(r.amount)]);
+    else if(r.type==='dep'){ rows.push([r.date||ymdLocal(r.ts), r.site||'', r.old?'KÝ QUỸ cũ (trước sổ)':'KÝ QUỸ đưa đi', r.desc||'', r.holder||'', r.byName||'', '', r.old?'':N(r.amount)]);
       (r.returned||[]).forEach(x=>rows.push([x.date||ymdLocal(x.ts), r.site||'', 'KÝ QUỸ lấy về', r.desc||'', r.holder||'', x.by||'', N(x.amount), ''])); } });
   (proposals||[]).forEach(p=>{ if(p.status==='rejected' || p.costType==='kyquy' || !hit(p.site)) return;
     (p.transfers||[]).filter(t=>t && _inLedgerTs(t.ts)).forEach(t=>rows.push([ymdLocal(t.ts), p.site||'', 'CHI', p.desc||'', p.kind==='salary'?'Lương và NC':((COST_TYPES[p.costType]||COST_TYPES.congtruong).label), p.person||'', '', N(t.amount)])); });
@@ -13716,7 +13818,7 @@ function renderCashChart(){
     else if(r.type==='rieng' || r.type==='bankpay') touch(m).out += parseFloat(r.amount)||0;   // v11; v21
     else if(r.type==='repay'){ if(!r.pending) touch(m).out += (parseFloat(r.principal)||0)+(parseFloat(r.interest)||0); }   // v113: chờ duyệt chưa tính
     else if(r.type==='dep'){
-      touch(m).out += parseFloat(r.amount)||0;                                  // đưa cọc đi = tiền ra
+      if(!r.old) touch(m).out += parseFloat(r.amount)||0;                       // đưa cọc đi = tiền ra (v61: ký quỹ cũ không)
       (r.returned||[]).forEach(x=>{ const mm = x.date?String(x.date).slice(0,7):mOf(x.ts); if(mm) touch(mm).in += parseFloat(x.amount)||0; });
     }
   });
@@ -14104,7 +14206,7 @@ function cashBookRows(){
     else if(r.type==='ret') rows.push({date:r.date, ts:r.ts, desc:'Trả lại vốn góp: '+(r.desc||''), kind:'out', amount:N(r.amount), acct:a,
                                       tag:'→ '+(CASH_SRC[r.src]||CASH_SRC.other).label});   // v40
     else if(r.type==='dep'){
-      rows.push({date:r.date, ts:r.ts, desc:'Ký quỹ: '+(r.desc||''), kind:'out', amount:N(r.amount), acct:a, tag:r.holder||'Ký quỹ'});
+      if(!r.old) rows.push({date:r.date, ts:r.ts, desc:'Ký quỹ: '+(r.desc||''), kind:'out', amount:N(r.amount), acct:a, tag:r.holder||'Ký quỹ'});   // v61: ký quỹ cũ không ra khỏi tài khoản
       (r.returned||[]).forEach(x=>rows.push({date:x.date, ts:x.ts, desc:'Lấy về: '+(r.desc||''), kind:'in',
                                              amount:N(x.amount), acct:a, tag:r.holder||'Ký quỹ'}));
     }

@@ -55,6 +55,15 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v61 (D 28/11/2026) — Bảo lãnh: phí theo kỳ + tab Bảo lãnh cũ
+- D: "phần phí cũng cần có dấu cộng để các loại bảo lãnh đóng phí theo kỳ, kế toán vào nhập thêm phí theo định kỳ thu của ngân hàng; thêm tab bảo lãnh cũ để nhập những bảo lãnh có trước sổ — ký quỹ vẫn vào tiền ký quỹ nhưng không trừ từ nguồn nào, phí cũ không nhập, phí mới kế toán cộng thêm; gia hạn có thể nhiều hơn 2 lần".
+- **Phí theo kỳ** `fees[]` {ts, date, amount, acct, feeId, by, byName}: trong form có "➕ Thêm phí" (ngày thu, số tiền, TK — TK chỉ người ghi sổ thấy); trên thẻ có nút **➕ Phí** (`addBlFee` / `saveBlFee`). Thủ quỹ / Hiền / Dũng thêm → ghi ngay 1 khoản `bankpay laiphi` (feeId). Người khác (kế toán…) thêm → kỳ phí "⏳ chờ ghi sổ"; người ghi sổ bấm **✅ Ghi sổ n phí** (`confirmBlFees`, chọn 1 TK cho cả lượt). Thẻ hiện tổng phí (ban đầu + các kỳ + phí gia hạn), số kỳ, danh sách kỳ.
+- Luật `baoLanh/$id/fees/$i`: `.write` riêng cho mọi người đã duyệt — chỉ TẠO kỳ mới, `by` = chính mình, KHÔNG có `feeId`; gắn feeId / sửa / xoá kỳ phí do quyền cha (người ghi sổ). Người khác vẫn không sửa được thông tin bảo lãnh.
+- **Bảo lãnh cũ**: tab con 🛡 Bảo lãnh | 📜 Bảo lãnh cũ (`_blTab`, `setBlTab`), cờ `old:true` trên bảo lãnh. Form cũ: ẩn ô phí ban đầu (phí cũ không nhập, chỉ thêm kỳ phí mới), ô TK ký quỹ đổi thành "Khi giải toả, tiền về tài khoản". Lúc có hiệu lực ghi khoản `dep` có `old:true`, `date` = NGÀY NHẬP SỔ (nếu để ngày phát hành có trước mốc đầu kỳ thì sổ bỏ qua cả khoản ký quỹ lẫn lần lấy về).
+- Ký quỹ `old` trong sổ quỹ: `cashTotals` — vẫn tính vào "đang gửi ngoài" (`dangGuiNgoai`), KHÔNG trừ tài khoản lúc ghi (`kqTruTk`: cũ = −đã lấy về, mới = còn treo), lấy về vẫn cộng vào tài khoản; `kyQuyDaChi` bỏ khoản cũ; sổ quỹ chi tiết không có dòng "Ký quỹ" ra cho khoản cũ (chỉ dòng "Lấy về"); Excel tháng / Excel công trình không tính tiền ra cho khoản cũ.
+- Gia hạn: không giới hạn số lần (đã thử 4 lần trong một form).
+- Thử: luật 215/215 (8 ca "BL v61"); `smoke35.js` (bảo lãnh cũ, ký quỹ không trừ TK rồi giải toả cộng TK, 2 kỳ phí trong form, kế toán thêm phí chờ → thủ quỹ ghi sổ, ➕ Phí trên thẻ, gia hạn 4 lần); hồi quy smoke12, 23, 29–31, 33, 34.
+
 ## v60 (D 28/11/2026) — sửa form Bảo lãnh
 - D: "loại bảo lãnh thêm bảo lãnh thanh toán; ngân hàng phát hành chọn trong ngân hàng của công ty, có thể đánh thêm ngân hàng khác; thêm 1 dòng số tiền bảo lãnh; thêm dấu cộng gia hạn, khi gia hạn sẽ có phí và hiệu lực".
 - `BL_KIND` thêm `thanhtoan` (Thanh toán). Ô ngân hàng = `<select id="bl-bank-sel">` lấy `_loanBankOpts()` (tài khoản ngân hàng của từng công ty) + "Ngân hàng khác (gõ tên)…" → hiện ô gõ `#bl-bank` (`_blBankUi`, `_blBankVal`). Sửa bảo lãnh cũ: tên ngân hàng không có trong danh sách thì tự chọn "khác" và điền sẵn.
