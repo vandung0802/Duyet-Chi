@@ -55,6 +55,12 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v56 (D 28/11/2026 "nhập các số nhỏ xong app cộng cho được không" → "cách 1, làm cả cho các mục")
+- MỌI ô số tiền (ô có `oninput="fmtAmountInput(this)"`, 23 ô: phiếu chi, P.KH, ứng lương, duyệt số, chuyển tiền, thu, ký quỹ, vay, trả nợ, phí + lãi NH, chi riêng, chuyển giữa TK, đầu kỳ, quyết toán tạm ứng, hợp đồng…) nhận phép CỘNG: gõ `120.000+35.000+8.500`.
+- Đang gõ: nổi nút **+** ở mép phải ô (bàn phím số iPhone không có dấu +) và nhãn "= 163.500 đ" ngay dưới ô (`#amt-help`, `_amtHelpShow`). Rời ô / Enter → `_amtSettle` thay phép cộng bằng tổng và bắn `input` (các ô xem trước như mã QR tự tính lại); `title` của ô giữ phép cộng vừa gõ.
+- Mọi chỗ đọc số tiền đi qua `amtVal()` (cộng các số): `parseAmountInput` + 14 chỗ trước đây bỏ ký tự không phải số (nếu không, "10.000+2.000" sẽ bị ghép thành 100.002.000). `saveAcctOpen` (đầu kỳ, có thể âm) cũng dùng `amtVal`. Chỉ CỘNG, không trừ / nhân.
+- Thử: `smoke31.js` (điện thoại giả lập: nút +, tổng nổi, rời ô ra tổng, lưu đúng; lưu khi ô còn phép cộng vẫn đúng; phiếu chi); hồi quy smoke12–14, 23–27, 29, 30.
+
 ## v55 (D 28/11/2026 "sắp xếp những tài khoản đang có tiền lên trên, xong đến TK MSB, TP rồi đến các TK đang 0 đồng khác")
 - Sổ quỹ, khung số dư: trong từng công ty `_bookAcctSort()` xếp TK có số dư khác 0 (nhiều tiền trước) → MSB → TP (TP / TPBank / Tiên Phong, so tên không dấu) → các TK 0 đồng còn lại theo thứ tự cài đặt. TK MSB / TP đang có tiền thì nằm ở nhóm đầu theo số tiền. Chỉ đổi thứ tự hiển thị, không đổi `order` trong `meta/accounts`.
 - Thử: `smoke30.js` thêm ca thứ tự.
