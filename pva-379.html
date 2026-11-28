@@ -1844,7 +1844,7 @@ code{background:var(--gray-light);padding:2px 5px;border-radius:4px;font-size:10
             <option value="">🏗 Tất cả CT</option>
           </select>
         </div>
-        <button class="btn-sm btn-primary-full" onclick="openKhModal()">➕ Đề xuất chi phí Kế hoạch</button>
+        <button class="btn-sm btn-primary-full" id="kh-new-btn" onclick="openKhModal()">➕ Đề xuất chi phí Kế hoạch</button>
       </div>
     </div>
     <div id="kh-list"></div>
@@ -2015,7 +2015,7 @@ const firebaseConfig = {
 const PUSH_TRIAL = false;
 // Ai được vào app trong giai đoạn thử (D 22/11: mở thêm cho Hiền). Thông báo thử cũng chỉ tới các vai này.
 const TRIAL_ROLES = ['dung','hien','ketoan','thuquy'];   // 24/11: thêm kế toán; 26/11 D "mở cho Trang": thêm thủ quỹ
-const APP_VERSION = '20261128-v52';
+const APP_VERSION = '20261128-v53';
 // Nhãn ngắn hiện trên tiêu đề = phần "vNN" của APP_VERSION (để nhìn là biết máy đang chạy bản nào)
 const VER_LABEL = (APP_VERSION.split('-').pop() || APP_VERSION);
 (function(){ var s=document.getElementById('ver-label'); if(s) s.textContent = VER_LABEL; document.title = 'PVA-379 ' + VER_LABEL; })();
@@ -5731,8 +5731,13 @@ function undoReject(id){
 //  người khác: chỉ phiếu của mình + phiếu mình bị @nhắc tên trong Hỏi–đáp.
 // CHỈ LỌC LÚC HIỂN THỊ — mảng proposals giữ nguyên (save() ghi cả mảng, bớt phiếu ra là XOÁ trên máy chủ).
 function _tagFold(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').replace(/ +/g,' ').trim(); }
+// v53 (D 28/11/2026 "cho tất cả mọi người đều nhìn thấy các phiếu đề xuất của cả công ty, không có quyền sửa chữa can thiệp gì
+//   vào phiếu của người khác, xem được toàn bộ báo cáo"): ai đã được duyệt cũng THẤY mọi phiếu (phiếu chi, P.KH, ứng lương).
+//   Sửa / xoá / duyệt / chuyển vẫn theo vai như cũ (_canEditDelete, _canOpenEdit, nút D/H/T) — chỉ xem, không can thiệp.
 function _canSeeP(p){
   if(!p) return false;
+  return true;   // v53: thay các dòng lọc dưới (giữ lại để biết quy tắc cũ v14/v30)
+  // eslint-disable-next-line no-unreachable
   if(currentRole==='dung' || currentRole==='hien') return true;   // v14 (D 26/11 "kế toán chưa cho xem"): kế toán chỉ thấy phiếu của mình như mọi người
   if(_isMyProposal(p)) return true;
   const me=getCurrentUserName();
@@ -6139,8 +6144,8 @@ function advDeleteItem(pid, idx){
   const p = proposals.find(x=>x.id===pid); if(!p || !p.settlement || !Array.isArray(p.settlement.items) || !p.settlement.items[idx]) return;
   if(!_settleCan(p)){ showToast('🔒 Không có quyền'); return; }
   const x = p.settlement.items[idx];
-  if(x.ok && currentRole!=='dung'){ showToast('🔒 Khoản đã duyệt — không xóa được'); return; }   // v47
-  if(currentRole!=='dung' && p.settlement.items.slice(idx+1).some(y=>y.ok||y.okD||y.rej)){ showToast('🔒 Không xóa được khoản đứng TRƯỚC khoản đã duyệt — nhờ Dũng xóa'); return; }   // v62: luật máy chủ khoá từng món đã duyệt theo thứ tự
+  if(x.ok && !_isApprover()){ showToast('🔒 Khoản đã duyệt — nhờ Hiền / Dũng xóa'); return; }   // v47; v53: Hiền như Dũng (sót ở v51)
+  if(!_isApprover() && p.settlement.items.slice(idx+1).some(y=>y.ok||y.okD||y.rej)){ showToast('🔒 Không xóa được khoản đứng TRƯỚC khoản đã duyệt — nhờ Hiền / Dũng xóa'); return; }   // v62: luật máy chủ khoá từng món đã duyệt theo thứ tự
   if(!confirm('Xóa dòng "'+(x.desc||'')+'" '+fmtVND(x.amount)+' khỏi sổ?')) return;
   p.settlement.items.splice(idx,1); p.settlement.ts = Date.now(); p.settlement.byName = getCurrentUserName()||'';
   logEdit(p, 'xóa dòng sổ tạm ứng: '+(x.desc||'')+' '+fmtVND(x.amount));
@@ -10424,6 +10429,7 @@ function renderKhImgPreview(){
 }
 function _khClearImages(){ uploadedImages=[]; _scanFiles=[]; renderKhImgPreview(); const fi=document.getElementById('kh-file-input'); if(fi) fi.value=''; }
 function openKhModal(){
+  if(!_khCanSee()){ showToast('🔒 Phiếu P.Kế hoạch do phòng Kế hoạch / Dũng / Hiền / thủ quỹ lập — bạn chỉ xem được'); return; }   // v53
   _khClearImages();
   // Nạp danh sách công trình dùng chung của app (Chi phí chung đứng đầu)
   const sel=document.getElementById('kh-inp-site');
@@ -10471,7 +10477,8 @@ function saveKhFromModal(){
 // Hiện/ẩn nút P.KH theo quyền — gọi sau khi biết vai trò/phòng (setRole + sau khi đọc dept)
 function _applyKhNav(){
   const b=document.getElementById('nav-kh');
-  if(b) b.style.display = _khCanSee() ? '' : 'none';
+  if(b) b.style.display = '';   // v53: mọi người xem được trang P.KH (chỉ xem); tạo phiếu P.KH vẫn theo _khCanSee()
+  const nb=document.getElementById('kh-new-btn'); if(nb) nb.style.display = _khCanSee() ? '' : 'none';
 }
 // v126: người phòng Kế hoạch THUẦN (không phải D/H/Trang) — dùng app rút gọn
 function _isKehoachOnly(){
@@ -10486,7 +10493,7 @@ function _applyCashView(){
   const nb=document.getElementById('nav-cash'); if(nb) nb.style.display = full ? '' : 'none';
   document.querySelectorAll('#page-cash .report-subtab').forEach(b=>{ b.style.display = (full || b.dataset.tab==='adv') ? '' : 'none'; });
   const d=document.querySelector('#page-cash .tab-desc'); if(d) d.style.display = full ? '' : 'none';
-  const h=document.querySelector('#page-cash .card-header'); if(h) h.textContent = full ? '⚖️ Cân đối quỹ công ty' : '👛 Sổ tạm ứng của tôi';
+  const h=document.querySelector('#page-cash .card-header'); if(h) h.textContent = full ? '⚖️ Cân đối quỹ công ty' : '👛 Sổ tạm ứng';   // v53: mọi người thấy sổ tạm ứng của cả công ty
   // v10 (D 25/11): báo cáo cả công ty (Telegram, bảng tính Google) chỉ người xem toàn bộ; nhân viên xuất Excel theo từng công trình ở tab Báo cáo → Công trình
   ['btn-tg-report','tile-sheet-view','tile-tg'].forEach(id=>{ const b=document.getElementById(id); if(b) b.style.display = full ? '' : 'none'; });
   // v30 (D 26/11): Thùng rác liệt kê phiếu / khoản đã xoá của CẢ công ty → chỉ nhóm xem toàn bộ (Dũng, Hiền, thủ quỹ) thấy
@@ -13331,7 +13338,7 @@ function renderReportPayee(){
 function _payeeJump(k){ const sel=document.getElementById('filter-payee'); if(sel){ if(![...sel.options].some(o=>o.value===k)) sel.add(new Option(k,k)); sel.value=k; } setReportTab('list', document.querySelector('#page-report .report-subtab[data-tab="list"]')); }
 function renderReportSite(){
   const el=document.getElementById('report-site-content'); if(!el) return;
-  const full=_fullView(), tbl=_siteTableHtml({total:full}), names=_siteNames();
+  const full=true, tbl=_siteTableHtml({total:full}), names=_siteNames();   // v53: mọi người xem đủ báo cáo (cả dòng TỔNG, xuất tất cả công trình)
   const old=document.getElementById('site-exp-sel'), keep = old ? old.value : '';
   el.innerHTML = `<div style="font-size:11.5px;color:var(--text-sub);margin:10px 2px 0">Thu về và đã chi của từng công trình${full?'':' (số tổng cả công ty chỉ D, Hiền, thủ quỹ xem)'}.</div>`
     + (tbl || '<div style="color:var(--text-sub);font-size:13px;text-align:center;padding:14px">Chưa có khoản thu / chi nào gắn công trình</div>')
@@ -13356,7 +13363,6 @@ function _siteRows(site){
 async function exportSiteExcel(){
   const sel=document.getElementById('site-exp-sel'), site = sel ? sel.value : '';
   if(!site){ showToast('Chọn công trình cần xuất'); return; }
-  if(site==='*' && !_fullView()){ showToast('Chỉ xuất được theo từng công trình'); return; }
   let XLSX; try{ XLSX = await _loadSheetJS(); }catch(e){ showToast('❌ '+e.message); return; }
   const rows=_siteRows(site);
   const head=['Ngày','Công trình','Loại','Nội dung','Nguồn / loại chi phí','Người','Tiền vào','Tiền ra'];
