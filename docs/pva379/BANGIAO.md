@@ -55,6 +55,11 @@ Gia Bình gọi thủ quỹ là `toan`, vật tư là `trang`. Ở đây đã đ
 - Xoá khoản Cân đối: Dũng xoá thẳng; hoặc Hiền đồng ý một đề nghị của **người khác** (`deleteReq/ok/hien1`). Hiền tự đề nghị thì phải chờ Dũng.
 - Cân đối chỉ D / Hiền / thủ quỹ / kế toán xem (`_cashCanSee`), luật máy chủ cũng chặn đọc `cashflow` và `bankBalance`. Nhân viên chỉ vào tab Tạm ứng (sổ của mình).
 
+## v57 (D 28/11/2026 "sửa chữ ứng lương thành Lương và NC rồi cho ra ngoài, vì cái này hay dùng")
+- Nút `#nav-luong` ra THANH DƯỚI (bỏ khỏi CSS ẩn), nhãn "💵 Lương và NC"; bỏ ô Lương khỏi menu Khác; chấm báo Lương không còn cộng vào chấm của nút Khác; mở trang Lương thì sáng nút Lương (không sáng nút Khác). Người chỉ thuộc phòng Kế hoạch vẫn ẩn như cũ.
+- Mọi chữ hiện cho người dùng "Ứng lương / ứng lương" → "Lương và NC" (tiêu đề trang, tab con, nút đề xuất, hộp nhập Excel, thông báo, Excel tháng / công trình, giải ngân thẳng). Diễn giải phiếu MỚI tạo là "Lương và NC tháng …"; phiếu cũ giữ chữ cũ. Không đổi `kind:'salary'`, tên hàm, tên sheet Google.
+- Thử: `smoke32.js` (Hiền + nhân viên); hồi quy smoke14, 23, 24, 26–31.
+
 ## v56 (D 28/11/2026 "nhập các số nhỏ xong app cộng cho được không" → "cách 1, làm cả cho các mục")
 - MỌI ô số tiền (ô có `oninput="fmtAmountInput(this)"`, 23 ô: phiếu chi, P.KH, ứng lương, duyệt số, chuyển tiền, thu, ký quỹ, vay, trả nợ, phí + lãi NH, chi riêng, chuyển giữa TK, đầu kỳ, quyết toán tạm ứng, hợp đồng…) nhận phép CỘNG: gõ `120.000+35.000+8.500`.
 - Đang gõ: nổi nút **+** ở mép phải ô (bàn phím số iPhone không có dấu +) và nhãn "= 163.500 đ" ngay dưới ô (`#amt-help`, `_amtHelpShow`). Rời ô / Enter → `_amtSettle` thay phép cộng bằng tổng và bắn `input` (các ô xem trước như mã QR tự tính lại); `title` của ô giữ phép cộng vừa gõ.
